@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   root: '.',
+  base: '/finessimo/',
   build: {
     target: 'es2020',
     outDir: 'dist',
