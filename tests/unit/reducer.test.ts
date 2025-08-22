@@ -1,0 +1,230 @@
+import { reducer } from '../../src/state/reducer';
+import { GameState, Action, TimingConfig, GameplayConfig } from '../../src/state/types';
+
+describe('Reducer', () => {
+  let initialState: GameState;
+  
+  beforeEach(() => {
+    initialState = reducer(undefined as any, { type: 'Init' });
+  });
+
+  describe('Init action', () => {
+    it('should create initial state with default values', () => {
+      const state = reducer(undefined as any, { type: 'Init' });
+      
+      expect(state.board).toBeDefined();
+      expect(state.board.width).toBe(10);
+      expect(state.board.height).toBe(20);
+      expect(state.board.cells).toBeInstanceOf(Uint8Array);
+      expect(state.board.cells.length).toBe(200);
+      expect(state.active).toBeUndefined();
+      expect(state.hold).toBeUndefined();
+      expect(state.canHold).toBe(true);
+      expect(state.nextQueue).toEqual([]);
+      expect(state.tick).toBe(0);
+      expect(state.status).toBe('playing');
+      expect(state.inputLog).toEqual([]);
+    });
+
+    it('should accept custom seed', () => {
+      const customSeed = 'test-seed-123';
+      const state = reducer(undefined as any, { type: 'Init', seed: customSeed });
+      
+      expect(state.rng).toEqual({ seed: customSeed });
+    });
+
+    it('should accept custom timing config', () => {
+      const customTiming: Partial<TimingConfig> = {
+        dasMs: 200,
+        arrMs: 5
+      };
+      const state = reducer(undefined as any, { type: 'Init', timing: customTiming });
+      
+      expect(state.timing.dasMs).toBe(200);
+      expect(state.timing.arrMs).toBe(5);
+      expect(state.timing.tickHz).toBe(60); // Should keep default
+    });
+
+    it('should accept custom gameplay config', () => {
+      const customGameplay: Partial<GameplayConfig> = {
+        allow180Rotation: false,
+        finesseCancelMs: 100
+      };
+      const state = reducer(undefined as any, { type: 'Init', gameplay: customGameplay });
+      
+      expect(state.gameplay.allow180Rotation).toBe(false);
+      expect(state.gameplay.finesseCancelMs).toBe(100);
+    });
+  });
+
+  describe('Lock action', () => {
+    it('should clear active piece and reset hold capability', () => {
+      // Set up state with an active piece and used hold
+      const stateWithActivePiece: GameState = {
+        ...initialState,
+        active: { id: 'T', rot: 'spawn', x: 4, y: 0 },
+        canHold: false,
+        inputLog: [
+          { tMs: 1000, frame: 60, action: 'RotateCW' },
+          { tMs: 1100, frame: 66, action: 'HardDrop' }
+        ]
+      };
+      
+      const newState = reducer(stateWithActivePiece, { type: 'Lock' });
+      
+      expect(newState.active).toBeUndefined();
+      expect(newState.canHold).toBe(true);
+      expect(newState.inputLog).toEqual([]);
+      expect(newState.tick).toBe(stateWithActivePiece.tick + 1);
+    });
+
+    it('should not mutate the original state', () => {
+      const originalState = { ...initialState, tick: 5 };
+      const newState = reducer(originalState, { type: 'Lock' });
+      
+      expect(originalState.tick).toBe(5);
+      expect(newState.tick).toBe(6);
+      expect(originalState).not.toBe(newState);
+    });
+
+    it('should preserve other state properties', () => {
+      const stateWithData: GameState = {
+        ...initialState,
+        hold: 'I',
+        nextQueue: ['T', 'S', 'Z'],
+        status: 'playing'
+      };
+      
+      const newState = reducer(stateWithData, { type: 'Lock' });
+      
+      expect(newState.hold).toBe('I');
+      expect(newState.nextQueue).toEqual(['T', 'S', 'Z']);
+      expect(newState.status).toBe('playing');
+    });
+  });
+
+  describe('Tick action', () => {
+    it('should increment tick counter', () => {
+      const state1 = reducer(initialState, { type: 'Tick' });
+      expect(state1.tick).toBe(1);
+      
+      const state2 = reducer(state1, { type: 'Tick' });
+      expect(state2.tick).toBe(2);
+    });
+
+    it('should not mutate original state', () => {
+      const originalTick = initialState.tick;
+      const newState = reducer(initialState, { type: 'Tick' });
+      
+      expect(initialState.tick).toBe(originalTick);
+      expect(newState.tick).toBe(originalTick + 1);
+      expect(initialState).not.toBe(newState);
+    });
+
+    it('should preserve all other properties', () => {
+      const stateWithData: GameState = {
+        ...initialState,
+        active: { id: 'T', rot: 'spawn', x: 4, y: 0 },
+        hold: 'I',
+        canHold: false
+      };
+      
+      const newState = reducer(stateWithData, { type: 'Tick' });
+      
+      expect(newState.active).toEqual(stateWithData.active);
+      expect(newState.hold).toBe(stateWithData.hold);
+      expect(newState.canHold).toBe(stateWithData.canHold);
+    });
+  });
+
+  describe('EnqueueInput action', () => {
+    it('should add input event to log', () => {
+      const inputEvent = {
+        tMs: 1000,
+        frame: 60,
+        action: 'RotateCW' as const
+      };
+      
+      const newState = reducer(initialState, { type: 'EnqueueInput', event: inputEvent });
+      
+      expect(newState.inputLog).toHaveLength(1);
+      expect(newState.inputLog[0]).toEqual(inputEvent);
+    });
+
+    it('should append to existing input log', () => {
+      const stateWithInput: GameState = {
+        ...initialState,
+        inputLog: [{ tMs: 500, frame: 30, action: 'LeftDown' }]
+      };
+      
+      const newInputEvent = {
+        tMs: 1000,
+        frame: 60,
+        action: 'HardDrop' as const
+      };
+      
+      const newState = reducer(stateWithInput, { type: 'EnqueueInput', event: newInputEvent });
+      
+      expect(newState.inputLog).toHaveLength(2);
+      expect(newState.inputLog[1]).toEqual(newInputEvent);
+    });
+
+    it('should not mutate original input log', () => {
+      const originalInputLog = [{ tMs: 500, frame: 30, action: 'LeftDown' as const }];
+      const stateWithInput: GameState = {
+        ...initialState,
+        inputLog: originalInputLog
+      };
+      
+      const newInputEvent = {
+        tMs: 1000,
+        frame: 60,
+        action: 'HardDrop' as const
+      };
+      
+      const newState = reducer(stateWithInput, { type: 'EnqueueInput', event: newInputEvent });
+      
+      expect(originalInputLog).toHaveLength(1);
+      expect(stateWithInput.inputLog).toHaveLength(1);
+      expect(newState.inputLog).toHaveLength(2);
+      expect(newState.inputLog).not.toBe(originalInputLog);
+    });
+  });
+
+  describe('Default case (unknown actions)', () => {
+    it('should return state unchanged for unknown action', () => {
+      const unknownAction = { type: 'UnknownAction' } as any;
+      const newState = reducer(initialState, unknownAction);
+      
+      expect(newState).toBe(initialState); // Should return exact same reference
+    });
+
+    it('should handle undefined action gracefully', () => {
+      const newState = reducer(initialState, undefined as any);
+      
+      expect(newState).toBe(initialState);
+    });
+  });
+
+  describe('State immutability', () => {
+    it('should never mutate the board cells array', () => {
+      const originalCells = new Uint8Array(initialState.board.cells);
+      
+      // Try various actions that might mutate state
+      reducer(initialState, { type: 'Lock' });
+      reducer(initialState, { type: 'Tick' });
+      reducer(initialState, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } });
+      
+      expect(initialState.board.cells).toEqual(originalCells);
+    });
+
+    it('should create new state objects for state changes', () => {
+      const newState1 = reducer(initialState, { type: 'Tick' });
+      const newState2 = reducer(newState1, { type: 'Lock' });
+      
+      expect(newState1).not.toBe(initialState);
+      expect(newState2).not.toBe(newState1);
+      expect(newState2).not.toBe(initialState);
+    });
+  });
+});
