@@ -38,9 +38,14 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 
 **UI (Canvas board + DOM UI)** → **Input Handler (Stateful: keyboard/touch + DAS/ARR timers)** → **Reducer (Pure Function)** → **Immutable State** → **Core Logic (movement, rotation, collision, line clear, RNG)** → **Finesse Calculator (post-lock)** → **Game Modes (via hooks)**
 
+Keybindings and Settings
+- A modal Settings panel exposes tabs for Timing, Gameplay, Visual, and Controls (Keybindings).
+- Keybindings are configurable and persisted locally (localStorage) under a single `finessimo` key (with both settings and keyBindings). The keyboard input handler loads these on startup and can be updated live via `setKeyBindings`.
+- While rebinding, the Settings panel adds `settings-open` to `<body>` so the keyboard handler ignores keydown/keyup to prevent interference.
+
 **Data flow:**
 
-- User input is processed by a stateful `Input Handler` which dispatches normalized action objects.
+- User input is processed by a stateful `Input Handler` which dispatches normalized action objects. Keyboard handling uses configurable `KeyBindings` (based on `KeyboardEvent.code`) so letters, digits, symbols, and modifier keys (including L/R variants like `ShiftLeft`/`ShiftRight`) can be bound.
 - Actions are processed by a pure `reducer` function: `(currentState, action) => newState`.
 - The application re-renders based on the new immutable state object.
 
@@ -54,6 +59,14 @@ To maintain a pure core reducer, all state related to physical input devices and
   2.  Manage timers for DAS (initial delay) and ARR (auto-repeat).
   3.  Dispatch normalized game `Action` objects (e.g., `{ type: 'Move', dir: -1, source: 'tap' }`) to the central store. It does not modify the `GameState` directly.
 - **Benefit:** This isolates side-effects and complex timing logic to the system's edge, allowing the game's core reducer to remain a simple, testable, pure function.
+
+### Input Handler API (current)
+
+- `init(dispatch: (action) => void)`: Provide the dispatch function to send Actions to the reducer.
+- `start()/stop()`: Attach/detach device listeners.
+- `update(gameState: GameState, nowMs: number)`: Advance input timing (DAS/ARR, soft-drop cadence) using a timestamp injected by the caller. The app loop passes the same `performance.now()` value it uses for `Tick` to keep timing consistent and testable.
+- `getState()`: Introspection for debugging.
+- `setKeyBindings(bindings)/getKeyBindings()`: Configure/read current keyboard bindings.
 
 ## Contracts and Conventions
 

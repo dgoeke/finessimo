@@ -124,15 +124,6 @@ body {
 #game-hud { min-height: 300px; }
 
 /* Controls */
-.controls-title { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary); margin-bottom: 10px; }
-.controls-groups { display: grid; gap: 12px; font-size: 14px; }
-.controls-group { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 12px; }
-.control-label { color: var(--text-dim); }
-.control-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.control-keys > * { vertical-align: middle; }
-.key { display: inline-flex; align-items: center; justify-content: center; height: var(--key-h); border: 1px solid var(--border); background: linear-gradient(180deg, color-mix(in oklab, var(--bg-elev-2) 88%, white), var(--bg-elev-1)); color: var(--primary); padding: 0 10px; border-radius: 6px; font-size: 12px; line-height: 1; font-weight: 600; font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
-.key:hover { transform: translateY(-1px); }
-.divider { display: inline-flex; align-items: center; height: var(--key-h); padding: 0 4px; color: var(--text-dim); font-size: 12px; line-height: 1; font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
 
 /* Footer removed */
 
@@ -144,7 +135,6 @@ body {
   .app.shell { grid-template-columns: 1fr; }
   .sidebar { order: 2; max-width: 680px; width: 100%; margin: 0 auto; }
   .game-area { order: 1; }
-  .controls-group { grid-template-columns: 100px 1fr; }
   #game-canvas { width: min(80vw, 320px); }
 }
 
@@ -153,7 +143,6 @@ body {
   .brand-text .title { font-size: 18px; }
   .brand-text .subtitle { font-size: 11px; }
   .panel { padding: 12px; border-radius: 10px; }
-  .controls-title { font-size: 11px; }
   .controls-grid { gap: 6px 8px; }
   /* Three-column mobile layout: 10% | 80% | 10% */
   /* Adjust to 15% | 70% | 15% */
@@ -165,7 +154,7 @@ body {
   .board-frame { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .mobile-board-slot #game-canvas { width: 100% !important; height: auto; max-height: none; border-radius: 0; border: 0; }
   /* Hide game state (left panel) and right panel/controls on mobile */
-  .left-panel, .right-panel, .controls-section { display: none; }
+  .left-panel, .right-panel { display: none; }
   /* Fit side canvases within 10% columns and keep squares */
   .mobile-hold-slot .hold-canvas,
   .mobile-preview-slot .preview-canvas { width: 100%; height: auto; }
@@ -205,7 +194,7 @@ body {
   /* NEXT header: minimal and uppercase */
   .mobile-preview-slot .preview-title { display: block; font-size: 10px; margin: 0 0 2px 0; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
   /* Hide right panel and controls on mobile */
-  .right-panel, .controls-section { display: none; }
+  .right-panel { display: none; }
   /* Ensure mobile preview shows all items vertically */
   .mobile-preview-slot .preview-container { display: flex; flex-direction: column !important; gap: 2px; width: 100%; }
   .mobile-preview-slot .preview-slot { display: block !important; width: 100%; gap: 0; background: transparent; border: 0; padding: 0; border-radius: 0; }
@@ -743,6 +732,71 @@ body.touch-active .app.shell {
 
 .button.secondary:hover {
   background: var(--bg-elev-1);
+}
+
+/* Keybindings pane */
+.keybinds-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.keybind-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--bg-elev-1) 92%, transparent), var(--bg-elev-2));
+}
+
+.keybind-label {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.keybind-button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--primary);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.keybind-button:hover { transform: translateY(-1px); border-color: var(--primary); }
+.keybind-button.listening { outline: 2px solid color-mix(in oklab, var(--primary) 70%, white); }
+
+.keybind-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.keybind-cancel {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.keybind-cancel:hover {
+  color: var(--text);
+  background: var(--bg-elev-1);
+}
+
+@media (max-width: 760px) {
+  .keybinds-list { grid-template-columns: 1fr; }
 }
 
 /* Settings button in header */

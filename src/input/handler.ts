@@ -1,5 +1,32 @@
 import { Action, KeyAction, InputEvent, GameState } from '../state/types';
 
+// Public type for configurable key bindings
+export type BindableAction =
+  | 'MoveLeft'
+  | 'MoveRight'
+  | 'SoftDrop'
+  | 'HardDrop'
+  | 'RotateCW'
+  | 'RotateCCW'
+  | 'Hold';
+
+export type KeyBindings = Record<BindableAction, string[]>; // KeyboardEvent.code values
+
+export function defaultKeyBindings(): KeyBindings {
+  return {
+    MoveLeft: ['ArrowLeft', 'KeyA'],
+    MoveRight: ['ArrowRight', 'KeyD'],
+    SoftDrop: ['ArrowDown', 'KeyS'],
+    HardDrop: ['Space'],
+    RotateCW: ['ArrowUp', 'KeyW', 'KeyX'],
+    RotateCCW: ['KeyZ'],
+    Hold: ['KeyC']
+  };
+}
+
+const STORAGE_KEY = 'finessimo';
+const LEGACY_BINDINGS_KEY = 'finessimo-keybindings';
+
 // Input normalization utility
 export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: number): KeyAction[] {
   // Filter to only keep relevant events
@@ -65,10 +92,14 @@ export interface InputHandler {
   stop(): void;
   
   // Update handler state based on current game state (for DAS/ARR timing)
-  update(gameState: GameState): void;
+  update(gameState: GameState, nowMs: number): void;
   
   // Get current internal state for debugging
   getState(): InputHandlerState;
+
+  // Update and retrieve key bindings
+  setKeyBindings(bindings: KeyBindings): void;
+  getKeyBindings(): KeyBindings;
 }
 
 // Internal state that the input handler maintains
@@ -108,7 +139,7 @@ export class MockInputHandler implements InputHandler {
     // MockInputHandler stopped
   }
 
-  update(_gameState: GameState): void {
+  update(_gameState: GameState, _nowMs: number): void {
     // This would normally handle DAS/ARR timing
     // For the mock, we just increment the frame counter
     this.frameCounter++;
@@ -116,6 +147,13 @@ export class MockInputHandler implements InputHandler {
 
   getState(): InputHandlerState {
     return { ...this.state };
+  }
+
+  setKeyBindings(_bindings: KeyBindings): void {
+    // mock: ignore
+  }
+  getKeyBindings(): KeyBindings {
+    return defaultKeyBindings();
   }
 
   // Mock method to simulate input events for testing
@@ -222,10 +260,12 @@ export class DOMInputHandler implements InputHandler {
   private frameCounter = 0;
   private boundKeyDownHandler: (event: KeyboardEvent) => void;
   private boundKeyUpHandler: (event: KeyboardEvent) => void;
+  private bindings: KeyBindings;
 
   constructor() {
     this.boundKeyDownHandler = this.handleKeyDown.bind(this);
     this.boundKeyUpHandler = this.handleKeyUp.bind(this);
+    this.bindings = this.loadBindingsFromStorage();
   }
 
   init(dispatch: (action: Action) => void): void {
@@ -242,9 +282,9 @@ export class DOMInputHandler implements InputHandler {
     document.removeEventListener('keyup', this.boundKeyUpHandler);
   }
 
-  update(gameState: GameState): void {
+  update(gameState: GameState, nowMs: number): void {
     this.frameCounter++;
-    const currentTime = Date.now();
+    const currentTime = nowMs;
 
     // Handle DAS/ARR timing
     if (this.state.currentDirection !== undefined && this.state.dasStartTime !== undefined) {
@@ -284,8 +324,32 @@ export class DOMInputHandler implements InputHandler {
     return { ...this.state };
   }
 
+  setKeyBindings(bindings: KeyBindings): void {
+    // Shallow clone and persist
+    this.bindings = JSON.parse(JSON.stringify(bindings));
+    try {
+      // Consolidated store: { settings?: ..., keyBindings?: ... }
+      const storeRaw = localStorage.getItem(STORAGE_KEY);
+      let store: any = {};
+      if (storeRaw) {
+        try { store = JSON.parse(storeRaw); } catch { store = {}; }
+      }
+      store.keyBindings = this.bindings;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    } catch (e) {
+      // ignore storage errors
+    }
+  }
+
+  getKeyBindings(): KeyBindings {
+    return JSON.parse(JSON.stringify(this.bindings));
+  }
+
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.dispatch) return;
+
+    // Ignore inputs when settings overlay is open to allow rebinding
+    if (document.body.classList.contains('settings-open')) return;
 
     const action = this.mapKeyToAction(event.code, 'down');
     if (!action) return;
@@ -333,6 +397,9 @@ export class DOMInputHandler implements InputHandler {
   private handleKeyUp(event: KeyboardEvent): void {
     if (!this.dispatch) return;
 
+    // Ignore inputs when settings overlay is open to allow rebinding
+    if (document.body.classList.contains('settings-open')) return;
+
     const action = this.mapKeyToAction(event.code, 'up');
     if (!action) return;
 
@@ -354,34 +421,65 @@ export class DOMInputHandler implements InputHandler {
   }
 
   private mapKeyToAction(code: string, type: 'down' | 'up'): KeyAction | null {
-    // Standard Tetris controls
-    const keyMapping: Record<string, { down: KeyAction; up: KeyAction }> = {
-      'ArrowLeft': { down: 'LeftDown', up: 'LeftUp' },
-      'KeyA': { down: 'LeftDown', up: 'LeftUp' },
-      'ArrowRight': { down: 'RightDown', up: 'RightUp' },
-      'KeyD': { down: 'RightDown', up: 'RightUp' },
-      'ArrowDown': { down: 'SoftDropDown', up: 'SoftDropUp' },
-      'KeyS': { down: 'SoftDropDown', up: 'SoftDropUp' },
-      'ArrowUp': { down: 'RotateCW', up: 'RotateCW' }, // No up action for rotations
-      'KeyW': { down: 'RotateCW', up: 'RotateCW' },
-      'KeyZ': { down: 'RotateCCW', up: 'RotateCCW' },
-      'Space': { down: 'HardDrop', up: 'HardDrop' },
-      'KeyC': { down: 'Hold', up: 'Hold' },
-    };
+    const b = this.bindings;
 
-    const mapping = keyMapping[code];
-    if (!mapping) return null;
+    // Determine which binding group this code belongs to
+    const inList = (list: string[]) => list.includes(code);
 
-    // For keyup events, only allow releases that are directional (Left/Right/Down) or SoftDrop (KeyS)
+    // On keyup, we only emit for continuous actions (move and soft drop)
     if (type === 'up') {
-      const allowOnKeyUp =
-        code === 'ArrowLeft' || code === 'KeyA' ||
-        code === 'ArrowRight' || code === 'KeyD' ||
-        code === 'ArrowDown' || code === 'KeyS';
-      if (!allowOnKeyUp) return null; // Suppress rotation on keyup (e.g., ArrowUp)
+      if (inList(b.MoveLeft)) return 'LeftUp';
+      if (inList(b.MoveRight)) return 'RightUp';
+      if (inList(b.SoftDrop)) return 'SoftDropUp';
+      return null;
     }
 
-    return mapping[type];
+    // keydown
+    if (inList(b.MoveLeft)) return 'LeftDown';
+    if (inList(b.MoveRight)) return 'RightDown';
+    if (inList(b.SoftDrop)) return 'SoftDropDown';
+    if (inList(b.RotateCW)) return 'RotateCW';
+    if (inList(b.RotateCCW)) return 'RotateCCW';
+    if (inList(b.HardDrop)) return 'HardDrop';
+    if (inList(b.Hold)) return 'Hold';
+    return null;
+  }
+
+  private loadBindingsFromStorage(): KeyBindings {
+    try {
+      // Prefer consolidated store
+      const storeRaw = localStorage.getItem(STORAGE_KEY);
+      if (storeRaw) {
+        const store = JSON.parse(storeRaw);
+        if (store && store.keyBindings) {
+          const fallback = defaultKeyBindings();
+          const merged: KeyBindings = { ...fallback, ...store.keyBindings };
+          (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
+            if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
+          });
+          return merged;
+        }
+      }
+      // Legacy fallback
+      const legacyRaw = localStorage.getItem(LEGACY_BINDINGS_KEY);
+      if (legacyRaw) {
+        const parsed = JSON.parse(legacyRaw);
+        const fallback = defaultKeyBindings();
+        const merged: KeyBindings = { ...fallback, ...parsed };
+        (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
+          if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
+        });
+        // Migrate to consolidated store
+        try {
+          const store = { keyBindings: merged };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        } catch {}
+        return merged;
+      }
+      return defaultKeyBindings();
+    } catch {
+      return defaultKeyBindings();
+    }
   }
 
   private updateInternalState(action: KeyAction): void {
