@@ -1,0 +1,2 @@
+echo "🛠️ Running pre-commit checks..."
+npm run pre-commit
