@@ -2,7 +2,7 @@ import { FinessimoApp } from './app';
 
 // Main entry point
 function main(): void {
-  console.log('Starting Finessimo - Tetris Finesse Trainer');
+  // Starting Finessimo - Tetris Finesse Trainer
   
   // Create the application instance
   const app = new FinessimoApp();
@@ -38,8 +38,7 @@ function initializeApp(app: FinessimoApp): void {
     // Expose app globally for debugging
     (window as any).finessimoApp = app;
     
-    console.log('Finessimo application is running!');
-    console.log('Use finessimoApp.simulateInput("lock") to test the reducer');
+    // Finessimo application is running
     
   } catch (error) {
     console.error('Failed to initialize Finessimo application:', error);

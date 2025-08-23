@@ -43,7 +43,6 @@ export class StubFinesseCalculator implements FinesseCalculator {
     targetRot: string,
     _config: GameplayConfig
   ): KeyAction[][] {
-    console.log(`StubFinesseCalculator: calculateOptimal for ${piece.id} to position (${targetX}, ${targetRot})`);
     
     // Stub implementation - returns a simple path
     const stubPath: KeyAction[] = [];
@@ -74,7 +73,6 @@ export class StubFinesseCalculator implements FinesseCalculator {
     playerInputs: KeyAction[],
     config: GameplayConfig
   ): FinesseResult {
-    console.log(`StubFinesseCalculator: analyze player inputs for ${piece.id}`);
     
     // Calculate optimal sequences
     const optimalSequences = this.calculateOptimal(piece, targetX, targetRot, config);

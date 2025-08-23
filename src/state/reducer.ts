@@ -91,21 +91,15 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
         return state;
       }
       
-      let movedPiece;
-      if (action.source === 'das') {
-        // For DAS, move to wall
-        movedPiece = moveToWall(state.board, state.active, action.dir);
-      } else {
-        // For tap, try single move
-        movedPiece = tryMove(state.board, state.active, action.dir, 0);
-        if (!movedPiece) {
-          return state; // Can't move
-        }
+      // Always apply a single-cell move; DAS/ARR repeats are produced by the Input Handler
+      const stepped = tryMove(state.board, state.active, action.dir, 0);
+      if (!stepped) {
+        return state; // Can't move
       }
       
       return {
         ...state,
-        active: movedPiece
+        active: stepped
       };
 
     case 'Rotate':

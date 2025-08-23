@@ -28,7 +28,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     canvas.width = this.boardWidth * this.cellSize;
     canvas.height = this.boardHeight * this.cellSize;
     
-    console.log('BasicCanvasRenderer initialized');
+    // Canvas renderer initialized
   }
 
   render(gameState: GameState): void {
@@ -143,6 +143,6 @@ export class BasicCanvasRenderer implements CanvasRenderer {
   destroy(): void {
     this.canvas = undefined;
     this.ctx = undefined;
-    console.log('BasicCanvasRenderer destroyed');
+    // Canvas renderer destroyed
   }
 }

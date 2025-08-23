@@ -13,7 +13,7 @@ export class BasicHudRenderer implements HudRenderer {
   initialize(container: HTMLElement): void {
     this.container = container;
     this.createElements();
-    console.log('BasicHudRenderer initialized');
+    // HUD renderer initialized
   }
 
   render(gameState: GameState): void {
@@ -220,6 +220,6 @@ export class BasicHudRenderer implements HudRenderer {
     }
     this.container = undefined;
     this.elements = {};
-    console.log('BasicHudRenderer destroyed');
+    // HUD renderer destroyed
   }
 }
