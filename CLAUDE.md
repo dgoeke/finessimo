@@ -49,13 +49,13 @@ tests/
 
 ---
 
-### Iteration 1: Core Logic & Input (Current Task)
+### Iteration 1: Core Logic & Input (Complete)
 
 - **TODO**: Implement the input normalization logic in `src/input/handler.ts`, including the 50ms cancellation window.
 - **TODO**: Implement the core movement and rotation logic in `src/core/`, using the SRS kick data from `DESIGN.md`.
 - **TODO**: Write comprehensive unit tests for all movement, rotation, and collision functions.
 
-### Iteration 2: Finesse Calculation (Next Steps)
+### Iteration 2: Finesse Calculation (Current Task)
 
 - **TODO**: Implement the BFS minimality algorithm in `src/finesse/calculator.ts`.
 - **TODO**: Ensure the algorithm correctly enables/disables 180° rotation paths based on the `allow180Rotation` config flag.
