@@ -3,6 +3,8 @@ import { reducer } from './state/reducer';
 import { MockInputHandler } from './input/handler';
 import { BasicCanvasRenderer } from './ui/canvas';
 import { BasicHudRenderer } from './ui/hud';
+import { gameModeRegistry } from './modes';
+import { finesseService } from './finesse/service';
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -35,7 +37,7 @@ export class FinessimoApp {
     this.inputHandler.start();
     
     // Setup test controls
-    this.hudRenderer.setupTestControls(this.dispatch.bind(this));
+    this.hudRenderer.setupTestControls(this.dispatch.bind(this), this.setGameMode.bind(this));
     
     // Render initial state
     this.render();
@@ -103,6 +105,9 @@ export class FinessimoApp {
     // Log action in HUD for debugging
     this.hudRenderer.logAction(action);
     
+    // Store previous state for finesse analysis
+    const prevState = this.gameState;
+    
     // Apply the action through the reducer
     const newState = reducer(this.gameState, action);
     
@@ -112,6 +117,28 @@ export class FinessimoApp {
     }
     
     this.gameState = newState;
+    
+    // Handle finesse analysis on piece lock
+    if (action.type === 'HardDrop' || action.type === 'Lock') {
+      this.handlePieceLock(prevState);
+    }
+  }
+  
+  private handlePieceLock(prevState: GameState): void {
+    if (!prevState.active) return;
+    
+    const currentMode = gameModeRegistry.get(prevState.currentMode);
+    if (!currentMode) return;
+    
+    const finesseActions = finesseService.analyzePieceLock(
+      prevState,
+      prevState.active,
+      currentMode
+    );
+    
+    for (const action of finesseActions) {
+      this.gameState = reducer(this.gameState, action);
+    }
   }
 
   // Public method to get current state (for debugging)
@@ -127,5 +154,25 @@ export class FinessimoApp {
     if (action === 'lock') {
       this.dispatch({ type: 'Lock' });
     }
+  }
+  
+  // Public method to change game mode
+  setGameMode(modeName: string): void {
+    const mode = gameModeRegistry.get(modeName);
+    if (mode) {
+      this.dispatch({ type: 'SetMode', mode: modeName });
+      
+      if (mode.shouldPromptNext(this.gameState)) {
+        const prompt = mode.getNextPrompt(this.gameState);
+        if (prompt) {
+          this.dispatch({ type: 'UpdateModePrompt', prompt });
+        }
+      }
+    }
+  }
+  
+  // Public method to get available game modes
+  getAvailableModes(): string[] {
+    return gameModeRegistry.list();
   }
 }

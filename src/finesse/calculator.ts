@@ -12,7 +12,7 @@ export interface FinesseResult {
 
 // Fault types (to be expanded in later iterations)
 export interface Fault {
-  type: 'extra_input' | 'suboptimal_path' | 'unnecessary_rotation';
+  type: 'extra_input' | 'suboptimal_path' | 'unnecessary_rotation' | 'wrong_piece' | 'wrong_target';
   description: string;
   position?: number; // Index in the player sequence where fault occurs
 }

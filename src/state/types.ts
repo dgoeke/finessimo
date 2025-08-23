@@ -64,6 +64,13 @@ export interface InputEvent {
   action: KeyAction;
 }
 
+// Game mode and finesse feedback
+export interface FinesseUIFeedback {
+  message: string;
+  isOptimal: boolean;
+  timestamp: number;
+}
+
 // Game state
 export interface GameState {
   board: Board;
@@ -79,11 +86,15 @@ export interface GameState {
   stats: unknown; // Stats object definition
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
+  // Game mode and finesse feedback
+  currentMode: string;
+  finesseFeedback: FinesseUIFeedback | null;
+  modePrompt: string | null;
 }
 
 // State transitions
 export type Action =
-  | { type: 'Init'; seed?: string; timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig> }
+  | { type: 'Init'; seed?: string; timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig>; mode?: string }
   | { type: 'Tick' }
   | { type: 'Spawn' }
   | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
@@ -93,6 +104,9 @@ export type Action =
   | { type: 'Hold' }
   | { type: 'Lock' }
   | { type: 'ClearLines'; lines: number[] }
-  | { type: 'EnqueueInput'; event: InputEvent };
+  | { type: 'EnqueueInput'; event: InputEvent }
+  | { type: 'SetMode'; mode: string }
+  | { type: 'UpdateFinesseFeedback'; feedback: FinesseUIFeedback | null }
+  | { type: 'UpdateModePrompt'; prompt: string | null };
 
 export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;

@@ -106,20 +106,21 @@ npm run lint
 npm run lint:fix
 ```
 
-## Current Status: Iteration 0
+## Current Status: Iteration 3 (Game Modes & Feedback)
 
-This implementation represents the **end-to-end skeleton** that validates the core architecture:
+This implementation now includes Guided and Free-play modes, finesse analysis wiring, and UI feedback:
 
 ### ✅ Completed Features
 
-- **Directory Structure**: Full project scaffolding
-- **Type Definitions**: Complete TypeScript interfaces from DESIGN.md
-- **Pure Reducer**: State transitions with `Init`, `Lock`, `Tick`, `EnqueueInput` actions
-- **Input Handler**: Mock implementation with proper interface
-- **Core Stubs**: Placeholder functions for movement/rotation logic
-- **Finesse Calculator**: Stub implementation returning minimal results
-- **UI Rendering**: Canvas board renderer and debug HUD
-- **Test Suite**: Unit tests for reducer and input handler contracts
+- Architecture skeleton and unidirectional data flow
+- Types & Reducer: pure state transitions and immutability
+- Input handling: DOM + mock handlers, DAS/ARR timing, normalization tests
+- Core logic: SRS rotation, movement/collision, line clear utils
+- Finesse calculator: BFS minimality on empty board
+- Finesse service: analyzes from spawn state; applies 50ms cancellation window; mode-aware faults
+- Modes: Free-play and Guided with drill prompts and progression
+- UI: Canvas board and HUD with feedback and prompts
+- Tests: Broad unit coverage plus golden fixtures
 
 ### 🎯 Validation Points
 
@@ -161,9 +162,10 @@ npm test:watch
 
 ### Test Coverage
 
-- **Reducer Tests**: Verifies pure functions and immutability
-- **Input Handler Tests**: Validates contract compliance and action dispatching
-- **Integration Tests**: End-to-end data flow (future)
+- Reducer: immutability, branches, new mode/feedback actions
+- Input handler: contracts, DOM mapping, DAS/ARR
+- Core: board ops, SRS, RNG
+- Finesse: BFS optimality, normalization, golden fixtures, service integration
 
 ## Next Iterations
 
@@ -177,9 +179,7 @@ npm test:watch
 - Create test cases with known optimal solutions
 
 ### Iteration 3: Game Modes & Feedback
-- Build Guided and Free-play modes
-- Connect finesse analysis to UI feedback
-- Add piece spawning and line clearing
+- Completed basic Guided/Free-play with feedback; next add piece lifecycle (spawn/queue/hold)
 
 ## Contributing
 

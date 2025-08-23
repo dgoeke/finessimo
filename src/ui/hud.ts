@@ -65,6 +65,34 @@ export class BasicHudRenderer implements HudRenderer {
       configEl.textContent = 
         `Cancel Window: ${gameState.gameplay.finesseCancelMs}ms`;
     }
+    
+    // Update game mode
+    const gameModeEl = this.elements.gameMode;
+    if (gameModeEl) gameModeEl.textContent = `Mode: ${gameState.currentMode}`;
+    
+    // Update mode prompt
+    const modePromptEl = this.elements.modePrompt;
+    if (modePromptEl) {
+      const promptTextEl = modePromptEl.querySelector('.prompt-text');
+      if (promptTextEl) {
+        promptTextEl.textContent = gameState.modePrompt || 'No active prompt';
+      }
+      modePromptEl.style.display = gameState.modePrompt ? 'block' : 'none';
+    }
+    
+    // Update finesse feedback
+    const finesseFeedbackEl = this.elements.finesseFeedback;
+    if (finesseFeedbackEl) {
+      if (gameState.finesseFeedback) {
+        finesseFeedbackEl.textContent = gameState.finesseFeedback.message;
+        finesseFeedbackEl.className = gameState.finesseFeedback.isOptimal 
+          ? 'finesse-feedback optimal' 
+          : 'finesse-feedback suboptimal';
+        finesseFeedbackEl.style.display = 'block';
+      } else {
+        finesseFeedbackEl.style.display = 'none';
+      }
+    }
   }
 
   private createElements(): void {
@@ -81,6 +109,16 @@ export class BasicHudRenderer implements HudRenderer {
         <div id="nextQueue" class="hud-item">Next: -</div>
         <div id="inputLog" class="hud-item">Recent Inputs: -</div>
         <div id="config" class="hud-item">Config: -</div>
+        <div id="gameMode" class="hud-item">Mode: -</div>
+        
+        <div id="modePrompt" class="mode-prompt" style="display: none;">
+          <h3>Current Challenge</h3>
+          <div class="prompt-text">No active prompt</div>
+        </div>
+        
+        <div id="finesseFeedback" class="finesse-feedback" style="display: none;">
+          Finesse feedback will appear here
+        </div>
         
         <h3>Action Log</h3>
         <div id="actionLog" class="action-log"></div>
@@ -90,6 +128,8 @@ export class BasicHudRenderer implements HudRenderer {
           <button id="testLock">Test Lock Action</button>
           <button id="testTick">Test Tick Action</button>
           <button id="testInit">Test Init Action</button>
+          <button id="setFreePlay">Free Play Mode</button>
+          <button id="setGuided">Guided Mode</button>
         </div>
       </div>
       
@@ -162,6 +202,41 @@ export class BasicHudRenderer implements HudRenderer {
           border-bottom: 1px solid #333;
           font-size: 10px;
         }
+        
+        .mode-prompt {
+          background: #1a1a1a;
+          border: 2px solid #f0a000;
+          color: #f0a000;
+          padding: 10px;
+          margin: 10px 0;
+          border-radius: 5px;
+        }
+        
+        .mode-prompt h3 {
+          margin: 0 0 8px 0;
+          color: #f0a000;
+          font-size: 14px;
+        }
+        
+        .finesse-feedback {
+          padding: 8px 12px;
+          margin: 8px 0;
+          border-radius: 4px;
+          font-weight: bold;
+          font-size: 13px;
+        }
+        
+        .finesse-feedback.optimal {
+          background: #1e4d1e;
+          border: 1px solid #4CAF50;
+          color: #4CAF50;
+        }
+        
+        .finesse-feedback.suboptimal {
+          background: #4d1e1e;
+          border: 1px solid #f44336;
+          color: #f44336;
+        }
       </style>
     `;
     
@@ -174,6 +249,9 @@ export class BasicHudRenderer implements HudRenderer {
     this.elements.nextQueue = this.container.querySelector('#nextQueue')!;
     this.elements.inputLog = this.container.querySelector('#inputLog')!;
     this.elements.config = this.container.querySelector('#config')!;
+    this.elements.gameMode = this.container.querySelector('#gameMode')!;
+    this.elements.modePrompt = this.container.querySelector('#modePrompt')!;
+    this.elements.finesseFeedback = this.container.querySelector('#finesseFeedback')!;
     this.elements.actionLog = this.container.querySelector('#actionLog')!;
   }
   
@@ -195,10 +273,12 @@ export class BasicHudRenderer implements HudRenderer {
   }
   
   // Method to setup test button handlers
-  setupTestControls(dispatch: (action: Action) => void): void {
+  setupTestControls(dispatch: (action: Action) => void, setGameMode?: (mode: string) => void): void {
     const testLock = this.container?.querySelector('#testLock');
     const testTick = this.container?.querySelector('#testTick');
     const testInit = this.container?.querySelector('#testInit');
+    const setFreePlay = this.container?.querySelector('#setFreePlay');
+    const setGuided = this.container?.querySelector('#setGuided');
     
     testLock?.addEventListener('click', () => {
       dispatch({ type: 'Lock' });
@@ -210,6 +290,22 @@ export class BasicHudRenderer implements HudRenderer {
     
     testInit?.addEventListener('click', () => {
       dispatch({ type: 'Init', seed: `test-${Date.now()}` });
+    });
+    
+    setFreePlay?.addEventListener('click', () => {
+      if (setGameMode) {
+        setGameMode('freePlay');
+      } else {
+        dispatch({ type: 'SetMode', mode: 'freePlay' });
+      }
+    });
+    
+    setGuided?.addEventListener('click', () => {
+      if (setGameMode) {
+        setGameMode('guided');
+      } else {
+        dispatch({ type: 'SetMode', mode: 'guided' });
+      }
     });
   }
 
