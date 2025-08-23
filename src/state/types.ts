@@ -18,7 +18,7 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 
 // Pieces and rotation
 export type PieceId = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type Rot = 'spawn' | 'right' | 'left';
+export type Rot = 'spawn' | 'right' | 'two' | 'left';
 
 export interface TetrominoShape {
   id: PieceId;

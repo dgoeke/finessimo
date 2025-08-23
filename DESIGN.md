@@ -433,8 +433,10 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
 
 ### Wall Kick Tables
 
+**SRS Compliance Note:** This implementation follows standard SRS rules where only adjacent rotation states (90° turns) are allowed. Direct 180° rotations require two sequential 90° rotations.
+
 ```typescript
-// Standard kicks for JLSTZ pieces, updated for 4-way SRS
+// Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
 export const KICKS_JLSTZ: Record<
   string,
   ReadonlyArray<readonly [number, number]>
@@ -499,24 +501,9 @@ export const KICKS_JLSTZ: Record<
     [0, -2],
     [-1, -2],
   ],
-  // 180-degree rotation transitions (legacy)
-  "right->left": [
-    [0, 0],
-    [1, 0],
-    [1, -1],
-    [0, 2],
-    [1, 2],
-  ],
-  "left->right": [
-    [0, 0],
-    [-1, 0],
-    [-1, 1],
-    [0, -2],
-    [-1, -2],
-  ],
 };
 
-// Standard kicks for I piece, updated for 4-way SRS
+// Standard kicks for I piece (SRS-compliant 4-way rotation)
 export const KICKS_I: Record<
   string,
   ReadonlyArray<readonly [number, number]>
@@ -580,21 +567,6 @@ export const KICKS_I: Record<
     [-2, 0],
     [1, -2],
     [-2, 1],
-  ],
-  // 180-degree rotation transitions
-  "right->left": [
-    [0, 0],
-    [1, 0],
-    [-2, 0],
-    [1, 2],
-    [-2, -1],
-  ],
-  "left->right": [
-    [0, 0],
-    [-1, 0],
-    [2, 0],
-    [-1, -2],
-    [2, 1],
   ],
 };
 ```

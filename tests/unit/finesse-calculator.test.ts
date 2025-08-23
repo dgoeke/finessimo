@@ -72,6 +72,20 @@ describe('Finesse Calculator (BFS minimality)', () => {
     expect(found[0]).toBe('RotateCCW');
   });
 
+  test('Rotate to two state is 2 inputs (+ HardDrop)', () => {
+    const piece = spawnPiece('T');
+    const targetX = piece.x;
+    const targetRot: Rot = 'two';
+    const seqs = finesseCalculator.calculateOptimal(piece, targetX, targetRot, cfg);
+    const minLen = Math.min(...seqs.map(s => s.length));
+    expect(minLen).toBe(3); // Two rotations needed to reach 'two' state, plus HardDrop
+    const found = seqs.find(s => s.length === 3)!;
+    expect(found[2]).toBe('HardDrop');
+    // Could be CW+CW or CCW+CCW
+    expect(['RotateCW', 'RotateCCW']).toContain(found[0]);
+    expect(['RotateCW', 'RotateCCW']).toContain(found[1]);
+  });
+
   test('Unreachable target returns no sequences (O cannot rotate)', () => {
     const piece = spawnPiece('O');
     const targetX = piece.x;

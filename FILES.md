@@ -22,9 +22,9 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Core Mechanics
 
-- src/core/pieces.ts: Tetromino definitions (T,J,L,S,Z,I,O) with cell offsets for rotations (spawn, right, left), spawn top-left positions, and colors.
+- src/core/pieces.ts: Tetromino definitions (T,J,L,S,Z,I,O) with cell offsets for 4-way rotations (spawn, right, two, left), spawn top-left positions, and colors.
 - src/core/board.ts: Board operations: create empty board, placement/movement checks, move-to-wall, hard drop, bottom check, try-move, lock piece into board, detect completed lines, and clear/compact lines.
-- src/core/srs.ts: SRS rotation logic. Kick tables for I and JLSTZ, getNextRotation, canRotate, and tryRotate using wall kicks with y‑down coordinates.
+- src/core/srs.ts: SRS-compliant rotation logic. Kick tables for I and JLSTZ pieces (adjacent states only), getNextRotation, canRotate, and tryRotate using wall kicks with y‑down coordinates. Direct 180° rotations require sequential 90° turns.
 - src/core/rng.ts: Seeded 7‑bag randomizer. RNG state, string hashing, LCG, Fisher‑Yates shuffle, getNextPiece and getNextPieces for preview queues.
 - src/core/spawning.ts: Spawn helpers. Create a spawned ActivePiece, check spawn validity, top‑out detection, and a basic hold‑swap spawn helper.
 
