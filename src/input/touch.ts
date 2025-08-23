@@ -96,10 +96,10 @@ export class TouchInputHandler implements InputHandler {
       return; // No touch support
     }
 
-    // Create touch control overlay
+    // Create touch control overlay; scope it to the board frame on mobile
     const overlay = document.createElement('div');
     overlay.id = 'touch-controls';
-    overlay.className = 'touch-controls-overlay';
+    overlay.className = 'touch-controls-overlay scoped';
     overlay.innerHTML = `
       <div class="touch-zones">
         <!-- Top row: Rotate buttons -->
@@ -118,22 +118,30 @@ export class TouchInputHandler implements InputHandler {
           <span class="touch-label">→</span>
         </div>
         
-        <!-- Bottom area: Soft drop -->
+        <!-- Third row: Soft drop -->
         <div class="touch-zone drop-zone soft-drop" data-action="SoftDropDown">
           <span class="touch-label">↓</span>
         </div>
-      </div>
-      
-      <!-- Action buttons -->
-      <div class="touch-buttons">
-        <button class="touch-button hold-btn" data-action="Hold">Hold</button>
-        <button class="touch-button hard-drop-btn" data-action="HardDrop">Drop</button>
+        
+        <!-- Bottom row: Hold and Hard Drop as transparent zones -->
+        <div class="touch-zone hold" data-action="Hold">
+          <span class="touch-label">H</span>
+        </div>
+        <div class="touch-zone hard-drop" data-action="HardDrop">
+          <span class="touch-label">⤓</span>
+        </div>
       </div>
     `;
 
-    // Store zones for easy access
+    // Attach to the game board frame so it doesn't cover header or other UI
+    const boardFrame = document.querySelector('.board-frame');
     this.container = overlay;
-    document.body.appendChild(overlay);
+    if (boardFrame) {
+      boardFrame.appendChild(overlay);
+    } else {
+      // Fallback: attach to body (unlikely on current layout)
+      document.body.appendChild(overlay);
+    }
 
     // Initialize touch zones
     this.initializeTouchZones();
