@@ -1,4 +1,6 @@
-import { KeyAction, ActivePiece, GameplayConfig } from '../state/types';
+import { KeyAction, ActivePiece, GameplayConfig, Rot } from '../state/types';
+import { createEmptyBoard, canMove, moveToWall } from '../core/board';
+import { getNextRotation, tryRotate } from '../core/srs';
 
 // Finesse calculation result
 export interface FinesseResult {
@@ -21,7 +23,7 @@ export interface FinesseCalculator {
   calculateOptimal(
     piece: ActivePiece,
     targetX: number,
-    targetRot: string,
+    targetRot: Rot,
     config: GameplayConfig
   ): KeyAction[][];
   
@@ -29,72 +31,164 @@ export interface FinesseCalculator {
   analyze(
     piece: ActivePiece,
     targetX: number,
-    targetRot: string,
+    targetRot: Rot,
     playerInputs: KeyAction[],
     config: GameplayConfig
   ): FinesseResult;
 }
 
-// Stub implementation of the finesse calculator
-export class StubFinesseCalculator implements FinesseCalculator {
+// BFS-based implementation of the finesse calculator (empty board assumption)
+export class BfsFinesseCalculator implements FinesseCalculator {
   calculateOptimal(
     piece: ActivePiece,
     targetX: number,
-    targetRot: string,
+    targetRot: Rot,
     _config: GameplayConfig
   ): KeyAction[][] {
-    
-    // Stub implementation - returns a simple path
-    const stubPath: KeyAction[] = [];
-    
-    // Add rotation inputs if needed
-    if (targetRot !== piece.rot) {
-      stubPath.push('RotateCW');
+    // Use an empty board for finesse calculation (placement minimality is board-agnostic in trainer drills)
+    const board = createEmptyBoard();
+
+    type Node = { piece: ActivePiece; path: KeyAction[] };
+    const start: Node = { piece, path: [] };
+    const queue: Node[] = [start];
+    const visited = new Set<string>();
+    const results: KeyAction[][] = [];
+    let foundDepth: number | undefined;
+
+    const keyOf = (p: ActivePiece) => `${p.x},${p.y},${p.rot}`;
+    visited.add(keyOf(piece));
+
+    while (queue.length) {
+      const { piece: cur, path } = queue.shift()!;
+
+      // If we have found solutions, limit exploration to the same depth
+      if (foundDepth !== undefined && path.length > foundDepth) break;
+
+      // Check goal condition (x and rot match). y is irrelevant for minimal input placement.
+      if (cur.x === targetX && cur.rot === targetRot) {
+        // Append hard drop as the final required input
+        results.push([...path, 'HardDrop']);
+        foundDepth = path.length; // first time sets minimal depth
+        // Do not continue expanding this node; continue collecting other minimal solutions
+        continue;
+      }
+
+      // Expand neighbors as player intents, each with cost 1
+      // 1) Tap Left
+      if (canMove(board, cur, -1, 0)) {
+        const next: ActivePiece = { ...cur, x: cur.x - 1 };
+        const k = keyOf(next);
+        if (!visited.has(k)) {
+          visited.add(k);
+          queue.push({ piece: next, path: [...path, 'LeftDown'] });
+        }
+      }
+
+      // 2) Tap Right
+      if (canMove(board, cur, 1, 0)) {
+        const next: ActivePiece = { ...cur, x: cur.x + 1 };
+        const k = keyOf(next);
+        if (!visited.has(k)) {
+          visited.add(k);
+          queue.push({ piece: next, path: [...path, 'RightDown'] });
+        }
+      }
+
+      // 3) Hold Left (move to left wall)
+      {
+        const walled = moveToWall(board, cur, -1);
+        if (walled.x !== cur.x) {
+          const k = keyOf(walled);
+          if (!visited.has(k)) {
+            visited.add(k);
+            // Represent both tap and hold as the same counted input: key down
+            queue.push({ piece: walled, path: [...path, 'LeftDown'] });
+          }
+        }
+      }
+
+      // 4) Hold Right (move to right wall)
+      {
+        const walled = moveToWall(board, cur, 1);
+        if (walled.x !== cur.x) {
+          const k = keyOf(walled);
+          if (!visited.has(k)) {
+            visited.add(k);
+            queue.push({ piece: walled, path: [...path, 'RightDown'] });
+          }
+        }
+      }
+
+      // 5) Rotate CW
+      {
+        const target = getNextRotation(cur.rot, 'CW');
+        const rotated = tryRotate(cur, target, board);
+        if (rotated) {
+          const k = keyOf(rotated);
+          if (!visited.has(k)) {
+            visited.add(k);
+            queue.push({ piece: rotated, path: [...path, 'RotateCW'] });
+          }
+        }
+      }
+
+      // 6) Rotate CCW
+      {
+        const target = getNextRotation(cur.rot, 'CCW');
+        const rotated = tryRotate(cur, target, board);
+        if (rotated) {
+          const k = keyOf(rotated);
+          if (!visited.has(k)) {
+            visited.add(k);
+            queue.push({ piece: rotated, path: [...path, 'RotateCCW'] });
+          }
+        }
+      }
     }
-    
-    // Add movement inputs
-    const deltaX = targetX - piece.x;
-    if (deltaX < 0) {
-      stubPath.push('LeftDown');
-    } else if (deltaX > 0) {
-      stubPath.push('RightDown');
+
+    // Deduplicate identical key sequences (hold vs tap can coincide)
+    const uniq = new Map<string, KeyAction[]>();
+    for (const seq of results) {
+      const key = seq.join('|');
+      if (!uniq.has(key)) uniq.set(key, seq);
     }
-    
-    // Always end with hard drop
-    stubPath.push('HardDrop');
-    
-    return [stubPath];
+    return Array.from(uniq.values());
   }
-  
+
   analyze(
     piece: ActivePiece,
     targetX: number,
-    targetRot: string,
+    targetRot: Rot,
     playerInputs: KeyAction[],
     config: GameplayConfig
   ): FinesseResult {
-    
-    // Calculate optimal sequences
+    // Calculate optimal sequences (already includes HardDrop)
     const optimalSequences = this.calculateOptimal(piece, targetX, targetRot, config);
-    
-    // Normalize player inputs (stub implementation)
+
+    // Normalize player inputs (basic filter; full normalization handled elsewhere)
     const playerSequence = this.normalizeInputs(playerInputs, config);
-    
-    // Simple optimality check - just compare lengths
-    const optimalLength = optimalSequences[0]?.length || 0;
+
+    // Compare by length against optimal minimal length (handle empty safely for noUncheckedIndexedAccess)
+    const minLen = optimalSequences.reduce((min, seq) => Math.min(min, seq.length), Number.POSITIVE_INFINITY);
+    const optimalLength = minLen === Number.POSITIVE_INFINITY ? 0 : minLen;
     const playerLength = playerSequence.length;
-    const isOptimal = playerLength <= optimalLength;
-    
-    // Generate faults if not optimal
+    const isOptimal = playerLength === optimalLength;
+
     const faults: Fault[] = [];
-    if (!isOptimal) {
+    if (playerLength > optimalLength) {
       faults.push({
         type: 'extra_input',
         description: `Used ${playerLength} inputs instead of optimal ${optimalLength}`,
         position: optimalLength
       });
+    } else if (playerLength < optimalLength) {
+      faults.push({
+        type: 'suboptimal_path',
+        description: `Sequence incomplete or mismatched; expected ${optimalLength} inputs`,
+        position: playerLength
+      });
     }
-    
+
     return {
       optimalSequences,
       playerSequence,
@@ -102,16 +196,12 @@ export class StubFinesseCalculator implements FinesseCalculator {
       faults
     };
   }
-  
-  // Stub input normalization (to be implemented properly in later iterations)
+
+  // Simple input normalization: drop releases and soft drop ups
   private normalizeInputs(inputs: KeyAction[], _config: GameplayConfig): KeyAction[] {
-    // For now, just filter out key up events and return as-is
-    return inputs.filter(input => 
-      !input.endsWith('Up') && 
-      input !== 'SoftDropUp'
-    );
+    return inputs.filter((a) => a !== 'LeftUp' && a !== 'RightUp' && a !== 'SoftDropUp');
   }
 }
 
 // Export a default instance
-export const finesseCalculator = new StubFinesseCalculator();
+export const finesseCalculator = new BfsFinesseCalculator();
