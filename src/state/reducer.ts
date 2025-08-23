@@ -30,7 +30,8 @@ const defaultGameplayConfig: GameplayConfig = {
 function createInitialState(
   seed?: string,
   timing?: Partial<TimingConfig>,
-  gameplay?: Partial<GameplayConfig>
+  gameplay?: Partial<GameplayConfig>,
+  mode?: string
 ): GameState {
   return {
     board: createEmptyBoard(),
@@ -44,7 +45,10 @@ function createInitialState(
     tick: 0,
     status: 'playing',
     stats: {},
-    inputLog: []
+    inputLog: [],
+    currentMode: mode || 'freePlay',
+    finesseFeedback: null,
+    modePrompt: null
   };
 }
 
@@ -58,7 +62,7 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
   
   switch (action.type) {
     case 'Init':
-      return createInitialState(action.seed, action.timing, action.gameplay);
+      return createInitialState(action.seed, action.timing, action.gameplay, action.mode);
 
     case 'Lock':
       // Defensive: only process if state has valid tick property
@@ -194,6 +198,26 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
       return {
         ...state,
         inputLog: [...state.inputLog, { ...action.event }]
+      };
+
+    case 'SetMode':
+      return {
+        ...state,
+        currentMode: action.mode,
+        finesseFeedback: null,
+        modePrompt: null
+      };
+
+    case 'UpdateFinesseFeedback':
+      return {
+        ...state,
+        finesseFeedback: action.feedback
+      };
+
+    case 'UpdateModePrompt':
+      return {
+        ...state,
+        modePrompt: action.prompt
       };
 
     default:
