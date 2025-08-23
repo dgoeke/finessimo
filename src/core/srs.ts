@@ -21,7 +21,6 @@ export const KICKS_I: Record<string, ReadonlyArray<readonly [number, number]>> =
 };
 
 import { ActivePiece, Board, Rot } from '../state/types';
-import { PIECES } from './pieces';
 import { canPlacePiece } from './board';
 
 // Helper function to get the appropriate kick table for a piece

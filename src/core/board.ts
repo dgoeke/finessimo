@@ -148,8 +148,12 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
   for (let y = board.height - 1; y >= 0; y--) {
     if (!linesToClear.includes(y)) {
       // Copy this line to the target position
-      for (let x = 0; x < board.width; x++) {
-        newCells[idx(x, targetY)] = board.cells[idx(x, y)];
+      if (targetY >= 0) {
+        for (let x = 0; x < board.width; x++) {
+          const sourceIndex = idx(x, y);
+          const targetIndex = idx(x, targetY);
+          newCells[targetIndex] = board.cells[sourceIndex] || 0;
+        }
       }
       targetY--;
     }

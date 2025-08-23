@@ -1,5 +1,5 @@
 import { GameState, Action, Board, TimingConfig, GameplayConfig } from './types';
-import { tryMove, moveToWall, dropToBottom, lockPiece, isAtBottom, getCompletedLines, clearLines } from '../core/board';
+import { tryMove, dropToBottom, lockPiece, getCompletedLines, clearLines } from '../core/board';
 import { tryRotate, getNextRotation } from '../core/srs';
 
 // Create an empty board

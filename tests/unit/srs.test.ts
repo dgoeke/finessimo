@@ -183,5 +183,59 @@ describe('SRS Rotation Logic', () => {
       expect(canRotate(edgePiece, 'right', emptyBoard)).toBe(true);
       expect(tryRotate(edgePiece, 'right', emptyBoard)).not.toBeNull();
     });
+
+    it('should return false/null when no kick data exists for rotation', () => {
+      const tPiece: ActivePiece = {
+        id: 'T',
+        rot: 'spawn',
+        x: 4,
+        y: 2
+      };
+
+      // Mock getKickTable to return an empty object to test missing kick data
+      const originalKickTable = (global as any).getKickTable;
+      jest.doMock('../../src/core/srs', () => ({
+        ...jest.requireActual('../../src/core/srs'),
+        getKickTable: () => ({}) // Return empty kick table
+      }));
+
+      // Test that functions handle missing kick data gracefully
+      // Note: Since getKickTable is not exported, we'll test with an invalid rotation instead
+      // This creates a scenario where kickTable[kickKey] returns undefined
+      const invalidRotation = 'invalid' as any;
+      
+      expect(canRotate(tPiece, invalidRotation, emptyBoard)).toBe(false);
+      expect(tryRotate(tPiece, invalidRotation, emptyBoard)).toBeNull();
+      
+      // Restore original function if it existed
+      if (originalKickTable) {
+        (global as any).getKickTable = originalKickTable;
+      }
+    });
+
+    it('should return false when all kick attempts fail', () => {
+      // Create a board where all possible kick positions are blocked
+      const fullyBlockedBoard = createEmptyBoard();
+      
+      // Create a T piece at spawn position
+      const tPiece: ActivePiece = {
+        id: 'T',
+        rot: 'spawn',
+        x: 4,
+        y: 2
+      };
+      
+      // Block all possible positions that kicks could place the piece
+      // This includes the original position and all kick offsets
+      for (let x = 0; x < 10; x++) {
+        for (let y = 0; y < 6; y++) {
+          fullyBlockedBoard.cells[y * 10 + x] = 1;
+        }
+      }
+
+      // Now test that rotation fails when all kicks are blocked
+      expect(canRotate(tPiece, 'right', fullyBlockedBoard)).toBe(false);
+      expect(tryRotate(tPiece, 'right', fullyBlockedBoard)).toBeNull();
+    });
   });
 });
