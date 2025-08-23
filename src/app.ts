@@ -1,4 +1,4 @@
-import { GameState, Action } from './state/types';
+import { GameState, Action, TimingConfig, GameplayConfig } from './state/types';
 import { reducer } from './state/reducer';
 import { DOMInputHandler } from './input/handler';
 import { TouchInputHandler } from './input/touch';
@@ -39,7 +39,7 @@ export class FinessimoApp {
   }
 
   private initializeState(): GameState {
-    return reducer(undefined as any, { type: 'Init' });
+    return reducer(undefined, { type: 'Init' });
   }
 
   initialize(canvasElement: HTMLCanvasElement, hudElement: HTMLElement): void {
@@ -90,7 +90,9 @@ export class FinessimoApp {
       const initialKeyBindings = this.settingsRenderer.getCurrentKeyBindings();
       const toApply: Partial<GameSettings> = { ...initialSettings, keyBindings: initialKeyBindings };
       this.handleSettingsChange(toApply);
-    } catch {}
+    } catch {
+      /* ignore persisted settings errors */
+    }
     
     // Spawn initial piece
     this.spawnNextPiece();
@@ -298,7 +300,7 @@ export class FinessimoApp {
   // Handle settings changes
   private handleSettingsChange(newSettings: Partial<GameSettings>): void {
     // Dispatch timing changes
-    const timing: any = {};
+    const timing: Partial<TimingConfig> = {};
     if (newSettings.dasMs !== undefined) timing.dasMs = newSettings.dasMs;
     if (newSettings.arrMs !== undefined) timing.arrMs = newSettings.arrMs;
     if (newSettings.softDropCps !== undefined) timing.softDropCps = newSettings.softDropCps;
@@ -311,7 +313,7 @@ export class FinessimoApp {
     }
 
     // Dispatch gameplay/visual toggles that affect renderers
-    const gameplay: any = {};
+    const gameplay: Partial<GameplayConfig> = {};
     if (newSettings.finesseCancelMs !== undefined) gameplay.finesseCancelMs = newSettings.finesseCancelMs;
     if (newSettings.ghostPieceEnabled !== undefined) gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
     if (newSettings.nextPieceCount !== undefined) gameplay.nextPieceCount = newSettings.nextPieceCount;

@@ -36,7 +36,7 @@ function initializeApp(app: FinessimoApp): void {
     app.start();
     
     // Expose app globally for debugging
-    (window as any).finessimoApp = app;
+    window.finessimoApp = app;
     
     // Finessimo application is running
     
@@ -47,7 +47,7 @@ function initializeApp(app: FinessimoApp): void {
 
 // Handle page unload
 window.addEventListener('beforeunload', () => {
-  const app = (window as any).finessimoApp;
+  const app = window.finessimoApp;
   if (app) {
     app.destroy();
   }

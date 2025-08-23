@@ -1,5 +1,6 @@
 import { createRng, getNextPiece, getNextPieces, SevenBagRng } from '../../src/core/rng';
 import { PieceId } from '../../src/state/types';
+import { createCorruptedRng } from '../test-types';
 
 describe('Seven Bag RNG', () => {
   const ALL_PIECES: PieceId[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
@@ -137,14 +138,10 @@ describe('Seven Bag RNG', () => {
     });
 
     it('should throw error if bag is corrupted', () => {
-      const corruptedRng: SevenBagRng = {
-        seed: 'test',
-        currentBag: [undefined as any], // Corrupted bag
-        bagIndex: 0,
-        internalSeed: 12345
-      };
+      const corruptedRng = createCorruptedRng('test', 'undefined');
       
-      expect(() => getNextPiece(corruptedRng)).toThrow('Bag is empty or corrupted');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      expect(() => getNextPiece(corruptedRng as unknown as SevenBagRng)).toThrow('Bag is empty or corrupted');
     });
   });
 

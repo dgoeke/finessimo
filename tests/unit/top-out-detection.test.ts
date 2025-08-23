@@ -3,7 +3,7 @@ import { reducer } from '../../src/state/reducer';
 import { GameState, Board, idx } from '../../src/state/types';
 
 function createTestState(): GameState {
-  return reducer(undefined as any, { 
+  return reducer(undefined, { 
     type: 'Init', 
     seed: 'test', 
     timing: { 

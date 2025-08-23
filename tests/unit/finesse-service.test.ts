@@ -6,7 +6,7 @@ import type { GameState, ActivePiece, InputEvent } from '../../src/state/types';
 import { PIECES } from '../../src/core/pieces';
 
 function baseState(): GameState {
-  return reducer(undefined as any, { type: 'Init' });
+  return reducer(undefined, { type: 'Init' });
 }
 
 describe('FinesseService', () => {
@@ -55,4 +55,3 @@ describe('FinesseService', () => {
     expect(feedback.feedback.isOptimal).toBe(true);
   });
 });
-

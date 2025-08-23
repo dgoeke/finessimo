@@ -1,10 +1,11 @@
 import { describe, it, expect } from '@jest/globals';
 import { reducer } from '../../src/state/reducer';
 import { GameState } from '../../src/state/types';
+import { assertActivePiece } from '../test-helpers';
 
 // Helper to create a test game state
 function createTestState(): GameState {
-  return reducer(undefined as any, { type: 'Init', seed: 'test' });
+  return reducer(undefined, { type: 'Init', seed: 'test' });
 }
 
 // Helper to create state with active piece and next queue
@@ -16,8 +17,8 @@ function createStateWithPiece(): GameState {
 describe('hold system', () => {
   describe('first hold (no piece in hold slot)', () => {
     it('should hold current piece and spawn next from queue', () => {
-      let state = createStateWithPiece();
-      expect(state.active!.id).toBe('T');
+      const state = createStateWithPiece();
+      expect(state.active?.id).toBe('T');
       expect(state.hold).toBeUndefined();
       expect(state.canHold).toBe(true);
       expect(state.nextQueue.length).toBe(5);
@@ -26,7 +27,7 @@ describe('hold system', () => {
       const newState = reducer(state, { type: 'Hold' });
       
       expect(newState.hold).toBe('T');
-      expect(newState.active!.id).toBe(nextPiece);
+      expect(newState.active?.id).toBe(nextPiece);
       expect(newState.canHold).toBe(false);
       expect(newState.nextQueue.length).toBe(5); // Refilled
       expect(newState.nextQueue[0]).not.toBe(nextPiece); // Queue shifted
@@ -68,15 +69,17 @@ describe('hold system', () => {
       // First hold - should swap T with next piece from queue
       state = reducer(state, { type: 'Hold' });
       expect(state.hold).toBe('T');
-      expect(state.active!.id).toBe(originalFirstInQueue); // Next piece spawned
+      assertActivePiece(state);
+      expect(state.active.id).toBe(originalFirstInQueue); // Next piece spawned
       
       // Enable hold and do second hold - should swap current with held T
       state = { ...state, canHold: true };
-      const currentPieceId = state.active!.id;
+      const currentPieceId = state.active?.id;
       const newState = reducer(state, { type: 'Hold' });
       
       expect(newState.hold).toBe(currentPieceId);
-      expect(newState.active!.id).toBe('T'); // Original piece swapped back
+      assertActivePiece(newState);
+      expect(newState.active.id).toBe('T'); // Original piece swapped back
       expect(newState.canHold).toBe(false);
     });
 
@@ -106,7 +109,7 @@ describe('hold system', () => {
     });
 
     it('should not allow hold when no active piece', () => {
-      let state = createTestState();
+      const state = createTestState();
       expect(state.active).toBeUndefined();
       
       const newState = reducer(state, { type: 'Hold' });
@@ -153,11 +156,11 @@ describe('hold system', () => {
       // Should swap successfully
       expect(newState.status).toBe('playing');
       expect(newState.hold).toBe('T'); // Original T piece now held
-      expect(newState.active!.id).toBe('S'); // S piece now active
+      expect(newState.active?.id).toBe('S'); // S piece now active
     });
 
     it('should work normally on first hold', () => {
-      let state = createStateWithPiece();
+      const state = createStateWithPiece();
       
       const newState = reducer(state, { type: 'Hold' });
       
@@ -165,7 +168,7 @@ describe('hold system', () => {
       expect(newState.status).toBe('playing');
       expect(newState.hold).toBe('T'); // T piece held
       expect(newState.active).toBeDefined(); // Next piece spawned
-      expect(newState.active!.id).toBe(state.nextQueue[0]); // First from queue
+      expect(newState.active?.id).toBe(state.nextQueue[0]); // First from queue
     });
   });
 

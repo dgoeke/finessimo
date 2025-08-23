@@ -2,6 +2,8 @@ import { describe, it, expect } from '@jest/globals';
 import { createActivePiece, canSpawnPiece, isTopOut, spawnWithHold } from '../../src/core/spawning';
 import { canPlacePiece } from '../../src/core/board';
 import { Board } from '../../src/state/types';
+import { PIECES } from '../../src/core/pieces';
+import { assertDefined } from '../test-helpers';
 
 // Helper to create a test board
 function createTestBoard(): Board {
@@ -109,8 +111,7 @@ describe('spawning', () => {
       // This would be very rare in normal Tetris, but can test the logic
       // We'll block the exact cells where the piece would be at spawn
       const testPiece = createActivePiece('T');
-      const shape = require('../../src/core/pieces').PIECES['T'];
-      const cells = shape.cells['spawn'];
+      const cells = PIECES['T'].cells['spawn'];
       
       // Block one of the spawn cells that's within the visible board
       // Actually, since pieces spawn above board, let's test with modified spawn position
@@ -134,8 +135,9 @@ describe('spawning', () => {
       const result = spawnWithHold(board, 'T');
       
       expect(result).not.toBeNull();
-      expect(result![0].id).toBe('T');
-      expect(result![1]).toBeUndefined();
+      assertDefined(result);
+      expect(result[0].id).toBe('T');
+      expect(result[1]).toBeUndefined();
     });
 
     it('should swap with held piece', () => {
@@ -143,8 +145,9 @@ describe('spawning', () => {
       const result = spawnWithHold(board, 'T', 'I');
       
       expect(result).not.toBeNull();
-      expect(result![0].id).toBe('I'); // Spawn held piece
-      expect(result![1]).toBe('T'); // Next piece becomes hold
+      assertDefined(result);
+      expect(result[0].id).toBe('I'); // Spawn held piece
+      expect(result[1]).toBe('T'); // Next piece becomes hold
     });
 
     it('should return null on top out', () => {
@@ -175,8 +178,9 @@ describe('spawning', () => {
       const emptyBoard = createTestBoard();
       const result = spawnWithHold(emptyBoard, 'L', 'T');
       expect(result).not.toBeNull();
-      expect(result![0].id).toBe('T'); // Held piece spawns
-      expect(result![1]).toBe('L'); // Next becomes hold
+      assertDefined(result);
+      expect(result[0].id).toBe('T'); // Held piece spawns
+      expect(result[1]).toBe('L'); // Next becomes hold
     });
   });
 });

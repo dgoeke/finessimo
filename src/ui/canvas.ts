@@ -163,7 +163,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
   }
 
   private drawGrid(): void {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.canvas) return;
     
     this.ctx.strokeStyle = '#222222';
     this.ctx.lineWidth = 1;
@@ -173,7 +173,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
       const pixelX = x * this.cellSize;
       this.ctx.beginPath();
       this.ctx.moveTo(pixelX, 0);
-      this.ctx.lineTo(pixelX, this.canvas!.height);
+      this.ctx.lineTo(pixelX, this.canvas.height);
       this.ctx.stroke();
     }
     
@@ -182,7 +182,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
       const pixelY = y * this.cellSize;
       this.ctx.beginPath();
       this.ctx.moveTo(0, pixelY);
-      this.ctx.lineTo(this.canvas!.width, pixelY);
+      this.ctx.lineTo(this.canvas.width, pixelY);
       this.ctx.stroke();
     }
   }

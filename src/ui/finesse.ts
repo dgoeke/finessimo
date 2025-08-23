@@ -1,4 +1,4 @@
-import { GameState, ActivePiece } from '../state/types';
+import { GameState, ActivePiece, PieceId, Rot } from '../state/types';
 import { PIECES } from '../core/pieces';
 import { finesseCalculator } from '../finesse/calculator';
 // mode registry no longer needed here; use state.guidance
@@ -10,7 +10,7 @@ export interface FinesseVisualization {
   targetPosition?: ActivePiece;
   optimalSequence?: string[];
   currentStep?: number;
-  pathTrace?: Array<{ piece: ActivePiece; stepNumber: number; action: string }>;
+  pathTrace?: { piece: ActivePiece; stepNumber: number; action: string }[];
   isOptimal?: boolean;
   faultCount?: number;
 }
@@ -93,7 +93,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     }
   }
 
-  private renderPathTrace(pathTrace: Array<{ piece: ActivePiece; stepNumber: number; action: string }>): void {
+  private renderPathTrace(pathTrace: { piece: ActivePiece; stepNumber: number; action: string }[]): void {
     if (!this.ctx) return;
 
     // Draw each step in the optimal path
@@ -116,7 +116,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     this.ctx.font = '14px monospace';
     this.ctx.textAlign = 'left';
     
-    let x = padding;
+    const x = padding;
     const text = `Optimal: ${sequence.join(' → ')}`;
     this.ctx.fillText(text, x, y - 15);
     
@@ -408,9 +408,9 @@ export function createFinesseVisualization(gameState: GameState): FinesseVisuali
 }
 
 // Calculate where a piece would land when dropped at a specific X position and rotation
-function calculateDropPosition(gameState: GameState, pieceId: string, targetX: number, targetRot: string): number {
+function calculateDropPosition(gameState: GameState, pieceId: PieceId, targetX: number, targetRot: Rot): number {
   // Build a piece at target x/rot high above and compute ghost position on actual board
-  const piece: ActivePiece = { id: pieceId as any, rot: targetRot as any, x: targetX, y: -4 };
+  const piece: ActivePiece = { id: pieceId, rot: targetRot, x: targetX, y: -4 };
   const ghost = calculateGhostPosition(gameState.board, piece);
   return ghost.y;
 }
@@ -421,8 +421,8 @@ function spawnFromActive(active: ActivePiece): ActivePiece {
 }
 
 // Generate a trace of piece positions for each step in the optimal sequence
-function generatePathTrace(startPiece: ActivePiece, sequence: string[]): Array<{ piece: ActivePiece; stepNumber: number; action: string }> {
-  const trace: Array<{ piece: ActivePiece; stepNumber: number; action: string }> = [];
+function generatePathTrace(startPiece: ActivePiece, sequence: string[]): { piece: ActivePiece; stepNumber: number; action: string }[] {
+  const trace: { piece: ActivePiece; stepNumber: number; action: string }[] = [];
   const emptyBoard = createEmptyBoard();
   let currentPiece = { ...startPiece };
 
@@ -464,6 +464,6 @@ function generatePathTrace(startPiece: ActivePiece, sequence: string[]): Array<{
 // Calculate which step the player is currently on
 function calculateCurrentStep(gameState: GameState, optimalSequence: string[]): number {
   // Normalize the inputs with cancellation window to align with finesse analysis
-  const normalized = normalizeInputSequence(gameState.inputLog as any, gameState.gameplay.finesseCancelMs);
+  const normalized = normalizeInputSequence(gameState.inputLog, gameState.gameplay.finesseCancelMs);
   return Math.min(normalized.length, optimalSequence.length);
 }

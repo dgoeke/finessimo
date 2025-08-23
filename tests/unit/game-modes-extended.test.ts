@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach } from '@jest/globals';
 import { FreePlayMode } from '../../src/modes/freePlay';
 import { GuidedMode } from '../../src/modes/guided';
 import type { GameState, ActivePiece, Rot } from '../../src/state/types';
+import { createRng } from '../../src/core/rng';
 import type { FinesseResult } from '../../src/finesse/calculator';
 
 const mockState = (): GameState => ({
@@ -10,12 +11,20 @@ const mockState = (): GameState => ({
   hold: undefined,
   canHold: true,
   nextQueue: [],
-  rng: { seed: 't' },
+  rng: createRng('t'),
   timing: { tickHz: 60, dasMs: 133, arrMs: 2, softDropCps: 20, lockDelayMs: 500, lineClearDelayMs: 0, gravityEnabled: false, gravityMs: 1000 },
   gameplay: { finesseCancelMs: 50 },
   tick: 0,
   status: 'playing',
-  stats: {},
+  stats: {
+    piecesPlaced: 0,
+    linesCleared: 0,
+    optimalPlacements: 0,
+    incorrectPlacements: 0,
+    attempts: 0,
+    startedAtMs: 0,
+    timePlayedMs: 0,
+  },
   physics: { lastGravityTime: 0, lockDelayStartTime: null, isSoftDropping: false, lineClearStartTime: null, lineClearLines: [] },
   inputLog: [],
   currentMode: 'freePlay',
@@ -57,38 +66,44 @@ describe('GuidedMode - extended', () => {
   let state: GameState;
   beforeEach(() => {
     mode = new GuidedMode();
-    state = { ...mockState(), currentMode: 'guided', modeData: mode.initModeData?.() } as any;
+    state = { ...mockState(), currentMode: 'guided', modeData: mode.initModeData?.() };
   });
 
   test('wrong piece does not advance and gives feedback', () => {
-    const guidance = mode.getGuidance(state)!; // expects T first
+    const guidance = mode.getGuidance(state);
+    expect(guidance?.target).toBeDefined();
     const wrongPiece: ActivePiece = { id: 'J', rot: 'spawn', x: 4, y: 0 };
-    const finalPos: ActivePiece = { id: 'J', rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
+    if (!guidance?.target) return;
+    const finalPos: ActivePiece = { id: 'J', rot: guidance.target.rot, x: guidance.target.x, y: 0 };
     const result = mode.onPieceLocked(state, {
       optimalSequences: [['HardDrop']], playerSequence: ['HardDrop'], isOptimal: true, faults: []
     }, wrongPiece, finalPos);
 
     expect(result.feedback).toContain('Wrong piece');
-    expect(((state.modeData as any)?.currentDrillIndex ?? 0)).toBe(0);
+    expect((state.modeData as { currentDrillIndex: number } | undefined)?.currentDrillIndex ?? 0).toBe(0);
   });
 
   test('wrong target does not advance and gives feedback', () => {
-    const guidance = mode.getGuidance(state)!; // expects T at x target
-    const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
+    const guidance = mode.getGuidance(state);
+    const expected = mode.getExpectedPiece(state);
+    expect(guidance?.target).toBeDefined();
+    expect(expected).toBeDefined();
+    if (!guidance?.target || !expected) return;
+    const locked: ActivePiece = { id: expected, rot: 'spawn', x: 4, y: 0 };
     // send a different target x/rot
-    const badX = guidance.target!.x === 0 ? 1 : 0;
-    const badRot: Rot = guidance.target!.rot === 'spawn' ? 'right' : 'spawn';
+    const badX = guidance.target.x === 0 ? 1 : 0;
+    const badRot: Rot = guidance.target.rot === 'spawn' ? 'right' : 'spawn';
     const finalPos: ActivePiece = { id: locked.id, rot: badRot, x: badX, y: 0 };
     const result = mode.onPieceLocked(state, {
       optimalSequences: [['HardDrop']], playerSequence: ['HardDrop'], isOptimal: true, faults: []
     }, locked, finalPos);
 
     expect(result.feedback).toContain('Wrong target');
-    expect(((state.modeData as any)?.currentDrillIndex ?? 0)).toBe(0);
+    expect((state.modeData as { currentDrillIndex: number } | undefined)?.currentDrillIndex ?? 0).toBe(0);
   });
 
   test('getTargetFor/getExpectedPiece reflect current drill', () => {
-    const guidance = mode.getGuidance(state)!;
+    const guidance = mode.getGuidance(state);
     const exp = mode.getExpectedPiece(state);
     expect(guidance?.target).toEqual({ x: 0, rot: 'spawn' });
     expect(exp).toBe('T');

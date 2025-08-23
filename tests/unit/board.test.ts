@@ -91,8 +91,9 @@ describe('Board Logic', () => {
     it('should return moved piece for valid moves', () => {
       const movedRight = tryMove(emptyBoard, tPiece, 1, 0);
       expect(movedRight).not.toBeNull();
-      expect(movedRight!.x).toBe(5);
-      expect(movedRight!.y).toBe(2);
+      if (!movedRight) return; // guard for type narrowing
+      expect(movedRight.x).toBe(5);
+      expect(movedRight.y).toBe(2);
     });
 
     it('should return null for invalid moves', () => {

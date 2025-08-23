@@ -1,16 +1,18 @@
 import { reducer } from '../../src/state/reducer';
-import { GameState, TimingConfig, GameplayConfig } from '../../src/state/types';
+import { GameState, TimingConfig, GameplayConfig, Action } from '../../src/state/types';
+import { SevenBagRng } from '../../src/core/rng';
+import { assertActivePiece } from '../test-helpers';
 
 describe('Reducer', () => {
   let initialState: GameState;
   
   beforeEach(() => {
-    initialState = reducer(undefined as any, { type: 'Init' });
+    initialState = reducer(undefined, { type: 'Init' });
   });
 
   describe('Init action', () => {
     it('should create initial state with default values', () => {
-      const state = reducer(undefined as any, { type: 'Init' });
+      const state = reducer(undefined, { type: 'Init' });
       
       expect(state.board).toBeDefined();
       expect(state.board.width).toBe(10);
@@ -28,10 +30,10 @@ describe('Reducer', () => {
 
     it('should accept custom seed', () => {
       const customSeed = 'test-seed-123';
-      const state = reducer(undefined as any, { type: 'Init', seed: customSeed });
+      const state = reducer(undefined, { type: 'Init', seed: customSeed });
       
       // New system has full RNG state, just check seed property
-      expect((state.rng as any).seed).toBe(customSeed);
+      expect((state.rng as SevenBagRng & { seed: string }).seed).toBe(customSeed);
       expect(state.nextQueue).toHaveLength(5); // Should generate queue
     });
 
@@ -40,7 +42,7 @@ describe('Reducer', () => {
         dasMs: 200,
         arrMs: 5
       };
-      const state = reducer(undefined as any, { type: 'Init', timing: customTiming });
+      const state = reducer(undefined, { type: 'Init', timing: customTiming });
       
       expect(state.timing.dasMs).toBe(200);
       expect(state.timing.arrMs).toBe(5);
@@ -51,7 +53,7 @@ describe('Reducer', () => {
       const customGameplay: Partial<GameplayConfig> = {
         finesseCancelMs: 100
       };
-      const state = reducer(undefined as any, { type: 'Init', gameplay: customGameplay });
+      const state = reducer(undefined, { type: 'Init', gameplay: customGameplay });
       
       expect(state.gameplay.finesseCancelMs).toBe(100);
     });
@@ -132,9 +134,11 @@ describe('Reducer', () => {
       const newState = reducer(stateWithData, { type: 'Tick', timestampMs: Date.now() });
       
       // Active piece may move due to gravity, but other properties should be preserved
-      expect(newState.active!.id).toBe(stateWithData.active!.id);
-      expect(newState.active!.rot).toBe(stateWithData.active!.rot);
-      expect(newState.active!.x).toBe(stateWithData.active!.x);
+      assertActivePiece(newState);
+      assertActivePiece(stateWithData);
+      expect(newState.active.id).toBe(stateWithData.active.id);
+      expect(newState.active.rot).toBe(stateWithData.active.rot);
+      expect(newState.active.x).toBe(stateWithData.active.x);
       // Y may change due to gravity, so we don't test it
       expect(newState.hold).toBe(stateWithData.hold);
       expect(newState.canHold).toBe(stateWithData.canHold);
@@ -197,14 +201,14 @@ describe('Reducer', () => {
 
   describe('Default case (unknown actions)', () => {
     it('should return state unchanged for unknown action', () => {
-      const unknownAction = { type: 'UnknownAction' } as any;
+      const unknownAction = { type: 'UnknownAction' } as unknown as Action;
       const newState = reducer(initialState, unknownAction);
       
       expect(newState).toBe(initialState); // Should return exact same reference
     });
 
     it('should handle undefined action gracefully', () => {
-      const newState = reducer(initialState, undefined as any);
+      const newState = reducer(initialState, undefined as unknown as Action);
       
       expect(newState).toBe(initialState);
     });

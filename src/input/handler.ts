@@ -27,6 +27,39 @@ export function defaultKeyBindings(): KeyBindings {
 const STORAGE_KEY = 'finessimo';
 const LEGACY_BINDINGS_KEY = 'finessimo-keybindings';
 
+const BINDABLE_ACTIONS: readonly BindableAction[] = [
+  'MoveLeft',
+  'MoveRight',
+  'SoftDrop',
+  'HardDrop',
+  'RotateCW',
+  'RotateCCW',
+  'Hold'
+];
+
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null;
+}
+
+function hasKey<K extends string>(o: Record<string, unknown>, k: K): o is Record<K, unknown> {
+  return k in o;
+}
+
+function isStringArray(a: unknown): a is string[] {
+  return Array.isArray(a) && a.every((s) => typeof s === 'string');
+}
+
+function coerceKeyBindings(maybe: unknown): KeyBindings {
+  const fallback = defaultKeyBindings();
+  if (!isRecord(maybe)) return fallback;
+  const result: KeyBindings = { ...fallback };
+  for (const action of BINDABLE_ACTIONS) {
+    const v = (maybe as Record<BindableAction, unknown>)[action];
+    result[action] = isStringArray(v) ? [...v] : [...fallback[action]];
+  }
+  return result;
+}
+
 // Input normalization utility
 export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: number): KeyAction[] {
   // Filter to only keep relevant events
@@ -140,6 +173,7 @@ export class MockInputHandler implements InputHandler {
   }
 
   update(_gameState: GameState, _nowMs: number): void {
+    void _gameState; void _nowMs;
     // This would normally handle DAS/ARR timing
     // For the mock, we just increment the frame counter
     this.frameCounter++;
@@ -151,6 +185,7 @@ export class MockInputHandler implements InputHandler {
 
   setKeyBindings(_bindings: KeyBindings): void {
     // mock: ignore
+    void _bindings;
   }
   getKeyBindings(): KeyBindings {
     return defaultKeyBindings();
@@ -283,6 +318,8 @@ export class DOMInputHandler implements InputHandler {
   }
 
   update(gameState: GameState, nowMs: number): void {
+    const dispatch = this.dispatch;
+    if (!dispatch) return;
     this.frameCounter++;
     const currentTime = nowMs;
 
@@ -294,13 +331,13 @@ export class DOMInputHandler implements InputHandler {
         // DAS threshold reached, check for ARR
         if (this.state.arrLastTime === undefined) {
           // First DAS trigger
-          this.dispatch!({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+          dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
           this.state.arrLastTime = currentTime;
         } else {
           // Check ARR timing
           const arrElapsed = currentTime - this.state.arrLastTime;
           if (arrElapsed >= gameState.timing.arrMs) {
-            this.dispatch!({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+            dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
             this.state.arrLastTime = currentTime;
           }
         }
@@ -314,7 +351,7 @@ export class DOMInputHandler implements InputHandler {
         this.state.softDropLastTime === undefined ||
         currentTime - this.state.softDropLastTime >= interval
       ) {
-        this.dispatch!({ type: 'SoftDrop', on: true });
+        dispatch({ type: 'SoftDrop', on: true });
         this.state.softDropLastTime = currentTime;
       }
     }
@@ -325,24 +362,39 @@ export class DOMInputHandler implements InputHandler {
   }
 
   setKeyBindings(bindings: KeyBindings): void {
-    // Shallow clone and persist
-    this.bindings = JSON.parse(JSON.stringify(bindings));
+    // Shallow/deep clone and persist
+    const cloned: KeyBindings = {
+      MoveLeft: [...bindings.MoveLeft],
+      MoveRight: [...bindings.MoveRight],
+      SoftDrop: [...bindings.SoftDrop],
+      HardDrop: [...bindings.HardDrop],
+      RotateCW: [...bindings.RotateCW],
+      RotateCCW: [...bindings.RotateCCW],
+      Hold: [...bindings.Hold]
+    };
+    this.bindings = cloned;
     try {
       // Consolidated store: { settings?: ..., keyBindings?: ... }
       const storeRaw = localStorage.getItem(STORAGE_KEY);
-      let store: any = {};
-      if (storeRaw) {
-        try { store = JSON.parse(storeRaw); } catch { store = {}; }
-      }
-      store.keyBindings = this.bindings;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+      const parsed: unknown = storeRaw ? JSON.parse(storeRaw) : {};
+      const base: Record<string, unknown> = isRecord(parsed) ? parsed : {};
+      const newStore: Record<string, unknown> = { ...base, keyBindings: this.bindings };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newStore));
     } catch (e) {
       // ignore storage errors
     }
   }
 
   getKeyBindings(): KeyBindings {
-    return JSON.parse(JSON.stringify(this.bindings));
+    return {
+      MoveLeft: [...this.bindings.MoveLeft],
+      MoveRight: [...this.bindings.MoveRight],
+      SoftDrop: [...this.bindings.SoftDrop],
+      HardDrop: [...this.bindings.HardDrop],
+      RotateCW: [...this.bindings.RotateCW],
+      RotateCCW: [...this.bindings.RotateCCW],
+      Hold: [...this.bindings.Hold]
+    };
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -424,7 +476,7 @@ export class DOMInputHandler implements InputHandler {
     const b = this.bindings;
 
     // Determine which binding group this code belongs to
-    const inList = (list: string[]) => list.includes(code);
+    const inList = (list: string[]): boolean => list.includes(code);
 
     // On keyup, we only emit for continuous actions (move and soft drop)
     if (type === 'up') {
@@ -450,30 +502,23 @@ export class DOMInputHandler implements InputHandler {
       // Prefer consolidated store
       const storeRaw = localStorage.getItem(STORAGE_KEY);
       if (storeRaw) {
-        const store = JSON.parse(storeRaw);
-        if (store && store.keyBindings) {
-          const fallback = defaultKeyBindings();
-          const merged: KeyBindings = { ...fallback, ...store.keyBindings };
-          (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
-            if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
-          });
-          return merged;
+        const store: unknown = JSON.parse(storeRaw);
+        if (isRecord(store) && hasKey(store, 'keyBindings')) {
+          return coerceKeyBindings(store.keyBindings);
         }
       }
       // Legacy fallback
       const legacyRaw = localStorage.getItem(LEGACY_BINDINGS_KEY);
       if (legacyRaw) {
-        const parsed = JSON.parse(legacyRaw);
-        const fallback = defaultKeyBindings();
-        const merged: KeyBindings = { ...fallback, ...parsed };
-        (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
-          if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
-        });
+        const parsed: unknown = JSON.parse(legacyRaw);
+        const merged = coerceKeyBindings(parsed);
         // Migrate to consolidated store
         try {
-          const store = { keyBindings: merged };
+          const store: Record<string, unknown> = { keyBindings: merged };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-        } catch {}
+        } catch {
+          /* ignore migration errors */
+        }
         return merged;
       }
       return defaultKeyBindings();

@@ -11,7 +11,7 @@
 // Wall Kick Tables
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
-export const KICKS_JLSTZ: Record<string, ReadonlyArray<readonly [number, number]>> = {
+export const KICKS_JLSTZ: Record<string, readonly (readonly [number, number])[]> = {
   // 0 -> R / R -> 0
   'spawn->right': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
   'right->spawn': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
@@ -27,7 +27,7 @@ export const KICKS_JLSTZ: Record<string, ReadonlyArray<readonly [number, number]
 };
 
 // Standard kicks for I piece (SRS-compliant 4-way rotation)
-export const KICKS_I: Record<string, ReadonlyArray<readonly [number, number]>> = {
+export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
   // 0 -> R / R -> 0
   'spawn->right': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
   'right->spawn': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
@@ -46,7 +46,7 @@ import { ActivePiece, Board, Rot } from '../state/types';
 import { canPlacePiece } from './board';
 
 // Helper function to get the appropriate kick table for a piece
-function getKickTable(pieceId: string): Record<string, ReadonlyArray<readonly [number, number]>> {
+function getKickTable(pieceId: string): Record<string, readonly (readonly [number, number])[]> {
   return pieceId === 'I' ? KICKS_I : KICKS_JLSTZ;
 }
 

@@ -15,7 +15,7 @@
     "lint:fix": "eslint src tests --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "pre-commit": "npm-run-all clean typecheck test"
+    "pre-commit": "npm-run-all clean typecheck lint test"
   },
   "keywords": [
     "tetris",

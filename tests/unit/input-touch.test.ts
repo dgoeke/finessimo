@@ -1,5 +1,7 @@
 import { TouchInputHandler } from '../../src/input/touch';
-import { GameState } from '../../src/state/types';
+import { Action, GameState, KeyAction } from '../../src/state/types';
+import type { InputHandlerState } from '../../src/input/handler';
+import { createRng } from '../../src/core/rng';
 
 function makeState(): GameState {
   // Build a minimal valid GameState by initializing the app reducer indirectly would be complex here.
@@ -10,7 +12,7 @@ function makeState(): GameState {
     hold: undefined,
     canHold: true,
     nextQueue: [],
-    rng: {},
+    rng: createRng('touch'),
     timing: {
       tickHz: 60,
       dasMs: 133,
@@ -24,7 +26,15 @@ function makeState(): GameState {
     gameplay: { finesseCancelMs: 50 },
     tick: 0,
     status: 'playing',
-    stats: {},
+    stats: {
+      piecesPlaced: 0,
+      linesCleared: 0,
+      optimalPlacements: 0,
+      incorrectPlacements: 0,
+      attempts: 0,
+      startedAtMs: 0,
+      timePlayedMs: 0,
+    },
     physics: { lastGravityTime: 0, lockDelayStartTime: null, isSoftDropping: false, lineClearStartTime: null, lineClearLines: [] },
     inputLog: [],
     currentMode: 'freePlay',
@@ -36,14 +46,15 @@ function makeState(): GameState {
 
 describe('TouchInputHandler', () => {
   let handler: TouchInputHandler;
-  let dispatched: any[];
+  let dispatched: Action[];
+  interface Testable { state: InputHandlerState; triggerAction: (a: KeyAction, p: 'down' | 'up') => void }
 
   beforeEach(() => {
     // Provide a board-frame container like the app layout
     document.body.innerHTML = '<div class="board-frame"></div>';
     handler = new TouchInputHandler();
     dispatched = [];
-    handler.init((a) => dispatched.push(a));
+    handler.init((a: Action) => dispatched.push(a));
   });
 
   afterEach(() => {
@@ -68,9 +79,10 @@ describe('TouchInputHandler', () => {
 
     // Force internal state to simulate holding Right long enough to surpass DAS
     const now = 1_000_000;
-    (handler as any).state.currentDirection = 1;
-    (handler as any).state.dasStartTime = now - state.timing.dasMs;
-    (handler as any).state.arrLastTime = undefined;
+    const h = handler as unknown as Testable;
+    h.state.currentDirection = 1;
+    h.state.dasStartTime = now - state.timing.dasMs;
+    h.state.arrLastTime = undefined;
 
     handler.update(state, now);
     expect(dispatched.some(a => a.type === 'Move' && a.dir === 1 && a.source === 'das')).toBe(true);
@@ -88,10 +100,10 @@ describe('TouchInputHandler', () => {
     const base = 2_000_000;
 
     // Engage soft drop
-    (handler as any).triggerAction('SoftDropDown', 'down');
+    (handler as unknown as Testable).triggerAction('SoftDropDown', 'down');
     expect(dispatched.find(a => a.type === 'SoftDrop' && a.on === true)).toBeTruthy();
     // Align last pulse time to base to avoid relying on Date.now in trigger
-    (handler as any).state.softDropLastTime = base;
+    (handler as unknown as Testable).state.softDropLastTime = base;
 
     // Advance time beyond interval to trigger repeat
     const interval = Math.max(1, Math.floor(1000 / Math.max(1, state.timing.softDropCps)));
@@ -100,7 +112,7 @@ describe('TouchInputHandler', () => {
     expect(softCount).toBeGreaterThanOrEqual(2);
 
     // Release
-    (handler as any).triggerAction('SoftDropDown', 'up');
+    (handler as unknown as Testable).triggerAction('SoftDropDown', 'up');
     expect(dispatched.find(a => a.type === 'SoftDrop' && a.on === false)).toBeTruthy();
   });
 });

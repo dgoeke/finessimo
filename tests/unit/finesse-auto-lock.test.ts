@@ -8,7 +8,7 @@ describe('finesse analysis trigger logic', () => {
     // This tests the condition: if (prevState.active && !newState.active)
     
     function createTestState(): GameState {
-      return reducer(undefined as any, { 
+      return reducer(undefined, { 
         type: 'Init', 
         seed: 'test', 
         timing: { 
@@ -54,7 +54,7 @@ describe('finesse analysis trigger logic', () => {
 
   it('should detect piece lock on HardDrop', () => {
     function createTestState(): GameState {
-      return reducer(undefined as any, { 
+      return reducer(undefined, { 
         type: 'Init', 
         seed: 'test', 
         timing: { 

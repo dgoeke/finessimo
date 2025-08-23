@@ -36,7 +36,9 @@ describe('Finesse golden fixtures', () => {
       const minLen = Math.min(...seqs.map(s => s.length));
       expect(minLen).toBe(c.expectedLen);
       // Ensure HardDrop present in minimal sequence
-      const one = seqs.find(s => s.length === c.expectedLen)!;
+      const one = seqs.find(s => s.length === c.expectedLen);
+      expect(one).toBeDefined();
+      if (!one) return;
       expect(one[one.length - 1]).toBe('HardDrop');
       if (c.first) {
         expect(one[0]).toBe(c.first);
@@ -44,4 +46,3 @@ describe('Finesse golden fixtures', () => {
     });
   }
 });
-

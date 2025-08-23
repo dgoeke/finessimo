@@ -1,4 +1,4 @@
-import { GameState, ActivePiece, Rot, PieceId } from '../state/types';
+import { GameState, ActivePiece, Rot, PieceId, ModeGuidance } from '../state/types';
 import { FinesseResult } from '../finesse/calculator';
 import { GameMode, GameModeResult } from './index';
 
@@ -6,10 +6,12 @@ export class FreePlayMode implements GameMode {
   readonly name = 'freePlay';
   
   onBeforeSpawn(_state: GameState): { piece?: PieceId } | null {
+    void _state;
     return null; // no override
   }
 
-  getGuidance(_state: GameState) {
+  getGuidance(_state: GameState): ModeGuidance | null {
+    void _state;
     return null; // no special guidance
   }
   
@@ -19,6 +21,7 @@ export class FreePlayMode implements GameMode {
     _lockedPiece: ActivePiece,
     _finalPosition: ActivePiece
   ): GameModeResult {
+    void _lockedPiece; void _finalPosition;
     const { isOptimal, playerSequence, optimalSequences, faults } = finesseResult;
     
     if (isOptimal) {
@@ -45,22 +48,21 @@ export class FreePlayMode implements GameMode {
   }
   
   shouldPromptNext(_gameState: GameState): boolean {
-    return false;
+    void _gameState; return false;
   }
   
   getNextPrompt(_gameState: GameState): string | null {
-    return null;
+    void _gameState; return null;
   }
 
   // Free play analyzes the actual final target; no preset target
   getTargetFor(_lockedPiece: ActivePiece, _gameState: GameState): { targetX: number; targetRot: Rot } | null {
-    return null;
+    void _lockedPiece; void _gameState; return null;
   }
 
   getExpectedPiece(_gameState: GameState): PieceId | undefined {
-    return undefined;
+    void _gameState; return undefined;
   }
   
-  reset(): void {
-  }
+  reset(): void { void 0; }
 }
