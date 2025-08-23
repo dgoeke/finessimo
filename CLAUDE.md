@@ -18,7 +18,7 @@ tests/
 - **Coordinate System**: 10x20 board, origin `(0,0)` is top-left.
 - **Rotation Names**: Use the exact names: `spawn`, `right` (CW), `left` (CCW), `reverse` (180°).
 
-### Iteration 0: End-to-End Skeleton (Current Task)
+### Iteration 0: End-to-End Skeleton (Complete)
 
 **Goal**: Implement a minimal, end-to-end skeleton that validates the core architecture and data flow.
 
@@ -49,7 +49,7 @@ tests/
 
 ---
 
-### Iteration 1: Core Logic & Input (Next Steps)
+### Iteration 1: Core Logic & Input (Current Task)
 
 - **TODO**: Implement the input normalization logic in `src/input/handler.ts`, including the 50ms cancellation window.
 - **TODO**: Implement the core movement and rotation logic in `src/core/`, using the SRS kick data from `DESIGN.md`.
