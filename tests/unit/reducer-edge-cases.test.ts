@@ -147,7 +147,11 @@ describe('Reducer Edge Cases and Error Conditions', () => {
     it('should handle soft drop off', () => {
       const action: Action = { type: 'SoftDrop', on: false };
       const result = reducer(stateWithActivePiece, action);
-      expect(result).toBe(stateWithActivePiece); // No state change for off
+      
+      // New physics system updates soft drop state
+      expect(result).not.toBe(stateWithActivePiece); // State changes to track physics
+      expect(result.physics.isSoftDropping).toBe(false);
+      expect(result.active).toEqual(stateWithActivePiece.active); // But piece unchanged
     });
   });
 
@@ -263,11 +267,15 @@ describe('Reducer Edge Cases and Error Conditions', () => {
     });
   });
 
-  describe('Spawn action (unimplemented)', () => {
-    it('should return unchanged state for Spawn action', () => {
+  describe('Spawn action', () => {
+    it('should spawn piece when game is playing', () => {
       const action: Action = { type: 'Spawn' };
       const result = reducer(validState, action);
-      expect(result).toBe(validState); // No-op, returns same reference
+      
+      // Spawn is now implemented
+      expect(result).not.toBe(validState);
+      expect(result.active).toBeDefined(); // Should spawn a piece
+      expect(result.active!.id).toBe(validState.nextQueue[0]); // First from queue
     });
   });
 });

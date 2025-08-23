@@ -1,5 +1,6 @@
 import { GameState, Board, ActivePiece } from '../state/types';
 import { PIECES } from '../core/pieces';
+import { calculateGhostPosition } from '../core/board';
 
 export interface CanvasRenderer {
   initialize(canvas: HTMLCanvasElement): void;
@@ -44,6 +45,15 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     // Render board
     this.renderBoard(gameState.board);
     
+    // Render ghost piece first (so active piece draws on top)
+    if (gameState.active) {
+      const ghostPosition = calculateGhostPosition(gameState.board, gameState.active);
+      // Only render ghost piece if it's different from active piece position
+      if (ghostPosition.y !== gameState.active.y) {
+        this.renderGhostPiece(ghostPosition);
+      }
+    }
+    
     // Render active piece
     if (gameState.active) {
       this.renderActivePiece(gameState.active);
@@ -79,9 +89,29 @@ export class BasicCanvasRenderer implements CanvasRenderer {
       const x = piece.x + dx;
       const y = piece.y + dy;
       
-      // Only render cells that are within the visible board area
-      if (y >= 0 && y < this.boardHeight) {
-        this.drawCell(x, y, shape.color);
+      // Render cells that are within the board width and visible height
+      // Allow rendering above the board (negative y) but clamp to visible area
+      if (x >= 0 && x < this.boardWidth && y < this.boardHeight) {
+        // If y is negative, render at y=0 (top of visible board)
+        const renderY = Math.max(0, y);
+        this.drawCell(x, renderY, shape.color);
+      }
+    }
+  }
+
+  private renderGhostPiece(piece: ActivePiece): void {
+    if (!this.ctx) return;
+
+    const shape = PIECES[piece.id];
+    const cells = shape.cells[piece.rot];
+    
+    for (const [dx, dy] of cells) {
+      const x = piece.x + dx;
+      const y = piece.y + dy;
+      
+      // Only render ghost piece within visible board area
+      if (x >= 0 && x < this.boardWidth && y >= 0 && y < this.boardHeight) {
+        this.drawGhostCell(x, y, shape.color);
       }
     }
   }
@@ -99,6 +129,24 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     this.ctx.strokeStyle = '#333333';
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
+  }
+
+  private drawGhostCell(x: number, y: number, color: string): void {
+    if (!this.ctx) return;
+    
+    const pixelX = x * this.cellSize;
+    const pixelY = y * this.cellSize;
+    
+    // Draw ghost piece with transparent fill and dashed border
+    this.ctx.fillStyle = color + '40'; // Add 40 for ~25% opacity
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+    
+    // Draw dashed border for ghost piece
+    this.ctx.strokeStyle = color + 'AA'; // Add AA for ~67% opacity
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([4, 4]); // Dashed line pattern
+    this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
+    this.ctx.setLineDash([]); // Reset line dash
   }
 
   private drawGrid(): void {

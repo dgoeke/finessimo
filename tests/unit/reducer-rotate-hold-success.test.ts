@@ -20,7 +20,7 @@ describe('Reducer success paths: Rotate and Hold', () => {
     expect(rotated.active!.rot).toBe('right');
   });
 
-  it('Hold stores current piece id and clears active when allowed', () => {
+  it('Hold stores current piece id and spawns next piece when allowed', () => {
     const withPiece: GameState = {
       ...base,
       active: { id: 'S', rot: 'spawn', x: 4, y: 2 },
@@ -29,7 +29,8 @@ describe('Reducer success paths: Rotate and Hold', () => {
 
     const held = reducer(withPiece, { type: 'Hold' });
     expect(held).not.toBe(withPiece);
-    expect(held.active).toBeUndefined();
+    expect(held.active).toBeDefined(); // New system spawns next piece
+    expect(held.active!.id).toBe(withPiece.nextQueue[0]); // Should be first piece from queue
     expect(held.hold).toBe('S');
     expect(held.canHold).toBe(false);
   });

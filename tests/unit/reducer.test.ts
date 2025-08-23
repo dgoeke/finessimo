@@ -20,7 +20,7 @@ describe('Reducer', () => {
       expect(state.active).toBeUndefined();
       expect(state.hold).toBeUndefined();
       expect(state.canHold).toBe(true);
-      expect(state.nextQueue).toEqual([]);
+      expect(state.nextQueue).toHaveLength(5); // New system pre-fills queue
       expect(state.tick).toBe(0);
       expect(state.status).toBe('playing');
       expect(state.inputLog).toEqual([]);
@@ -30,7 +30,9 @@ describe('Reducer', () => {
       const customSeed = 'test-seed-123';
       const state = reducer(undefined as any, { type: 'Init', seed: customSeed });
       
-      expect(state.rng).toEqual({ seed: customSeed });
+      // New system has full RNG state, just check seed property
+      expect((state.rng as any).seed).toBe(customSeed);
+      expect(state.nextQueue).toHaveLength(5); // Should generate queue
     });
 
     it('should accept custom timing config', () => {
@@ -119,7 +121,7 @@ describe('Reducer', () => {
       expect(initialState).not.toBe(newState);
     });
 
-    it('should preserve all other properties', () => {
+    it('should preserve most properties but may move active piece with gravity', () => {
       const stateWithData: GameState = {
         ...initialState,
         active: { id: 'T', rot: 'spawn', x: 4, y: 0 },
@@ -127,9 +129,13 @@ describe('Reducer', () => {
         canHold: false
       };
       
-      const newState = reducer(stateWithData, { type: 'Tick' });
+      const newState = reducer(stateWithData, { type: 'Tick', timestampMs: Date.now() });
       
-      expect(newState.active).toEqual(stateWithData.active);
+      // Active piece may move due to gravity, but other properties should be preserved
+      expect(newState.active!.id).toBe(stateWithData.active!.id);
+      expect(newState.active!.rot).toBe(stateWithData.active!.rot);
+      expect(newState.active!.x).toBe(stateWithData.active!.x);
+      // Y may change due to gravity, so we don't test it
       expect(newState.hold).toBe(stateWithData.hold);
       expect(newState.canHold).toBe(stateWithData.canHold);
     });

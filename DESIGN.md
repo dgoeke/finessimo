@@ -4,6 +4,8 @@ Project name: Finessimo
 
 This document has been updated to incorporate architectural clarifications, ensuring minimal ambiguity for AI-assisted implementation.
 
+Note: For a concise per-file overview of the current src/ codebase, see FILES.md.
+
 ## Executive Summary
 
 A web-based training application to learn "2-step finesse" (placing any piece with minimum inputs), emphasizing correctness over speed to build durable muscle memory. Pieces are evaluated after placement for optimality, with feedback, drills, and progression.

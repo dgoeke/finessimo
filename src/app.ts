@@ -1,6 +1,6 @@
 import { GameState, Action } from './state/types';
 import { reducer } from './state/reducer';
-import { MockInputHandler } from './input/handler';
+import { DOMInputHandler } from './input/handler';
 import { BasicCanvasRenderer } from './ui/canvas';
 import { BasicHudRenderer } from './ui/hud';
 import { gameModeRegistry } from './modes';
@@ -8,7 +8,7 @@ import { finesseService } from './finesse/service';
 
 export class FinessimoApp {
   private gameState: GameState;
-  private inputHandler: MockInputHandler;
+  private inputHandler: DOMInputHandler;
   private canvasRenderer: BasicCanvasRenderer;
   private hudRenderer: BasicHudRenderer;
   private isRunning = false;
@@ -17,7 +17,7 @@ export class FinessimoApp {
 
   constructor() {
     this.gameState = this.initializeState();
-    this.inputHandler = new MockInputHandler();
+    this.inputHandler = new DOMInputHandler();
     this.canvasRenderer = new BasicCanvasRenderer();
     this.hudRenderer = new BasicHudRenderer();
   }
@@ -38,6 +38,9 @@ export class FinessimoApp {
     
     // Setup test controls
     this.hudRenderer.setupTestControls(this.dispatch.bind(this), this.setGameMode.bind(this));
+    
+    // Spawn initial piece
+    this.dispatch({ type: 'Spawn' });
     
     // Render initial state
     this.render();
@@ -85,13 +88,27 @@ export class FinessimoApp {
   }
 
   private update(): void {
+    const currentTime = performance.now();
+    
     // Update input handler
     this.inputHandler.update(this.gameState);
     
-    // Process any pending game logic updates here
-    // For now, we'll just dispatch a Tick action periodically
-    if (this.gameState.tick % 60 === 0) { // Every second
-      this.dispatch({ type: 'Tick' });
+    // Always dispatch Tick with timestamp for physics calculations
+    this.dispatch({ type: 'Tick', timestampMs: currentTime });
+    
+    // Handle line clear completion
+    if (this.gameState.status === 'lineClear' && 
+        this.gameState.physics.lineClearStartTime && 
+        this.gameState.timing.lineClearDelayMs > 0) {
+      const timeSinceStart = currentTime - this.gameState.physics.lineClearStartTime;
+      if (timeSinceStart >= this.gameState.timing.lineClearDelayMs) {
+        this.dispatch({ type: 'CompleteLineClear' });
+      }
+    }
+    
+    // Auto-spawn piece if no active piece and game is playing
+    if (!this.gameState.active && this.gameState.status === 'playing') {
+      this.dispatch({ type: 'Spawn' });
     }
   }
 
@@ -118,8 +135,8 @@ export class FinessimoApp {
     
     this.gameState = newState;
     
-    // Handle finesse analysis on piece lock
-    if (action.type === 'HardDrop' || action.type === 'Lock') {
+    // Handle finesse analysis on piece lock for any lock source
+    if (prevState.active && !newState.active) {
       this.handlePieceLock(prevState);
     }
   }

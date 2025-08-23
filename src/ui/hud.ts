@@ -123,11 +123,8 @@ export class BasicHudRenderer implements HudRenderer {
         <h3>Action Log</h3>
         <div id="actionLog" class="action-log"></div>
         
-        <h3>Test Controls</h3>
+        <h3>Game Modes</h3>
         <div class="test-controls">
-          <button id="testLock">Test Lock Action</button>
-          <button id="testTick">Test Tick Action</button>
-          <button id="testInit">Test Init Action</button>
           <button id="setFreePlay">Free Play Mode</button>
           <button id="setGuided">Guided Mode</button>
         </div>
@@ -272,25 +269,10 @@ export class BasicHudRenderer implements HudRenderer {
     }
   }
   
-  // Method to setup test button handlers
+  // Method to setup game mode controls
   setupTestControls(dispatch: (action: Action) => void, setGameMode?: (mode: string) => void): void {
-    const testLock = this.container?.querySelector('#testLock');
-    const testTick = this.container?.querySelector('#testTick');
-    const testInit = this.container?.querySelector('#testInit');
     const setFreePlay = this.container?.querySelector('#setFreePlay');
     const setGuided = this.container?.querySelector('#setGuided');
-    
-    testLock?.addEventListener('click', () => {
-      dispatch({ type: 'Lock' });
-    });
-    
-    testTick?.addEventListener('click', () => {
-      dispatch({ type: 'Tick' });
-    });
-    
-    testInit?.addEventListener('click', () => {
-      dispatch({ type: 'Init', seed: `test-${Date.now()}` });
-    });
     
     setFreePlay?.addEventListener('click', () => {
       if (setGameMode) {

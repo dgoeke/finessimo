@@ -66,6 +66,11 @@ export function dropToBottom(board: Board, piece: ActivePiece): ActivePiece {
   return currentPiece;
 }
 
+// Calculate ghost piece position (same as dropToBottom but more explicit naming)
+export function calculateGhostPosition(board: Board, piece: ActivePiece): ActivePiece {
+  return dropToBottom(board, piece);
+}
+
 // Check if piece is at the bottom (touching ground or other pieces)
 export function isAtBottom(board: Board, piece: ActivePiece): boolean {
   return !canMove(board, piece, 0, 1);

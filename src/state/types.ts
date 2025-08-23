@@ -46,6 +46,8 @@ export interface TimingConfig {
   softDropCps: number;
   lockDelayMs: number;
   lineClearDelayMs: number;
+  gravityEnabled: boolean;
+  gravityMs: number; // Milliseconds between gravity drops
 }
 
 // User actions at the input layer
@@ -71,6 +73,15 @@ export interface FinesseUIFeedback {
   timestamp: number;
 }
 
+// Physics timing state
+export interface PhysicsState {
+  lastGravityTime: number;
+  lockDelayStartTime: number | null;
+  isSoftDropping: boolean;
+  lineClearStartTime: number | null;
+  lineClearLines: number[];
+}
+
 // Game state
 export interface GameState {
   board: Board;
@@ -78,12 +89,13 @@ export interface GameState {
   hold: PieceId | undefined;
   canHold: boolean;
   nextQueue: PieceId[];
-  rng: unknown; // Opaque SevenBagRng state
+  rng: unknown; // SevenBagRng state from core/rng.ts
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
   status: 'playing' | 'lineClear' | 'topOut';
   stats: unknown; // Stats object definition
+  physics: PhysicsState;
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
   // Game mode and finesse feedback
@@ -95,14 +107,18 @@ export interface GameState {
 // State transitions
 export type Action =
   | { type: 'Init'; seed?: string; timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig>; mode?: string }
-  | { type: 'Tick' }
-  | { type: 'Spawn' }
+  | { type: 'Tick'; timestampMs: number }
+  | { type: 'Spawn'; piece?: PieceId }
   | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
   | { type: 'SoftDrop'; on: boolean }
   | { type: 'Rotate'; dir: 'CW' | 'CCW' }
   | { type: 'HardDrop' }
   | { type: 'Hold' }
   | { type: 'Lock' }
+  | { type: 'StartLockDelay'; timestampMs: number }
+  | { type: 'CancelLockDelay' }
+  | { type: 'StartLineClear'; lines: number[]; timestampMs: number }
+  | { type: 'CompleteLineClear' }
   | { type: 'ClearLines'; lines: number[] }
   | { type: 'EnqueueInput'; event: InputEvent }
   | { type: 'SetMode'; mode: string }
