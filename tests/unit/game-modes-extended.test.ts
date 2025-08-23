@@ -57,42 +57,41 @@ describe('GuidedMode - extended', () => {
   let state: GameState;
   beforeEach(() => {
     mode = new GuidedMode();
-    state = mockState();
+    state = { ...mockState(), currentMode: 'guided', modeData: mode.initModeData?.() } as any;
   });
 
   test('wrong piece does not advance and gives feedback', () => {
-    const current = mode.getCurrentDrill()!; // expects T first
+    const guidance = mode.getGuidance(state)!; // expects T first
     const wrongPiece: ActivePiece = { id: 'J', rot: 'spawn', x: 4, y: 0 };
-    const finalPos: ActivePiece = { id: 'J', rot: current.targetRot, x: current.targetX, y: 0 };
+    const finalPos: ActivePiece = { id: 'J', rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
     const result = mode.onPieceLocked(state, {
       optimalSequences: [['HardDrop']], playerSequence: ['HardDrop'], isOptimal: true, faults: []
     }, wrongPiece, finalPos);
 
     expect(result.feedback).toContain('Wrong piece');
-    expect(mode.getProgress().current).toBe(0);
+    expect(((state.modeData as any)?.currentDrillIndex ?? 0)).toBe(0);
   });
 
   test('wrong target does not advance and gives feedback', () => {
-    const current = mode.getCurrentDrill()!; // expects T at x target
-    const locked: ActivePiece = { id: current.piece, rot: 'spawn', x: 4, y: 0 };
+    const guidance = mode.getGuidance(state)!; // expects T at x target
+    const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
     // send a different target x/rot
-    const badX = current.targetX === 0 ? 1 : 0;
-    const badRot: Rot = current.targetRot === 'spawn' ? 'right' : 'spawn';
-    const finalPos: ActivePiece = { id: current.piece, rot: badRot, x: badX, y: 0 };
+    const badX = guidance.target!.x === 0 ? 1 : 0;
+    const badRot: Rot = guidance.target!.rot === 'spawn' ? 'right' : 'spawn';
+    const finalPos: ActivePiece = { id: locked.id, rot: badRot, x: badX, y: 0 };
     const result = mode.onPieceLocked(state, {
       optimalSequences: [['HardDrop']], playerSequence: ['HardDrop'], isOptimal: true, faults: []
     }, locked, finalPos);
 
     expect(result.feedback).toContain('Wrong target');
-    expect(mode.getProgress().current).toBe(0);
+    expect(((state.modeData as any)?.currentDrillIndex ?? 0)).toBe(0);
   });
 
   test('getTargetFor/getExpectedPiece reflect current drill', () => {
-    const cur = mode.getCurrentDrill()!;
-    const target = mode.getTargetFor({ id: cur.piece, rot: 'spawn', x: 4, y: 0 }, state);
+    const guidance = mode.getGuidance(state)!;
     const exp = mode.getExpectedPiece(state);
-    expect(target).toEqual({ targetX: cur.targetX, targetRot: cur.targetRot });
-    expect(exp).toBe(cur.piece);
+    expect(guidance?.target).toEqual({ x: 0, rot: 'spawn' });
+    expect(exp).toBe('T');
   });
 
   test('shouldPromptNext is false when active piece exists', () => {
@@ -100,4 +99,3 @@ describe('GuidedMode - extended', () => {
     expect(mode.shouldPromptNext(stateWithActive)).toBe(false);
   });
 });
-

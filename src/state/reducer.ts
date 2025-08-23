@@ -28,7 +28,9 @@ const defaultTimingConfig: TimingConfig = {
 
 // Default gameplay configuration
 const defaultGameplayConfig: GameplayConfig = {
-  finesseCancelMs: 50
+  finesseCancelMs: 50,
+  ghostPieceEnabled: true,
+  nextPieceCount: 5
 };
 
 // Create initial physics state
@@ -67,6 +69,7 @@ function createInitialState(
     physics: createInitialPhysics(),
     inputLog: [],
     currentMode: mode || 'freePlay',
+    modeData: null,
     finesseFeedback: null,
     modePrompt: null
   };
@@ -149,6 +152,18 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
   };
 
   switch (action.type) {
+    case 'UpdateTiming':
+      return {
+        ...state,
+        timing: { ...state.timing, ...action.timing }
+      };
+
+    case 'UpdateGameplay':
+      return {
+        ...state,
+        gameplay: { ...state.gameplay, ...action.gameplay }
+      };
+
     case 'Init':
       return createInitialState(action.seed, action.timing, action.gameplay, action.mode);
 
@@ -442,6 +457,18 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
       return {
         ...state,
         modePrompt: action.prompt
+      };
+
+    case 'UpdateGuidance':
+      return {
+        ...state,
+        guidance: action.guidance
+      };
+
+    case 'UpdateModeData':
+      return {
+        ...state,
+        modeData: action.data
       };
 
     case 'StartLineClear':

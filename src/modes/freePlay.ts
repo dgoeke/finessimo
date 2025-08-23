@@ -5,6 +5,14 @@ import { GameMode, GameModeResult } from './index';
 export class FreePlayMode implements GameMode {
   readonly name = 'freePlay';
   
+  onBeforeSpawn(_state: GameState): { piece?: PieceId } | null {
+    return null; // no override
+  }
+
+  getGuidance(_state: GameState) {
+    return null; // no special guidance
+  }
+  
   onPieceLocked(
     _gameState: GameState, 
     finesseResult: FinesseResult,

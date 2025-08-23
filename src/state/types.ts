@@ -37,6 +37,9 @@ export interface ActivePiece {
 // Config
 export interface GameplayConfig {
   finesseCancelMs: number;   // default: 50
+  // Visual/gameplay toggles used by UI renderers
+  ghostPieceEnabled?: boolean; // default true
+  nextPieceCount?: number;     // default 5 (preview count)
 }
 
 export interface TimingConfig {
@@ -73,6 +76,13 @@ export interface FinesseUIFeedback {
   timestamp: number;
 }
 
+// Generic guidance provided by game modes for UI and engine policies
+export interface ModeGuidance {
+  target?: { x: number; rot: Rot };
+  label?: string; // prompt/description
+  visual?: { highlightTarget?: boolean; showPath?: boolean };
+}
+
 // Physics timing state
 export interface PhysicsState {
   lastGravityTime: number;
@@ -100,8 +110,11 @@ export interface GameState {
   inputLog: InputEvent[];
   // Game mode and finesse feedback
   currentMode: string;
+  modeData?: unknown;
   finesseFeedback: FinesseUIFeedback | null;
   modePrompt: string | null;
+  // Optional, mode-provided guidance for visualization and prompts
+  guidance?: ModeGuidance | null;
 }
 
 // State transitions
@@ -123,6 +136,12 @@ export type Action =
   | { type: 'EnqueueInput'; event: InputEvent }
   | { type: 'SetMode'; mode: string }
   | { type: 'UpdateFinesseFeedback'; feedback: FinesseUIFeedback | null }
-  | { type: 'UpdateModePrompt'; prompt: string | null };
+  | { type: 'UpdateModePrompt'; prompt: string | null }
+  // Settings updates
+  | { type: 'UpdateTiming'; timing: Partial<TimingConfig> }
+  | { type: 'UpdateGameplay'; gameplay: Partial<GameplayConfig> }
+  // Mode/UI guidance
+  | { type: 'UpdateGuidance'; guidance: ModeGuidance | null }
+  | { type: 'UpdateModeData'; data: unknown };
 
 export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
