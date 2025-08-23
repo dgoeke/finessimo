@@ -37,6 +37,7 @@
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
 html, body {
+  overflow-x: hidden; /* Prevent minor horizontal jank on mobile */
   background:
     radial-gradient(1200px 600px at 10% 0%, rgba(124,140,251,0.14), transparent 60%),
     radial-gradient(1000px 500px at 90% 0%, rgba(34,211,238,0.10), transparent 60%),
@@ -95,16 +96,22 @@ body {
 
 /* Board area */
 .game-area { display: grid; place-items: center; }
+/* Mobile play grid containers (used on phones) */
+.mobile-play { width: 100%; display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start; }
+.mobile-hold-slot, .mobile-preview-slot { display: none; }
+.mobile-board-slot { display: block; }
+.mobile-hold-slot, .mobile-preview-slot { justify-content: center; }
 .board-frame {
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 2px);
   padding: 12px;
+  position: relative; /* Anchor touch overlay locally on mobile */
   box-shadow: var(--shadow-md);
 }
 #game-canvas {
   display: block;
-  width: min(86vw, 360px);
+  width: min(84vw, 360px);
   height: auto;
   max-height: 80vh;
   image-rendering: pixelated;
@@ -138,7 +145,7 @@ body {
   .sidebar { order: 2; max-width: 680px; width: 100%; margin: 0 auto; }
   .game-area { order: 1; }
   .controls-group { grid-template-columns: 100px 1fr; }
-  #game-canvas { width: min(92vw, 420px); }
+  #game-canvas { width: min(80vw, 320px); }
 }
 
 @media (max-width: 680px) {
@@ -148,7 +155,70 @@ body {
   .panel { padding: 12px; border-radius: 10px; }
   .controls-title { font-size: 11px; }
   .controls-grid { gap: 6px 8px; }
-  #game-canvas { width: min(96vw, 440px); }
+  /* Three-column mobile layout: 10% | 80% | 10% */
+  /* Adjust to 15% | 70% | 15% */
+  .mobile-play { grid-template-columns: 0.15fr 0.7fr 0.15fr; gap: 6px; }
+  .mobile-hold-slot, .mobile-preview-slot { display: flex; }
+  .mobile-hold-slot { align-items: stretch; flex-direction: column; width: 100%; }
+  .mobile-preview-slot { align-items: stretch; flex-direction: column; width: 100%; }
+  /* Minimize frame chrome and maximize board area */
+  .board-frame { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .mobile-board-slot #game-canvas { width: 100% !important; height: auto; max-height: none; border-radius: 0; border: 0; }
+  /* Hide game state (left panel) and right panel/controls on mobile */
+  .left-panel, .right-panel, .controls-section { display: none; }
+  /* Fit side canvases within 10% columns and keep squares */
+  .mobile-hold-slot .hold-canvas,
+  .mobile-preview-slot .preview-canvas { width: 100%; height: auto; }
+  .mobile-preview-slot .preview-slot { flex-direction: column; align-items: center; gap: 2px; }
+  .mobile-hold-slot .hold-section,
+  .mobile-preview-slot .preview-section { padding: 4px; }
+  /* Hold: maximize usable width inside a thin bordered box */
+  /* Remove the inner wrapper box and let its children adopt the column layout */
+  .mobile-hold-slot .hold-section { display: contents; }
+  .mobile-preview-slot .preview-section { display: contents; }
+  .mobile-hold-slot .hold-title {
+    order: 1;
+    display: block;
+    margin: 0 0 2px 0;
+    padding: 0;
+    font-size: 10px;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+  .mobile-hold-slot .hold-container {
+    order: 2;
+    display: block;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+  }
+  .mobile-hold-slot .hold-canvas {
+    width: 100%;
+    height: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    display: block;
+  }
+  /* NEXT header: minimal and uppercase */
+  .mobile-preview-slot .preview-title { display: block; font-size: 10px; margin: 0 0 2px 0; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+  /* Hide right panel and controls on mobile */
+  .right-panel, .controls-section { display: none; }
+  /* Ensure mobile preview shows all items vertically */
+  .mobile-preview-slot .preview-container { display: flex; flex-direction: column !important; gap: 2px; width: 100%; }
+  .mobile-preview-slot .preview-slot { display: block !important; width: 100%; gap: 0; background: transparent; border: 0; padding: 0; border-radius: 0; }
+  .mobile-preview-slot .preview-slot.main { padding: 0 !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
+  .mobile-preview-slot .preview-label { display: none; }
+  .mobile-preview-slot .preview-canvas { width: 100%; height: auto; background: transparent; border: 0; border-radius: 0; }
+  .mobile-preview-slot .preview-slot.main .preview-canvas { background: transparent; border: 0; }
+  /* Convert bottom buttons to floating overlays so they don't cover board space */
+  .touch-buttons { background: transparent; border-top: 0; height: 0; padding: 0; }
+  .touch-zones { bottom: 0; }
+  .touch-button { position: absolute; bottom: 8px; width: 48px; height: 48px; border-radius: 999px; padding: 0; display: grid; place-items: center; }
+  .touch-button.hold-btn { left: 8px; }
+  .touch-button.hard-drop-btn { right: 8px; }
 }
 
 @media (max-height: 700px) and (min-width: 680px) {
@@ -304,13 +374,20 @@ body {
   right: 0;
   bottom: 0;
   z-index: 1000;
+  /* Do not block page scroll; enable events only on controls */
   pointer-events: none;
   display: none; /* Hidden by default, shown when touch is detected */
 }
 
+/* Scoped variant: overlay confined to the board frame */
+.touch-controls-overlay.scoped {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
 .touch-controls-overlay.active {
   display: block;
-  pointer-events: auto;
 }
 
 .touch-zones {
@@ -318,16 +395,19 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 80px; /* Leave space for buttons */
+  bottom: 0; /* Full-frame overlay, no reserved space */
   display: grid;
   grid-template-areas: 
     "rotate-ccw rotate-cw"
     "move-left move-right"
-    "soft-drop soft-drop";
-  grid-template-rows: 1fr 2fr 1fr;
+    "soft-drop soft-drop"
+    "hold hard-drop";
+  grid-template-rows: 1fr 2fr 1fr 0.8fr;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 8px;
+  /* Allow interaction within zones even when overlay itself ignores events */
+  pointer-events: none;
 }
 
 .touch-zone {
@@ -341,6 +421,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  /* Re-enable pointer events on the actual buttons */
+  pointer-events: auto;
 }
 
 .touch-zone:active,
@@ -370,6 +452,9 @@ body {
   grid-area: soft-drop;
 }
 
+.touch-zone.hold { grid-area: hold; }
+.touch-zone.hard-drop { grid-area: hard-drop; }
+
 .touch-label {
   font-size: 24px;
   font-weight: bold;
@@ -394,6 +479,7 @@ body {
   padding: 12px;
   background: var(--bg-elev-1);
   border-top: 1px solid var(--border);
+  pointer-events: auto;
 }
 
 .touch-button {
@@ -429,17 +515,12 @@ body {
 
 /* Hide touch controls on desktop */
 @media (hover: hover) and (pointer: fine) {
-  .touch-controls-overlay {
-    display: none !important;
-  }
+  .touch-controls-overlay { display: none !important; }
 }
 
-/* Show touch controls on touch devices */
+/* Show touch controls on touch devices (still non-blocking for scroll) */
 @media (hover: none) and (pointer: coarse) {
-  .touch-controls-overlay {
-    display: block;
-    pointer-events: auto;
-  }
+  .touch-controls-overlay { display: block; }
 }
 
 /* Adjust main UI when touch controls are active */

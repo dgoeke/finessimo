@@ -33,14 +33,20 @@
         </section>
 
         <section class="game-area">
-            <div class="board-frame">
-                <canvas id="game-canvas" width="300" height="600"></canvas>
+            <div class="mobile-play" id="mobile-play">
+                <div class="mobile-hold-slot" id="mobile-hold"></div>
+                <div class="mobile-board-slot">
+                    <div class="board-frame">
+                        <canvas id="game-canvas" width="300" height="600"></canvas>
+                    </div>
+                </div>
+                <div class="mobile-preview-slot" id="mobile-preview"></div>
             </div>
         </section>
 
         <aside class="sidebar right-panel">
             <div class="panel game-info-section" id="game-info">
-                <!-- Hold and Preview displays will be added here -->
+                <!-- Hold and Preview displays will be added here (desktop/tablet) -->
             </div>
             <div class="panel controls-section">
                 <h2 class="controls-title">Controls</h2>

@@ -49,10 +49,18 @@ export class FinessimoApp {
     this.hudRenderer.initialize(hudElement);
     
     // Initialize preview and hold renderers
-    const gameInfoElement = document.getElementById('game-info');
-    if (gameInfoElement) {
-      this.holdRenderer.initialize(gameInfoElement);
-      this.previewRenderer.initialize(gameInfoElement);
+    const isMobile = window.matchMedia('(max-width: 680px)').matches;
+    if (isMobile) {
+      const mobileHold = document.getElementById('mobile-hold');
+      const mobilePreview = document.getElementById('mobile-preview');
+      if (mobileHold) this.holdRenderer.initialize(mobileHold);
+      if (mobilePreview) this.previewRenderer.initialize(mobilePreview);
+    } else {
+      const gameInfoElement = document.getElementById('game-info');
+      if (gameInfoElement) {
+        this.holdRenderer.initialize(gameInfoElement);
+        this.previewRenderer.initialize(gameInfoElement);
+      }
     }
     
     // Initialize input handlers
