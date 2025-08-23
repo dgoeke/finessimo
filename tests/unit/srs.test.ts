@@ -10,16 +10,95 @@ describe('SRS Rotation Logic', () => {
   });
 
   describe('getNextRotation', () => {
-    it('should rotate clockwise correctly', () => {
+    it('should rotate clockwise correctly with 4-way SRS', () => {
       expect(getNextRotation('spawn', 'CW')).toBe('right');
-      expect(getNextRotation('right', 'CW')).toBe('left');
+      expect(getNextRotation('right', 'CW')).toBe('two');
+      expect(getNextRotation('two', 'CW')).toBe('left');
       expect(getNextRotation('left', 'CW')).toBe('spawn');
     });
 
-    it('should rotate counter-clockwise correctly', () => {
+    it('should rotate counter-clockwise correctly with 4-way SRS', () => {
       expect(getNextRotation('spawn', 'CCW')).toBe('left');
-      expect(getNextRotation('left', 'CCW')).toBe('right');
+      expect(getNextRotation('left', 'CCW')).toBe('two');
+      expect(getNextRotation('two', 'CCW')).toBe('right');
       expect(getNextRotation('right', 'CCW')).toBe('spawn');
+    });
+  });
+
+  describe('4-way SRS rotation sequence', () => {
+    it('should cycle through all four rotation states', () => {
+      const tPiece: ActivePiece = {
+        id: 'T',
+        rot: 'spawn',
+        x: 4,
+        y: 2
+      };
+
+      // Test full CW rotation cycle
+      let current = tPiece.rot;
+      current = getNextRotation(current, 'CW'); // spawn -> right
+      expect(current).toBe('right');
+      current = getNextRotation(current, 'CW'); // right -> two  
+      expect(current).toBe('two');
+      current = getNextRotation(current, 'CW'); // two -> left
+      expect(current).toBe('left');
+      current = getNextRotation(current, 'CW'); // left -> spawn
+      expect(current).toBe('spawn');
+
+      // Test full CCW rotation cycle
+      current = tPiece.rot;
+      current = getNextRotation(current, 'CCW'); // spawn -> left
+      expect(current).toBe('left');
+      current = getNextRotation(current, 'CCW'); // left -> two
+      expect(current).toBe('two');
+      current = getNextRotation(current, 'CCW'); // two -> right
+      expect(current).toBe('right');
+      current = getNextRotation(current, 'CCW'); // right -> spawn
+      expect(current).toBe('spawn');
+    });
+
+    it('should require sequential rotations for 180-degree turns (SRS-compliant)', () => {
+      const emptyBoard = createEmptyBoard();
+      const tPiece: ActivePiece = {
+        id: 'T',
+        rot: 'spawn',
+        x: 4,
+        y: 2
+      };
+
+      // Direct rotation to 'two' state should NOT be allowed in SRS
+      const directRotateToTwo = tryRotate(tPiece, 'two', emptyBoard);
+      expect(directRotateToTwo).toBeNull();
+
+      // Must rotate sequentially: spawn -> right -> two
+      const firstRotation = tryRotate(tPiece, 'right', emptyBoard);
+      expect(firstRotation).not.toBeNull();
+      expect(firstRotation!.rot).toBe('right');
+
+      const secondRotation = tryRotate(firstRotation!, 'two', emptyBoard);
+      expect(secondRotation).not.toBeNull();
+      expect(secondRotation!.rot).toBe('two');
+
+      // Test that from 'two' state, only adjacent rotations are allowed
+      const tPieceTwo: ActivePiece = {
+        id: 'T',
+        rot: 'two',
+        x: 4,
+        y: 2
+      };
+
+      // Direct rotation back to spawn should NOT be allowed
+      const directToSpawn = tryRotate(tPieceTwo, 'spawn', emptyBoard);
+      expect(directToSpawn).toBeNull();
+
+      // Adjacent rotations should work
+      const toRight = tryRotate(tPieceTwo, 'right', emptyBoard);
+      expect(toRight).not.toBeNull();
+      expect(toRight!.rot).toBe('right');
+
+      const toLeft = tryRotate(tPieceTwo, 'left', emptyBoard);
+      expect(toLeft).not.toBeNull();
+      expect(toLeft!.rot).toBe('left');
     });
   });
 
@@ -33,11 +112,15 @@ describe('SRS Rotation Logic', () => {
 
     it('should not allow O piece to change rotation', () => {
       expect(canRotate(oPiece, 'right', emptyBoard)).toBe(false);
+      expect(canRotate(oPiece, 'two', emptyBoard)).toBe(false);
+      expect(canRotate(oPiece, 'left', emptyBoard)).toBe(false);
       expect(canRotate(oPiece, 'spawn', emptyBoard)).toBe(true);
     });
 
     it('should return null for invalid O piece rotations', () => {
       expect(tryRotate(oPiece, 'right', emptyBoard)).toBeNull();
+      expect(tryRotate(oPiece, 'two', emptyBoard)).toBeNull();
+      expect(tryRotate(oPiece, 'left', emptyBoard)).toBeNull();
       expect(tryRotate(oPiece, 'spawn', emptyBoard)).toEqual(oPiece);
     });
   });
@@ -50,16 +133,27 @@ describe('SRS Rotation Logic', () => {
       y: 2
     };
 
-    it('should allow valid rotations on empty board', () => {
+    it('should allow valid adjacent rotations on empty board', () => {
       expect(canRotate(tPiece, 'right', emptyBoard)).toBe(true);
       expect(canRotate(tPiece, 'left', emptyBoard)).toBe(true);
+      // Direct 180° rotation should not be allowed in SRS
+      expect(canRotate(tPiece, 'two', emptyBoard)).toBe(false);
     });
 
-    it('should perform valid rotations on empty board', () => {
+    it('should perform valid adjacent rotations on empty board', () => {
       const rotatedRight = tryRotate(tPiece, 'right', emptyBoard);
       expect(rotatedRight).not.toBeNull();
       expect(rotatedRight!.rot).toBe('right');
       expect(rotatedRight!.id).toBe('T');
+      
+      const rotatedLeft = tryRotate(tPiece, 'left', emptyBoard);
+      expect(rotatedLeft).not.toBeNull();
+      expect(rotatedLeft!.rot).toBe('left');
+      expect(rotatedLeft!.id).toBe('T');
+
+      // Direct 180° rotation should fail in SRS
+      const rotatedTwo = tryRotate(tPiece, 'two', emptyBoard);
+      expect(rotatedTwo).toBeNull();
     });
   });
 
