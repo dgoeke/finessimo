@@ -1,4 +1,4 @@
-import { MockInputHandler, InputHandlerState } from '../../src/input/handler';
+import { MockInputHandler } from '../../src/input/handler';
 import { Action, GameState, KeyAction } from '../../src/state/types';
 
 describe('Input Handler', () => {
@@ -24,7 +24,9 @@ describe('Input Handler', () => {
         arrMs: 2,
         softDropCps: 20,
         lockDelayMs: 500,
-        lineClearDelayMs: 0
+        lineClearDelayMs: 0,
+        gravityEnabled: false,
+        gravityMs: 1000
       },
       gameplay: {
         finesseCancelMs: 50
@@ -32,7 +34,11 @@ describe('Input Handler', () => {
       tick: 0,
       status: 'playing',
       stats: {},
-      inputLog: []
+      physics: { lastGravityTime: 0, lockDelayStartTime: null, isSoftDropping: false, lineClearStartTime: null, lineClearLines: [] },
+      inputLog: [],
+      currentMode: 'freePlay',
+      finesseFeedback: null,
+      modePrompt: null
     };
   });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { reducer } from '../../src/state/reducer';
-import { GameState, Action, PhysicsState } from '../../src/state/types';
+import { GameState } from '../../src/state/types';
 
 // Helper to create a test game state
 function createTestState(): GameState {

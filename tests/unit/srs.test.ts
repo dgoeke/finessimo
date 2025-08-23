@@ -1,6 +1,6 @@
 import { canRotate, tryRotate, getNextRotation } from '../../src/core/srs';
 import { createEmptyBoard } from '../../src/core/board';
-import { ActivePiece, Board, Rot } from '../../src/state/types';
+import { ActivePiece, Board } from '../../src/state/types';
 
 describe('SRS Rotation Logic', () => {
   let emptyBoard: Board;

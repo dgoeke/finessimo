@@ -11,11 +11,12 @@ const mockState = (): GameState => ({
   canHold: true,
   nextQueue: [],
   rng: { seed: 't' },
-  timing: { tickHz: 60, dasMs: 133, arrMs: 2, softDropCps: 20, lockDelayMs: 500, lineClearDelayMs: 0 },
+  timing: { tickHz: 60, dasMs: 133, arrMs: 2, softDropCps: 20, lockDelayMs: 500, lineClearDelayMs: 0, gravityEnabled: false, gravityMs: 1000 },
   gameplay: { finesseCancelMs: 50 },
   tick: 0,
   status: 'playing',
   stats: {},
+  physics: { lastGravityTime: 0, lockDelayStartTime: null, isSoftDropping: false, lineClearStartTime: null, lineClearLines: [] },
   inputLog: [],
   currentMode: 'freePlay',
   finesseFeedback: null,
@@ -95,7 +96,7 @@ describe('GuidedMode - extended', () => {
   });
 
   test('shouldPromptNext is false when active piece exists', () => {
-    const stateWithActive = { ...state, active: { id: 'T', rot: 'spawn', x: 3, y: 0 } };
+    const stateWithActive = { ...state, active: { id: 'T' as const, rot: 'spawn' as const, x: 3, y: 0 } };
     expect(mode.shouldPromptNext(stateWithActive)).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { reducer } from '../../src/state/reducer';
-import { GameState, Action, TimingConfig, GameplayConfig } from '../../src/state/types';
+import { GameState, TimingConfig, GameplayConfig } from '../../src/state/types';
 
 describe('Reducer', () => {
   let initialState: GameState;
@@ -105,16 +105,16 @@ describe('Reducer', () => {
 
   describe('Tick action', () => {
     it('should increment tick counter', () => {
-      const state1 = reducer(initialState, { type: 'Tick' });
+      const state1 = reducer(initialState, { type: 'Tick', timestampMs: 0 });
       expect(state1.tick).toBe(1);
       
-      const state2 = reducer(state1, { type: 'Tick' });
+      const state2 = reducer(state1, { type: 'Tick', timestampMs: 0 });
       expect(state2.tick).toBe(2);
     });
 
     it('should not mutate original state', () => {
       const originalTick = initialState.tick;
-      const newState = reducer(initialState, { type: 'Tick' });
+      const newState = reducer(initialState, { type: 'Tick', timestampMs: 0 });
       
       expect(initialState.tick).toBe(originalTick);
       expect(newState.tick).toBe(originalTick + 1);
@@ -216,14 +216,14 @@ describe('Reducer', () => {
       
       // Try various actions that might mutate state
       reducer(initialState, { type: 'Lock' });
-      reducer(initialState, { type: 'Tick' });
+      reducer(initialState, { type: 'Tick', timestampMs: 0 });
       reducer(initialState, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } });
       
       expect(initialState.board.cells).toEqual(originalCells);
     });
 
     it('should create new state objects for state changes', () => {
-      const newState1 = reducer(initialState, { type: 'Tick' });
+      const newState1 = reducer(initialState, { type: 'Tick', timestampMs: 0 });
       const newState2 = reducer(newState1, { type: 'Lock' });
       
       expect(newState1).not.toBe(initialState);

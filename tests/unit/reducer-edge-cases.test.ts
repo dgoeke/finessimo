@@ -205,7 +205,7 @@ describe('Reducer Edge Cases and Error Conditions', () => {
         tick: 'invalid' as any // Invalid tick
       };
 
-      const action: Action = { type: 'Tick' };
+      const action: Action = { type: 'Tick', timestampMs: 0 };
       const result = reducer(invalidState as any, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });

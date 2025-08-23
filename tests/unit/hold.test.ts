@@ -63,7 +63,6 @@ describe('hold system', () => {
   describe('hold swap (piece already in hold slot)', () => {
     it('should swap current piece with held piece', () => {
       let state = createStateWithPiece();
-      const originalActiveId = state.active!.id; // 'T'
       const originalFirstInQueue = state.nextQueue[0]; // First piece in queue
       
       // First hold - should swap T with next piece from queue

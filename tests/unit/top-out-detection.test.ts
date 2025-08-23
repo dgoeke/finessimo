@@ -89,8 +89,7 @@ describe('top-out detection', () => {
     };
     
     const newState = reducer(stateWithFullBoard, { 
-      type: 'HardDrop',
-      timestampMs: 1000
+      type: 'HardDrop'
     });
     
     expect(newState.status).toBe('topOut');

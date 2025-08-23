@@ -1,7 +1,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { createActivePiece, canSpawnPiece, isTopOut, spawnWithHold } from '../../src/core/spawning';
 import { canPlacePiece } from '../../src/core/board';
-import { PieceId, Board } from '../../src/state/types';
+import { Board } from '../../src/state/types';
 
 // Helper to create a test board
 function createTestBoard(): Board {
@@ -12,24 +12,6 @@ function createTestBoard(): Board {
   };
 }
 
-// Helper to create a board that causes top-out
-function createBlockedTopBoard(): Board {
-  const board = createTestBoard();
-  // Create a scenario where pieces can't move from spawn position
-  // Stack blocks very high, leaving only the very top rows
-  for (let y = 2; y < 20; y++) {
-    for (let x = 0; x < 10; x++) {
-      board.cells[y * 10 + x] = 1; // Fill most of the board
-    }
-  }
-  // Also block some cells where pieces might land after spawning
-  board.cells[0 * 10 + 4] = 1; // Block (4,0) - where T piece center would land
-  board.cells[1 * 10 + 3] = 1; // Block (3,1) 
-  board.cells[1 * 10 + 4] = 1; // Block (4,1)
-  board.cells[1 * 10 + 5] = 1; // Block (5,1)
-  
-  return board;
-}
 
 describe('spawning', () => {
   describe('createActivePiece', () => {
@@ -174,8 +156,6 @@ describe('spawning', () => {
         board.cells[i] = 1;
       }
       
-      // Test with a custom spawn position that would collide
-      const result = spawnWithHold(board, 'T');
       
       // This test might need adjustment based on actual collision logic
       // For now, let's test the normal case

@@ -79,8 +79,7 @@ describe('finesse analysis trigger logic', () => {
     
     // HardDrop should lock the piece
     const stateAfterHardDrop = reducer(stateWithActive, { 
-      type: 'HardDrop',
-      timestampMs: 1000
+      type: 'HardDrop'
     });
     
     // Verify piece lock detection for HardDrop

@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { reducer } from '../../src/state/reducer';
-import { GameState, Action, Board, idx } from '../../src/state/types';
+import { GameState, Board, idx } from '../../src/state/types';
 
 // Helper to create game state with zero line clear delay
 function createTestState(): GameState {
@@ -104,8 +104,7 @@ describe('line clear with zero delay', () => {
     };
     
     const newState = reducer(stateWithBoard, { 
-      type: 'HardDrop',
-      timestampMs: 1000
+      type: 'HardDrop'
     });
     
     // Lines should be cleared immediately
