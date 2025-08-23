@@ -43,30 +43,141 @@ export const KICKS_I_180: Record<string, ReadonlyArray<readonly [number, number]
 };
 
 import { ActivePiece, Board, Rot } from '../state/types';
+import { PIECES } from './pieces';
+import { canPlacePiece } from './board';
 
-// Stub function for checking if a rotation is valid
+// Helper function to get the appropriate kick table for a piece
+function getKickTable(pieceId: string, is180: boolean): Record<string, ReadonlyArray<readonly [number, number]>> {
+  if (is180) {
+    return pieceId === 'I' ? KICKS_I_180 : KICKS_JLSTZ_180;
+  } else {
+    return pieceId === 'I' ? KICKS_I : KICKS_JLSTZ;
+  }
+}
+
+// Helper function to determine if a rotation is 180 degrees
+function is180Rotation(fromRot: Rot, toRot: Rot): boolean {
+  const rotations: Rot[] = ['spawn', 'right', 'reverse', 'left'];
+  const fromIndex = rotations.indexOf(fromRot);
+  const toIndex = rotations.indexOf(toRot);
+  const diff = Math.abs(toIndex - fromIndex);
+  return diff === 2;
+}
+
+// Helper function to get the next rotation state
+export function getNextRotation(currentRot: Rot, direction: 'CW' | 'CCW' | '180'): Rot {
+  if (direction === '180') {
+    switch (currentRot) {
+      case 'spawn': return 'reverse';
+      case 'right': return 'left';
+      case 'reverse': return 'spawn';
+      case 'left': return 'right';
+    }
+  }
+  
+  if (direction === 'CW') {
+    switch (currentRot) {
+      case 'spawn': return 'right';
+      case 'right': return 'reverse';
+      case 'reverse': return 'left';
+      case 'left': return 'spawn';
+    }
+  }
+  
+  if (direction === 'CCW') {
+    switch (currentRot) {
+      case 'spawn': return 'left';
+      case 'left': return 'reverse';
+      case 'reverse': return 'right';
+      case 'right': return 'spawn';
+    }
+  }
+  
+  return currentRot;
+}
+
+// Check if a rotation is valid (doesn't perform it, just checks)
 export function canRotate(
   piece: ActivePiece, 
   targetRot: Rot, 
-  _board: Board, 
-  _allow180: boolean = true
+  board: Board, 
+  allow180: boolean = true
 ): boolean {
-  // Stub implementation - always returns true for now
-  console.log(`canRotate: ${piece.id} from ${piece.rot} to ${targetRot}`);
-  return true;
+  // O piece doesn't rotate
+  if (piece.id === 'O') {
+    return piece.rot === targetRot;
+  }
+  
+  // Check if 180-degree rotation is allowed
+  if (!allow180 && is180Rotation(piece.rot, targetRot)) {
+    return false;
+  }
+  
+  const testPiece = { ...piece, rot: targetRot };
+  const kickKey = `${piece.rot}->${targetRot}`;
+  const is180 = is180Rotation(piece.rot, targetRot);
+  const kickTable = getKickTable(piece.id, is180);
+  const kicks = kickTable[kickKey];
+  
+  if (!kicks) {
+    return false;
+  }
+  
+  // Try each kick offset
+  for (const [dx, dy] of kicks) {
+    const kickedPiece = {
+      ...testPiece,
+      x: piece.x + dx,
+      y: piece.y + dy
+    };
+    
+    if (canPlacePiece(board, kickedPiece)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
-// Stub function for performing a rotation with wall kicks
+// Perform a rotation with wall kicks, returns the new piece position or null if invalid
 export function tryRotate(
   piece: ActivePiece, 
   targetRot: Rot, 
-  _board: Board, 
-  _allow180: boolean = true
+  board: Board, 
+  allow180: boolean = true
 ): ActivePiece | null {
-  // Stub implementation - returns piece with new rotation
-  console.log(`tryRotate: ${piece.id} from ${piece.rot} to ${targetRot}`);
-  return {
-    ...piece,
-    rot: targetRot
-  };
+  // O piece doesn't rotate
+  if (piece.id === 'O') {
+    return piece.rot === targetRot ? piece : null;
+  }
+  
+  // Check if 180-degree rotation is allowed
+  if (!allow180 && is180Rotation(piece.rot, targetRot)) {
+    return null;
+  }
+  
+  const testPiece = { ...piece, rot: targetRot };
+  const kickKey = `${piece.rot}->${targetRot}`;
+  const is180 = is180Rotation(piece.rot, targetRot);
+  const kickTable = getKickTable(piece.id, is180);
+  const kicks = kickTable[kickKey];
+  
+  if (!kicks) {
+    return null;
+  }
+  
+  // Try each kick offset
+  for (const [dx, dy] of kicks) {
+    const kickedPiece = {
+      ...testPiece,
+      x: piece.x + dx,
+      y: piece.y + dy
+    };
+    
+    if (canPlacePiece(board, kickedPiece)) {
+      return kickedPiece;
+    }
+  }
+  
+  return null;
 }

@@ -34,13 +34,7 @@ describe('Reducer - Extended Coverage', () => {
 
     it('should return original state for unimplemented actions (no-op)', () => {
       const unimplementedActions: Action[] = [
-        { type: 'Spawn' },
-        { type: 'Move', dir: -1, source: 'tap' },
-        { type: 'SoftDrop', on: true },
-        { type: 'Rotate', dir: 'CW' },
-        { type: 'HardDrop' },
-        { type: 'Hold' },
-        { type: 'ClearLines', lines: [19] }
+        { type: 'Spawn' }
       ];
 
       unimplementedActions.forEach(action => {

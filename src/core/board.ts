@@ -38,6 +38,39 @@ export function canMove(board: Board, piece: ActivePiece, dx: number, dy: number
   return canPlacePiece(board, newPiece);
 }
 
+// Move piece as far as possible in a direction (for DAS/ARR and wall charges)
+export function moveToWall(board: Board, piece: ActivePiece, direction: -1 | 1): ActivePiece {
+  let currentPiece = piece;
+  
+  while (canMove(board, currentPiece, direction, 0)) {
+    currentPiece = {
+      ...currentPiece,
+      x: currentPiece.x + direction
+    };
+  }
+  
+  return currentPiece;
+}
+
+// Drop piece to bottom (for hard drop)
+export function dropToBottom(board: Board, piece: ActivePiece): ActivePiece {
+  let currentPiece = piece;
+  
+  while (canMove(board, currentPiece, 0, 1)) {
+    currentPiece = {
+      ...currentPiece,
+      y: currentPiece.y + 1
+    };
+  }
+  
+  return currentPiece;
+}
+
+// Check if piece is at the bottom (touching ground or other pieces)
+export function isAtBottom(board: Board, piece: ActivePiece): boolean {
+  return !canMove(board, piece, 0, 1);
+}
+
 // Try to move a piece, return new position or null if invalid
 export function tryMove(board: Board, piece: ActivePiece, dx: number, dy: number): ActivePiece | null {
   if (canMove(board, piece, dx, dy)) {
@@ -116,11 +149,7 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
     if (!linesToClear.includes(y)) {
       // Copy this line to the target position
       for (let x = 0; x < board.width; x++) {
-        const sourceCell = board.cells[idx(x, y)];
-        const targetCell = newCells[idx(x, targetY)];
-        if (sourceCell !== undefined && targetCell !== undefined) {
-          newCells[idx(x, targetY)] = sourceCell;
-        }
+        newCells[idx(x, targetY)] = board.cells[idx(x, y)];
       }
       targetY--;
     }
