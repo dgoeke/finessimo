@@ -79,6 +79,7 @@ export interface InputHandlerState {
   dasStartTime: number | undefined;
   arrLastTime: number | undefined;
   currentDirection: -1 | 1 | undefined; // -1 for left, 1 for right
+  softDropLastTime?: number; // last timestamp a soft drop pulse was sent
 }
 
 // Mock implementation for testing the architecture
@@ -90,7 +91,8 @@ export class MockInputHandler implements InputHandler {
     isSoftDropDown: false,
     dasStartTime: undefined,
     arrLastTime: undefined,
-    currentDirection: undefined
+    currentDirection: undefined,
+    softDropLastTime: undefined
   };
   private frameCounter = 0;
 
@@ -214,7 +216,8 @@ export class DOMInputHandler implements InputHandler {
     isSoftDropDown: false,
     dasStartTime: undefined,
     arrLastTime: undefined,
-    currentDirection: undefined
+    currentDirection: undefined,
+    softDropLastTime: undefined
   };
   private frameCounter = 0;
   private boundKeyDownHandler: (event: KeyboardEvent) => void;
@@ -261,6 +264,18 @@ export class DOMInputHandler implements InputHandler {
             this.state.arrLastTime = currentTime;
           }
         }
+      }
+    }
+
+    // Handle soft drop repeat independent of gravity
+    if (this.state.isSoftDropDown) {
+      const interval = Math.max(1, Math.floor(1000 / Math.max(1, gameState.timing.softDropCps)));
+      if (
+        this.state.softDropLastTime === undefined ||
+        currentTime - this.state.softDropLastTime >= interval
+      ) {
+        this.dispatch!({ type: 'SoftDrop', on: true });
+        this.state.softDropLastTime = currentTime;
       }
     }
   }
@@ -359,7 +374,10 @@ export class DOMInputHandler implements InputHandler {
 
     // For keyup events, only allow releases that are directional (Left/Right/Down) or SoftDrop (KeyS)
     if (type === 'up') {
-      const allowOnKeyUp = code === 'ArrowLeft' || code === 'ArrowRight' || code === 'ArrowDown' || code === 'KeyS';
+      const allowOnKeyUp =
+        code === 'ArrowLeft' || code === 'KeyA' ||
+        code === 'ArrowRight' || code === 'KeyD' ||
+        code === 'ArrowDown' || code === 'KeyS';
       if (!allowOnKeyUp) return null; // Suppress rotation on keyup (e.g., ArrowUp)
     }
 
@@ -408,9 +426,12 @@ export class DOMInputHandler implements InputHandler {
         break;
       case 'SoftDropDown':
         this.state.isSoftDropDown = true;
+        // immediate pulse happens on keydown via dispatch; set timing for repeats
+        this.state.softDropLastTime = currentTime;
         break;
       case 'SoftDropUp':
         this.state.isSoftDropDown = false;
+        this.state.softDropLastTime = undefined;
         break;
     }
   }
