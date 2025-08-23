@@ -93,11 +93,11 @@ export class MockInputHandler implements InputHandler {
   }
 
   start(): void {
-    console.log('MockInputHandler: Started listening for input');
+    // MockInputHandler started
   }
 
   stop(): void {
-    console.log('MockInputHandler: Stopped listening for input');
+    // MockInputHandler stopped
   }
 
   update(_gameState: GameState): void {
@@ -123,7 +123,7 @@ export class MockInputHandler implements InputHandler {
       action
     };
 
-    console.log('MockInputHandler: Dispatching input', action);
+    // MockInputHandler dispatching input
     
     // Enqueue the input event
     this.dispatch({
@@ -358,9 +358,10 @@ export class DOMInputHandler implements InputHandler {
     const mapping = keyMapping[code];
     if (!mapping) return null;
 
-    // For non-directional keys, only respond to keydown
-    if (type === 'up' && !code.startsWith('Arrow') && code !== 'KeyS') {
-      return null;
+    // For keyup events, only allow releases that are directional (Left/Right/Down) or SoftDrop (KeyS)
+    if (type === 'up') {
+      const allowOnKeyUp = code === 'ArrowLeft' || code === 'ArrowRight' || code === 'ArrowDown' || code === 'KeyS';
+      if (!allowOnKeyUp) return null; // Suppress rotation on keyup (e.g., ArrowUp)
     }
 
     return mapping[type];

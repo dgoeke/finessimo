@@ -25,7 +25,6 @@ export class FinessimoApp {
   }
 
   initialize(canvasElement: HTMLCanvasElement, hudElement: HTMLElement): void {
-    console.log('Initializing Finessimo application...');
     
     // Initialize renderers
     this.canvasRenderer.initialize(canvasElement);
@@ -41,7 +40,6 @@ export class FinessimoApp {
     // Render initial state
     this.render();
     
-    console.log('Finessimo application initialized');
   }
 
   start(): void {
@@ -54,20 +52,17 @@ export class FinessimoApp {
     this.lastFrameTime = performance.now();
     this.gameLoop();
     
-    console.log('Finessimo application started');
   }
 
   stop(): void {
     this.isRunning = false;
     this.inputHandler.stop();
-    console.log('Finessimo application stopped');
   }
 
   destroy(): void {
     this.stop();
     this.canvasRenderer.destroy();
     this.hudRenderer.destroy();
-    console.log('Finessimo application destroyed');
   }
 
   private gameLoop(): void {
@@ -104,7 +99,6 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
-    console.log('Dispatching action:', action);
     
     // Log action in HUD for debugging
     this.hudRenderer.logAction(action);
@@ -114,11 +108,7 @@ export class FinessimoApp {
     
     // Check if state actually changed (for debugging)
     if (newState !== this.gameState) {
-      console.log('State changed:', {
-        oldTick: this.gameState.tick,
-        newTick: newState.tick,
-        action: action.type
-      });
+      // State changed; no console logging in production
     }
     
     this.gameState = newState;
@@ -131,7 +121,7 @@ export class FinessimoApp {
 
   // Public method to simulate input (for testing)
   simulateInput(action: string): void {
-    console.log('Simulating input:', action);
+    // Simulating input (no console logging)
     // This is a simple test method - in a real implementation,
     // input would come from the keyboard/touch handlers
     if (action === 'lock') {

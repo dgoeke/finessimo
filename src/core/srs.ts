@@ -4,8 +4,7 @@
 export const KICKS_JLSTZ: Record<string, ReadonlyArray<readonly [number, number]>> = {
   'spawn->right': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
   'right->spawn': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'right->left':  [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'left->right':  [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+  // Note: 180° transitions are not part of the 90° JLSTZ table
   'left->spawn':  [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
   'spawn->left':  [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
   'reverse->right': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
@@ -125,10 +124,12 @@ export function canRotate(
   
   // Try each kick offset
   for (const [dx, dy] of kicks) {
+    // Wiki offsets use positive y upwards; our grid uses positive y downwards.
+    const appliedDy = -dy;
     const kickedPiece = {
       ...testPiece,
       x: piece.x + dx,
-      y: piece.y + dy
+      y: piece.y + appliedDy
     };
     
     if (canPlacePiece(board, kickedPiece)) {
@@ -168,10 +169,12 @@ export function tryRotate(
   
   // Try each kick offset
   for (const [dx, dy] of kicks) {
+    // Invert dy to account for y-down coordinate system
+    const appliedDy = -dy;
     const kickedPiece = {
       ...testPiece,
       x: piece.x + dx,
-      y: piece.y + dy
+      y: piece.y + appliedDy
     };
     
     if (canPlacePiece(board, kickedPiece)) {

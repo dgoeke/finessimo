@@ -126,7 +126,7 @@ describe('SRS Rotation Logic', () => {
       
       // Block all positions around the piece
       for (let x = 2; x <= 6; x++) {
-        for (let y = 1; y <= 3; y++) {
+        for (let y = 1; y <= 4; y++) {
           if (!(x === 4 && y === 2)) { // Don't block the piece itself
             fullyBlockedBoard.cells[y * 10 + x] = 1;
           }
