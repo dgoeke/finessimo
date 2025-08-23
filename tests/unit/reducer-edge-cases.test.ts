@@ -122,19 +122,6 @@ describe('Reducer Edge Cases and Error Conditions', () => {
       expect(result).toBe(blockedState); // Rotation blocked
     });
 
-    it('should handle 180-degree rotation when disabled', () => {
-      const no180State = {
-        ...stateWithActivePiece,
-        gameplay: {
-          ...stateWithActivePiece.gameplay,
-          allow180Rotation: false
-        }
-      };
-
-      const action: Action = { type: 'Rotate', dir: '180' };
-      const result = reducer(no180State, action);
-      expect(result).toBe(no180State); // 180 rotation blocked
-    });
   });
 
   describe('SoftDrop action edge cases', () => {

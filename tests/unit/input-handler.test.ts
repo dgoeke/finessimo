@@ -27,7 +27,6 @@ describe('Input Handler', () => {
         lineClearDelayMs: 0
       },
       gameplay: {
-        allow180Rotation: true,
         finesseCancelMs: 50
       },
       tick: 0,
@@ -147,7 +146,6 @@ describe('Input Handler', () => {
       const rotationTests: Array<[KeyAction, string]> = [
         ['RotateCW', 'CW'],
         ['RotateCCW', 'CCW'],
-        ['Rotate180', '180']
       ];
 
       rotationTests.forEach(([input, expectedDir]) => {
@@ -219,7 +217,7 @@ describe('Input Handler', () => {
     describe('Input event enqueuing', () => {
       it('should always enqueue InputEvent for every simulated input', () => {
         const testInputs: KeyAction[] = [
-          'LeftDown', 'RightDown', 'RotateCW', 'RotateCCW', 'Rotate180',
+          'LeftDown', 'RightDown', 'RotateCW', 'RotateCCW',
           'HardDrop', 'Hold', 'SoftDropDown', 'SoftDropUp'
         ];
         

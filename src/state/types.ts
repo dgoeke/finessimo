@@ -18,7 +18,7 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 
 // Pieces and rotation
 export type PieceId = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type Rot = 'spawn' | 'right' | 'left' | 'reverse';
+export type Rot = 'spawn' | 'right' | 'left';
 
 export interface TetrominoShape {
   id: PieceId;
@@ -36,7 +36,6 @@ export interface ActivePiece {
 
 // Config
 export interface GameplayConfig {
-  allow180Rotation: boolean; // default: true
   finesseCancelMs: number;   // default: 50
 }
 
@@ -57,7 +56,6 @@ export type KeyAction =
   | 'HardDrop'
   | 'RotateCW'
   | 'RotateCCW'
-  | 'Rotate180'
   | 'Hold';
 
 export interface InputEvent {
@@ -90,7 +88,7 @@ export type Action =
   | { type: 'Spawn' }
   | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
   | { type: 'SoftDrop'; on: boolean }
-  | { type: 'Rotate'; dir: 'CW' | 'CCW' | '180' }
+  | { type: 'Rotate'; dir: 'CW' | 'CCW' }
   | { type: 'HardDrop' }
   | { type: 'Hold' }
   | { type: 'Lock' }

@@ -120,15 +120,12 @@ describe('DOMInputHandler', () => {
     it('should handle rotation keys', () => {
       const rotCWEvent = new KeyboardEvent('keydown', { code: 'ArrowUp' });
       const rotCCWEvent = new KeyboardEvent('keydown', { code: 'KeyZ' });
-      const rot180Event = new KeyboardEvent('keydown', { code: 'KeyX' });
 
       mockKeyDownHandler(rotCWEvent);
       mockKeyDownHandler(rotCCWEvent);
-      mockKeyDownHandler(rot180Event);
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'Rotate', dir: 'CW' });
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'Rotate', dir: 'CCW' });
-      expect(mockDispatch).toHaveBeenCalledWith({ type: 'Rotate', dir: '180' });
     });
 
     it('should handle soft drop and key up', () => {

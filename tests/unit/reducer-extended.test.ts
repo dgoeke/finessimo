@@ -19,7 +19,6 @@ describe('Reducer - Extended Coverage', () => {
         { type: 'SoftDrop', on: false },
         { type: 'Rotate', dir: 'CW' },
         { type: 'Rotate', dir: 'CCW' },
-        { type: 'Rotate', dir: '180' },
         { type: 'HardDrop' },
         { type: 'Hold' },
         { type: 'Lock' },
@@ -77,7 +76,6 @@ describe('Reducer - Extended Coverage', () => {
       const state = reducer(undefined as any, { type: 'Init', gameplay: partialGameplay });
       
       expect(state.gameplay.finesseCancelMs).toBe(75); // Overridden
-      expect(state.gameplay.allow180Rotation).toBe(true); // Default
     });
 
     it('should handle empty partial configs', () => {
@@ -90,7 +88,6 @@ describe('Reducer - Extended Coverage', () => {
       // Should use all defaults
       expect(state.timing.dasMs).toBe(133);
       expect(state.timing.arrMs).toBe(2);
-      expect(state.gameplay.allow180Rotation).toBe(true);
       expect(state.gameplay.finesseCancelMs).toBe(50);
     });
 
@@ -213,7 +210,7 @@ describe('Reducer - Extended Coverage', () => {
       const keyActions = [
         'LeftDown', 'LeftUp', 'RightDown', 'RightUp',
         'SoftDropDown', 'SoftDropUp', 'HardDrop',
-        'RotateCW', 'RotateCCW', 'Rotate180', 'Hold'
+        'RotateCW', 'RotateCCW', 'Hold'
       ] as const;
       
       let currentState = initialState;
@@ -233,7 +230,7 @@ describe('Reducer - Extended Coverage', () => {
       const complexEvent: InputEvent = {
         tMs: 1234.56789,
         frame: 12345,
-        action: 'Rotate180'
+        action: 'RotateCCW'
       };
       
       const result = reducer(initialState, { type: 'EnqueueInput', event: complexEvent });
