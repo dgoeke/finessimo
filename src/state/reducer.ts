@@ -23,7 +23,6 @@ const defaultTimingConfig: TimingConfig = {
 
 // Default gameplay configuration
 const defaultGameplayConfig: GameplayConfig = {
-  allow180Rotation: true,
   finesseCancelMs: 50
 };
 
@@ -112,8 +111,7 @@ export const reducer: (state: Readonly<GameState>, action: Action) => GameState 
       const rotatedPiece = tryRotate(
         state.active,
         targetRot,
-        state.board,
-        state.gameplay.allow180Rotation
+        state.board
       );
       
       if (!rotatedPiece) {

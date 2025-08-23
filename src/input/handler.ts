@@ -4,7 +4,7 @@ import { Action, KeyAction, InputEvent, GameState } from '../state/types';
 export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: number): KeyAction[] {
   // Filter to only keep relevant events
   const relevantEvents = events.filter(event => 
-    ['LeftDown', 'RightDown', 'RotateCW', 'RotateCCW', 'Rotate180', 'Hold', 'HardDrop'].includes(event.action)
+    ['LeftDown', 'RightDown', 'RotateCW', 'RotateCCW', 'Hold', 'HardDrop'].includes(event.action)
   );
 
   // Sort by timestamp to ensure proper order
@@ -147,9 +147,6 @@ export class MockInputHandler implements InputHandler {
         break;
       case 'RotateCCW':
         this.dispatch({ type: 'Rotate', dir: 'CCW' });
-        break;
-      case 'Rotate180':
-        this.dispatch({ type: 'Rotate', dir: '180' });
         break;
       case 'HardDrop':
         this.dispatch({ type: 'HardDrop' });
@@ -300,9 +297,6 @@ export class DOMInputHandler implements InputHandler {
       case 'RotateCCW':
         this.dispatch({ type: 'Rotate', dir: 'CCW' });
         break;
-      case 'Rotate180':
-        this.dispatch({ type: 'Rotate', dir: '180' });
-        break;
       case 'HardDrop':
         this.dispatch({ type: 'HardDrop' });
         break;
@@ -350,7 +344,6 @@ export class DOMInputHandler implements InputHandler {
       'ArrowUp': { down: 'RotateCW', up: 'RotateCW' }, // No up action for rotations
       'KeyW': { down: 'RotateCW', up: 'RotateCW' },
       'KeyZ': { down: 'RotateCCW', up: 'RotateCCW' },
-      'KeyX': { down: 'Rotate180', up: 'Rotate180' },
       'Space': { down: 'HardDrop', up: 'HardDrop' },
       'KeyC': { down: 'Hold', up: 'Hold' },
     };

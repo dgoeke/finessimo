@@ -82,12 +82,11 @@ describe('Input Normalization', () => {
       const events: InputEvent[] = [
         createInputEvent('RotateCW', 100),
         createInputEvent('RotateCCW', 120),
-        createInputEvent('Rotate180', 140),
         createInputEvent('Hold', 160)
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW', 'RotateCCW', 'Rotate180', 'Hold']);
+      expect(result).toEqual(['RotateCW', 'RotateCCW', 'Hold']);
     });
 
     it('should handle edge case with same timestamp', () => {
@@ -145,12 +144,11 @@ describe('Input Normalization', () => {
         createInputEvent('Hold', 100),
         createInputEvent('RotateCW', 150),
         createInputEvent('RotateCCW', 200),
-        createInputEvent('Rotate180', 250),
         createInputEvent('HardDrop', 300)
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['Hold', 'RotateCW', 'RotateCCW', 'Rotate180', 'HardDrop']);
+      expect(result).toEqual(['Hold', 'RotateCW', 'RotateCCW', 'HardDrop']);
     });
   });
 });

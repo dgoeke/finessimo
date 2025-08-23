@@ -63,7 +63,6 @@ export class BasicHudRenderer implements HudRenderer {
     const configEl = this.elements.config;
     if (configEl) {
       configEl.textContent = 
-        `180° Rotation: ${gameState.gameplay.allow180Rotation}, ` +
         `Cancel Window: ${gameState.gameplay.finesseCancelMs}ms`;
     }
   }

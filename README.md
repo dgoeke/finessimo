@@ -36,8 +36,7 @@ UI → Input Handler → Reducer → State → UI
 ### Rotation Names
 - `spawn`: Initial rotation (0°)
 - `right`: Clockwise rotation (90°)
-- `left`: Counter-clockwise rotation (270°) 
-- `reverse`: 180° rotation
+- `left`: Counter-clockwise rotation (270°)
 
 ## Project Structure
 
@@ -175,7 +174,6 @@ npm test:watch
 
 ### Iteration 2: Finesse Calculation  
 - Implement BFS algorithm for optimal path finding
-- Add support for 180° rotations based on config
 - Create test cases with known optimal solutions
 
 ### Iteration 3: Game Modes & Feedback

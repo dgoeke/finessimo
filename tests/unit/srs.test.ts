@@ -12,23 +12,14 @@ describe('SRS Rotation Logic', () => {
   describe('getNextRotation', () => {
     it('should rotate clockwise correctly', () => {
       expect(getNextRotation('spawn', 'CW')).toBe('right');
-      expect(getNextRotation('right', 'CW')).toBe('reverse');
-      expect(getNextRotation('reverse', 'CW')).toBe('left');
+      expect(getNextRotation('right', 'CW')).toBe('left');
       expect(getNextRotation('left', 'CW')).toBe('spawn');
     });
 
     it('should rotate counter-clockwise correctly', () => {
       expect(getNextRotation('spawn', 'CCW')).toBe('left');
-      expect(getNextRotation('left', 'CCW')).toBe('reverse');
-      expect(getNextRotation('reverse', 'CCW')).toBe('right');
+      expect(getNextRotation('left', 'CCW')).toBe('right');
       expect(getNextRotation('right', 'CCW')).toBe('spawn');
-    });
-
-    it('should rotate 180 degrees correctly', () => {
-      expect(getNextRotation('spawn', '180')).toBe('reverse');
-      expect(getNextRotation('right', '180')).toBe('left');
-      expect(getNextRotation('reverse', '180')).toBe('spawn');
-      expect(getNextRotation('left', '180')).toBe('right');
     });
   });
 
@@ -62,7 +53,6 @@ describe('SRS Rotation Logic', () => {
     it('should allow valid rotations on empty board', () => {
       expect(canRotate(tPiece, 'right', emptyBoard)).toBe(true);
       expect(canRotate(tPiece, 'left', emptyBoard)).toBe(true);
-      expect(canRotate(tPiece, 'reverse', emptyBoard)).toBe(true);
     });
 
     it('should perform valid rotations on empty board', () => {
@@ -70,33 +60,6 @@ describe('SRS Rotation Logic', () => {
       expect(rotatedRight).not.toBeNull();
       expect(rotatedRight!.rot).toBe('right');
       expect(rotatedRight!.id).toBe('T');
-    });
-  });
-
-  describe('180-degree rotation control', () => {
-    const tPiece: ActivePiece = {
-      id: 'T',
-      rot: 'spawn',
-      x: 4,
-      y: 2
-    };
-
-    it('should allow 180-degree rotation when enabled', () => {
-      expect(canRotate(tPiece, 'reverse', emptyBoard, true)).toBe(true);
-      const result = tryRotate(tPiece, 'reverse', emptyBoard, true);
-      expect(result).not.toBeNull();
-      expect(result!.rot).toBe('reverse');
-    });
-
-    it('should prevent 180-degree rotation when disabled', () => {
-      expect(canRotate(tPiece, 'reverse', emptyBoard, false)).toBe(false);
-      const result = tryRotate(tPiece, 'reverse', emptyBoard, false);
-      expect(result).toBeNull();
-    });
-
-    it('should still allow 90-degree rotations when 180 is disabled', () => {
-      expect(canRotate(tPiece, 'right', emptyBoard, false)).toBe(true);
-      expect(canRotate(tPiece, 'left', emptyBoard, false)).toBe(true);
     });
   });
 

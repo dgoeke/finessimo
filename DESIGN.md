@@ -2,7 +2,7 @@
 
 Project name: Finessimo
 
-This document has been updated to incorporate architectural clarifications and support for optional 180-degree rotations, ensuring minimal ambiguity for AI-assisted implementation.
+This document has been updated to incorporate architectural clarifications, ensuring minimal ambiguity for AI-assisted implementation.
 
 ## Executive Summary
 
@@ -16,7 +16,7 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 ## Goals and Non-goals
 
 **Goals:**
-- Teach minimal-input placement using SRS (including optional 180° rotations), with clear feedback, drills, and stats.
+- Teach minimal-input placement using SRS with clear feedback, drills, and stats.
 - Provide guided and free-play modes, desktop and mobile support, and custom scenarios.
 - Maintain deterministic, testable, and extensible core.
 
@@ -75,7 +75,7 @@ To maintain a pure core reducer, all state related to physical input devices and
 
 ### Rotation Names
 
--   `spawn` (0), `right` (CW, +1), `left` (CCW, -1), `reverse` (180°).
+-   `spawn` (0), `right` (CW, +1), `left` (CCW, -1).
 
 ### Physics & Gameplay Defaults
 
@@ -109,7 +109,7 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 
 // Pieces and rotation
 export type PieceId = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type Rot = 'spawn' | 'right' | 'left' | 'reverse';
+export type Rot = 'spawn' | 'right' | 'left';
 
 export interface TetrominoShape {
   id: PieceId;
@@ -127,7 +127,6 @@ export interface ActivePiece {
 
 // Config
 export interface GameplayConfig {
-  allow180Rotation: boolean; // default: true
   finesseCancelMs: number;   // default: 50
 }
 
@@ -148,7 +147,6 @@ export type KeyAction =
   | 'HardDrop'
   | 'RotateCW'
   | 'RotateCCW'
-  | 'Rotate180'
   | 'Hold';
 
 export interface InputEvent {
@@ -181,7 +179,7 @@ export type Action =
   | { type: 'Spawn' }
   | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
   | { type: 'SoftDrop'; on: boolean }
-  | { type: 'Rotate'; dir: 'CW' | 'CCW' | '180' }
+  | { type: 'Rotate'; dir: 'CW' | 'CCW' }
   | { type: 'HardDrop' }
   | { type: 'Hold' }
   | { type: 'Lock' }
@@ -193,7 +191,7 @@ export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
 
 ## SRS Constants
 
-### Piece Definitions (with 180° rotations)
+### Piece Definitions
 
 ```typescript
 export const PIECES: Record<PieceId, TetrominoShape> = {
@@ -202,7 +200,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[1,0],[0,1],[1,1],[2,1]],
       right: [[1,0],[1,1],[2,1],[1,2]],
-      reverse: [[0,1],[1,1],[2,1],[1,2]],
       left:  [[1,0],[0,1],[1,1],[1,2]],
     },
     spawnTopLeft: [3, -2], color: '#a000f0',
@@ -212,7 +209,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[0,0],[0,1],[1,1],[2,1]],
       right: [[1,0],[2,0],[1,1],[1,2]],
-      reverse: [[0,1],[1,1],[2,1],[2,2]],
       left:  [[1,0],[0,2],[1,1],[1,2]],
     },
     spawnTopLeft: [3, -2], color: '#0000f0',
@@ -222,7 +218,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[2,0],[0,1],[1,1],[2,1]],
       right: [[1,0],[1,1],[1,2],[2,2]],
-      reverse: [[0,1],[1,1],[2,1],[0,2]],
       left:  [[0,0],[1,0],[1,1],[1,2]],
     },
     spawnTopLeft: [3, -2], color: '#f0a000',
@@ -232,7 +227,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[1,0],[2,0],[0,1],[1,1]],
       right: [[1,0],[1,1],[2,1],[2,2]],
-      reverse: [[0,1],[1,1],[1,2],[2,2]],
       left:  [[0,0],[0,1],[1,1],[1,2]],
     },
     spawnTopLeft: [3, -2], color: '#00f000',
@@ -242,7 +236,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[0,0],[1,0],[1,1],[2,1]],
       right: [[2,0],[1,1],[2,1],[1,2]],
-      reverse: [[1,1],[2,1],[0,2],[1,2]],
       left:  [[0,1],[1,1],[1,2],[2,2]],
     },
     spawnTopLeft: [3, -2], color: '#f00000',
@@ -252,7 +245,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[0,1],[1,1],[2,1],[3,1]],
       right: [[2,0],[2,1],[2,2],[2,3]],
-      reverse: [[0,2],[1,2],[2,2],[3,2]],
       left:  [[1,0],[1,1],[1,2],[1,3]],
     },
     spawnTopLeft: [3, -1], color: '#00f0f0',
@@ -262,7 +254,6 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     cells: {
       spawn: [[1,0],[2,0],[1,1],[2,1]],
       right: [[1,0],[2,0],[1,1],[2,1]],
-      reverse: [[1,0],[2,0],[1,1],[2,1]],
       left:  [[1,0],[2,0],[1,1],[2,1]],
     },
     spawnTopLeft: [4, -2], color: '#f0f000',
@@ -270,7 +261,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
 };
 ```
 
-### Wall Kick Tables (with 180° rotations)
+### Wall Kick Tables
 
 ```typescript
 // Standard CW/CCW kicks for JLSTZ pieces
@@ -281,46 +272,23 @@ export const KICKS_JLSTZ: Record<string, ReadonlyArray<readonly [number, number]
   'left->right':  [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
   'left->spawn':  [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
   'spawn->left':  [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
-  'reverse->right': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
-  'right->reverse': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
-  'reverse->left':  [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'left->reverse':  [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
 };
 
 // Standard CW/CCW kicks for I piece
 export const KICKS_I: Record<string, ReadonlyArray<readonly [number, number]>> = {
   'spawn->right': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
   'right->spawn': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-  'reverse->right': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
-  'right->reverse': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
   'left->spawn':  [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
   'spawn->left':  [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
-  'reverse->left':  [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-  'left->reverse':  [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
 };
 
-// 180-degree kicks for JLSTZ pieces
-export const KICKS_JLSTZ_180: Record<string, ReadonlyArray<readonly [number, number]>> = {
-  'spawn->reverse': [[0,0],[1,0],[-2,0],[1,-1],[-2,-1]],
-  'reverse->spawn': [[0,0],[-1,0],[2,0],[-1,1],[2,1]],
-  'right->left':    [[0,0],[2,0],[-1,0],[2,1],[-1,1]],
-  'left->right':    [[0,0],[-2,0],[1,0],[-2,-1],[1,-1]],
-};
-
-// 180-degree kicks for I piece
-export const KICKS_I_180: Record<string, ReadonlyArray<readonly [number, number]>> = {
-  'spawn->reverse': [[0,0],[-1,0],[2,0],[-1,1],[2,1]],
-  'reverse->spawn': [[0,0],[1,0],[-2,0],[1,-1],[-2,-1]],
-  'right->left':    [[0,0],[1,0],[-2,0],[1,-2],[-2,-2]],
-  'left->right':    [[0,0],[-1,0],[2,0],[-1,2],[2,2]],
-};
 ```
 
 ## Finesse Detection Specification
 
 ### What Counts as an Input
 
-  - Each distinct key press counts as 1 input: `LeftDown`, `RightDown`, `RotateCW`, `RotateCCW`, `Rotate180`, `Hold`, `HardDrop`.
+  - Each distinct key press counts as 1 input: `LeftDown`, `RightDown`, `RotateCW`, `RotateCCW`, `Hold`, `HardDrop`.
   - Holding Left/Right that generates movement via DAS/ARR does **NOT** add further inputs.
   - Hard drop is always required and counts as 1 input.
 
@@ -345,8 +313,7 @@ The optimal input sequence is found by performing a Breadth-First Search (BFS) o
       - `HoldLeft`: Moves piece to collide with the left wall.
       - `HoldRight`: Moves piece to collide with the right wall.
       - `RotateCW`, `RotateCCW`.
-      - `Rotate180` (this edge is only added to the graph if `gameplay.allow180Rotation` is true).
-  - **Goal:** The search finds the shortest path(s) from the spawn state to the final locked `(x, rot)` state. The trainer does not require the player to use a 180° rotation, but if used, it is counted as a single, valid input.
+  - **Goal:** The search finds the shortest path(s) from the spawn state to the final locked `(x, rot)` state.
 
 ### Output
 
@@ -378,7 +345,7 @@ src/
     recorder.ts      // Input logging
   finesse/
     analyzer.ts      // Post-lock analysis
-    calculator.ts    // BFS optimal path finder (respects 180° setting)
+    calculator.ts    // BFS optimal path finder
     normalizer.ts    // Input normalization (uses cancellation setting)
   modes/
     index.ts         // Mode interface and registry

@@ -47,12 +47,10 @@ describe('Reducer', () => {
 
     it('should accept custom gameplay config', () => {
       const customGameplay: Partial<GameplayConfig> = {
-        allow180Rotation: false,
         finesseCancelMs: 100
       };
       const state = reducer(undefined as any, { type: 'Init', gameplay: customGameplay });
       
-      expect(state.gameplay.allow180Rotation).toBe(false);
       expect(state.gameplay.finesseCancelMs).toBe(100);
     });
   });
