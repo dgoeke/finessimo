@@ -4,292 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finessimo</title>
+    <meta name="color-scheme" content="dark light">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #242424;
-            --bg-tertiary: #2e2e2e;
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --border-color: #404040;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.5;
-            padding: 1rem;
-        }
-
-        .header {
-            padding: 0.75rem 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--accent-primary);
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        
-        .app-container {
-            display: grid;
-            grid-template-columns: minmax(280px, 320px) auto minmax(280px, 320px);
-            gap: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            align-items: start;
-            justify-content: center;
-        }
-        
-        .game-area {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        
-        #game-canvas {
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background-color: #000;
-            display: block;
-        }
-        
-        .left-panel, .right-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            min-width: 280px;
-            max-width: 320px;
-        }
-
-        #game-hud {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            min-height: 300px;
-            flex: 1;
-        }
-
-        .controls-section {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-        }
-
-        .controls-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--accent-primary);
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-        }
-
-        .control-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.25rem 0;
-        }
-
-        .control-label {
-            color: var(--text-secondary);
-        }
-
-        .control-keys {
-            display: flex;
-            gap: 0.25rem;
-        }
-
-        .key {
-            background: var(--bg-primary);
-            color: var(--accent-primary);
-            padding: 0.2rem 0.4rem;
-            border-radius: 3px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            border: 1px solid var(--border-color);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .divider {
-            color: var(--text-secondary);
-            margin: 0 0.25rem;
-            font-size: 0.75rem;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1100px) {
-            .app-container {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-                justify-items: center;
-            }
-
-            .left-panel, .right-panel {
-                min-width: auto;
-                max-width: 500px;
-                width: 100%;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.25rem;
-            }
-
-            .controls-grid {
-                grid-template-columns: 1fr;
-            }
-
-            #game-canvas {
-                width: 100%;
-                max-width: 300px;
-                height: auto;
-            }
-        }
-
-        @media (max-width: 640px) {
-            body {
-                padding: 0.5rem;
-            }
-
-            .title {
-                font-size: 1.25rem;
-            }
-
-            .game-area,
-            #game-hud,
-            .controls-section {
-                padding: 0.75rem;
-            }
-            
-            .left-panel, .right-panel {
-                order: 2;
-            }
-            
-            .game-area {
-                order: 1;
-            }
-        }
-
-        /* Subtle focus states */
-        .key:hover {
-            background: var(--bg-secondary);
-            transform: translateY(-1px);
-        }
-
-        .game-area:hover {
-            border-color: var(--accent-primary);
-        }
-
-        /* Smooth transitions */
-        .key,
-        .game-area,
-        #game-hud,
-        .controls-section,
-        .left-panel,
-        .right-panel {
-            transition: all 0.2s ease;
-        }
-    </style>
+    <link rel="stylesheet" href="/src/ui/styles.css">
 </head>
 <body>
-    <div class="header">
-        <div>
-            <div class="title">Finessimo</div>
-            <div class="subtitle">Finesse Trainer</div>
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="brand">
+                <div class="logo" aria-hidden="true">🎮</div>
+                <div class="brand-text">
+                    <div class="title">Finessimo</div>
+                    <div class="subtitle">Tetris Finesse Trainer</div>
+                </div>
+            </div>
+            <nav class="header-actions" aria-label="App actions">
+                <a class="chip" href="#" role="button">Docs</a>
+            </nav>
         </div>
-    </div>
-    
-    <div class="app-container">
-        <div class="left-panel">
-            <div id="game-hud"></div>
-        </div>
-        
-        <div class="game-area">
-            <canvas id="game-canvas" width="300" height="600"></canvas>
-        </div>
-        
-        <div class="right-panel">
-            <div class="controls-section">
-                <div class="controls-title">Controls</div>
-                <div class="controls-grid">
-                    <div class="control-row">
-                        <span class="control-label">Move</span>
+    </header>
+
+    <main class="app shell">
+        <section class="sidebar left-panel">
+            <div class="panel" id="game-hud"></div>
+        </section>
+
+        <section class="game-area">
+            <div class="board-frame">
+                <canvas id="game-canvas" width="300" height="600"></canvas>
+            </div>
+        </section>
+
+        <aside class="sidebar right-panel">
+            <div class="panel controls-section">
+                <h2 class="controls-title">Controls</h2>
+                <div class="controls-groups">
+                    <div class="controls-group">
+                        <div class="control-label">Move</div>
                         <div class="control-keys">
                             <span class="key">A</span>
                             <span class="key">D</span>
-                            <span class="divider">or</span>
                             <span class="key">←</span>
                             <span class="key">→</span>
                         </div>
                     </div>
-                    <div class="control-row">
-                        <span class="control-label">Rotate</span>
+                    <div class="controls-group">
+                        <div class="control-label">Rotate</div>
                         <div class="control-keys">
                             <span class="key">W</span>
                             <span class="key">Z</span>
                             <span class="key">X</span>
                         </div>
                     </div>
-                    <div class="control-row">
-                        <span class="control-label">Soft Drop</span>
+                    <div class="controls-group">
+                        <div class="control-label">Soft Drop</div>
                         <div class="control-keys">
                             <span class="key">S</span>
-                            <span class="divider">or</span>
                             <span class="key">↓</span>
                         </div>
                     </div>
-                    <div class="control-row">
-                        <span class="control-label">Hard Drop</span>
+                    <div class="controls-group">
+                        <div class="control-label">Hard Drop</div>
                         <div class="control-keys">
                             <span class="key">Space</span>
                         </div>
                     </div>
-                    <div class="control-row">
-                        <span class="control-label">Hold</span>
+                    <div class="controls-group">
+                        <div class="control-label">Hold</div>
                         <div class="control-keys">
                             <span class="key">C</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </aside>
+    </main>
+
     
+
     <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
