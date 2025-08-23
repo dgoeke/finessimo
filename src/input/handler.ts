@@ -18,11 +18,14 @@ export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: num
     if (toRemove.has(i)) continue;
 
     const current = sortedEvents[i];
+    if (!current) continue;
     
     for (let j = i + 1; j < sortedEvents.length; j++) {
       if (toRemove.has(j)) continue;
 
       const next = sortedEvents[j];
+      if (!next) continue;
+      
       const timeDiff = next.tMs - current.tMs;
 
       if (timeDiff > cancelWindowMs) break; // Too far apart
@@ -40,7 +43,10 @@ export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: num
   // Build result without removed events
   for (let i = 0; i < sortedEvents.length; i++) {
     if (!toRemove.has(i)) {
-      result.push(sortedEvents[i].action);
+      const event = sortedEvents[i];
+      if (event) {
+        result.push(event.action);
+      }
     }
   }
 

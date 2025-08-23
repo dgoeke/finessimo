@@ -263,8 +263,17 @@ describe('Input Handler', () => {
       it('should handle simulation without initialized dispatch', () => {
         const uninitializedHandler = new MockInputHandler();
         
+        // Mock console.error to suppress output during test
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        
         // Should not throw, but should log error
         expect(() => uninitializedHandler.simulateInput('LeftDown')).not.toThrow();
+        
+        // Verify error was logged
+        expect(consoleErrorSpy).toHaveBeenCalledWith('MockInputHandler: dispatch not initialized');
+        
+        // Restore console.error
+        consoleErrorSpy.mockRestore();
       });
 
       it('should handle update calls gracefully', () => {
