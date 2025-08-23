@@ -6,7 +6,7 @@ export interface Board {
 }
 
 // Helper for array indexing
-export const idx = (x: number, y: number, width = 10) => y * width + x;
+export const idx = (x: number, y: number, width = 10): number => y * width + x;
 
 // Collision check with negative y handling
 export function isCellBlocked(board: Board, x: number, y: number): boolean {
@@ -22,7 +22,7 @@ export type Rot = 'spawn' | 'right' | 'two' | 'left';
 
 export interface TetrominoShape {
   id: PieceId;
-  cells: Record<Rot, ReadonlyArray<readonly [number, number]>>;
+  cells: Record<Rot, readonly (readonly [number, number])[]>;
   spawnTopLeft: readonly [number, number];
   color: string;
 }
@@ -93,18 +93,31 @@ export interface PhysicsState {
 }
 
 // Game state
+import type { SevenBagRng } from '../core/rng';
+
+export interface Stats {
+  // Minimal session stats for Iteration 6 groundwork
+  piecesPlaced: number;
+  linesCleared: number;
+  optimalPlacements: number;
+  incorrectPlacements: number;
+  attempts: number;
+  startedAtMs: number;
+  timePlayedMs: number;
+}
+
 export interface GameState {
   board: Board;
   active: ActivePiece | undefined;
   hold: PieceId | undefined;
   canHold: boolean;
   nextQueue: PieceId[];
-  rng: unknown; // SevenBagRng state from core/rng.ts
+  rng: SevenBagRng; // SevenBagRng state from core/rng.ts
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
   status: 'playing' | 'lineClear' | 'topOut';
-  stats: unknown; // Stats object definition
+  stats: Stats; // Basic stats; extended in Iteration 6
   physics: PhysicsState;
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
@@ -144,4 +157,4 @@ export type Action =
   | { type: 'UpdateGuidance'; guidance: ModeGuidance | null }
   | { type: 'UpdateModeData'; data: unknown };
 
-export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
+export type Reducer = (s: Readonly<GameState> | undefined, a: Action) => GameState;

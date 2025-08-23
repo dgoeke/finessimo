@@ -25,11 +25,11 @@ describe('DOMInputHandler', () => {
 
   beforeEach(() => {
     handler = new DOMInputHandler();
-    mockDispatch = jest.fn();
+    mockDispatch = jest.fn<void, [Action]>();
     mockAddEventListener.mockClear();
     mockRemoveEventListener.mockClear();
     
-    gameState = reducer(undefined as any, { type: 'Init' });
+    gameState = reducer(undefined, { type: 'Init' });
   });
 
   afterEach(() => {
@@ -80,30 +80,39 @@ describe('DOMInputHandler', () => {
       handler.start();
       
       // Capture the actual event handlers
-      const addEventListenerCalls = mockAddEventListener.mock.calls;
-      const keyDownCall = addEventListenerCalls.find(call => call[0] === 'keydown');
-      const keyUpCall = addEventListenerCalls.find(call => call[0] === 'keyup');
-      
-      mockKeyDownHandler = keyDownCall?.[1];
-      mockKeyUpHandler = keyUpCall?.[1];
+      const calls = mockAddEventListener.mock.calls as ([string, (e: KeyboardEvent) => void])[];
+      const kd = calls.find(c => c[0] === 'keydown')?.[1];
+      const ku = calls.find(c => c[0] === 'keyup')?.[1];
+      if (!kd || !ku) throw new Error('Keyboard handlers not registered');
+      mockKeyDownHandler = kd;
+      mockKeyUpHandler = ku;
     });
 
     it('should handle left movement keys', () => {
       const leftArrowEvent = new KeyboardEvent('keydown', { code: 'ArrowLeft' });
-      jest.spyOn(leftArrowEvent, 'preventDefault');
+      const pd = jest.spyOn(leftArrowEvent, 'preventDefault');
       
       mockKeyDownHandler(leftArrowEvent);
 
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'EnqueueInput',
-        event: expect.objectContaining({ action: 'LeftDown' })
-      });
+      // Verify via captured call rather than any-based matcher
+      const calls = mockDispatch.mock.calls;
+      type Enqueue = Extract<Action, { type: 'EnqueueInput' }>;
+      const found = calls.find(([a]) => a.type === 'EnqueueInput');
+      let enqueue: Enqueue | undefined;
+      if (found && found[0].type === 'EnqueueInput') {
+        enqueue = found[0];
+      }
+      expect(enqueue).toBeDefined();
+      if (enqueue) {
+        expect(enqueue.type).toBe('EnqueueInput');
+        expect(enqueue.event.action).toBe('LeftDown');
+      }
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'Move',
         dir: -1,
         source: 'tap'
       });
-      expect(leftArrowEvent.preventDefault).toHaveBeenCalled();
+      expect(pd).toHaveBeenCalled();
     });
 
     it('should handle right movement keys', () => {
@@ -152,12 +161,12 @@ describe('DOMInputHandler', () => {
 
     it('should ignore unmapped keys', () => {
       const unmappedEvent = new KeyboardEvent('keydown', { code: 'KeyQ' });
-      jest.spyOn(unmappedEvent, 'preventDefault');
+      const pd2 = jest.spyOn(unmappedEvent, 'preventDefault');
       
       mockKeyDownHandler(unmappedEvent);
 
       expect(mockDispatch).not.toHaveBeenCalled();
-      expect(unmappedEvent.preventDefault).not.toHaveBeenCalled();
+      expect(pd2).not.toHaveBeenCalled();
     });
 
     it('should update internal state on key press', () => {
@@ -187,11 +196,11 @@ describe('DOMInputHandler', () => {
         code: 'ArrowLeft',
         repeat: true 
       });
-      jest.spyOn(repeatEvent, 'preventDefault');
+      const pd3 = jest.spyOn(repeatEvent, 'preventDefault');
       
       mockKeyDownHandler(repeatEvent);
 
-      expect(repeatEvent.preventDefault).toHaveBeenCalled();
+      expect(pd3).toHaveBeenCalled();
       expect(mockDispatch).not.toHaveBeenCalled();
     });
   });
@@ -202,9 +211,10 @@ describe('DOMInputHandler', () => {
       handler.start();
       jest.useFakeTimers();
       
-      const addEventListenerCalls = mockAddEventListener.mock.calls;
-      const keyDownCall = addEventListenerCalls.find(call => call[0] === 'keydown');
-      mockKeyDownHandler = keyDownCall?.[1];
+      const calls = mockAddEventListener.mock.calls as ([string, (e: KeyboardEvent) => void])[];
+      const keyDown = calls.find(c => c[0] === 'keydown');
+      if (!keyDown) throw new Error('keydown not registered');
+      mockKeyDownHandler = keyDown[1];
     });
 
     afterEach(() => {
@@ -216,7 +226,7 @@ describe('DOMInputHandler', () => {
       mockKeyDownHandler(leftDownEvent);
       
       mockDispatch.mockClear();
-      const press = (handler as any).state.dasStartTime as number;
+      const press = handler.getState().dasStartTime as number;
       handler.update(gameState, press + gameState.timing.dasMs - 1);
       
       expect(mockDispatch).not.toHaveBeenCalledWith({
@@ -231,7 +241,7 @@ describe('DOMInputHandler', () => {
       mockKeyDownHandler(leftDownEvent);
       
       mockDispatch.mockClear();
-      const press = (handler as any).state.dasStartTime as number;
+      const press = handler.getState().dasStartTime as number;
       handler.update(gameState, press + gameState.timing.dasMs + 1);
 
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -247,14 +257,13 @@ describe('DOMInputHandler', () => {
       
       mockDispatch.mockClear();
       // Trigger initial DAS
-      const press = (handler as any).state.dasStartTime as number;
+      const press = handler.getState().dasStartTime as number;
       handler.update(gameState, press + gameState.timing.dasMs + 1);
       
       mockDispatch.mockClear();
       
       // Trigger ARR
-      const state = (handler as any).state;
-      const arrStart = state.arrLastTime as number;
+      const arrStart = handler.getState().arrLastTime as number;
       handler.update(gameState, arrStart + gameState.timing.arrMs);
       const afterArr = arrStart + gameState.timing.arrMs + 1;
       handler.update(gameState, afterArr);
@@ -277,9 +286,9 @@ describe('DOMInputHandler', () => {
       const uninitializedHandler = new DOMInputHandler();
       uninitializedHandler.start();
 
-      const addEventListenerCalls = mockAddEventListener.mock.calls;
-      const keyDownCall = addEventListenerCalls.find(call => call[0] === 'keydown');
-      const handler = keyDownCall?.[1];
+      const calls = mockAddEventListener.mock.calls as ([string, (e: KeyboardEvent) => void])[];
+      const keyDown = calls.find(c => c[0] === 'keydown');
+      const handler = keyDown ? keyDown[1] : undefined;
       
       const keyEvent = new KeyboardEvent('keydown', { code: 'ArrowLeft' });
       expect(() => handler?.(keyEvent)).not.toThrow();
@@ -289,12 +298,9 @@ describe('DOMInputHandler', () => {
       handler.init(mockDispatch);
       handler.start();
       
-      const addEventListenerCalls = mockAddEventListener.mock.calls;
-      const keyDownCall = addEventListenerCalls.find(call => call[0] === 'keydown');
-      const keyUpCall = addEventListenerCalls.find(call => call[0] === 'keyup');
-      
-      const keyDownHandler = keyDownCall?.[1];
-      const keyUpHandler = keyUpCall?.[1];
+      const calls2 = mockAddEventListener.mock.calls as ([string, (e: KeyboardEvent) => void])[];
+      const keyDownHandler = (calls2.find(c => c[0] === 'keydown')?.[1]) as ((e: KeyboardEvent) => void) | undefined;
+      const keyUpHandler = (calls2.find(c => c[0] === 'keyup')?.[1]) as ((e: KeyboardEvent) => void) | undefined;
 
       // Press left, then right (right should take priority)
       const leftDownEvent = new KeyboardEvent('keydown', { code: 'ArrowLeft' });

@@ -2,7 +2,8 @@ import { finesseCalculator } from '../../src/finesse/calculator';
 import { PIECES } from '../../src/core/pieces';
 import { createEmptyBoard, moveToWall } from '../../src/core/board';
 import { getNextRotation, tryRotate } from '../../src/core/srs';
-import type { ActivePiece, GameplayConfig, Rot } from '../../src/state/types';
+import type { ActivePiece, GameplayConfig, Rot, KeyAction } from '../../src/state/types';
+import { assertDefined } from '../test-helpers';
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
 
@@ -29,7 +30,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     // Minimal should be exactly 2 inputs: LeftDown + HardDrop
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(2);
-    const one = seqs.find(s => s.length === 2)!;
+    const one = seqs.find(s => s.length === 2);
+    expect(one).toBeDefined();
+    if (!one) return;
     expect(one).toEqual(['LeftDown', 'HardDrop']);
   });
 
@@ -41,7 +44,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     expect(seqs.length).toBeGreaterThan(0);
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(3); // Left, Left, HardDrop
-    const opt = seqs.find(s => s.length === 3)!;
+    const opt = seqs.find(s => s.length === 3);
+    expect(opt).toBeDefined();
+    if (!opt) return;
     expect(opt[0]).toBe('LeftDown');
     expect(opt[1]).toBe('LeftDown');
     expect(opt[2]).toBe('HardDrop');
@@ -55,7 +60,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(2); // RotateCW, HardDrop
     // Either CW or CCW could reach right depending on path, but CW is direct from spawn
-    const found = seqs.find(s => s.length === 2)!;
+    const found = seqs.find(s => s.length === 2);
+    expect(found).toBeDefined();
+    if (!found) return;
     expect(found[1]).toBe('HardDrop');
     expect(['RotateCW', 'RotateCCW']).toContain(found[0]);
   });
@@ -67,7 +74,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const seqs = finesseCalculator.calculateOptimal(piece, targetX, targetRot, cfg);
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(2); // RotateCCW, HardDrop
-    const found = seqs.find(s => s.length === 2)!;
+    const found = seqs.find(s => s.length === 2);
+    expect(found).toBeDefined();
+    if (!found) return;
     expect(found[1]).toBe('HardDrop');
     expect(found[0]).toBe('RotateCCW');
   });
@@ -79,7 +88,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const seqs = finesseCalculator.calculateOptimal(piece, targetX, targetRot, cfg);
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(3); // Two rotations needed to reach 'two' state, plus HardDrop
-    const found = seqs.find(s => s.length === 3)!;
+    const found = seqs.find(s => s.length === 3);
+    expect(found).toBeDefined();
+    if (!found) return;
     expect(found[2]).toBe('HardDrop');
     // Could be CW+CW or CCW+CCW
     expect(['RotateCW', 'RotateCCW']).toContain(found[0]);
@@ -106,8 +117,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const piece = spawnPiece('T');
     const targetX = 0;
     const targetRot: Rot = 'spawn';
-    const player = ['LeftDown', 'HardDrop'] as const;
-    const res = finesseCalculator.analyze(piece, targetX, targetRot, player as any, cfg);
+    const player: KeyAction[] = ['LeftDown', 'HardDrop'];
+    const res = finesseCalculator.analyze(piece, targetX, targetRot, player, cfg);
     expect(res.isOptimal).toBe(true);
     expect(res.faults.length).toBe(0);
     expect(res.playerSequence).toEqual(['LeftDown', 'HardDrop']);
@@ -118,8 +129,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const targetX = 0;
     const targetRot: Rot = 'spawn';
     // Extra unnecessary rotation
-    const player = ['RotateCW', 'LeftDown', 'HardDrop'] as const;
-    const res = finesseCalculator.analyze(piece, targetX, targetRot, player as any, cfg);
+    const player: KeyAction[] = ['RotateCW', 'LeftDown', 'HardDrop'];
+    const res = finesseCalculator.analyze(piece, targetX, targetRot, player, cfg);
     expect(res.isOptimal).toBe(false);
     expect(res.faults.some(f => f.type === 'extra_input')).toBe(true);
   });
@@ -129,8 +140,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const targetX = 0;
     const targetRot: Rot = 'spawn';
     // Missing hard drop
-    const player = ['LeftDown'] as const;
-    const res = finesseCalculator.analyze(piece, targetX, targetRot, player as any, cfg);
+    const player: KeyAction[] = ['LeftDown'];
+    const res = finesseCalculator.analyze(piece, targetX, targetRot, player, cfg);
     expect(res.isOptimal).toBe(false);
     expect(res.faults.some(f => f.type === 'suboptimal_path')).toBe(true);
   });
@@ -139,8 +150,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const piece = spawnPiece('T');
     const targetX = 0;
     const targetRot: Rot = 'spawn';
-    const player = ['LeftDown', 'LeftUp', 'RightUp', 'SoftDropUp', 'HardDrop'] as const;
-    const res = finesseCalculator.analyze(piece, targetX, targetRot, player as any, cfg);
+    const player: KeyAction[] = ['LeftDown', 'LeftUp', 'RightUp', 'SoftDropUp', 'HardDrop'];
+    const res = finesseCalculator.analyze(piece, targetX, targetRot, player, cfg);
     expect(res.playerSequence).toEqual(['LeftDown', 'HardDrop']);
   });
   test('Hold-right to wall is 1 input (+ HardDrop)', () => {
@@ -150,7 +161,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const seqs = finesseCalculator.calculateOptimal(piece, targetX, targetRot, cfg);
     const minLen = Math.min(...seqs.map(s => s.length));
     expect(minLen).toBe(2);
-    const one = seqs.find(s => s.length === 2)!;
+    const one = seqs.find(s => s.length === 2);
+    assertDefined(one, 'Expected to find a sequence with length 2');
     expect(one).toEqual(['RightDown', 'HardDrop']);
   });
 
@@ -163,7 +175,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
       const seqs = finesseCalculator.calculateOptimal(piece, left.x, piece.rot, cfg);
       const minLen = Math.min(...seqs.map(s => s.length));
       expect(minLen).toBe(2);
-      const one = seqs.find(s => s.length === 2)!;
+      const one = seqs.find(s => s.length === 2);
+      assertDefined(one, `Expected to find a sequence with length 2 for ${pid}`);
       expect(one[0]).toBe('LeftDown');
       expect(one[1]).toBe('HardDrop');
     });
@@ -177,7 +190,8 @@ describe('Finesse Calculator (BFS minimality)', () => {
       const seqs = finesseCalculator.calculateOptimal(piece, right.x, piece.rot, cfg);
       const minLen = Math.min(...seqs.map(s => s.length));
       expect(minLen).toBe(2);
-      const one = seqs.find(s => s.length === 2)!;
+      const one = seqs.find(s => s.length === 2);
+      assertDefined(one, `Expected to find a sequence with length 2 for ${pid}`);
       expect(one[0]).toBe('RightDown');
       expect(one[1]).toBe('HardDrop');
     });
@@ -187,7 +201,9 @@ describe('Finesse Calculator (BFS minimality)', () => {
     const piece = spawnPiece('I');
     const board = createEmptyBoard();
     const rot = getNextRotation(piece.rot, 'CW');
-    const rotated = tryRotate(piece, rot, board)!;
+    const rotated = tryRotate(piece, rot, board);
+    expect(rotated).toBeDefined();
+    if (!rotated) return;
     const right = moveToWall(board, rotated, 1);
     const seqs = finesseCalculator.calculateOptimal(piece, right.x, rot, cfg);
     const minLen = Math.min(...seqs.map(s => s.length));

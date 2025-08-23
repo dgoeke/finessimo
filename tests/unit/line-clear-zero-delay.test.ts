@@ -4,7 +4,7 @@ import { GameState, Board, idx } from '../../src/state/types';
 
 // Helper to create game state with zero line clear delay
 function createTestState(): GameState {
-  return reducer(undefined as any, { 
+  return reducer(undefined, { 
     type: 'Init', 
     seed: 'test', 
     timing: { 

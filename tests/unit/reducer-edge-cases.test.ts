@@ -1,12 +1,14 @@
 import { reducer } from '../../src/state/reducer';
 import { GameState, Action } from '../../src/state/types';
+import { assertActivePiece } from '../test-helpers';
+import { InvalidGameState } from '../test-types';
 
 describe('Reducer Edge Cases and Error Conditions', () => {
   let validState: GameState;
   let stateWithActivePiece: GameState;
 
   beforeEach(() => {
-    validState = reducer(undefined as any, { type: 'Init' });
+    validState = reducer(undefined, { type: 'Init' });
     
     // Create state with an active piece for testing actions that require one
     stateWithActivePiece = {
@@ -73,7 +75,8 @@ describe('Reducer Edge Cases and Error Conditions', () => {
       const result = reducer(stateWithActivePiece, action);
       
       expect(result).not.toBe(stateWithActivePiece);
-      expect(result.active?.x).toBeLessThan(stateWithActivePiece.active!.x);
+      assertActivePiece(stateWithActivePiece);
+      expect(result.active?.x).toBeLessThan(stateWithActivePiece.active.x);
     });
 
     it('should handle invalid movement (blocked)', () => {
@@ -189,31 +192,31 @@ describe('Reducer Edge Cases and Error Conditions', () => {
 
   describe('Invalid or malformed states', () => {
     it('should handle Lock action with invalid state structure', () => {
-      const invalidState = {
+      const invalidState: InvalidGameState = {
         ...validState,
-        tick: undefined as any // Invalid tick
+        tick: undefined // Invalid tick
       };
 
       const action: Action = { type: 'Lock' };
-      const result = reducer(invalidState as any, action);
+      const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });
 
     it('should handle Tick action with invalid state structure', () => {
-      const invalidState = {
+      const invalidState: InvalidGameState = {
         ...validState,
-        tick: 'invalid' as any // Invalid tick
+        tick: 'invalid' as unknown as number // Invalid tick
       };
 
       const action: Action = { type: 'Tick', timestampMs: 0 };
-      const result = reducer(invalidState as any, action);
+      const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });
 
     it('should handle EnqueueInput with invalid state', () => {
-      const invalidState = {
+      const invalidState: InvalidGameState = {
         ...validState,
-        inputLog: null as any // Invalid inputLog
+        inputLog: null as unknown as undefined // Invalid inputLog
       };
 
       const action: Action = {
@@ -221,15 +224,15 @@ describe('Reducer Edge Cases and Error Conditions', () => {
         event: { tMs: 1000, frame: 60, action: 'HardDrop' }
       };
 
-      const result = reducer(invalidState as any, action);
+      const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState);
     });
 
     it('should handle EnqueueInput with missing event', () => {
-      const action: Action = {
-        type: 'EnqueueInput',
-        event: undefined as any
-      };
+      const action = {
+        type: 'EnqueueInput' as const,
+        event: undefined
+      } as unknown as Action;
 
       const result = reducer(validState, action);
       expect(result).toBe(validState);
@@ -275,7 +278,8 @@ describe('Reducer Edge Cases and Error Conditions', () => {
       // Spawn is now implemented
       expect(result).not.toBe(validState);
       expect(result.active).toBeDefined(); // Should spawn a piece
-      expect(result.active!.id).toBe(validState.nextQueue[0]); // First from queue
+      assertActivePiece(result);
+      expect(result.active.id).toBe(validState.nextQueue[0]); // First from queue
     });
   });
 });

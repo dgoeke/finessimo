@@ -66,7 +66,11 @@ export class BasicPreviewRenderer implements PreviewRenderer {
       <div class="preview-container"></div>
     `;
 
-    const previewContainer = previewSection.querySelector('.preview-container')!;
+    const previewContainer = previewSection.querySelector('.preview-container');
+    if (!previewContainer) {
+      this.container.appendChild(previewSection);
+      return;
+    }
 
     // Create individual preview slots
     for (let i = 0; i < this.previewCount; i++) {

@@ -1,10 +1,11 @@
 import { describe, it, expect } from '@jest/globals';
 import { reducer } from '../../src/state/reducer';
 import { GameState } from '../../src/state/types';
+import { assertActivePiece } from '../test-helpers';
 
 // Helper to create a test game state
 function createTestState(): GameState {
-  return reducer(undefined as any, { type: 'Init', seed: 'test', timing: { gravityEnabled: true, gravityMs: 1000 } });
+  return reducer(undefined, { type: 'Init', seed: 'test', timing: { gravityEnabled: true, gravityMs: 1000 } });
 }
 
 // Helper to create state with active piece
@@ -28,14 +29,16 @@ describe('physics system', () => {
 
     it('should move piece down with gravity when enabled', () => {
       const state = createStateWithPiece();
-      const originalY = state.active!.y;
+      assertActivePiece(state);
+      const originalY = state.active.y;
       
       // Simulate gravity tick after gravity interval
       const gravityTime = state.physics.lastGravityTime + state.timing.gravityMs + 1;
       const newState = reducer(state, { type: 'Tick', timestampMs: gravityTime });
       
       expect(newState.active).toBeDefined();
-      expect(newState.active!.y).toBe(originalY + 1);
+      assertActivePiece(newState);
+      expect(newState.active.y).toBe(originalY + 1);
       expect(newState.physics.lastGravityTime).toBe(gravityTime);
     });
 
@@ -43,11 +46,13 @@ describe('physics system', () => {
       let state = createTestState();
       state = { ...state, timing: { ...state.timing, gravityEnabled: false } };
       state = reducer(state, { type: 'Spawn', piece: 'T' });
-      const originalY = state.active!.y;
+      assertActivePiece(state);
+      const originalY = state.active.y;
       
       const newState = reducer(state, { type: 'Tick', timestampMs: Date.now() + 2000 });
       
-      expect(newState.active!.y).toBe(originalY);
+      assertActivePiece(newState);
+      expect(newState.active.y).toBe(originalY);
     });
 
     it('should start lock delay when piece hits bottom', () => {
@@ -60,9 +65,10 @@ describe('physics system', () => {
       state = reducer(state, { type: 'Spawn', piece: 'T' });
       
       // Move the piece to a position where it can't drop further
+      assertActivePiece(state);
       state = {
         ...state,
-        active: { ...state.active!, y: 18 }, // Near bottom
+        active: { ...state.active, y: 18 }, // Near bottom
         physics: { ...state.physics, lastGravityTime: 1000 }
       };
       
@@ -84,9 +90,10 @@ describe('physics system', () => {
       let state = createStateWithPiece();
       
       // Move piece to bottom and start lock delay
+      assertActivePiece(state);
       state = { 
         ...state, 
-        active: { ...state.active!, y: 18 }, // Near bottom
+        active: { ...state.active, y: 18 }, // Near bottom
         physics: { ...state.physics, lockDelayStartTime: 1000 }
       };
       
@@ -119,11 +126,13 @@ describe('physics system', () => {
 
     it('should move piece down immediately when soft drop starts', () => {
       const state = createStateWithPiece();
-      const originalY = state.active!.y;
+      assertActivePiece(state);
+      const originalY = state.active.y;
       
       const newState = reducer(state, { type: 'SoftDrop', on: true });
       
-      expect(newState.active!.y).toBe(originalY + 1);
+      assertActivePiece(newState);
+      expect(newState.active.y).toBe(originalY + 1);
     });
 
     it('should use faster gravity when soft dropping', () => {
@@ -136,7 +145,9 @@ describe('physics system', () => {
       
       const newState = reducer(state, { type: 'Tick', timestampMs: gravityTime });
       
-      expect(newState.active!.y).toBe(state.active!.y + 1);
+      assertActivePiece(state);
+      assertActivePiece(newState);
+      expect(newState.active.y).toBe(state.active.y + 1);
     });
   });
 
@@ -232,7 +243,7 @@ describe('physics system', () => {
 
   describe('top-out detection', () => {
     it('should detect top-out on spawn', () => {
-      let state = createTestState();
+      const state = createTestState();
       
       // Since pieces spawn above the board, we need to create a scenario where
       // the piece cannot be placed even at its spawn position
@@ -247,7 +258,7 @@ describe('physics system', () => {
     });
 
     it('should detect top-out on hold', () => {
-      let state = createStateWithPiece();
+      const state = createStateWithPiece();
       
       // Same issue - pieces spawn above the board so they won't collide
       // In practice, top-out in modern Tetris happens when pieces lock above row 20

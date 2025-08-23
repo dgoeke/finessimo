@@ -1,11 +1,12 @@
 import { reducer } from '../../src/state/reducer';
 import { GameState } from '../../src/state/types';
+import { assertActivePiece } from '../test-helpers';
 
 describe('Reducer success paths: Rotate and Hold', () => {
   let base: GameState;
 
   beforeEach(() => {
-    base = reducer(undefined as any, { type: 'Init' });
+    base = reducer(undefined, { type: 'Init' });
   });
 
   it('applies a successful Rotate and updates active piece', () => {
@@ -17,7 +18,8 @@ describe('Reducer success paths: Rotate and Hold', () => {
     const rotated = reducer(withPiece, { type: 'Rotate', dir: 'CW' });
     expect(rotated).not.toBe(withPiece);
     expect(rotated.active).toBeDefined();
-    expect(rotated.active!.rot).toBe('right');
+    assertActivePiece(rotated);
+    expect(rotated.active.rot).toBe('right');
   });
 
   it('Hold stores current piece id and spawns next piece when allowed', () => {
@@ -30,9 +32,9 @@ describe('Reducer success paths: Rotate and Hold', () => {
     const held = reducer(withPiece, { type: 'Hold' });
     expect(held).not.toBe(withPiece);
     expect(held.active).toBeDefined(); // New system spawns next piece
-    expect(held.active!.id).toBe(withPiece.nextQueue[0]); // Should be first piece from queue
+    assertActivePiece(held);
+    expect(held.active.id).toBe(withPiece.nextQueue[0]); // Should be first piece from queue
     expect(held.hold).toBe('S');
     expect(held.canHold).toBe(false);
   });
 });
-

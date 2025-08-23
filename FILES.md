@@ -50,3 +50,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/ui/finesse.ts: Finesse visualization renderer. Provides visual feedback for optimal piece placement including target position highlighting, path indicators, and finesse quality indicators. Path simulation starts from spawn and uses core movement/rotation (SRS) on an empty board to match BFS; target Y uses real board collision (ghost).
 - src/ui/settings.ts: Settings/configuration panel. Tabs: Timing, Gameplay, Visual, Controls (Keybindings). Persists to localStorage under a single key `finessimo` (settings + keyBindings), emits changes immediately, and blocks keyboard input while rebinding.
 - src/ui/styles.css: Complete CSS styling for the application, including responsive design, preview/hold displays, touch controls, finesse visualization, and settings modal. The on-page Controls panel has been removed.
+
+## Test Utilities
+
+- tests/test-types.ts: Type utilities for testing edge cases and invalid states. Provides DeepPartial type, InvalidGameState, MalformedAction, CorruptedRng types, type guards (isValidGameState, isValidAction, isValidPieceId, isValidRot), and helper functions (createInvalidAction, createPartialGameState, createCorruptedRng) for creating test scenarios with invalid data.
+- tests/test-helpers.ts: Runtime assertion helpers for type-safe test code. Provides assertDefined, assertActivePiece, assertHasPiece, assertValidBag for type narrowing with runtime checks, plus utility functions like getOrDefault, safeArrayAccess, hasProperty, assertNotNull, assertArrayLength, and type guards (isNumber, isValidTick, assertType) to replace non-null assertions with safer alternatives.

@@ -1,6 +1,7 @@
 import { canRotate, tryRotate, getNextRotation } from '../../src/core/srs';
 import { createEmptyBoard } from '../../src/core/board';
-import { ActivePiece, Board } from '../../src/state/types';
+import { ActivePiece, Board, Rot } from '../../src/state/types';
+import { assertDefined } from '../test-helpers';
 
 describe('SRS Rotation Logic', () => {
   let emptyBoard: Board;
@@ -73,11 +74,13 @@ describe('SRS Rotation Logic', () => {
       // Must rotate sequentially: spawn -> right -> two
       const firstRotation = tryRotate(tPiece, 'right', emptyBoard);
       expect(firstRotation).not.toBeNull();
-      expect(firstRotation!.rot).toBe('right');
+      assertDefined(firstRotation);
+      expect(firstRotation.rot).toBe('right');
 
-      const secondRotation = tryRotate(firstRotation!, 'two', emptyBoard);
+      const secondRotation = tryRotate(firstRotation, 'two', emptyBoard);
       expect(secondRotation).not.toBeNull();
-      expect(secondRotation!.rot).toBe('two');
+      assertDefined(secondRotation);
+      expect(secondRotation.rot).toBe('two');
 
       // Test that from 'two' state, only adjacent rotations are allowed
       const tPieceTwo: ActivePiece = {
@@ -94,11 +97,13 @@ describe('SRS Rotation Logic', () => {
       // Adjacent rotations should work
       const toRight = tryRotate(tPieceTwo, 'right', emptyBoard);
       expect(toRight).not.toBeNull();
-      expect(toRight!.rot).toBe('right');
+      assertDefined(toRight);
+      expect(toRight.rot).toBe('right');
 
       const toLeft = tryRotate(tPieceTwo, 'left', emptyBoard);
       expect(toLeft).not.toBeNull();
-      expect(toLeft!.rot).toBe('left');
+      assertDefined(toLeft);
+      expect(toLeft.rot).toBe('left');
     });
   });
 
@@ -143,13 +148,15 @@ describe('SRS Rotation Logic', () => {
     it('should perform valid adjacent rotations on empty board', () => {
       const rotatedRight = tryRotate(tPiece, 'right', emptyBoard);
       expect(rotatedRight).not.toBeNull();
-      expect(rotatedRight!.rot).toBe('right');
-      expect(rotatedRight!.id).toBe('T');
+      assertDefined(rotatedRight);
+      expect(rotatedRight.rot).toBe('right');
+      expect(rotatedRight.id).toBe('T');
       
       const rotatedLeft = tryRotate(tPiece, 'left', emptyBoard);
       expect(rotatedLeft).not.toBeNull();
-      expect(rotatedLeft!.rot).toBe('left');
-      expect(rotatedLeft!.id).toBe('T');
+      assertDefined(rotatedLeft);
+      expect(rotatedLeft.rot).toBe('left');
+      expect(rotatedLeft.id).toBe('T');
 
       // Direct 180° rotation should fail in SRS
       const rotatedTwo = tryRotate(tPiece, 'two', emptyBoard);
@@ -174,7 +181,8 @@ describe('SRS Rotation Logic', () => {
       // Should still be able to rotate due to wall kicks
       const rotated = tryRotate(tPiece, 'right', blockedBoard);
       expect(rotated).not.toBeNull();
-      expect(rotated!.rot).toBe('right');
+      assertDefined(rotated);
+      expect(rotated.rot).toBe('right');
     });
 
     it('should return null when no valid kick position exists', () => {
@@ -216,8 +224,9 @@ describe('SRS Rotation Logic', () => {
       
       const rotated = tryRotate(iPiece, 'right', emptyBoard);
       expect(rotated).not.toBeNull();
-      expect(rotated!.rot).toBe('right');
-      expect(rotated!.id).toBe('I');
+      assertDefined(rotated);
+      expect(rotated.rot).toBe('right');
+      expect(rotated.id).toBe('I');
     });
   });
 
@@ -258,7 +267,7 @@ describe('SRS Rotation Logic', () => {
 
     it('should return current rotation for invalid direction in getNextRotation', () => {
       // Test invalid direction that would trigger the fallback
-      const invalidDirection = 'INVALID' as any;
+      const invalidDirection = 'INVALID' as unknown as 'CW' | 'CCW';
       const result = getNextRotation('spawn', invalidDirection);
       expect(result).toBe('spawn'); // Should return current rotation unchanged
     });
@@ -287,23 +296,29 @@ describe('SRS Rotation Logic', () => {
       };
 
       // Mock getKickTable to return an empty object to test missing kick data
-      const originalKickTable = (global as any).getKickTable;
-      jest.doMock('../../src/core/srs', () => ({
-        ...jest.requireActual('../../src/core/srs'),
-        getKickTable: () => ({}) // Return empty kick table
-      }));
+      type GlobalWithKickTable = typeof globalThis & { getKickTable?: () => Record<string, unknown> };
+      const originalKickTable = (global as GlobalWithKickTable).getKickTable;
+      jest.doMock('../../src/core/srs', () => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const actual = jest.requireActual('../../src/core/srs');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return {
+          ...actual,
+          getKickTable: (): Record<string, unknown> => ({}) // Return empty kick table
+        };
+      });
 
       // Test that functions handle missing kick data gracefully
       // Note: Since getKickTable is not exported, we'll test with an invalid rotation instead
       // This creates a scenario where kickTable[kickKey] returns undefined
-      const invalidRotation = 'invalid' as any;
+      const invalidRotation = 'invalid' as unknown as Rot;
       
       expect(canRotate(tPiece, invalidRotation, emptyBoard)).toBe(false);
       expect(tryRotate(tPiece, invalidRotation, emptyBoard)).toBeNull();
       
       // Restore original function if it existed
       if (originalKickTable) {
-        (global as any).getKickTable = originalKickTable;
+        (global as GlobalWithKickTable).getKickTable = originalKickTable;
       }
     });
 

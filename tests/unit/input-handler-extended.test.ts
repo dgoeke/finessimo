@@ -24,8 +24,9 @@ describe('Input Handler extended coverage', () => {
 
       // Start and capture handlers
       handler.start();
-      const kd = mockAddEventListener.mock.calls.find(c => c[0] === 'keydown')?.[1];
-      const ku = mockAddEventListener.mock.calls.find(c => c[0] === 'keyup')?.[1];
+      const calls = mockAddEventListener.mock.calls as ([string, (e: KeyboardEvent) => void])[];
+      const kd = calls.find(c => c[0] === 'keydown')?.[1];
+      const ku = calls.find(c => c[0] === 'keyup')?.[1];
 
       expect(kd).toBeInstanceOf(Function);
       expect(ku).toBeInstanceOf(Function);
@@ -35,7 +36,7 @@ describe('Input Handler extended coverage', () => {
 
       // Fire keyup ArrowUp and assert no dispatch occurred
       const up = new KeyboardEvent('keyup', { code: 'ArrowUp' });
-      (ku as any)(up);
+      if (typeof ku === 'function') ku(up);
       expect(dispatch).not.toHaveBeenCalled();
     });
   });
@@ -58,4 +59,3 @@ describe('Input Handler extended coverage', () => {
     });
   });
 });
-

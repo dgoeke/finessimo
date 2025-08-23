@@ -45,21 +45,24 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     targetRot: Rot,
     _config: GameplayConfig
   ): KeyAction[][] {
+    void _config;
     // Use an empty board for finesse calculation (placement minimality is board-agnostic in trainer drills)
     const board = createEmptyBoard();
 
-    type Node = { piece: ActivePiece; path: KeyAction[] };
+    interface Node { piece: ActivePiece; path: KeyAction[] }
     const start: Node = { piece, path: [] };
     const queue: Node[] = [start];
     const visited = new Set<string>();
     const results: KeyAction[][] = [];
     let foundDepth: number | undefined;
 
-    const keyOf = (p: ActivePiece) => `${p.x},${p.y},${p.rot}`;
+    const keyOf = (p: ActivePiece): string => `${p.x},${p.y},${p.rot}`;
     visited.add(keyOf(piece));
 
     while (queue.length) {
-      const { piece: cur, path } = queue.shift()!;
+      const shifted = queue.shift();
+      if (!shifted) break;
+      const { piece: cur, path } = shifted;
 
       // If we have found solutions, limit exploration to the same depth
       if (foundDepth !== undefined && path.length > foundDepth) break;
@@ -199,6 +202,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
 
   // Simple input normalization: drop releases and soft drop ups
   private normalizeInputs(inputs: KeyAction[], _config: GameplayConfig): KeyAction[] {
+    void _config;
     return inputs.filter((a) => a !== 'LeftUp' && a !== 'RightUp' && a !== 'SoftDropUp');
   }
 }

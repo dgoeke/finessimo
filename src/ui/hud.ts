@@ -8,7 +8,19 @@ export interface HudRenderer {
 
 export class BasicHudRenderer implements HudRenderer {
   private container: HTMLElement | undefined;
-  private elements: { [key: string]: HTMLElement } = {};
+  private elements: {
+    status?: HTMLElement;
+    tick?: HTMLElement;
+    activePiece?: HTMLElement;
+    holdPiece?: HTMLElement;
+    canHold?: HTMLElement;
+    nextQueue?: HTMLElement;
+    inputLog?: HTMLElement;
+    config?: HTMLElement;
+    gameMode?: HTMLElement;
+    modePrompt?: HTMLElement;
+    finesseFeedback?: HTMLElement;
+  } = {};
   
   initialize(container: HTMLElement): void {
     this.container = container;
@@ -218,17 +230,17 @@ export class BasicHudRenderer implements HudRenderer {
     `;
     
     // Store references to elements
-    this.elements.status = this.container.querySelector('#status')!;
-    this.elements.tick = this.container.querySelector('#tick')!;
-    this.elements.activePiece = this.container.querySelector('#activePiece')!;
-    this.elements.holdPiece = this.container.querySelector('#holdPiece')!;
-    this.elements.canHold = this.container.querySelector('#canHold')!;
-    this.elements.nextQueue = this.container.querySelector('#nextQueue')!;
-    this.elements.inputLog = this.container.querySelector('#inputLog')!;
-    this.elements.config = this.container.querySelector('#config')!;
-    this.elements.gameMode = this.container.querySelector('#gameMode')!;
-    this.elements.modePrompt = this.container.querySelector('#modePrompt')!;
-    this.elements.finesseFeedback = this.container.querySelector('#finesseFeedback')!;
+    this.elements.status = this.container.querySelector('#status') ?? undefined;
+    this.elements.tick = this.container.querySelector('#tick') ?? undefined;
+    this.elements.activePiece = this.container.querySelector('#activePiece') ?? undefined;
+    this.elements.holdPiece = this.container.querySelector('#holdPiece') ?? undefined;
+    this.elements.canHold = this.container.querySelector('#canHold') ?? undefined;
+    this.elements.nextQueue = this.container.querySelector('#nextQueue') ?? undefined;
+    this.elements.inputLog = this.container.querySelector('#inputLog') ?? undefined;
+    this.elements.config = this.container.querySelector('#config') ?? undefined;
+    this.elements.gameMode = this.container.querySelector('#gameMode') ?? undefined;
+    this.elements.modePrompt = this.container.querySelector('#modePrompt') ?? undefined;
+    this.elements.finesseFeedback = this.container.querySelector('#finesseFeedback') ?? undefined;
     // No action log; minimal HUD
   }
   

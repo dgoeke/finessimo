@@ -23,14 +23,14 @@ export class TouchInputHandler implements InputHandler {
   private container?: HTMLElement;
   
   // Touch gesture detection
-  private activeTouches: Map<number, {
+  private activeTouches = new Map<number, {
     startX: number;
     startY: number;
     startTime: number;
     zone: TouchZone | null;
     hasTriggeredHardDrop?: boolean;
     softDropEngaged?: boolean;
-  }> = new Map();
+  }>();
   
   private readonly minSwipeDistance = 30; // px
   private readonly quickSwipeTimeMs = 300; // ms threshold for hard drop swipe
@@ -52,6 +52,8 @@ export class TouchInputHandler implements InputHandler {
   }
 
   update(gameState: GameState, nowMs: number): void {
+    const dispatch = this.dispatch;
+    if (!dispatch) return;
     this.frameCounter++;
     const currentTime = nowMs;
 
@@ -61,12 +63,12 @@ export class TouchInputHandler implements InputHandler {
       
       if (dasElapsed >= gameState.timing.dasMs) {
         if (this.state.arrLastTime === undefined) {
-          this.dispatch!({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+          dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
           this.state.arrLastTime = currentTime;
         } else {
           const arrElapsed = currentTime - this.state.arrLastTime;
           if (arrElapsed >= gameState.timing.arrMs) {
-            this.dispatch!({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+            dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
             this.state.arrLastTime = currentTime;
           }
         }
@@ -80,7 +82,7 @@ export class TouchInputHandler implements InputHandler {
         this.state.softDropLastTime === undefined ||
         currentTime - this.state.softDropLastTime >= interval
       ) {
-        this.dispatch!({ type: 'SoftDrop', on: true });
+        dispatch({ type: 'SoftDrop', on: true });
         this.state.softDropLastTime = currentTime;
       }
     }
@@ -93,6 +95,7 @@ export class TouchInputHandler implements InputHandler {
   // Touch handler ignores keyboard bindings but must satisfy interface
   setKeyBindings(_bindings: KeyBindings): void {
     // no-op for touch
+    void _bindings;
   }
   getKeyBindings(): KeyBindings {
     // Not applicable; return empty bindings
@@ -213,9 +216,7 @@ export class TouchInputHandler implements InputHandler {
   private handleTouchStart(event: TouchEvent): void {
     event.preventDefault();
     
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-      if (!touch) continue;
+    for (const touch of Array.from(event.changedTouches)) {
       
       const element = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
       const zone = this.findTouchZone(element);
@@ -242,9 +243,7 @@ export class TouchInputHandler implements InputHandler {
   private handleTouchMove(event: TouchEvent): void {
     event.preventDefault();
     
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-      if (!touch) continue;
+    for (const touch of Array.from(event.changedTouches)) {
       
       const touchData = this.activeTouches.get(touch.identifier);
       
@@ -279,9 +278,7 @@ export class TouchInputHandler implements InputHandler {
   private handleTouchEnd(event: TouchEvent): void {
     event.preventDefault();
     
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-      if (!touch) continue;
+    for (const touch of Array.from(event.changedTouches)) {
       
       const touchData = this.activeTouches.get(touch.identifier);
       

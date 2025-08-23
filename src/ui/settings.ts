@@ -42,6 +42,50 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   private rebindingAction?: BindableAction;
   private boundCaptureHandler?: (e: KeyboardEvent) => void;
 
+  // Type guards and coercers for robust store parsing
+  private isRecord(x: unknown): x is Record<string, unknown> {
+    return typeof x === 'object' && x !== null;
+  }
+  private isStringArray(a: unknown): a is string[] {
+    return Array.isArray(a) && a.every((s) => typeof s === 'string');
+  }
+  private readonly BINDABLE_ACTIONS: readonly BindableAction[] = [
+    'MoveLeft','MoveRight','SoftDrop','HardDrop','RotateCW','RotateCCW','Hold'
+  ];
+  private coerceKeyBindings(maybe: unknown): KeyBindings {
+    const fb = defaultKeyBindings();
+    if (!this.isRecord(maybe)) return fb;
+    const out: KeyBindings = { ...fb };
+    const rec: Record<string, unknown> = maybe;
+    for (const action of this.BINDABLE_ACTIONS) {
+      const v = rec[action];
+      out[action] = this.isStringArray(v) ? [...v] : [...fb[action]];
+    }
+    return out;
+  }
+  private coerceSettings(maybe: unknown): Partial<GameSettings> {
+    if (!this.isRecord(maybe)) return {};
+    const s = maybe;
+    const out: Partial<GameSettings> = {};
+    const isNum = (v: unknown): v is number => typeof v === 'number';
+    const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
+    const isStr = (v: unknown): v is string => typeof v === 'string';
+    if (isNum(s.dasMs)) out.dasMs = s.dasMs;
+    if (isNum(s.arrMs)) out.arrMs = s.arrMs;
+    if (isNum(s.softDropCps)) out.softDropCps = s.softDropCps;
+    if (isNum(s.lockDelayMs)) out.lockDelayMs = s.lockDelayMs;
+    if (isNum(s.lineClearDelayMs)) out.lineClearDelayMs = s.lineClearDelayMs;
+    if (isBool(s.gravityEnabled)) out.gravityEnabled = s.gravityEnabled;
+    if (isNum(s.gravityMs)) out.gravityMs = s.gravityMs;
+    if (isNum(s.finesseCancelMs)) out.finesseCancelMs = s.finesseCancelMs;
+    if (isBool(s.ghostPieceEnabled)) out.ghostPieceEnabled = s.ghostPieceEnabled;
+    if (isNum(s.nextPieceCount)) out.nextPieceCount = s.nextPieceCount;
+    if (isStr(s.boardTheme)) out.boardTheme = s.boardTheme;
+    if (isBool(s.showGrid)) out.showGrid = s.showGrid;
+    if (isNum(s.uiScale)) out.uiScale = s.uiScale;
+    return out;
+  }
+
   constructor() {
     this.currentSettings = this.getDefaultSettings();
     const { settings, keyBindings } = this.loadStoreFromStorage();
@@ -84,7 +128,15 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     return { ...this.currentSettings };
   }
   getCurrentKeyBindings(): KeyBindings {
-    return JSON.parse(JSON.stringify(this.currentKeyBindings));
+    return {
+      MoveLeft: [...this.currentKeyBindings.MoveLeft],
+      MoveRight: [...this.currentKeyBindings.MoveRight],
+      SoftDrop: [...this.currentKeyBindings.SoftDrop],
+      HardDrop: [...this.currentKeyBindings.HardDrop],
+      RotateCW: [...this.currentKeyBindings.RotateCW],
+      RotateCCW: [...this.currentKeyBindings.RotateCCW],
+      Hold: [...this.currentKeyBindings.Hold]
+    };
   }
 
   private getDefaultSettings(): GameSettings {
@@ -117,16 +169,18 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     try {
       const raw = localStorage.getItem(this.STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) || {};
-        const kb = this.validateKeyBindings(parsed.keyBindings);
-        const s = typeof parsed.settings === 'object' && parsed.settings ? parsed.settings : {};
-        return { settings: s, keyBindings: kb };
+        const parsed: unknown = JSON.parse(raw);
+        if (this.isRecord(parsed)) {
+          const kb = 'keyBindings' in parsed ? this.coerceKeyBindings(parsed.keyBindings) : defaultKeyBindings();
+          const s = 'settings' in parsed ? this.coerceSettings(parsed.settings) : {};
+          return { settings: s, keyBindings: kb };
+        }
       }
       // Legacy migration: read old keys if present
       const legacySettingsRaw = localStorage.getItem('finessimo-settings');
       const legacyKbRaw = localStorage.getItem('finessimo-keybindings');
-      const settings = legacySettingsRaw ? JSON.parse(legacySettingsRaw) : {};
-      const keyBindings = this.validateKeyBindings(legacyKbRaw ? JSON.parse(legacyKbRaw) : undefined);
+      const settings = this.coerceSettings(legacySettingsRaw ? JSON.parse(legacySettingsRaw) : undefined);
+      const keyBindings = this.coerceKeyBindings(legacyKbRaw ? JSON.parse(legacyKbRaw) : undefined);
       // Save consolidated for future
       this.saveStoreToStorage(settings, keyBindings);
       return { settings, keyBindings };
@@ -144,15 +198,10 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     }
   }
 
-  private validateKeyBindings(maybe: any): KeyBindings {
-    const fallback = defaultKeyBindings();
-    if (!maybe || typeof maybe !== 'object') return fallback;
-    const merged: KeyBindings = { ...fallback, ...maybe };
-    (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
-      if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
-    });
-    return merged;
-  }
+  // Deprecated; kept for API compatibility in tests if referenced indirectly
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Removed in favor of coerceKeyBindings; kept to avoid breaking API, but unused.
+  // private validateKeyBindings(_maybe: unknown): KeyBindings { return this.coerceKeyBindings(_maybe); }
 
   private createSettingsPanel(): void {
     if (!this.container) return;
@@ -315,14 +364,12 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     });
 
     // Tab switching
-    const tabButtons = this.settingsPanel.querySelectorAll('.tab-button');
+    const tabButtons = this.settingsPanel.querySelectorAll<HTMLButtonElement>('.tab-button');
     tabButtons.forEach(button => {
       button.addEventListener('click', (e) => {
-        const target = e.target as HTMLButtonElement;
-        const tabName = target.getAttribute('data-tab');
-        if (tabName) {
-          this.switchTab(tabName);
-        }
+        const target = e.target as Element | null;
+        const tabName = target?.getAttribute('data-tab');
+        if (tabName) this.switchTab(tabName);
       });
     });
 
@@ -330,10 +377,10 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     this.bindSettingControls();
 
     // Action buttons
-    const resetButton = this.settingsPanel.querySelector('#reset-settings');
+    const resetButton = this.settingsPanel.querySelector<HTMLButtonElement>('#reset-settings');
     resetButton?.addEventListener('click', () => this.resetToDefaults());
     
-    const applyButton = this.settingsPanel.querySelector('#apply-settings');
+    const applyButton = this.settingsPanel.querySelector<HTMLButtonElement>('#apply-settings');
     applyButton?.addEventListener('click', () => this.applySettings());
   }
 
@@ -341,10 +388,10 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     if (!this.settingsPanel) return;
 
     // Range inputs
-    const rangeInputs = this.settingsPanel.querySelectorAll('input[type="range"]');
+    const rangeInputs = this.settingsPanel.querySelectorAll<HTMLInputElement>('input[type="range"]');
     rangeInputs.forEach(input => {
-      const rangeInput = input as HTMLInputElement;
-      const valueDisplay = rangeInput.parentElement?.querySelector('.value-display');
+      const rangeInput = input;
+      const valueDisplay = rangeInput.parentElement?.querySelector<HTMLElement>('.value-display');
       
       rangeInput.addEventListener('input', () => {
         const value = rangeInput.value;
@@ -357,10 +404,11 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     });
 
     // Bind keybinding buttons
-    const bindButtons = this.settingsPanel.querySelectorAll('[data-keybind-action]');
+    const bindButtons = this.settingsPanel.querySelectorAll<HTMLElement>('[data-keybind-action]');
     bindButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
+        const target = e.currentTarget;
+        if (!(target instanceof HTMLElement)) return;
         const action = target.getAttribute('data-keybind-action') as BindableAction | null;
         if (!action) return;
         this.startRebinding(action, target);
@@ -411,45 +459,45 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     const newSettings: Partial<GameSettings> = {};
 
     // Timing settings
-    const dasInput = this.settingsPanel.querySelector('#das-delay') as HTMLInputElement;
+    const dasInput = this.settingsPanel.querySelector<HTMLInputElement>('#das-delay');
     if (dasInput) newSettings.dasMs = parseInt(dasInput.value);
 
-    const arrInput = this.settingsPanel.querySelector('#arr-rate') as HTMLInputElement;
+    const arrInput = this.settingsPanel.querySelector<HTMLInputElement>('#arr-rate');
     if (arrInput) newSettings.arrMs = parseInt(arrInput.value);
 
-    const softDropInput = this.settingsPanel.querySelector('#soft-drop-speed') as HTMLInputElement;
+    const softDropInput = this.settingsPanel.querySelector<HTMLInputElement>('#soft-drop-speed');
     if (softDropInput) newSettings.softDropCps = parseInt(softDropInput.value);
 
-    const lockDelayInput = this.settingsPanel.querySelector('#lock-delay') as HTMLInputElement;
+    const lockDelayInput = this.settingsPanel.querySelector<HTMLInputElement>('#lock-delay');
     if (lockDelayInput) newSettings.lockDelayMs = parseInt(lockDelayInput.value);
 
-    const lineClearDelayInput = this.settingsPanel.querySelector('#line-clear-delay') as HTMLInputElement;
+    const lineClearDelayInput = this.settingsPanel.querySelector<HTMLInputElement>('#line-clear-delay');
     if (lineClearDelayInput) newSettings.lineClearDelayMs = parseInt(lineClearDelayInput.value);
 
     // Gameplay settings
-    const gravityEnabledInput = this.settingsPanel.querySelector('#gravity-enabled') as HTMLInputElement;
+    const gravityEnabledInput = this.settingsPanel.querySelector<HTMLInputElement>('#gravity-enabled');
     if (gravityEnabledInput) newSettings.gravityEnabled = gravityEnabledInput.checked;
 
-    const gravitySpeedInput = this.settingsPanel.querySelector('#gravity-speed') as HTMLInputElement;
+    const gravitySpeedInput = this.settingsPanel.querySelector<HTMLInputElement>('#gravity-speed');
     if (gravitySpeedInput) newSettings.gravityMs = parseInt(gravitySpeedInput.value);
 
-    const finesseCancelInput = this.settingsPanel.querySelector('#finesse-cancel') as HTMLInputElement;
+    const finesseCancelInput = this.settingsPanel.querySelector<HTMLInputElement>('#finesse-cancel');
     if (finesseCancelInput) newSettings.finesseCancelMs = parseInt(finesseCancelInput.value);
 
-    const ghostPieceInput = this.settingsPanel.querySelector('#ghost-piece') as HTMLInputElement;
+    const ghostPieceInput = this.settingsPanel.querySelector<HTMLInputElement>('#ghost-piece');
     if (ghostPieceInput) newSettings.ghostPieceEnabled = ghostPieceInput.checked;
 
-    const nextCountInput = this.settingsPanel.querySelector('#next-count') as HTMLInputElement;
+    const nextCountInput = this.settingsPanel.querySelector<HTMLInputElement>('#next-count');
     if (nextCountInput) newSettings.nextPieceCount = parseInt(nextCountInput.value);
 
     // Visual settings
-    const themeSelect = this.settingsPanel.querySelector('#board-theme') as HTMLSelectElement;
+    const themeSelect = this.settingsPanel.querySelector<HTMLSelectElement>('#board-theme');
     if (themeSelect) newSettings.boardTheme = themeSelect.value;
 
-    const showGridInput = this.settingsPanel.querySelector('#show-grid') as HTMLInputElement;
+    const showGridInput = this.settingsPanel.querySelector<HTMLInputElement>('#show-grid');
     if (showGridInput) newSettings.showGrid = showGridInput.checked;
 
-    const uiScaleInput = this.settingsPanel.querySelector('#ui-scale') as HTMLInputElement;
+    const uiScaleInput = this.settingsPanel.querySelector<HTMLInputElement>('#ui-scale');
     if (uiScaleInput) newSettings.uiScale = parseFloat(uiScaleInput.value);
 
     // Update internal settings
@@ -512,11 +560,11 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     // Indicate listening
     this.stopRebinding();
     this.rebindingAction = action;
-    const hint = this.settingsPanel.querySelector(`[data-hint-for="${action}"]`) as HTMLElement | null;
+    const hint = this.settingsPanel.querySelector<HTMLElement>(`[data-hint-for="${action}"]`);
     if (hint) hint.style.display = 'inline';
     buttonEl.classList.add('listening');
 
-    this.boundCaptureHandler = (e: KeyboardEvent) => {
+    this.boundCaptureHandler = (e: KeyboardEvent): void => {
       e.preventDefault();
       e.stopImmediatePropagation();
       // Update binding to single key for this action
@@ -539,10 +587,10 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     window.addEventListener('keydown', this.boundCaptureHandler, { capture: true, once: true });
 
     // Show cancel button and wire it
-    const cancelBtn = this.settingsPanel.querySelector(`[data-cancel-for="${action}"]`) as HTMLButtonElement | null;
+    const cancelBtn = this.settingsPanel.querySelector<HTMLButtonElement>(`[data-cancel-for="${action}"]`);
     if (cancelBtn) {
       cancelBtn.style.display = 'inline-block';
-      const cancelHandler = (ev: Event) => {
+      const cancelHandler = (ev: Event): void => {
         ev.preventDefault();
         ev.stopImmediatePropagation();
         this.stopRebinding();
@@ -555,11 +603,11 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   private stopRebinding(): void {
     if (!this.settingsPanel) return;
     if (this.rebindingAction) {
-      const hint = this.settingsPanel.querySelector(`[data-hint-for="${this.rebindingAction}"]`) as HTMLElement | null;
+      const hint = this.settingsPanel.querySelector<HTMLElement>(`[data-hint-for='${this.rebindingAction}']`);
       if (hint) hint.style.display = 'none';
-      const btn = this.settingsPanel.querySelector(`[data-keybind-action="${this.rebindingAction}"]`) as HTMLElement | null;
+      const btn = this.settingsPanel.querySelector<HTMLElement>(`[data-keybind-action='${this.rebindingAction}']`);
       btn?.classList.remove('listening');
-      const cancel = this.settingsPanel.querySelector(`[data-cancel-for="${this.rebindingAction}"]`) as HTMLElement | null;
+      const cancel = this.settingsPanel.querySelector<HTMLElement>(`[data-cancel-for='${this.rebindingAction}']`);
       if (cancel) cancel.style.display = 'none';
     }
     if (this.boundCaptureHandler) {
@@ -571,18 +619,23 @@ export class BasicSettingsRenderer implements SettingsRenderer {
 
   private updateInputsFromSettings(): void {
     if (!this.settingsPanel) return;
-    const setVal = (sel: string, val: string | number | boolean) => {
-      const el = this.settingsPanel!.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null;
+    const panel = this.settingsPanel;
+    const setVal = (sel: string, val: string | number | boolean): void => {
+      const el = panel.querySelector(sel);
       if (!el) return;
-      if (el instanceof HTMLInputElement && (el.type === 'checkbox')) {
-        (el as HTMLInputElement).checked = Boolean(val);
-      } else {
-        (el as HTMLInputElement | HTMLSelectElement).value = String(val);
+      if (el instanceof HTMLInputElement) {
+        if (el.type === 'checkbox') {
+          el.checked = Boolean(val);
+        } else {
+          el.value = String(val);
+        }
+      } else if (el instanceof HTMLSelectElement) {
+        el.value = String(val);
       }
       // Update inline value display if present
-      const display = el.parentElement?.querySelector('.value-display');
-      if (display) {
-        const id = (el as HTMLInputElement).id;
+      const display = el.parentElement?.querySelector<HTMLElement>('.value-display');
+      if (display && el instanceof HTMLInputElement) {
+        const id = el.id;
         const suffix = id.includes('delay') || id.includes('cancel') || id.includes('speed') || id === 'arr-rate' || id === 'das-delay' ? 'ms' : id === 'ui-scale' ? 'x' : '';
         display.textContent = `${(el as HTMLInputElement | HTMLSelectElement).value}${suffix}`;
       }
@@ -607,7 +660,7 @@ export class BasicSettingsRenderer implements SettingsRenderer {
 
   private updateKeybindButtons(): void {
     if (!this.settingsPanel) return;
-    const all: Array<[BindableAction, string]> = [
+    const all: [BindableAction, string][] = [
       ['MoveLeft', 'Move Left'],
       ['MoveRight', 'Move Right'],
       ['SoftDrop', 'Soft Drop'],
@@ -619,9 +672,9 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     for (const [action] of all) {
       const code = this.currentKeyBindings[action]?.[0] || '';
       const label = this.formatKey(code) || 'Unbound';
-      const btn = this.settingsPanel.querySelector(`[data-keybind-action="${action}"]`) as HTMLElement | null;
-      const hint = this.settingsPanel.querySelector(`[data-hint-for="${action}"]`) as HTMLElement | null;
-      const cancel = this.settingsPanel.querySelector(`[data-cancel-for="${action}"]`) as HTMLElement | null;
+      const btn = this.settingsPanel.querySelector<HTMLElement>(`[data-keybind-action="${action}"]`);
+      const hint = this.settingsPanel.querySelector<HTMLElement>(`[data-hint-for="${action}"]`);
+      const cancel = this.settingsPanel.querySelector<HTMLElement>(`[data-cancel-for="${action}"]`);
       if (btn) btn.textContent = label;
       if (hint) hint.style.display = 'none';
       if (cancel) cancel.style.display = 'none';

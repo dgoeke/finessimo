@@ -1,11 +1,14 @@
 import { reducer } from '../../src/state/reducer';
 import { GameState, Action, InputEvent, Board, idx } from '../../src/state/types';
+import { SevenBagRng } from '../../src/core/rng';
+import { InvalidGameState } from '../test-types';
+import { assertDefined } from '../test-helpers';
 
 describe('Reducer - Extended Coverage', () => {
   let initialState: GameState;
   
   beforeEach(() => {
-    initialState = reducer(undefined as any, { type: 'Init' });
+    initialState = reducer(undefined, { type: 'Init' });
   });
 
   describe('Action type coverage', () => {
@@ -52,8 +55,8 @@ describe('Reducer - Extended Coverage', () => {
 
   describe('Init action comprehensive testing', () => {
     it('should create completely fresh state each time', () => {
-      const state1 = reducer(undefined as any, { type: 'Init' });
-      const state2 = reducer(undefined as any, { type: 'Init' });
+      const state1 = reducer(undefined, { type: 'Init' });
+      const state2 = reducer(undefined, { type: 'Init' });
       
       expect(state1).not.toBe(state2); // Different objects
       expect(state1).toEqual(state2); // Same content
@@ -61,16 +64,16 @@ describe('Reducer - Extended Coverage', () => {
     });
 
     it('should create empty board with all zeros', () => {
-      const state = reducer(undefined as any, { type: 'Init' });
+      const state = reducer(undefined, { type: 'Init' });
       
-      for (let i = 0; i < state.board.cells.length; i++) {
-        expect(state.board.cells[i]).toBe(0);
+      for (const cell of state.board.cells) {
+        expect(cell).toBe(0);
       }
     });
 
     it('should merge partial timing config correctly', () => {
       const partialTiming = { dasMs: 100 };
-      const state = reducer(undefined as any, { type: 'Init', timing: partialTiming });
+      const state = reducer(undefined, { type: 'Init', timing: partialTiming });
       
       expect(state.timing.dasMs).toBe(100); // Overridden
       expect(state.timing.arrMs).toBe(2);   // Default
@@ -80,13 +83,13 @@ describe('Reducer - Extended Coverage', () => {
 
     it('should merge partial gameplay config correctly', () => {
       const partialGameplay = { finesseCancelMs: 75 };
-      const state = reducer(undefined as any, { type: 'Init', gameplay: partialGameplay });
+      const state = reducer(undefined, { type: 'Init', gameplay: partialGameplay });
       
       expect(state.gameplay.finesseCancelMs).toBe(75); // Overridden
     });
 
     it('should handle empty partial configs', () => {
-      const state = reducer(undefined as any, { 
+      const state = reducer(undefined, { 
         type: 'Init', 
         timing: {}, 
         gameplay: {} 
@@ -99,12 +102,12 @@ describe('Reducer - Extended Coverage', () => {
     });
 
     it('should create valid RNG state', () => {
-      const state1 = reducer(undefined as any, { type: 'Init' });
-      const state2 = reducer(undefined as any, { type: 'Init', seed: 'custom' });
+      const state1 = reducer(undefined, { type: 'Init' });
+      const state2 = reducer(undefined, { type: 'Init', seed: 'custom' });
       
       // New system creates full RNG state, just check seed property
-      expect((state1.rng as any).seed).toBe('default');
-      expect((state2.rng as any).seed).toBe('custom');
+      expect((state1.rng as SevenBagRng & { seed: string }).seed).toBe('default');
+      expect((state2.rng as SevenBagRng & { seed: string }).seed).toBe('custom');
       
       // Should also generate pieces in queue
       expect(state1.nextQueue).toHaveLength(5);
@@ -234,7 +237,8 @@ describe('Reducer - Extended Coverage', () => {
       
       expect(currentState.inputLog).toHaveLength(keyActions.length);
       keyActions.forEach((action, index) => {
-        expect(currentState.inputLog[index]!.action).toBe(action);
+        assertDefined(currentState.inputLog[index]);
+        expect(currentState.inputLog[index].action).toBe(action);
       });
     });
 
@@ -319,8 +323,8 @@ describe('Reducer - Extended Coverage', () => {
       ];
       
       malformedActions.forEach(action => {
-        expect(() => reducer(initialState, action as any)).not.toThrow();
-        const result = reducer(initialState, action as any);
+        expect(() => reducer(initialState, action as unknown as Action)).not.toThrow();
+        const result = reducer(initialState, action as unknown as Action);
         expect(result).toBe(initialState); // Should return unchanged state
       });
     });
@@ -328,8 +332,8 @@ describe('Reducer - Extended Coverage', () => {
     it('should handle EnqueueInput with missing event', () => {
       const malformedAction = { type: 'EnqueueInput' }; // Missing event
       
-      expect(() => reducer(initialState, malformedAction as any)).not.toThrow();
-      const result = reducer(initialState, malformedAction as any);
+      expect(() => reducer(initialState, malformedAction as unknown as Action)).not.toThrow();
+      const result = reducer(initialState, malformedAction as unknown as Action);
       
       // Should return original state unchanged when event is missing
       expect(result).toBe(initialState);
@@ -343,7 +347,7 @@ describe('Reducer - Extended Coverage', () => {
       ];
       
       handledCorruptStates.forEach(state => {
-        expect(() => reducer(state as any, { type: 'Tick', timestampMs: 0 })).not.toThrow();
+        expect(() => reducer(state as InvalidGameState as GameState, { type: 'Tick', timestampMs: 0 })).not.toThrow();
       });
     });
 
@@ -359,10 +363,10 @@ describe('Reducer - Extended Coverage', () => {
       
       invalidStates.forEach(invalidState => {
         // Should not throw
-        expect(() => reducer(invalidState as any, { type: 'Tick', timestampMs: 0 })).not.toThrow();
+        expect(() => reducer(invalidState as InvalidGameState as GameState, { type: 'Tick', timestampMs: 0 })).not.toThrow();
         
         // Should return the invalid state unchanged (defensive behavior)
-        const result = reducer(invalidState as any, { type: 'Tick', timestampMs: 0 });
+        const result = reducer(invalidState as InvalidGameState as GameState, { type: 'Tick', timestampMs: 0 });
         expect(result).toBe(invalidState);
       });
     });
@@ -376,9 +380,9 @@ describe('Reducer - Extended Coverage', () => {
       ];
       
       invalidStates.forEach(invalidState => {
-        expect(() => reducer(invalidState as any, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } })).not.toThrow();
+        expect(() => reducer(invalidState as InvalidGameState as GameState, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } })).not.toThrow();
         
-        const result = reducer(invalidState as any, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } });
+        const result = reducer(invalidState as InvalidGameState as GameState, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } });
         expect(result).toBe(invalidState);
       });
     });

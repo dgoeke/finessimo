@@ -11,7 +11,7 @@ export interface SevenBagRng {
 const ALL_PIECES: PieceId[] = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
 // Create initial RNG state
-export function createRng(seed: string = 'default'): SevenBagRng {
+export function createRng(seed = 'default'): SevenBagRng {
   return {
     seed,
     currentBag: [],
