@@ -1,6 +1,5 @@
 import { DOMInputHandler, MockInputHandler } from '../../src/input/handler';
 import { Action } from '../../src/state/types';
-import { reducer } from '../../src/state/reducer';
 
 // Mock DOM listener bindings to capture handlers
 const mockAddEventListener = jest.fn();

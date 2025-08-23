@@ -11,11 +11,12 @@ const mockGameState: GameState = {
   canHold: true,
   nextQueue: [],
   rng: { seed: 'test' },
-  timing: { tickHz: 60, dasMs: 133, arrMs: 2, softDropCps: 20, lockDelayMs: 500, lineClearDelayMs: 0 },
+  timing: { tickHz: 60, dasMs: 133, arrMs: 2, softDropCps: 20, lockDelayMs: 500, lineClearDelayMs: 0, gravityEnabled: false, gravityMs: 1000 },
   gameplay: { finesseCancelMs: 50 },
   tick: 0,
   status: 'playing',
   stats: {},
+  physics: { lastGravityTime: 0, lockDelayStartTime: null, isSoftDropping: false, lineClearStartTime: null, lineClearLines: [] },
   inputLog: [],
   currentMode: 'freePlay',
   finesseFeedback: null,
@@ -53,7 +54,7 @@ describe('FreePlayMode', () => {
   const mode = new FreePlayMode();
 
   test('should provide feedback for optimal finesse', () => {
-    const result = mode.onPieceLocked(mockGameState, mockOptimalResult);
+    const result = mode.onPieceLocked(mockGameState, mockOptimalResult, mockPiece, mockPiece);
     
     expect(result.feedback).toContain('✓ Optimal finesse');
     expect(result.feedback).toContain('3 inputs');
@@ -62,7 +63,7 @@ describe('FreePlayMode', () => {
   });
 
   test('should provide feedback for suboptimal finesse', () => {
-    const result = mode.onPieceLocked(mockGameState, mockSuboptimalResult);
+    const result = mode.onPieceLocked(mockGameState, mockSuboptimalResult, mockPiece, mockPiece);
     
     expect(result.feedback).toContain('✗ Non-optimal finesse');
     expect(result.feedback).toContain('Used 6 inputs');

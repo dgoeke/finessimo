@@ -1,8 +1,6 @@
-# Tetris Finesse Trainer — Final Design Document (AI-Ready, Rev. 2)
+# Tetris Finesse Trainer — Design Document
 
 Project name: Finessimo
-
-This document has been updated to incorporate architectural clarifications, ensuring minimal ambiguity for AI-assisted implementation.
 
 Note: For a concise per-file overview of the current src/ codebase, see FILES.md.
 
@@ -18,11 +16,13 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 ## Goals and Non-goals
 
 **Goals:**
+
 - Teach minimal-input placement using SRS with clear feedback, drills, and stats.
 - Provide guided and free-play modes, desktop and mobile support, and custom scenarios.
 - Maintain deterministic, testable, and extensible core.
 
 **Non-goals (MVP):**
+
 - Competitive scoring/versus modes.
 - Online leaderboards and multiplayer.
 - Non-SRS rotation variants and non-standard piece sets.
@@ -39,6 +39,7 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 **UI (Canvas board + DOM UI)** → **Input Handler (Stateful: keyboard/touch + DAS/ARR timers)** → **Reducer (Pure Function)** → **Immutable State** → **Core Logic (movement, rotation, collision, line clear, RNG)** → **Finesse Calculator (post-lock)** → **Game Mode hooks**
 
 **Data flow:**
+
 - User input is processed by a stateful `Input Handler` which dispatches normalized action objects.
 - Actions are processed by a pure `reducer` function: `(currentState, action) => newState`.
 - The application re-renders based on the new immutable state object.
@@ -47,46 +48,51 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 
 To maintain a pure core reducer, all state related to physical input devices and timing (DAS/ARR) is managed exclusively within the `Input Handler` module.
 
--   **Internal State:** The handler maintains its own internal, mutable state, such as `isLeftKeyDown`, `dasStartTime`, etc. This state is not part of the global `GameState`.
--   **Responsibilities:**
-    1.  Listen for raw DOM events (`keydown`, `keyup`).
-    2.  Manage timers for DAS (initial delay) and ARR (auto-repeat).
-    3.  Dispatch normalized game `Action` objects (e.g., `{ type: 'Move', dir: -1, source: 'tap' }`) to the central store. It does not modify the `GameState` directly.
--   **Benefit:** This isolates side-effects and complex timing logic to the system's edge, allowing the game's core reducer to remain a simple, testable, pure function.
+- **Internal State:** The handler maintains its own internal, mutable state, such as `isLeftKeyDown`, `dasStartTime`, etc. This state is not part of the global `GameState`.
+- **Responsibilities:**
+  1.  Listen for raw DOM events (`keydown`, `keyup`).
+  2.  Manage timers for DAS (initial delay) and ARR (auto-repeat).
+  3.  Dispatch normalized game `Action` objects (e.g., `{ type: 'Move', dir: -1, source: 'tap' }`) to the central store. It does not modify the `GameState` directly.
+- **Benefit:** This isolates side-effects and complex timing logic to the system's edge, allowing the game's core reducer to remain a simple, testable, pure function.
 
 ## Contracts and Conventions
 
 ### Coordinate System
 
--   **Board dimensions:** width = 10, height = 20 (visible rows only).
--   **Origin:** Top-left at (0,0); x increases right, y increases down.
--   **Active piece positioning:** May occupy negative y values while spawning/rotating above the board.
--   **Collision rules:** Cells with y < 0 are treated as empty; locking with any cell at y < 0 triggers top-out.
--   **Line clearing:** Only scans rows 0..19.
+- **Board dimensions:** width = 10, height = 20 (visible rows only).
+- **Origin:** Top-left at (0,0); x increases right, y increases down.
+- **Active piece positioning:** May occupy negative y values while spawning/rotating above the board.
+- **Collision rules:** Cells with y < 0 are treated as empty; locking with any cell at y < 0 triggers top-out.
+- **Line clearing:** Only scans rows 0..19.
 
 ### Time and Loop
 
--   Fixed logic tick: 60 Hz (every 16.666… ms).
--   Render via `requestAnimationFrame`; logic is independent of render cadence.
+- Fixed logic tick: 60 Hz (every 16.666… ms).
+- Render via `requestAnimationFrame`; logic is independent of render cadence.
 
 ### Randomness and Determinism
 
--   Seedable 7-bag randomizer.
--   All gameplay is deterministic from seed + input log.
--   Replays serialize seed, timing config, and normalized input events.
+- Seedable 7-bag randomizer.
+- All gameplay is deterministic from seed + input log.
+- Replays serialize seed, timing config, and normalized input events.
 
 ### Rotation Names
 
--   `spawn` (0), `right` (CW, +1), `left` (CCW, -1).
+The four rotation states are defined as follows:
+
+- `spawn` (0): The initial state when the piece appears.
+- `right` (R): State after one clockwise rotation from spawn.
+- `two` (2): State after two successive rotations in either direction from spawn.
+- `left` (L): State after one counter-clockwise rotation from spawn.
 
 ### Physics & Gameplay Defaults
 
--   Gravity: OFF in trainer modes by default (piece falls only on soft/hard drop).
--   Lock delay: 500 ms.
--   Line clear delay: 0 ms.
--   DAS: 133 ms.
--   ARR: 2 ms (0 = instant).
--   Input Cancellation Window: 50 ms (for normalizing mis-inputs).
+- Gravity: OFF in trainer modes by default (piece falls only on soft/hard drop).
+- Lock delay: 500 ms.
+- Line clear delay: 0 ms.
+- DAS: 133 ms.
+- ARR: 2 ms (0 = instant).
+- Input Cancellation Window: 50 ms (for normalizing mis-inputs).
 
 ## Core Types
 
@@ -110,8 +116,8 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 }
 
 // Pieces and rotation
-export type PieceId = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type Rot = 'spawn' | 'right' | 'left';
+export type PieceId = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
+export type Rot = "spawn" | "right" | "two" | "left";
 
 export interface TetrominoShape {
   id: PieceId;
@@ -129,7 +135,7 @@ export interface ActivePiece {
 
 // Config
 export interface GameplayConfig {
-  finesseCancelMs: number;   // default: 50
+  finesseCancelMs: number; // default: 50
 }
 
 export interface TimingConfig {
@@ -143,13 +149,16 @@ export interface TimingConfig {
 
 // User actions at the input layer
 export type KeyAction =
-  | 'LeftDown' | 'LeftUp'
-  | 'RightDown' | 'RightUp'
-  | 'SoftDropDown' | 'SoftDropUp'
-  | 'HardDrop'
-  | 'RotateCW'
-  | 'RotateCCW'
-  | 'Hold';
+  | "LeftDown"
+  | "LeftUp"
+  | "RightDown"
+  | "RightUp"
+  | "SoftDropDown"
+  | "SoftDropUp"
+  | "HardDrop"
+  | "RotateCW"
+  | "RotateCCW"
+  | "Hold";
 
 export interface InputEvent {
   tMs: number;
@@ -168,7 +177,7 @@ export interface GameState {
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
-  status: 'playing' | 'lineClear' | 'topOut';
+  status: "playing" | "lineClear" | "topOut";
   stats: unknown; // Stats object definition
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
@@ -176,20 +185,25 @@ export interface GameState {
 
 // State transitions
 export type Action =
-  | { type: 'Init'; seed?: string; timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig> }
-  | { type: 'Tick' }
-  | { type: 'Spawn' }
-  | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
-  | { type: 'SoftDrop'; on: boolean }
-  | { type: 'Rotate'; dir: 'CW' | 'CCW' }
-  | { type: 'HardDrop' }
-  | { type: 'Hold' }
-  | { type: 'Lock' }
-  | { type: 'ClearLines'; lines: number[] }
-  | { type: 'EnqueueInput'; event: InputEvent };
+  | {
+      type: "Init";
+      seed?: string;
+      timing?: Partial<TimingConfig>;
+      gameplay?: Partial<GameplayConfig>;
+    }
+  | { type: "Tick" }
+  | { type: "Spawn" }
+  | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
+  | { type: "SoftDrop"; on: boolean }
+  | { type: "Rotate"; dir: "CW" | "CCW" }
+  | { type: "HardDrop" }
+  | { type: "Hold" }
+  | { type: "Lock" }
+  | { type: "ClearLines"; lines: number[] }
+  | { type: "EnqueueInput"; event: InputEvent };
 
 export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
-````
+```
 
 ## SRS Constants
 
@@ -198,67 +212,221 @@ export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
 ```typescript
 export const PIECES: Record<PieceId, TetrominoShape> = {
   T: {
-    id: 'T',
+    id: "T",
     cells: {
-      spawn: [[1,0],[0,1],[1,1],[2,1]],
-      right: [[1,0],[1,1],[2,1],[1,2]],
-      left:  [[1,0],[0,1],[1,1],[1,2]],
+      spawn: [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
+      right: [
+        [1, 0],
+        [1, 1],
+        [2, 1],
+        [1, 2],
+      ],
+      two: [
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [1, 2],
+      ],
+      left: [
+        [1, 0],
+        [0, 1],
+        [1, 1],
+        [1, 2],
+      ],
     },
-    spawnTopLeft: [3, -2], color: '#a000f0',
+    spawnTopLeft: [3, -2],
+    color: "#a000f0",
   },
   J: {
-    id: 'J',
+    id: "J",
     cells: {
-      spawn: [[0,0],[0,1],[1,1],[2,1]],
-      right: [[1,0],[2,0],[1,1],[1,2]],
-      left:  [[1,0],[0,2],[1,1],[1,2]],
+      spawn: [
+        [0, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
+      right: [
+        [1, 0],
+        [2, 0],
+        [1, 1],
+        [1, 2],
+      ],
+      two: [
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [2, 2],
+      ],
+      left: [
+        [1, 0],
+        [0, 2],
+        [1, 1],
+        [1, 2],
+      ],
     },
-    spawnTopLeft: [3, -2], color: '#0000f0',
+    spawnTopLeft: [3, -2],
+    color: "#0000f0",
   },
   L: {
-    id: 'L',
+    id: "L",
     cells: {
-      spawn: [[2,0],[0,1],[1,1],[2,1]],
-      right: [[1,0],[1,1],[1,2],[2,2]],
-      left:  [[0,0],[1,0],[1,1],[1,2]],
+      spawn: [
+        [2, 0],
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ],
+      right: [
+        [1, 0],
+        [1, 1],
+        [1, 2],
+        [2, 2],
+      ],
+      two: [
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [0, 2],
+      ],
+      left: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [1, 2],
+      ],
     },
-    spawnTopLeft: [3, -2], color: '#f0a000',
+    spawnTopLeft: [3, -2],
+    color: "#f0a000",
   },
   S: {
-    id: 'S',
+    id: "S",
     cells: {
-      spawn: [[1,0],[2,0],[0,1],[1,1]],
-      right: [[1,0],[1,1],[2,1],[2,2]],
-      left:  [[0,0],[0,1],[1,1],[1,2]],
+      spawn: [
+        [1, 0],
+        [2, 0],
+        [0, 1],
+        [1, 1],
+      ],
+      right: [
+        [1, 0],
+        [1, 1],
+        [2, 1],
+        [2, 2],
+      ],
+      two: [
+        [1, 1],
+        [2, 1],
+        [0, 2],
+        [1, 2],
+      ],
+      left: [
+        [0, 0],
+        [0, 1],
+        [1, 1],
+        [1, 2],
+      ],
     },
-    spawnTopLeft: [3, -2], color: '#00f000',
+    spawnTopLeft: [3, -2],
+    color: "#00f000",
   },
   Z: {
-    id: 'Z',
+    id: "Z",
     cells: {
-      spawn: [[0,0],[1,0],[1,1],[2,1]],
-      right: [[2,0],[1,1],[2,1],[1,2]],
-      left:  [[0,1],[1,1],[1,2],[2,2]],
+      spawn: [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [2, 1],
+      ],
+      right: [
+        [2, 0],
+        [1, 1],
+        [2, 1],
+        [1, 2],
+      ],
+      two: [
+        [0, 1],
+        [1, 1],
+        [1, 2],
+        [2, 2],
+      ],
+      left: [
+        [0, 1],
+        [1, 1],
+        [1, 2],
+        [2, 2],
+      ],
     },
-    spawnTopLeft: [3, -2], color: '#f00000',
+    spawnTopLeft: [3, -2],
+    color: "#f00000",
   },
   I: {
-    id: 'I',
+    id: "I",
     cells: {
-      spawn: [[0,1],[1,1],[2,1],[3,1]],
-      right: [[2,0],[2,1],[2,2],[2,3]],
-      left:  [[1,0],[1,1],[1,2],[1,3]],
+      spawn: [
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [3, 1],
+      ],
+      right: [
+        [2, 0],
+        [2, 1],
+        [2, 2],
+        [2, 3],
+      ],
+      two: [
+        [0, 2],
+        [1, 2],
+        [2, 2],
+        [3, 2],
+      ],
+      left: [
+        [1, 0],
+        [1, 1],
+        [1, 2],
+        [1, 3],
+      ],
     },
-    spawnTopLeft: [3, -1], color: '#00f0f0',
+    spawnTopLeft: [3, -1],
+    color: "#00f0f0",
   },
   O: {
-    id: 'O',
+    id: "O",
     cells: {
-      spawn: [[1,0],[2,0],[1,1],[2,1]],
-      right: [[1,0],[2,0],[1,1],[2,1]],
-      left:  [[1,0],[2,0],[1,1],[2,1]],
+      spawn: [
+        [1, 0],
+        [2, 0],
+        [1, 1],
+        [2, 1],
+      ],
+      right: [
+        [1, 0],
+        [2, 0],
+        [1, 1],
+        [2, 1],
+      ],
+      two: [
+        [1, 0],
+        [2, 0],
+        [1, 1],
+        [2, 1],
+      ],
+      left: [
+        [1, 0],
+        [2, 0],
+        [1, 1],
+        [2, 1],
+      ],
     },
-    spawnTopLeft: [4, -2], color: '#f0f000',
+    spawnTopLeft: [4, -2],
+    color: "#f0f000",
   },
 };
 ```
@@ -266,33 +434,178 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
 ### Wall Kick Tables
 
 ```typescript
-// Standard CW/CCW kicks for JLSTZ pieces
-export const KICKS_JLSTZ: Record<string, ReadonlyArray<readonly [number, number]>> = {
-  'spawn->right': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
-  'right->spawn': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'right->left':  [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'left->right':  [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
-  'left->spawn':  [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
-  'spawn->left':  [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+// Standard kicks for JLSTZ pieces, updated for 4-way SRS
+export const KICKS_JLSTZ: Record<
+  string,
+  ReadonlyArray<readonly [number, number]>
+> = {
+  // 0 -> R / R -> 0
+  "spawn->right": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  "right->spawn": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  // R -> 2 / 2 -> R
+  "right->two": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "two->right": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  // 2 -> L / L -> 2
+  "two->left": [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+  "left->two": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+  // L -> 0 / 0 -> L
+  "left->spawn": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "spawn->left": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  // 180-degree rotation transitions (legacy)
+  "right->left": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "left->right": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
 };
 
-// Standard CW/CCW kicks for I piece
-export const KICKS_I: Record<string, ReadonlyArray<readonly [number, number]>> = {
-  'spawn->right': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
-  'right->spawn': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-  'left->spawn':  [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
-  'spawn->left':  [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+// Standard kicks for I piece, updated for 4-way SRS
+export const KICKS_I: Record<
+  string,
+  ReadonlyArray<readonly [number, number]>
+> = {
+  // 0 -> R / R -> 0
+  "spawn->right": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+  "right->spawn": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  // R -> 2 / 2 -> R
+  "right->two": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "two->right": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
+  // 2 -> L / L -> 2
+  "two->left": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  "left->two": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+  // L -> 0 / 0 -> L
+  "left->spawn": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "spawn->left": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
+  // 180-degree rotation transitions
+  "right->left": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, 2],
+    [-2, -1],
+  ],
+  "left->right": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, -2],
+    [2, 1],
+  ],
 };
-
 ```
 
 ## Finesse Detection Specification
 
 ### What Counts as an Input
 
-  - Each distinct key press counts as 1 input: `LeftDown`, `RightDown`, `RotateCW`, `RotateCCW`, `Hold`, `HardDrop`.
-  - Holding Left/Right that generates movement via DAS/ARR does **NOT** add further inputs.
-  - Hard drop is always required and counts as 1 input.
+- Each distinct key press counts as 1 input: `LeftDown`, `RightDown`, `RotateCW`, `RotateCCW`, `Hold`, `HardDrop`.
+- Holding Left/Right that generates movement via DAS/ARR does **NOT** add further inputs.
+- Hard drop is always required and counts as 1 input.
 
 ### Input Normalization
 
@@ -308,14 +621,14 @@ The goal is to convert a raw series of `InputEvent`s into a clean sequence of `K
 
 The optimal input sequence is found by performing a Breadth-First Search (BFS) on the state space.
 
-  - **Nodes:** Unique piece states defined by `(x, y, rot)`.
-  - **Graph Edges:** The search expands from a node by applying abstract "player intents," each with a cost of 1. These edges represent the minimal actions a player can take, not raw game ticks.
-      - `TapLeft`: Moves piece 1 unit left.
-      - `TapRight`: Moves piece 1 unit right.
-      - `HoldLeft`: Moves piece to collide with the left wall.
-      - `HoldRight`: Moves piece to collide with the right wall.
-      - `RotateCW`, `RotateCCW`.
-  - **Goal:** The search finds the shortest path(s) from the spawn state to the final locked `(x, rot)` state.
+- **Nodes:** Unique piece states defined by `(x, y, rot)`.
+- **Graph Edges:** The search expands from a node by applying abstract "player intents," each with a cost of 1. These edges represent the minimal actions a player can take, not raw game ticks.
+  - `TapLeft`: Moves piece 1 unit left.
+  - `TapRight`: Moves piece 1 unit right.
+  - `HoldLeft`: Moves piece to collide with the left wall.
+  - `HoldRight`: Moves piece to collide with the right wall.
+  - `RotateCW`, `RotateCCW`.
+- **Goal:** The search finds the shortest path(s) from the spawn state to the final locked `(x, rot)` state.
 
 ### Output
 

@@ -11,7 +11,7 @@ describe('Reducer - Extended Coverage', () => {
   describe('Action type coverage', () => {
     it('should handle all defined action types without errors', () => {
       const actions: Action[] = [
-        { type: 'Tick' },
+        { type: 'Tick', timestampMs: 0 },
         { type: 'Spawn' },
         { type: 'Move', dir: -1, source: 'tap' },
         { type: 'Move', dir: 1, source: 'das' },
@@ -115,7 +115,7 @@ describe('Reducer - Extended Coverage', () => {
   describe('Tick action detailed testing', () => {
     it('should increment tick from any starting value', () => {
       const stateWithTicks = { ...initialState, tick: 42 };
-      const result = reducer(stateWithTicks, { type: 'Tick' });
+      const result = reducer(stateWithTicks, { type: 'Tick', timestampMs: 0 });
       
       expect(result.tick).toBe(43);
       expect(result).not.toBe(stateWithTicks); // New object
@@ -133,7 +133,7 @@ describe('Reducer - Extended Coverage', () => {
         status: 'lineClear'
       };
       
-      const result = reducer(complexState, { type: 'Tick' });
+      const result = reducer(complexState, { type: 'Tick', timestampMs: 0 });
       
       expect(result.tick).toBe(11);
       expect(result.active).toEqual(complexState.active);
@@ -260,7 +260,7 @@ describe('Reducer - Extended Coverage', () => {
       const originalCanHold = originalState.canHold;
       
       // Try all actions that modify state
-      reducer(originalState, { type: 'Tick' });
+      reducer(originalState, { type: 'Tick', timestampMs: 0 });
       reducer(originalState, { type: 'Lock' });
       reducer(originalState, { type: 'EnqueueInput', event: { tMs: 1000, frame: 60, action: 'HardDrop' } });
       
@@ -285,7 +285,7 @@ describe('Reducer - Extended Coverage', () => {
       
       // Simulate rapid input sequence
       for (let i = 0; i < 100; i++) {
-        state = reducer(state, { type: 'Tick' });
+        state = reducer(state, { type: 'Tick', timestampMs: i });
         tickCount++;
         
         if (i % 10 === 0) {
@@ -343,7 +343,7 @@ describe('Reducer - Extended Coverage', () => {
       ];
       
       handledCorruptStates.forEach(state => {
-        expect(() => reducer(state as any, { type: 'Tick' })).not.toThrow();
+        expect(() => reducer(state as any, { type: 'Tick', timestampMs: 0 })).not.toThrow();
       });
     });
 
@@ -359,10 +359,10 @@ describe('Reducer - Extended Coverage', () => {
       
       invalidStates.forEach(invalidState => {
         // Should not throw
-        expect(() => reducer(invalidState as any, { type: 'Tick' })).not.toThrow();
+        expect(() => reducer(invalidState as any, { type: 'Tick', timestampMs: 0 })).not.toThrow();
         
         // Should return the invalid state unchanged (defensive behavior)
-        const result = reducer(invalidState as any, { type: 'Tick' });
+        const result = reducer(invalidState as any, { type: 'Tick', timestampMs: 0 });
         expect(result).toBe(invalidState);
       });
     });
