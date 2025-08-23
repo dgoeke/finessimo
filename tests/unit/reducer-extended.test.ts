@@ -32,14 +32,21 @@ describe('Reducer - Extended Coverage', () => {
     });
 
     it('should return original state for unimplemented actions (no-op)', () => {
+      // Spawn is now implemented, so we test with truly unimplemented actions
       const unimplementedActions: Action[] = [
-        { type: 'Spawn' }
+        // All actions are now implemented, so this test is no longer relevant
+        // Keeping test but with no actions to test
       ];
 
       unimplementedActions.forEach(action => {
         const result = reducer(initialState, action);
         expect(result).toBe(initialState); // Should return exact same reference
       });
+      
+      // Test that Spawn actually works now
+      const spawnResult = reducer(initialState, { type: 'Spawn' });
+      expect(spawnResult).not.toBe(initialState); // Should create new state
+      expect(spawnResult.active).toBeDefined(); // Should spawn a piece
     });
   });
 
@@ -95,8 +102,13 @@ describe('Reducer - Extended Coverage', () => {
       const state1 = reducer(undefined as any, { type: 'Init' });
       const state2 = reducer(undefined as any, { type: 'Init', seed: 'custom' });
       
-      expect(state1.rng).toEqual({ seed: 'default' });
-      expect(state2.rng).toEqual({ seed: 'custom' });
+      // New system creates full RNG state, just check seed property
+      expect((state1.rng as any).seed).toBe('default');
+      expect((state2.rng as any).seed).toBe('custom');
+      
+      // Should also generate pieces in queue
+      expect(state1.nextQueue).toHaveLength(5);
+      expect(state2.nextQueue).toHaveLength(5);
     });
   });
 
