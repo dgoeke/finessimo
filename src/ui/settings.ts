@@ -1,4 +1,5 @@
 import { GameState } from '../state/types';
+import { KeyBindings, defaultKeyBindings, BindableAction } from '../input/handler';
 
 export interface GameSettings {
   // Timing settings
@@ -19,6 +20,8 @@ export interface GameSettings {
   boardTheme: string;
   showGrid: boolean;
   uiScale: number;
+  // Controls
+  keyBindings?: KeyBindings;
 }
 
 export interface SettingsRenderer {
@@ -33,13 +36,17 @@ export interface SettingsRenderer {
 export class BasicSettingsRenderer implements SettingsRenderer {
   private container: HTMLElement | undefined;
   private settingsPanel: HTMLElement | undefined;
-  private isVisible = false;
   private settingsChangeCallback?: (settings: Partial<GameSettings>) => void;
   private currentSettings: GameSettings;
+  private currentKeyBindings: KeyBindings;
+  private rebindingAction?: BindableAction;
+  private boundCaptureHandler?: (e: KeyboardEvent) => void;
 
   constructor() {
     this.currentSettings = this.getDefaultSettings();
-    this.loadSettingsFromStorage();
+    const { settings, keyBindings } = this.loadStoreFromStorage();
+    this.currentSettings = { ...this.currentSettings, ...settings };
+    this.currentKeyBindings = keyBindings;
   }
 
   initialize(container: HTMLElement): void {
@@ -56,21 +63,28 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   show(): void {
     if (this.settingsPanel) {
       this.settingsPanel.style.display = 'block';
-      this.isVisible = true;
       document.body.classList.add('settings-open');
     }
   }
 
   hide(): void {
     if (this.settingsPanel) {
+      this.stopRebinding();
       this.settingsPanel.style.display = 'none';
-      this.isVisible = false;
       document.body.classList.remove('settings-open');
     }
   }
 
   onSettingsChange(callback: (settings: Partial<GameSettings>) => void): void {
     this.settingsChangeCallback = callback;
+  }
+
+  // Expose current snapshots so the app can apply persisted settings on init
+  getCurrentSettings(): GameSettings {
+    return { ...this.currentSettings };
+  }
+  getCurrentKeyBindings(): KeyBindings {
+    return JSON.parse(JSON.stringify(this.currentKeyBindings));
   }
 
   private getDefaultSettings(): GameSettings {
@@ -96,24 +110,48 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     };
   }
 
-  private loadSettingsFromStorage(): void {
+  private readonly STORAGE_KEY = 'finessimo';
+
+  private loadStoreFromStorage(): { settings: Partial<GameSettings>; keyBindings: KeyBindings } {
+    // Consolidated store: { settings?: GameSettings, keyBindings?: KeyBindings }
     try {
-      const saved = localStorage.getItem('finessimo-settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        this.currentSettings = { ...this.currentSettings, ...parsed };
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) || {};
+        const kb = this.validateKeyBindings(parsed.keyBindings);
+        const s = typeof parsed.settings === 'object' && parsed.settings ? parsed.settings : {};
+        return { settings: s, keyBindings: kb };
       }
+      // Legacy migration: read old keys if present
+      const legacySettingsRaw = localStorage.getItem('finessimo-settings');
+      const legacyKbRaw = localStorage.getItem('finessimo-keybindings');
+      const settings = legacySettingsRaw ? JSON.parse(legacySettingsRaw) : {};
+      const keyBindings = this.validateKeyBindings(legacyKbRaw ? JSON.parse(legacyKbRaw) : undefined);
+      // Save consolidated for future
+      this.saveStoreToStorage(settings, keyBindings);
+      return { settings, keyBindings };
     } catch (error) {
-      console.warn('Failed to load settings from localStorage:', error);
+      console.warn('Failed to load store from localStorage:', error);
+      return { settings: {}, keyBindings: defaultKeyBindings() };
     }
   }
 
-  private saveSettingsToStorage(): void {
+  private saveStoreToStorage(settings: Partial<GameSettings>, keyBindings: KeyBindings): void {
     try {
-      localStorage.setItem('finessimo-settings', JSON.stringify(this.currentSettings));
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify({ settings, keyBindings }));
     } catch (error) {
-      console.warn('Failed to save settings to localStorage:', error);
+      console.warn('Failed to save store to localStorage:', error);
     }
+  }
+
+  private validateKeyBindings(maybe: any): KeyBindings {
+    const fallback = defaultKeyBindings();
+    if (!maybe || typeof maybe !== 'object') return fallback;
+    const merged: KeyBindings = { ...fallback, ...maybe };
+    (Object.keys(fallback) as (keyof KeyBindings)[]).forEach(k => {
+      if (!Array.isArray((merged as any)[k])) (merged as any)[k] = (fallback as any)[k];
+    });
+    return merged;
   }
 
   private createSettingsPanel(): void {
@@ -133,6 +171,7 @@ export class BasicSettingsRenderer implements SettingsRenderer {
             <button class="tab-button active" data-tab="timing">Timing</button>
             <button class="tab-button" data-tab="gameplay">Gameplay</button>
             <button class="tab-button" data-tab="visual">Visual</button>
+            <button class="tab-button" data-tab="controls">Controls</button>
           </div>
           
           <div class="settings-panels">
@@ -228,6 +267,22 @@ export class BasicSettingsRenderer implements SettingsRenderer {
                 <span class="value-display">${this.currentSettings.uiScale}x</span>
               </div>
             </div>
+
+            <!-- Controls / Keybindings -->
+            <div class="settings-panel" id="controls-panel">
+              <div class="setting-group">
+                <p>Click a keybind, then press any key to rebind.</p>
+              </div>
+              <div class="keybinds-list">
+                ${this.renderKeybindRow('Move Left', 'MoveLeft')}
+                ${this.renderKeybindRow('Move Right', 'MoveRight')}
+                ${this.renderKeybindRow('Soft Drop', 'SoftDrop')}
+                ${this.renderKeybindRow('Hard Drop', 'HardDrop')}
+                ${this.renderKeybindRow('Rotate CW', 'RotateCW')}
+                ${this.renderKeybindRow('Rotate CCW', 'RotateCCW')}
+                ${this.renderKeybindRow('Hold', 'Hold')}
+              </div>
+            </div>
           </div>
         </div>
         
@@ -298,6 +353,17 @@ export class BasicSettingsRenderer implements SettingsRenderer {
         if (valueDisplay) {
           valueDisplay.textContent = `${value}${suffix}`;
         }
+      });
+    });
+
+    // Bind keybinding buttons
+    const bindButtons = this.settingsPanel.querySelectorAll('[data-keybind-action]');
+    bindButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const action = target.getAttribute('data-keybind-action') as BindableAction | null;
+        if (!action) return;
+        this.startRebinding(action, target);
       });
     });
   }
@@ -390,11 +456,12 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     this.currentSettings = { ...this.currentSettings, ...newSettings };
     
     // Save to storage
-    this.saveSettingsToStorage();
+    this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
 
     // Notify callback
     if (this.settingsChangeCallback) {
-      this.settingsChangeCallback(newSettings);
+      // Include keybindings with settings change so input handler can update
+      this.settingsChangeCallback({ ...newSettings, keyBindings: this.currentKeyBindings });
     }
 
     // Hide panel
@@ -402,22 +469,19 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   }
 
   private resetToDefaults(): void {
+    // Reset internal models
     this.currentSettings = this.getDefaultSettings();
-    this.saveSettingsToStorage();
-    
+    this.currentKeyBindings = defaultKeyBindings();
+    this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
+
+    // Update UI controls in-place (do not close dialog)
+    this.updateInputsFromSettings();
+    this.updateKeybindButtons();
+    this.stopRebinding();
+
+    // Notify listeners for live update
     if (this.settingsChangeCallback) {
-      this.settingsChangeCallback(this.currentSettings);
-    }
-    
-    // Recreate the panel with default values
-    if (this.settingsPanel && this.settingsPanel.parentNode) {
-      this.settingsPanel.parentNode.removeChild(this.settingsPanel);
-    }
-    this.createSettingsPanel();
-    this.bindEvents();
-    
-    if (this.isVisible) {
-      this.show();
+      this.settingsChangeCallback({ ...this.currentSettings, keyBindings: this.currentKeyBindings });
     }
   }
 
@@ -427,5 +491,159 @@ export class BasicSettingsRenderer implements SettingsRenderer {
     }
     this.container = undefined;
     this.settingsPanel = undefined;
+  }
+
+  // --- Keybindings helpers ---
+  private renderKeybindRow(label: string, action: BindableAction): string {
+    const code = this.currentKeyBindings[action]?.[0] || '';
+    const keyLabel = this.formatKey(code) || 'Unbound';
+    return `
+      <div class="keybind-row">
+        <div class="keybind-label">${label}</div>
+        <button class="keybind-button" data-keybind-action="${action}" aria-label="Rebind ${label}">${keyLabel}</button>
+        <span class="keybind-hint" data-hint-for="${action}" style="display:none;">Press any key…</span>
+        <button class="keybind-cancel" data-cancel-for="${action}" style="display:none;">Cancel</button>
+      </div>
+    `;
+  }
+
+  private startRebinding(action: BindableAction, buttonEl: HTMLElement): void {
+    if (!this.settingsPanel) return;
+    // Indicate listening
+    this.stopRebinding();
+    this.rebindingAction = action;
+    const hint = this.settingsPanel.querySelector(`[data-hint-for="${action}"]`) as HTMLElement | null;
+    if (hint) hint.style.display = 'inline';
+    buttonEl.classList.add('listening');
+
+    this.boundCaptureHandler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      // Update binding to single key for this action
+      const updated: KeyBindings = { ...this.currentKeyBindings, [action]: [e.code] };
+      this.currentKeyBindings = updated;
+      this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
+
+      // Update UI label
+      buttonEl.textContent = this.formatKey(e.code);
+
+      // Notify immediately for live update
+      if (this.settingsChangeCallback) {
+        this.settingsChangeCallback({ keyBindings: this.currentKeyBindings });
+      }
+
+      // Done
+      this.stopRebinding();
+    };
+
+    window.addEventListener('keydown', this.boundCaptureHandler, { capture: true, once: true });
+
+    // Show cancel button and wire it
+    const cancelBtn = this.settingsPanel.querySelector(`[data-cancel-for="${action}"]`) as HTMLButtonElement | null;
+    if (cancelBtn) {
+      cancelBtn.style.display = 'inline-block';
+      const cancelHandler = (ev: Event) => {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        this.stopRebinding();
+        cancelBtn.removeEventListener('click', cancelHandler);
+      };
+      cancelBtn.addEventListener('click', cancelHandler);
+    }
+  }
+
+  private stopRebinding(): void {
+    if (!this.settingsPanel) return;
+    if (this.rebindingAction) {
+      const hint = this.settingsPanel.querySelector(`[data-hint-for="${this.rebindingAction}"]`) as HTMLElement | null;
+      if (hint) hint.style.display = 'none';
+      const btn = this.settingsPanel.querySelector(`[data-keybind-action="${this.rebindingAction}"]`) as HTMLElement | null;
+      btn?.classList.remove('listening');
+      const cancel = this.settingsPanel.querySelector(`[data-cancel-for="${this.rebindingAction}"]`) as HTMLElement | null;
+      if (cancel) cancel.style.display = 'none';
+    }
+    if (this.boundCaptureHandler) {
+      // Remove pending listener if still attached
+      window.removeEventListener('keydown', this.boundCaptureHandler, true);
+    }
+    this.rebindingAction = undefined;
+  }
+
+  private updateInputsFromSettings(): void {
+    if (!this.settingsPanel) return;
+    const setVal = (sel: string, val: string | number | boolean) => {
+      const el = this.settingsPanel!.querySelector(sel) as HTMLInputElement | HTMLSelectElement | null;
+      if (!el) return;
+      if (el instanceof HTMLInputElement && (el.type === 'checkbox')) {
+        (el as HTMLInputElement).checked = Boolean(val);
+      } else {
+        (el as HTMLInputElement | HTMLSelectElement).value = String(val);
+      }
+      // Update inline value display if present
+      const display = el.parentElement?.querySelector('.value-display');
+      if (display) {
+        const id = (el as HTMLInputElement).id;
+        const suffix = id.includes('delay') || id.includes('cancel') || id.includes('speed') || id === 'arr-rate' || id === 'das-delay' ? 'ms' : id === 'ui-scale' ? 'x' : '';
+        display.textContent = `${(el as HTMLInputElement | HTMLSelectElement).value}${suffix}`;
+      }
+    };
+    // Timing
+    setVal('#das-delay', this.currentSettings.dasMs);
+    setVal('#arr-rate', this.currentSettings.arrMs);
+    setVal('#soft-drop-speed', this.currentSettings.softDropCps);
+    setVal('#lock-delay', this.currentSettings.lockDelayMs);
+    setVal('#line-clear-delay', this.currentSettings.lineClearDelayMs);
+    // Gameplay
+    setVal('#gravity-enabled', this.currentSettings.gravityEnabled);
+    setVal('#gravity-speed', this.currentSettings.gravityMs);
+    setVal('#finesse-cancel', this.currentSettings.finesseCancelMs);
+    setVal('#ghost-piece', this.currentSettings.ghostPieceEnabled);
+    setVal('#next-count', this.currentSettings.nextPieceCount);
+    // Visual
+    setVal('#board-theme', this.currentSettings.boardTheme);
+    setVal('#show-grid', this.currentSettings.showGrid);
+    setVal('#ui-scale', this.currentSettings.uiScale);
+  }
+
+  private updateKeybindButtons(): void {
+    if (!this.settingsPanel) return;
+    const all: Array<[BindableAction, string]> = [
+      ['MoveLeft', 'Move Left'],
+      ['MoveRight', 'Move Right'],
+      ['SoftDrop', 'Soft Drop'],
+      ['HardDrop', 'Hard Drop'],
+      ['RotateCW', 'Rotate CW'],
+      ['RotateCCW', 'Rotate CCW'],
+      ['Hold', 'Hold']
+    ];
+    for (const [action] of all) {
+      const code = this.currentKeyBindings[action]?.[0] || '';
+      const label = this.formatKey(code) || 'Unbound';
+      const btn = this.settingsPanel.querySelector(`[data-keybind-action="${action}"]`) as HTMLElement | null;
+      const hint = this.settingsPanel.querySelector(`[data-hint-for="${action}"]`) as HTMLElement | null;
+      const cancel = this.settingsPanel.querySelector(`[data-cancel-for="${action}"]`) as HTMLElement | null;
+      if (btn) btn.textContent = label;
+      if (hint) hint.style.display = 'none';
+      if (cancel) cancel.style.display = 'none';
+      btn?.classList.remove('listening');
+    }
+  }
+
+  // Deprecated individual keybinding save now uses consolidated store
+
+  private formatKey(code: string): string {
+    const map: Record<string, string> = {
+      ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓',
+      Space: 'Space', Escape: 'Esc', Backspace: 'Backspace', Enter: 'Enter', Tab: 'Tab',
+      ShiftLeft: 'LShift', ShiftRight: 'RShift', ControlLeft: 'LCtrl', ControlRight: 'RCtrl',
+      AltLeft: 'LAlt', AltRight: 'RAlt', MetaLeft: 'LCmd', MetaRight: 'RCmd', CapsLock: 'Caps',
+      Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+      Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backquote: '`'
+    };
+    if (!code) return '';
+    if (map[code]) return map[code];
+    if (code.startsWith('Key') && code.length === 4) return code.slice(3);
+    if (code.startsWith('Digit') && code.length === 6) return code.slice(5);
+    return code;
   }
 }

@@ -1,5 +1,5 @@
 import { Action, KeyAction, InputEvent, GameState } from '../state/types';
-import { InputHandler, InputHandlerState } from './handler';
+import { InputHandler, InputHandlerState, KeyBindings } from './handler';
 
 interface TouchZone {
   element: HTMLElement;
@@ -51,9 +51,9 @@ export class TouchInputHandler implements InputHandler {
     this.unbindTouchEvents();
   }
 
-  update(gameState: GameState): void {
+  update(gameState: GameState, nowMs: number): void {
     this.frameCounter++;
-    const currentTime = Date.now();
+    const currentTime = nowMs;
 
     // Handle DAS/ARR timing same as keyboard handler
     if (this.state.currentDirection !== undefined && this.state.dasStartTime !== undefined) {
@@ -88,6 +88,23 @@ export class TouchInputHandler implements InputHandler {
 
   getState(): InputHandlerState {
     return { ...this.state };
+  }
+
+  // Touch handler ignores keyboard bindings but must satisfy interface
+  setKeyBindings(_bindings: KeyBindings): void {
+    // no-op for touch
+  }
+  getKeyBindings(): KeyBindings {
+    // Not applicable; return empty bindings
+    return {
+      MoveLeft: [],
+      MoveRight: [],
+      SoftDrop: [],
+      HardDrop: [],
+      RotateCW: [],
+      RotateCCW: [],
+      Hold: []
+    };
   }
 
   private createTouchControls(): void {

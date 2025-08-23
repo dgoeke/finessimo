@@ -54,8 +54,8 @@ export class BasicHudRenderer implements HudRenderer {
     const nextQueueEl = this.elements.nextQueue;
     if (nextQueueEl) nextQueueEl.textContent = `Next: ${gameState.nextQueue.join(', ')}`;
     
-    // Update input log
-    const recentInputs = gameState.inputLog.slice(-5); // Show last 5 inputs
+    // Update input log (compact, recent 5)
+    const recentInputs = gameState.inputLog.slice(-5);
     const inputLogEl = this.elements.inputLog;
     if (inputLogEl) inputLogEl.textContent = `Recent Inputs: ${recentInputs.map(e => e.action).join(', ')}`;
     
@@ -122,9 +122,6 @@ export class BasicHudRenderer implements HudRenderer {
           Finesse feedback will appear here
         </div>
         
-        <h3>Action Log</h3>
-        <div id="actionLog" class="action-log"></div>
-        
         <h3>Game Modes</h3>
         <div class="test-controls">
           <button id="setFreePlay">Free Play Mode</button>
@@ -167,18 +164,6 @@ export class BasicHudRenderer implements HudRenderer {
           border-left: 3px solid #4CAF50;
         }
         
-        .action-log {
-          background: #1a1a1a;
-          border: 1px solid #4CAF50;
-          color: #e0e0e0;
-          padding: 8px;
-          height: 150px;
-          overflow-y: auto;
-          font-size: 11px;
-          margin: 8px 0;
-          border-radius: 3px;
-        }
-        
         .test-controls button {
           margin: 4px;
           padding: 6px 12px;
@@ -193,13 +178,6 @@ export class BasicHudRenderer implements HudRenderer {
         
         .test-controls button:hover {
           background: #45a049;
-        }
-        
-        .action-entry {
-          margin: 2px 0;
-          padding: 3px;
-          border-bottom: 1px solid #333;
-          font-size: 10px;
         }
         
         .mode-prompt {
@@ -251,24 +229,7 @@ export class BasicHudRenderer implements HudRenderer {
     this.elements.gameMode = this.container.querySelector('#gameMode')!;
     this.elements.modePrompt = this.container.querySelector('#modePrompt')!;
     this.elements.finesseFeedback = this.container.querySelector('#finesseFeedback')!;
-    this.elements.actionLog = this.container.querySelector('#actionLog')!;
-  }
-  
-  // Method to log actions for debugging
-  logAction(action: Action): void {
-    if (!this.elements.actionLog) return;
-    
-    const actionEntry = document.createElement('div');
-    actionEntry.className = 'action-entry';
-    actionEntry.textContent = `${new Date().toLocaleTimeString()}: ${JSON.stringify(action)}`;
-    
-    this.elements.actionLog.appendChild(actionEntry);
-    this.elements.actionLog.scrollTop = this.elements.actionLog.scrollHeight;
-    
-    // Keep only last 50 entries
-    while (this.elements.actionLog.children.length > 50) {
-      this.elements.actionLog.removeChild(this.elements.actionLog.firstChild!);
-    }
+    // No action log; minimal HUD
   }
   
   // Method to setup game mode controls

@@ -75,12 +75,22 @@ export class FinessimoApp {
     // Initialize settings renderer
     this.settingsRenderer.initialize(document.body);
     this.settingsRenderer.onSettingsChange(this.handleSettingsChange.bind(this));
+
+    // No on-page controls list; users can view in Settings
     
     // Setup test controls
     this.hudRenderer.setupTestControls(this.dispatch.bind(this), this.setGameMode.bind(this));
     
     // Setup settings button
     this.setupSettingsButton();
+    
+    // Apply persisted settings on init (if present)
+    try {
+      const initialSettings = this.settingsRenderer.getCurrentSettings();
+      const initialKeyBindings = this.settingsRenderer.getCurrentKeyBindings();
+      const toApply: Partial<GameSettings> = { ...initialSettings, keyBindings: initialKeyBindings };
+      this.handleSettingsChange(toApply);
+    } catch {}
     
     // Spawn initial piece
     this.spawnNextPiece();
@@ -139,10 +149,10 @@ export class FinessimoApp {
   private update(): void {
     const currentTime = performance.now();
     
-    // Update input handlers
-    this.keyboardInputHandler.update(this.gameState);
+    // Update input handlers using the same timestamp used for Tick/physics
+    this.keyboardInputHandler.update(this.gameState, currentTime);
     if (this.touchInputHandler) {
-      this.touchInputHandler.update(this.gameState);
+      this.touchInputHandler.update(this.gameState, currentTime);
     }
     
     // Always dispatch Tick with timestamp for physics calculations
@@ -184,9 +194,6 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
-    
-    // Log action in HUD for debugging
-    this.hudRenderer.logAction(action);
     
     // Store previous state for finesse analysis
     const prevState = this.gameState;
@@ -310,6 +317,11 @@ export class FinessimoApp {
     if (newSettings.nextPieceCount !== undefined) gameplay.nextPieceCount = newSettings.nextPieceCount;
     if (Object.keys(gameplay).length > 0) {
       this.dispatch({ type: 'UpdateGameplay', gameplay });
+    }
+
+    // Keybindings: update input handler and controls UI immediately
+    if (newSettings.keyBindings) {
+      this.keyboardInputHandler.setKeyBindings(newSettings.keyBindings);
     }
 
     // Apply UI scale directly to document root

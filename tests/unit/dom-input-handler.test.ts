@@ -49,7 +49,7 @@ describe('DOMInputHandler', () => {
 
     it('should store dispatch function on init', () => {
       handler.init(mockDispatch);
-      expect(() => handler.update(gameState)).not.toThrow();
+      expect(() => handler.update(gameState, 0)).not.toThrow();
     });
   });
 
@@ -216,7 +216,8 @@ describe('DOMInputHandler', () => {
       mockKeyDownHandler(leftDownEvent);
       
       mockDispatch.mockClear();
-      handler.update(gameState);
+      const press = (handler as any).state.dasStartTime as number;
+      handler.update(gameState, press + gameState.timing.dasMs - 1);
       
       expect(mockDispatch).not.toHaveBeenCalledWith({
         type: 'Move',
@@ -230,9 +231,8 @@ describe('DOMInputHandler', () => {
       mockKeyDownHandler(leftDownEvent);
       
       mockDispatch.mockClear();
-
-      jest.advanceTimersByTime(gameState.timing.dasMs + 1);
-      handler.update(gameState);
+      const press = (handler as any).state.dasStartTime as number;
+      handler.update(gameState, press + gameState.timing.dasMs + 1);
 
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'Move',
@@ -246,16 +246,18 @@ describe('DOMInputHandler', () => {
       mockKeyDownHandler(leftDownEvent);
       
       mockDispatch.mockClear();
-
       // Trigger initial DAS
-      jest.advanceTimersByTime(gameState.timing.dasMs + 1);
-      handler.update(gameState);
+      const press = (handler as any).state.dasStartTime as number;
+      handler.update(gameState, press + gameState.timing.dasMs + 1);
       
       mockDispatch.mockClear();
-
+      
       // Trigger ARR
-      jest.advanceTimersByTime(gameState.timing.arrMs + 1);
-      handler.update(gameState);
+      const state = (handler as any).state;
+      const arrStart = state.arrLastTime as number;
+      handler.update(gameState, arrStart + gameState.timing.arrMs);
+      const afterArr = arrStart + gameState.timing.arrMs + 1;
+      handler.update(gameState, afterArr);
 
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'Move',
@@ -268,7 +270,7 @@ describe('DOMInputHandler', () => {
   describe('Edge Cases', () => {
     it('should handle update without dispatch initialized', () => {
       const uninitializedHandler = new DOMInputHandler();
-      expect(() => uninitializedHandler.update(gameState)).not.toThrow();
+      expect(() => uninitializedHandler.update(gameState, 0)).not.toThrow();
     });
 
     it('should handle key events without dispatch initialized', () => {

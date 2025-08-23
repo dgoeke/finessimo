@@ -18,7 +18,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
   - normalizeInputSequence(...): Normalizes InputEvent[] into a KeyAction[] with a cancellation window.
   - InputHandler interface and internal InputHandlerState.
   - MockInputHandler: Simple, stateful mock that enqueues inputs and dispatches actions directly (for tests/dev).
-  - DOMInputHandler: Real keyboard handler. Maps keys to actions, enqueues input, and implements DAS/ARR timing in update.
+  - DOMInputHandler: Real keyboard handler. Maps keys to actions using configurable KeyBindings (loaded/saved to localStorage), enqueues input, and implements DAS/ARR timing in update. Exposes setKeyBindings/getKeyBindings.
 - src/input/touch.ts: Touch input handler for mobile devices.
   - TouchInputHandler: Implements touch controls with gesture detection, DAS/ARR timing, and visual touch zones. Supports both keyboard and touch simultaneously.
 
@@ -44,9 +44,9 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## UI
 
 - src/ui/canvas.ts: Canvas renderer. Draws the 10×20 board, active piece, and grid using colors from pieces definitions. Respects gameplay.ghostPieceEnabled when rendering the ghost piece.
-- src/ui/hud.ts: HUD renderer. Renders state summaries (status, tick, active/hold/next, inputs, config, mode), finesse feedback, and an action log. Shows prompt from `state.guidance.label` when present.
+- src/ui/hud.ts: HUD renderer. Renders state summaries (status, tick, active/hold/next, inputs, config, mode) and finesse feedback. Shows prompt from `state.guidance.label` when present. Action Log removed.
 - src/ui/preview.ts: Visual next piece preview renderer. Displays upcoming pieces with mini canvases showing actual tetromino shapes and colors. Accepts a display count to cap shown previews (from settings).
 - src/ui/hold.ts: Visual hold piece display renderer. Shows held piece visually with grayed-out state when hold is unavailable.
 - src/ui/finesse.ts: Finesse visualization renderer. Provides visual feedback for optimal piece placement including target position highlighting, path indicators, and finesse quality indicators. Path simulation starts from spawn and uses core movement/rotation (SRS) on an empty board to match BFS; target Y uses real board collision (ghost).
-- src/ui/settings.ts: Settings/configuration panel. Comprehensive settings interface with timing, gameplay, and visual options. Includes localStorage persistence and tabbed interface.
-- src/ui/styles.css: Complete CSS styling for the application, including responsive design, preview/hold displays, touch controls, finesse visualization, and settings modal.
+- src/ui/settings.ts: Settings/configuration panel. Tabs: Timing, Gameplay, Visual, Controls (Keybindings). Persists to localStorage under a single key `finessimo` (settings + keyBindings), emits changes immediately, and blocks keyboard input while rebinding.
+- src/ui/styles.css: Complete CSS styling for the application, including responsive design, preview/hold displays, touch controls, finesse visualization, and settings modal. The on-page Controls panel has been removed.
