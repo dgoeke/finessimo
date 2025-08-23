@@ -36,7 +36,7 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 
 ## System Architecture
 
-**UI (Canvas board + DOM UI)** → **Input Handler (Stateful: keyboard/touch + DAS/ARR timers)** → **Reducer (Pure Function)** → **Immutable State** → **Core Logic (movement, rotation, collision, line clear, RNG)** → **Finesse Calculator (post-lock)** → **Game Mode hooks**
+**UI (Canvas board + DOM UI)** → **Input Handler (Stateful: keyboard/touch + DAS/ARR timers)** → **Reducer (Pure Function)** → **Immutable State** → **Core Logic (movement, rotation, collision, line clear, RNG)** → **Finesse Calculator (post-lock)** → **Game Modes (via hooks)**
 
 **Data flow:**
 
@@ -94,6 +94,27 @@ The four rotation states are defined as follows:
 - ARR: 2 ms (0 = instant).
 - Input Cancellation Window: 50 ms (for normalizing mis-inputs).
 
+### Mode Hooks and Guidance (Current Implementation)
+
+To keep the core engine mode-agnostic, game modes expose a small set of pure hooks. The engine never branches on a mode name.
+
+- `initialConfig?(): { timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig> }`
+  - Optional: a mode can tweak timing/gameplay defaults on activation.
+
+- `initModeData?(): unknown`
+  - Optional: provides an opaque mode-specific substate stored in `GameState.modeData`.
+
+- `onBeforeSpawn?(state: GameState): { piece?: PieceId } | null`
+  - Optional: allows a mode to override the next spawned piece (e.g., drills).
+
+- `getGuidance?(state: GameState): ModeGuidance | null`
+  - Optional: provides a target/prompt/visual flags for UI overlays. The app stores this in `state.guidance`.
+
+`ModeGuidance`:
+- `target?: { x: number; rot: Rot }` — suggested placement for overlays/analyzers
+- `label?: string` — HUD text prompt
+- `visual?: { highlightTarget?: boolean; showPath?: boolean }` — overlay toggles
+
 ## Core Types
 
 ```typescript
@@ -136,6 +157,9 @@ export interface ActivePiece {
 // Config
 export interface GameplayConfig {
   finesseCancelMs: number; // default: 50
+  // Visual/gameplay toggles
+  ghostPieceEnabled?: boolean; // default: true
+  nextPieceCount?: number;     // default: 5 (preview count)
 }
 
 export interface TimingConfig {
@@ -145,6 +169,8 @@ export interface TimingConfig {
   softDropCps: number;
   lockDelayMs: number;
   lineClearDelayMs: number;
+  gravityEnabled: boolean;
+  gravityMs: number;
 }
 
 // User actions at the input layer
@@ -181,6 +207,10 @@ export interface GameState {
   stats: unknown; // Stats object definition
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
+  // Mode subsystem
+  currentMode: string;
+  modeData?: unknown;
+  guidance?: ModeGuidance | null;
 }
 
 // State transitions
@@ -190,17 +220,31 @@ export type Action =
       seed?: string;
       timing?: Partial<TimingConfig>;
       gameplay?: Partial<GameplayConfig>;
+      mode?: string;
     }
-  | { type: "Tick" }
-  | { type: "Spawn" }
+  | { type: "Tick"; timestampMs: number }
+  | { type: "Spawn"; piece?: PieceId }
   | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
   | { type: "SoftDrop"; on: boolean }
   | { type: "Rotate"; dir: "CW" | "CCW" }
   | { type: "HardDrop" }
   | { type: "Hold" }
   | { type: "Lock" }
+  | { type: "StartLockDelay"; timestampMs: number }
+  | { type: "CancelLockDelay" }
+  | { type: "StartLineClear"; lines: number[]; timestampMs: number }
+  | { type: "CompleteLineClear" }
   | { type: "ClearLines"; lines: number[] }
-  | { type: "EnqueueInput"; event: InputEvent };
+  | { type: "EnqueueInput"; event: InputEvent }
+  | { type: "SetMode"; mode: string }
+  | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
+  | { type: "UpdateModePrompt"; prompt: string | null }
+  // Settings updates
+  | { type: "UpdateTiming"; timing: Partial<TimingConfig> }
+  | { type: "UpdateGameplay"; gameplay: Partial<GameplayConfig> }
+  // Mode/UI guidance
+  | { type: "UpdateGuidance"; guidance: ModeGuidance | null }
+  | { type: "UpdateModeData"; data: unknown };
 
 export type Reducer = (s: Readonly<GameState>, a: Action) => GameState;
 ```

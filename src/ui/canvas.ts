@@ -1,6 +1,7 @@
 import { GameState, Board, ActivePiece } from '../state/types';
 import { PIECES } from '../core/pieces';
 import { calculateGhostPosition } from '../core/board';
+import { BasicFinesseRenderer, createFinesseVisualization } from './finesse';
 
 export interface CanvasRenderer {
   initialize(canvas: HTMLCanvasElement): void;
@@ -11,9 +12,14 @@ export interface CanvasRenderer {
 export class BasicCanvasRenderer implements CanvasRenderer {
   private canvas: HTMLCanvasElement | undefined;
   private ctx: CanvasRenderingContext2D | undefined;
+  private finesseRenderer: BasicFinesseRenderer;
   private cellSize = 30;
   private boardWidth = 10;
   private boardHeight = 20;
+
+  constructor() {
+    this.finesseRenderer = new BasicFinesseRenderer();
+  }
 
   initialize(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
@@ -28,6 +34,9 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     // Set canvas size
     canvas.width = this.boardWidth * this.cellSize;
     canvas.height = this.boardHeight * this.cellSize;
+    
+    // Initialize finesse renderer with same canvas
+    this.finesseRenderer.initialize(canvas);
     
     // Canvas renderer initialized
   }
@@ -46,7 +55,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     this.renderBoard(gameState.board);
     
     // Render ghost piece first (so active piece draws on top)
-    if (gameState.active) {
+    if (gameState.active && (gameState.gameplay.ghostPieceEnabled ?? true)) {
       const ghostPosition = calculateGhostPosition(gameState.board, gameState.active);
       // Only render ghost piece if it's different from active piece position
       if (ghostPosition.y !== gameState.active.y) {
@@ -61,6 +70,10 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     
     // Draw grid
     this.drawGrid();
+    
+    // Render finesse visualization overlay
+    const finesseViz = createFinesseVisualization(gameState);
+    this.finesseRenderer.render(gameState, finesseViz);
   }
 
   private renderBoard(board: Board): void {
@@ -189,6 +202,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
   }
 
   destroy(): void {
+    this.finesseRenderer.destroy();
     this.canvas = undefined;
     this.ctx = undefined;
     // Canvas renderer destroyed

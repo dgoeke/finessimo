@@ -70,14 +70,16 @@ export class BasicHudRenderer implements HudRenderer {
     const gameModeEl = this.elements.gameMode;
     if (gameModeEl) gameModeEl.textContent = `Mode: ${gameState.currentMode}`;
     
-    // Update mode prompt
+    // Update mode prompt (prefer guidance label if present)
     const modePromptEl = this.elements.modePrompt;
     if (modePromptEl) {
       const promptTextEl = modePromptEl.querySelector('.prompt-text');
       if (promptTextEl) {
-        promptTextEl.textContent = gameState.modePrompt || 'No active prompt';
+        const label = (gameState.guidance && gameState.guidance.label) || gameState.modePrompt;
+        promptTextEl.textContent = label || 'No active prompt';
       }
-      modePromptEl.style.display = gameState.modePrompt ? 'block' : 'none';
+      const show = (gameState.guidance && gameState.guidance.label) || gameState.modePrompt;
+      modePromptEl.style.display = show ? 'block' : 'none';
     }
     
     // Update finesse feedback

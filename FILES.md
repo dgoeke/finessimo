@@ -5,12 +5,12 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## Root Application
 
 - src/main.ts: Browser entrypoint. Waits for DOM ready, initializes and starts FinessimoApp, wires teardown on beforeunload.
-- src/app.ts: App orchestrator. Holds current GameState, runs the 60 FPS loop, dispatches actions to the pure reducer, integrates the input handler and UI renderers, auto-spawns pieces, and triggers finesse analysis on piece lock via the finesse service. Supports changing modes.
+- src/app.ts: App orchestrator. Holds current GameState, runs the 60 FPS loop, dispatches actions to the pure reducer, integrates the input handler and UI renderers, auto-spawns pieces, triggers finesse analysis on piece lock, supports changing modes, and applies settings by dispatching UpdateTiming/UpdateGameplay actions. Passes preview count to the preview renderer.
 
 ## State
 
-- src/state/types.ts: Source of truth for core types. Defines Board, ActivePiece, PieceId, Rot, GameplayConfig, TimingConfig, PhysicsState, GameState, and the Action union. Includes helpers idx and isCellBlocked.
-- src/state/reducer.ts: Pure reducer implementing game logic and state transitions. Handles init and defaults, spawning (7‑bag via RNG), movement, SRS rotation, hard/soft drop, gravity, lock delay, line clear staging/completion, hold, input logging, and mode/finesse UI updates. Returns new immutable state per action.
+- src/state/types.ts: Source of truth for core types. Defines Board, ActivePiece, PieceId, Rot, GameplayConfig (now includes ghostPieceEnabled, nextPieceCount), TimingConfig, PhysicsState, GameState, and the Action union. Includes helpers idx and isCellBlocked, and adds UpdateTiming/UpdateGameplay actions.
+- src/state/reducer.ts: Pure reducer implementing game logic and state transitions. Handles init/defaults (incl. ghostPieceEnabled/nextPieceCount defaults), spawning (7‑bag via RNG), movement, SRS rotation, hard/soft drop, gravity, lock delay, line clear staging/completion, hold, input logging, mode/finesse UI updates, and settings updates via UpdateTiming/UpdateGameplay. Returns new immutable state per action.
 
 ## Input
 
@@ -19,6 +19,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
   - InputHandler interface and internal InputHandlerState.
   - MockInputHandler: Simple, stateful mock that enqueues inputs and dispatches actions directly (for tests/dev).
   - DOMInputHandler: Real keyboard handler. Maps keys to actions, enqueues input, and implements DAS/ARR timing in update.
+- src/input/touch.ts: Touch input handler for mobile devices.
+  - TouchInputHandler: Implements touch controls with gesture detection, DAS/ARR timing, and visual touch zones. Supports both keyboard and touch simultaneously.
 
 ## Core Mechanics
 
@@ -35,12 +37,16 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Modes
 
-- src/modes/index.ts: Game mode contracts (GameMode, GameModeResult) and registry. Registers FreePlayMode and GuidedMode.
-- src/modes/freePlay.ts: Free‑play mode. Evaluates finesse on actual final placement and returns succinct feedback; no prompts or targets.
-- src/modes/guided.ts: Guided drills. Sequence of piece/target challenges with progress tracking, prompts, expected piece/target checks, and feedback with hints/optimal sequence after retries.
+- src/modes/index.ts: Game mode contracts (GameMode, GameModeResult) and registry. Adds optional hooks `initialConfig`, `initModeData`, `onBeforeSpawn`, and `getGuidance` so the engine stays mode-agnostic. Registers FreePlayMode and GuidedMode.
+- src/modes/freePlay.ts: Free‑play mode. Evaluates finesse on actual final placement and returns succinct feedback; no prompts or targets. Implements `onBeforeSpawn` (no override) and `getGuidance` (null).
+- src/modes/guided.ts: Guided drills. Sequence of piece/target challenges with progress tracking, prompts, expected piece/target checks, and feedback with hints/optimal sequence after retries. Implements `onBeforeSpawn` to provide the expected piece and `getGuidance` to supply target and label.
 
 ## UI
 
-- src/ui/canvas.ts: Canvas renderer. Draws the 10×20 board, active piece, and grid using colors from pieces definitions.
-- src/ui/hud.ts: HUD renderer. Renders state summaries (status, tick, active/hold/next, inputs, config, mode), finesse feedback, and an action log. Provides simple buttons to switch modes and utility methods to log actions.
-
+- src/ui/canvas.ts: Canvas renderer. Draws the 10×20 board, active piece, and grid using colors from pieces definitions. Respects gameplay.ghostPieceEnabled when rendering the ghost piece.
+- src/ui/hud.ts: HUD renderer. Renders state summaries (status, tick, active/hold/next, inputs, config, mode), finesse feedback, and an action log. Shows prompt from `state.guidance.label` when present.
+- src/ui/preview.ts: Visual next piece preview renderer. Displays upcoming pieces with mini canvases showing actual tetromino shapes and colors. Accepts a display count to cap shown previews (from settings).
+- src/ui/hold.ts: Visual hold piece display renderer. Shows held piece visually with grayed-out state when hold is unavailable.
+- src/ui/finesse.ts: Finesse visualization renderer. Provides visual feedback for optimal piece placement including target position highlighting, path indicators, and finesse quality indicators. Path simulation starts from spawn and uses core movement/rotation (SRS) on an empty board to match BFS; target Y uses real board collision (ghost).
+- src/ui/settings.ts: Settings/configuration panel. Comprehensive settings interface with timing, gameplay, and visual options. Includes localStorage persistence and tabbed interface.
+- src/ui/styles.css: Complete CSS styling for the application, including responsive design, preview/hold displays, touch controls, finesse visualization, and settings modal.

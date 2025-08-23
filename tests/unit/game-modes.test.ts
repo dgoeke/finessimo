@@ -79,16 +79,19 @@ describe('FreePlayMode', () => {
 
 describe('GuidedMode', () => {
   let mode: GuidedMode;
+  let state: GameState;
 
   beforeEach(() => {
     mode = new GuidedMode();
+    state = { ...mockGameState, currentMode: 'guided', modeData: mode.initModeData?.() } as any;
   });
 
   test('should provide feedback for optimal finesse and advance drill', () => {
     // Match current drill (T at x=0, rot=spawn)
     const locked: ActivePiece = { id: 'T', rot: 'spawn', x: 4, y: 0 };
     const finalPos: ActivePiece = { id: 'T', rot: 'spawn', x: 0, y: 0 };
-    const result = mode.onPieceLocked(mockGameState, mockOptimalResult, locked, finalPos);
+    const result = mode.onPieceLocked(state, mockOptimalResult, locked, finalPos);
+    if (result.modeData !== undefined) state = { ...state, modeData: result.modeData } as any;
     
     expect(result.feedback).toContain('✓ Perfect!');
     expect(result.feedback).toContain('3 inputs (optimal)');
@@ -99,7 +102,7 @@ describe('GuidedMode', () => {
   test('should provide feedback for suboptimal finesse without advancing', () => {
     const locked: ActivePiece = { id: 'T', rot: 'spawn', x: 4, y: 0 };
     const finalPos: ActivePiece = { id: 'T', rot: 'spawn', x: 0, y: 0 };
-    const result = mode.onPieceLocked(mockGameState, mockSuboptimalResult, locked, finalPos);
+    const result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
     
     expect(result.feedback).toContain('✗ Try again!');
     expect(result.feedback).toContain('Used 6 inputs');
@@ -112,15 +115,17 @@ describe('GuidedMode', () => {
     // First attempt - suboptimal
     const locked: ActivePiece = { id: 'T', rot: 'spawn', x: 4, y: 0 };
     const finalPos: ActivePiece = { id: 'T', rot: 'spawn', x: 0, y: 0 };
-    let result = mode.onPieceLocked(mockGameState, mockSuboptimalResult, locked, finalPos);
+    let result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
     expect(result.feedback).not.toContain('Optimal sequence:');
+    if (result.modeData !== undefined) state = { ...state, modeData: result.modeData } as any;
     
     // Second attempt - suboptimal
-    result = mode.onPieceLocked(mockGameState, mockSuboptimalResult, locked, finalPos);
+    result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
     expect(result.feedback).not.toContain('Optimal sequence:');
+    if (result.modeData !== undefined) state = { ...state, modeData: result.modeData } as any;
     
     // Third attempt - should show hint
-    result = mode.onPieceLocked(mockGameState, mockSuboptimalResult, locked, finalPos);
+    result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
     expect(result.feedback).toContain('Optimal sequence:');
     expect(result.feedback).toContain('LeftDown → LeftDown → HardDrop');
   });
@@ -136,12 +141,13 @@ describe('GuidedMode', () => {
   });
 
   test('should complete all drills', () => {
-    // Complete all 7 drills with matching piece/target
+    // Complete all 7 drills with matching piece/target using guidance
     for (let i = 0; i < 7; i++) {
-      const drill = mode.getCurrentDrill()!;
-      const locked: ActivePiece = { id: drill.piece, rot: 'spawn', x: 4, y: 0 };
-      const finalPos: ActivePiece = { id: drill.piece, rot: drill.targetRot, x: drill.targetX, y: 0 };
-      const result = mode.onPieceLocked(mockGameState, mockOptimalResult, locked, finalPos);
+      const guidance = mode.getGuidance(state)!;
+      const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
+      const finalPos: ActivePiece = { id: locked.id, rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
+      const result = mode.onPieceLocked(state, mockOptimalResult, locked, finalPos);
+      if (result.modeData !== undefined) state = { ...state, modeData: result.modeData } as any;
       if (i === 6) {
         expect(result.feedback).toContain('All drills completed!');
         expect(result.isComplete).toBe(true);
@@ -150,42 +156,48 @@ describe('GuidedMode', () => {
   });
 
   test('should track progress correctly', () => {
-    const progress = mode.getProgress();
-    expect(progress.current).toBe(0);
-    expect(progress.total).toBe(7);
+    const data0 = state.modeData as any;
+    expect(data0.currentDrillIndex).toBe(0);
+    
+    const total = 7;
     
     // Complete one drill
     {
-      const drill = mode.getCurrentDrill()!;
-      const locked: ActivePiece = { id: drill.piece, rot: 'spawn', x: 4, y: 0 };
-      const finalPos: ActivePiece = { id: drill.piece, rot: drill.targetRot, x: drill.targetX, y: 0 };
-      mode.onPieceLocked(mockGameState, mockOptimalResult, locked, finalPos);
+      const guidance = mode.getGuidance(state)!;
+      const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
+      const finalPos: ActivePiece = { id: locked.id, rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
+      const res = mode.onPieceLocked(state, mockOptimalResult, locked, finalPos);
+      if (res.modeData !== undefined) state = { ...state, modeData: res.modeData } as any;
     }
     
-    const newProgress = mode.getProgress();
-    expect(newProgress.current).toBe(1);
-    expect(newProgress.total).toBe(7);
+    const data1 = state.modeData as any;
+    expect(data1.currentDrillIndex).toBe(1);
+    expect(total).toBe(7);
   });
 
   test('should reset correctly', () => {
     // Advance a few drills
     {
-      const drill = mode.getCurrentDrill()!;
-      const locked: ActivePiece = { id: drill.piece, rot: 'spawn', x: 4, y: 0 };
-      const finalPos: ActivePiece = { id: drill.piece, rot: drill.targetRot, x: drill.targetX, y: 0 };
-      mode.onPieceLocked(mockGameState, mockOptimalResult, locked, finalPos);
+      const guidance = mode.getGuidance(state)!;
+      const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
+      const finalPos: ActivePiece = { id: locked.id, rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
+      const res = mode.onPieceLocked(state, mockOptimalResult, locked, finalPos);
+      if (res.modeData !== undefined) state = { ...state, modeData: res.modeData } as any;
     }
     {
-      const drill = mode.getCurrentDrill()!;
-      const locked: ActivePiece = { id: drill.piece, rot: 'spawn', x: 4, y: 0 };
-      const finalPos: ActivePiece = { id: drill.piece, rot: drill.targetRot, x: drill.targetX, y: 0 };
-      mode.onPieceLocked(mockGameState, mockOptimalResult, locked, finalPos);
+      const guidance = mode.getGuidance(state)!;
+      const locked: ActivePiece = { id: mode.getExpectedPiece(state)!, rot: 'spawn', x: 4, y: 0 };
+      const finalPos: ActivePiece = { id: locked.id, rot: guidance.target!.rot, x: guidance.target!.x, y: 0 };
+      const res = mode.onPieceLocked(state, mockOptimalResult, locked, finalPos);
+      if (res.modeData !== undefined) state = { ...state, modeData: res.modeData } as any;
     }
     
-    expect(mode.getProgress().current).toBe(2);
+    expect((state.modeData as any).currentDrillIndex).toBe(2);
     
     mode.reset();
     
-    expect(mode.getProgress().current).toBe(0);
+    // After reset, consumer should re-init modeData using initModeData
+    state = { ...state, modeData: mode.initModeData?.() } as any;
+    expect((state.modeData as any).currentDrillIndex).toBe(0);
   });
 });

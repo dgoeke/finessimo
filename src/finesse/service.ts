@@ -25,7 +25,11 @@ export class DefaultFinesseService implements FinesseService {
     const finalPosition = dropToBottom(state.board, lockedPiece);
     let targetX: number = finalPosition.x;
     let targetRot: Rot = finalPosition.rot;
-    if (typeof gameMode.getTargetFor === 'function') {
+    // Prefer mode guidance if available
+    if (typeof gameMode.getGuidance === 'function') {
+      const g = gameMode.getGuidance(state);
+      if (g?.target) { targetX = g.target.x; targetRot = g.target.rot; }
+    } else if (typeof gameMode.getTargetFor === 'function') {
       const t = gameMode.getTargetFor(lockedPiece, state);
       if (t) { targetX = t.targetX; targetRot = t.targetRot; }
     }
@@ -80,6 +84,9 @@ export class DefaultFinesseService implements FinesseService {
         type: 'UpdateModePrompt',
         prompt: modeResult.nextPrompt
       });
+    }
+    if (modeResult.modeData !== undefined) {
+      actions.push({ type: 'UpdateModeData', data: modeResult.modeData });
     }
     
     return actions;

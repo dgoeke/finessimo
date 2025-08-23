@@ -41,6 +41,41 @@ npm run lint
 npm run lint:fix
 ```
 
+## Architecture
+
+Finessimo follows a functional, unidirectional data flow:
+
+- UI → Input Handler → Reducer → State → UI
+- UI (Canvas + HUD) renders the immutable `GameState`.
+- Input Handlers are stateful and own all device timing (DAS/ARR, soft-drop repeats). They dispatch pure `Action`s only.
+- The reducer is pure/deterministic and creates new state snapshots for every action.
+- Core logic (movement, rotation via SRS, collision, line clears, 7‑bag RNG) lives under `src/core`.
+- Finesse analysis runs after a piece locks; the service compares the player’s normalized inputs against minimal BFS sequences.
+
+### Mode System (Mode-Agnostic Hooks)
+
+Game modes are self-contained policies exposed via hooks; the engine never branches on a mode name.
+
+- `initialConfig?()` applies timing/gameplay overrides when a mode activates.
+- `initModeData?()` initializes `GameState.modeData` (opaque per-mode substate).
+- `onBeforeSpawn?(state)` can override the next piece.
+- `getGuidance?(state)` emits `ModeGuidance` (target/prompt/visual flags). The app stores this in `state.guidance`, and UI renders it.
+
+Guided mode uses `modeData` to track drill index/attempts; on each lock it returns updated `modeData` and feedback. Free Play supplies no guidance or spawn overrides.
+
+### Input
+
+- Keyboard (DOM): DAS/ARR and soft drop repeats are implemented, with keyup suppression for rotation keys.
+- Touch: Quick downward swipe triggers Hard Drop; sustained downward movement engages Soft Drop (released on touch end).
+
+### Settings
+
+- Timing: DAS/ARR, soft-drop speed, lock delay, line clear delay, gravity on/off and speed.
+- Gameplay: finesse cancel window (ms).
+- Visual: ghost piece toggle, next preview count, UI scale.
+
+Settings are applied by dispatching `UpdateTiming`/`UpdateGameplay` actions. The canvas respects `ghostPieceEnabled`; the preview shows up to `nextPieceCount` items.
+
 ### ✅ Completed Features
 
 - Architecture skeleton and unidirectional data flow
@@ -49,7 +84,7 @@ npm run lint:fix
 - Core logic: SRS rotation, movement/collision, line clear utils
 - Finesse calculator: BFS minimality on empty board
 - Finesse service: analyzes from spawn state; applies 50ms cancellation window; mode-aware faults
-- Modes: Free-play and Guided with drill prompts and progression
+- Modes: Free-play and Guided with drill prompts, progression, guidance, and spawn policy hooks
 - UI: Canvas board and HUD with feedback and prompts
 - Tests: Broad unit coverage plus golden fixtures
 
@@ -68,6 +103,10 @@ npm run typecheck
 npm test:coverage
 npm test:watch
 ```
+
+## Design Reference
+
+See `DESIGN.md` for detailed contracts (types, actions, and mode hooks).
 
 ## Contributing
 

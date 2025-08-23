@@ -9,6 +9,8 @@ interface GuidedDrill {
   description: string;
 }
 
+type GuidedData = { currentDrillIndex: number; attemptsOnCurrentDrill: number };
+
 export class GuidedMode implements GameMode {
   readonly name = 'guided';
   
@@ -22,8 +24,35 @@ export class GuidedMode implements GameMode {
     { piece: 'J', targetX: 7, targetRot: 'spawn', description: 'Place J-piece at right edge (spawn rotation)' },
   ];
   
-  private currentDrillIndex = 0;
-  private attemptsOnCurrentDrill = 0;
+  initModeData(): GuidedData {
+    return { currentDrillIndex: 0, attemptsOnCurrentDrill: 0 };
+  }
+
+  private getData(state: GameState): GuidedData {
+    const data = (state.modeData as GuidedData) || this.initModeData();
+    return {
+      currentDrillIndex: data.currentDrillIndex ?? 0,
+      attemptsOnCurrentDrill: data.attemptsOnCurrentDrill ?? 0,
+    };
+  }
+
+  onBeforeSpawn(state: GameState): { piece?: PieceId } | null {
+    const data = this.getData(state);
+    const drill = this.drills[data.currentDrillIndex];
+    if (!drill || state.status !== 'playing') return null;
+    return { piece: drill.piece };
+  }
+
+  getGuidance(state: GameState) {
+    const data = this.getData(state);
+    const drill = this.drills[data.currentDrillIndex];
+    if (!drill) return null;
+    return {
+      target: { x: drill.targetX, rot: drill.targetRot },
+      label: `Drill ${data.currentDrillIndex + 1}/${this.drills.length}: ${drill.description}`,
+      visual: { highlightTarget: true, showPath: true }
+    };
+  }
   
   onPieceLocked(
     _gameState: GameState, 
@@ -31,9 +60,8 @@ export class GuidedMode implements GameMode {
     lockedPiece: ActivePiece,
     finalPosition: ActivePiece
   ): GameModeResult {
-    this.attemptsOnCurrentDrill++;
-    
-    const currentDrill = this.drills[this.currentDrillIndex];
+    const data = this.getData(_gameState);
+    const currentDrill = this.drills[data.currentDrillIndex];
     if (!currentDrill) {
       return {
         feedback: 'All drills completed! Well done!',
@@ -44,7 +72,10 @@ export class GuidedMode implements GameMode {
     const { isOptimal, playerSequence, optimalSequences, faults } = finesseResult;
 
     // Enforce piece identity and target match for the current drill
-    const expected = this.drills[this.currentDrillIndex];
+    const idxForEval = (typeof (_gameState.modeData as any)?.currentDrillIndex === 'number')
+      ? (_gameState.modeData as any).currentDrillIndex
+      : 0;
+    const expected = this.drills[idxForEval];
     if (expected) {
       if (lockedPiece.id !== expected.piece) {
         return { feedback: `✗ Wrong piece. Expected ${expected.piece}.` };
@@ -55,8 +86,11 @@ export class GuidedMode implements GameMode {
     }
     
     if (isOptimal) {
-      this.currentDrillIndex++;
-      const nextDrill = this.drills[this.currentDrillIndex];
+      const baseIndex = (typeof (_gameState.modeData as any)?.currentDrillIndex === 'number')
+        ? (_gameState.modeData as any).currentDrillIndex
+        : 0;
+      const nextIndex = baseIndex + 1;
+      const nextDrill = this.drills[nextIndex];
       
       let feedback = `✓ Perfect! Completed drill in ${playerSequence.length} inputs (optimal).`;
       
@@ -64,12 +98,14 @@ export class GuidedMode implements GameMode {
         feedback += ` Moving to next drill.`;
         return {
           feedback,
-          nextPrompt: nextDrill.description
+          nextPrompt: nextDrill.description,
+          modeData: { currentDrillIndex: nextIndex, attemptsOnCurrentDrill: 0 }
         };
       } else {
         return {
           feedback: `${feedback} All drills completed! Excellent work!`,
-          isComplete: true
+          isComplete: true,
+          modeData: { currentDrillIndex: nextIndex, attemptsOnCurrentDrill: 0 }
         };
       }
     }
@@ -90,59 +126,54 @@ export class GuidedMode implements GameMode {
       }
     }
     
-    if (this.attemptsOnCurrentDrill > 2 && optimalSequences.length > 0) {
+    const baseAttempts = data.attemptsOnCurrentDrill ?? 0;
+    const nextAttempts = baseAttempts + 1;
+    if (nextAttempts > 2 && optimalSequences.length > 0) {
       const optimalSequence = optimalSequences[0];
       if (optimalSequence) {
         const optimalStr = optimalSequence.join(' → ');
         feedback += ` Optimal sequence: ${optimalStr}`;
       }
     }
-    
-    return { feedback };
+    return { feedback, modeData: { currentDrillIndex: data.currentDrillIndex, attemptsOnCurrentDrill: nextAttempts } };
   }
   
   shouldPromptNext(gameState: GameState): boolean {
     if (!gameState.active) {
-      const currentDrill = this.drills[this.currentDrillIndex];
+      const data = this.getData(gameState);
+      const currentDrill = this.drills[data.currentDrillIndex];
       return currentDrill !== undefined;
     }
     return false;
   }
   
   getNextPrompt(_gameState: GameState): string | null {
-    const currentDrill = this.drills[this.currentDrillIndex];
+    const data = this.getData(_gameState);
+    const currentDrill = this.drills[data.currentDrillIndex];
     if (currentDrill) {
-      return `Drill ${this.currentDrillIndex + 1}/${this.drills.length}: ${currentDrill.description}`;
+      return `Drill ${data.currentDrillIndex + 1}/${this.drills.length}: ${currentDrill.description}`;
     }
     return null;
   }
   
   // Provide intended target for analysis
   getTargetFor(_lockedPiece: ActivePiece, _gameState: GameState): { targetX: number; targetRot: Rot } | null {
-    const currentDrill = this.drills[this.currentDrillIndex];
+    const data = this.getData(_gameState);
+    const currentDrill = this.drills[data.currentDrillIndex];
     if (!currentDrill) return null;
     return { targetX: currentDrill.targetX, targetRot: currentDrill.targetRot };
     
   }
 
   getExpectedPiece(_gameState: GameState): PieceId | undefined {
-    const currentDrill = this.drills[this.currentDrillIndex];
+    const data = this.getData(_gameState);
+    const currentDrill = this.drills[data.currentDrillIndex];
     return currentDrill?.piece;
   }
 
-  reset(): void {
-    this.currentDrillIndex = 0;
-    this.attemptsOnCurrentDrill = 0;
-  }
+  reset(): void {}
   
-  getCurrentDrill(): GuidedDrill | undefined {
-    return this.drills[this.currentDrillIndex];
-  }
+  getCurrentDrill(): GuidedDrill | undefined { return undefined; }
   
-  getProgress(): { current: number; total: number } {
-    return {
-      current: this.currentDrillIndex,
-      total: this.drills.length
-    };
-  }
+  getProgress(): { current: number; total: number } { return { current: 0, total: this.drills.length }; }
 }
