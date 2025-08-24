@@ -2,6 +2,7 @@ import { TouchInputHandler } from "../../src/input/touch";
 import { Action, GameState, KeyAction } from "../../src/state/types";
 import type { InputHandlerState } from "../../src/input/handler";
 import { createRng } from "../../src/core/rng";
+import { assertDefined } from "../helpers/assert";
 
 function makeState(): GameState {
   // Build a minimal valid GameState by initializing the app reducer indirectly would be complex here.
@@ -157,5 +158,112 @@ describe("TouchInputHandler", () => {
     expect(
       dispatched.find((a) => a.type === "SoftDrop" && a.on === false),
     ).toBeTruthy();
+  });
+
+  test("movement hold logs Down once and Up on release", () => {
+    handler.start();
+
+    // Press and release Left
+    (handler as unknown as Testable).triggerAction("LeftDown", "down");
+    (handler as unknown as Testable).triggerAction("LeftDown", "up");
+
+    // Extract EnqueueInput actions only
+    const enqueues = dispatched.filter(
+      (a): a is Extract<Action, { type: "EnqueueInput" }> =>
+        a.type === "EnqueueInput",
+    );
+
+    // Expect two log entries: LeftDown then LeftUp
+    expect(enqueues.length).toBeGreaterThanOrEqual(2);
+    const lastTwo = enqueues.slice(-2);
+    assertDefined(lastTwo[0]);
+    assertDefined(lastTwo[1]);
+    expect(lastTwo[0].event.action).toBe("LeftDown");
+    expect(lastTwo[1].event.action).toBe("LeftUp");
+  });
+
+  test("start/stop does not double-bind touch listeners", () => {
+    // Capture add/remove calls with their targets to verify idempotency
+    const addRecorded: {
+      target: EventTarget;
+      type: string;
+      listener: EventListenerOrEventListenerObject | null;
+      options?: boolean | AddEventListenerOptions;
+    }[] = [];
+    const removeRecorded: {
+      target: EventTarget;
+      type: string;
+      listener: EventListenerOrEventListenerObject | null;
+      options?: boolean | EventListenerOptions;
+    }[] = [];
+
+    const addSpy = jest
+      .spyOn(EventTarget.prototype, "addEventListener")
+      .mockImplementation(function (
+        this: EventTarget,
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | AddEventListenerOptions,
+      ) {
+        addRecorded.push({ target: this, type, listener, options });
+        // Do not call the original to avoid recursion; we only need to record
+        return;
+      });
+
+    const removeSpy = jest
+      .spyOn(EventTarget.prototype, "removeEventListener")
+      .mockImplementation(function (
+        this: EventTarget,
+        type: string,
+        listener: EventListenerOrEventListenerObject | null,
+        options?: boolean | EventListenerOptions,
+      ) {
+        removeRecorded.push({ target: this, type, listener, options });
+        // Do not call original; just record
+        return;
+      });
+
+    handler.start();
+    const overlay = document.getElementById("touch-controls");
+    assertDefined(overlay);
+
+    const isOverlay = (r: { target: EventTarget }) =>
+      r.target instanceof Element && r.target.id === "touch-controls";
+    const isTouch = (r: { type: string }) =>
+      r.type === "touchstart" ||
+      r.type === "touchmove" ||
+      r.type === "touchend" ||
+      r.type === "touchcancel";
+
+    const addedFirst = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
+    expect(addedFirst.length).toBe(4);
+
+    // Calling start() again should not add more listeners
+    handler.start();
+    const addedSecond = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
+    expect(addedSecond.length).toBe(4);
+
+    // Stop once should remove the four listeners
+    handler.stop();
+    const removedFirst = removeRecorded.filter(
+      (r) => isOverlay(r) && isTouch(r),
+    );
+    expect(removedFirst.length).toBe(4);
+
+    // Stop again should not remove additional listeners
+    handler.stop();
+    const removedSecond = removeRecorded.filter(
+      (r) => isOverlay(r) && isTouch(r),
+    );
+    expect(removedSecond.length).toBe(4);
+
+    // Starting again should add four more listeners (total 8)
+    handler.start();
+    const addedThird = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
+    expect(addedThird.length).toBe(8);
+
+    // Cleanup spies
+    addSpy.mockRestore();
+    removeSpy.mockRestore();
   });
 });

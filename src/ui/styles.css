@@ -656,6 +656,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  /* Prevent browser scrolling/zooming; allows passive listeners */
+  touch-action: none;
   /* Re-enable pointer events on the actual buttons */
   pointer-events: auto;
 }
