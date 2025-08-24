@@ -48,6 +48,19 @@ export class BasicPreviewRenderer implements PreviewRenderer {
 
       if (canvas && ctx && pieceId) {
         this.renderPreviewPiece(ctx, canvas, pieceId, i === 0);
+        
+        // Update label text based on desired count
+        const previewSlot = canvas.parentElement;
+        const label = previewSlot?.querySelector('.preview-label') as HTMLElement;
+        if (label) {
+          if (this.desiredCount === 1) {
+            // Hide label when only one preview piece
+            label.textContent = '';
+          } else {
+            // Show number for multiple preview pieces
+            label.textContent = i === 0 ? '1' : `${i + 1}`;
+          }
+        }
       }
     }
 
@@ -86,7 +99,7 @@ export class BasicPreviewRenderer implements PreviewRenderer {
 
       const label = document.createElement("div");
       label.className = "preview-label";
-      label.textContent = i === 0 ? "Next" : `${i + 1}`;
+      // Label text will be set dynamically in render method
 
       const canvas = document.createElement("canvas");
       canvas.className = "preview-canvas";

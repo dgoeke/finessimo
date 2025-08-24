@@ -179,7 +179,8 @@ body {
   display: none;
 }
 .mobile-board-slot {
-  display: block;
+  display: flex;
+  justify-content: center;
 }
 .mobile-hold-slot,
 .mobile-preview-slot {
@@ -196,12 +197,17 @@ body {
   padding: 12px;
   position: relative; /* Anchor touch overlay locally on mobile */
   box-shadow: var(--shadow-md);
+  /* Fit contents without extra width */
+  display: inline-block;
 }
 #game-canvas {
   display: block;
-  width: min(84vw, 360px);
-  height: auto;
-  max-height: 80vh;
+  /* Fixed width with responsive max, maintaining 1:2 aspect ratio */
+  width: min(360px, 40vh);
+  height: min(720px, 80vh);
+  /* Ensure consistent aspect ratio by constraining both dimensions */
+  max-width: 360px;
+  max-height: 720px;
   image-rendering: pixelated;
   background: #000;
   border-radius: 8px;
@@ -239,7 +245,10 @@ body {
     order: 1;
   }
   #game-canvas {
-    width: min(80vw, 320px);
+    width: min(320px, 35vh);
+    height: min(640px, 70vh);
+    max-width: 320px;
+    max-height: 640px;
   }
 }
 
@@ -290,7 +299,8 @@ body {
   }
   .mobile-board-slot #game-canvas {
     width: 100% !important;
-    height: auto;
+    /* Maintain 1:2 aspect ratio even on mobile */
+    height: 200% !important;
     max-height: none;
     border-radius: 0;
     border: 0;
@@ -434,10 +444,13 @@ body {
 
 /* Game Info Section - Preview and Hold */
 .game-info-section {
-  display: flex;
+  display: inline-flex;
   flex-direction: column;
+  align-items: center;
   gap: 16px;
   margin-bottom: 16px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Hold Section */
@@ -447,6 +460,9 @@ body {
   border-radius: var(--radius);
   padding: 12px;
   transition: opacity 0.2s ease;
+  text-align: center;
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .hold-section.disabled {
@@ -463,8 +479,9 @@ body {
 }
 
 .hold-container {
-  display: flex;
+  display: inline-flex;
   justify-content: center;
+  margin: 0 auto;
 }
 
 .hold-canvas {
@@ -480,6 +497,8 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 12px;
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .preview-title {
@@ -489,18 +508,21 @@ body {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
 }
 
 .preview-container {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
 .preview-slot {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin: 0 auto;
 }
 
 .preview-slot.main {
