@@ -39,11 +39,12 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     // Update finesse feedback
     const finesseFeedbackEl = this.elements.finesseFeedback;
     if (finesseFeedbackEl) {
-      if (gameState.finesseFeedback) {
+      if (
+        gameState.finesseFeedback &&
+        gameState.finesseFeedback.isOptimal === false
+      ) {
         finesseFeedbackEl.textContent = gameState.finesseFeedback.message;
-        finesseFeedbackEl.className = gameState.finesseFeedback.isOptimal
-          ? "finesse-feedback optimal"
-          : "finesse-feedback suboptimal";
+        finesseFeedbackEl.className = "finesse-feedback suboptimal";
         finesseFeedbackEl.style.display = "block";
       } else {
         finesseFeedbackEl.style.display = "none";
