@@ -23,16 +23,20 @@ function initializeApp(app: FinessimoApp): void {
     return;
   }
 
-  // Get HUD element
-  const hud = document.getElementById("game-hud") as HTMLElement;
-  if (!hud) {
-    console.error('HUD element with id "game-hud" not found');
+  // Get finesse feedback panel element
+  const finesseFeedbackPanel = document.getElementById(
+    "finesse-feedback-panel",
+  ) as HTMLElement;
+  if (!finesseFeedbackPanel) {
+    console.error(
+      'Finesse feedback panel element with id "finesse-feedback-panel" not found',
+    );
     return;
   }
 
   // Initialize and start the application
   try {
-    app.initialize(canvas, hud);
+    app.initialize(canvas, finesseFeedbackPanel);
     app.start();
 
     // Expose app globally for debugging
