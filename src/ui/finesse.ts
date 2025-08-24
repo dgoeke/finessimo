@@ -47,9 +47,9 @@ export class BasicFinesseRenderer implements FinesseRenderer {
       return;
     }
 
-    // Only render when there is guidance or finesse feedback to show
+    // Only render when guidance is available
     const guidance = gameState.guidance ?? null;
-    if (!guidance && !gameState.finesseFeedback) {
+    if (!guidance) {
       return;
     }
 
@@ -75,11 +75,6 @@ export class BasicFinesseRenderer implements FinesseRenderer {
         visualization.optimalSequence,
         visualization.currentStep ?? 0,
       );
-    }
-
-    // Show finesse quality indicator
-    if (gameState.finesseFeedback) {
-      this.renderFinesseIndicator(gameState);
     }
   }
 
@@ -167,51 +162,6 @@ export class BasicFinesseRenderer implements FinesseRenderer {
         this.drawPathStepCell(x, y, pieceData.color, stepNumber, action);
       }
     }
-  }
-
-  private renderFinesseIndicator(gameState: GameState): void {
-    if (!this.ctx || !this.canvas || !gameState.finesseFeedback) return;
-
-    // Draw finesse quality indicator in top-right corner of canvas
-    const indicatorSize = 40;
-    const margin = 10;
-    const x = this.canvas.width - indicatorSize - margin;
-    const y = margin;
-
-    // Background circle
-    this.ctx.fillStyle = gameState.finesseFeedback.isOptimal
-      ? "rgba(76, 175, 80, 0.8)" // Green for optimal
-      : "rgba(255, 152, 0, 0.8)"; // Orange for suboptimal
-
-    this.ctx.beginPath();
-    this.ctx.arc(
-      x + indicatorSize / 2,
-      y + indicatorSize / 2,
-      indicatorSize / 2,
-      0,
-      2 * Math.PI,
-    );
-    this.ctx.fill();
-
-    // Border
-    this.ctx.strokeStyle = gameState.finesseFeedback.isOptimal
-      ? "#4CAF50"
-      : "#FF9800";
-    this.ctx.lineWidth = 2;
-    this.ctx.stroke();
-
-    // Text
-    this.ctx.fillStyle = "white";
-    this.ctx.font = "bold 12px monospace";
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-
-    const text = gameState.finesseFeedback.isOptimal ? "✓" : "!";
-    this.ctx.fillText(text, x + indicatorSize / 2, y + indicatorSize / 2);
-
-    // Reset text alignment
-    this.ctx.textAlign = "left";
-    this.ctx.textBaseline = "alphabetic";
   }
 
   private drawTargetCell(
