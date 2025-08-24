@@ -146,7 +146,6 @@ describe("Seven Bag RNG", () => {
     it("should throw error if bag is corrupted", () => {
       const corruptedRng = createCorruptedRng("test", "undefined");
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       expect(() =>
         getNextPiece(corruptedRng as unknown as SevenBagRng),
       ).toThrow("Bag is empty or corrupted");

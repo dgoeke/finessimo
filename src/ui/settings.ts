@@ -231,7 +231,7 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   }
 
   // Deprecated; kept for API compatibility in tests if referenced indirectly
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   // Removed in favor of coerceKeyBindings; kept to avoid breaking API, but unused.
   // private validateKeyBindings(_maybe: unknown): KeyBindings { return this.coerceKeyBindings(_maybe); }
 
