@@ -65,6 +65,42 @@ function createInitialPhysics(): PhysicsState {
   };
 }
 
+// Helper to calculate derived stats
+function calculateDerivedStats(
+  stats: GameState["stats"],
+): Partial<GameState["stats"]> {
+  const {
+    optimalPlacements,
+    attempts,
+    totalInputs,
+    piecesPlaced,
+    timePlayedMs,
+    linesCleared,
+  } = stats;
+
+  const accuracyPercentage =
+    attempts > 0 ? (optimalPlacements / attempts) * 100 : 0;
+  const finesseAccuracy =
+    attempts > 0 ? (optimalPlacements / attempts) * 100 : 0;
+  const averageInputsPerPiece =
+    piecesPlaced > 0 ? totalInputs / piecesPlaced : 0;
+
+  // Calculate rates per minute
+  const playTimeMinutes = timePlayedMs > 0 ? timePlayedMs / (1000 * 60) : 0;
+  const piecesPerMinute =
+    playTimeMinutes > 0 ? piecesPlaced / playTimeMinutes : 0;
+  const linesPerMinute =
+    playTimeMinutes > 0 ? linesCleared / playTimeMinutes : 0;
+
+  return {
+    accuracyPercentage,
+    finesseAccuracy,
+    averageInputsPerPiece,
+    piecesPerMinute,
+    linesPerMinute,
+  };
+}
+
 // Initial game state
 function createInitialState(
   seed?: string,
@@ -74,6 +110,7 @@ function createInitialState(
 ): GameState {
   const rng = createRng(seed ?? "default");
   const { pieces: initialQueue, newRng } = getNextPieces(rng, 5); // Generate 5-piece preview
+  const now = Date.now();
 
   return {
     board: createEmptyBoard(),
@@ -87,13 +124,40 @@ function createInitialState(
     tick: 0,
     status: "playing",
     stats: {
+      // Basic counters
       piecesPlaced: 0,
       linesCleared: 0,
       optimalPlacements: 0,
       incorrectPlacements: 0,
       attempts: 0,
-      startedAtMs: Date.now(),
+      startedAtMs: now,
       timePlayedMs: 0,
+
+      // Comprehensive metrics
+      accuracyPercentage: 0,
+      finesseAccuracy: 0,
+      averageInputsPerPiece: 0,
+
+      // Session tracking
+      sessionStartMs: now,
+      totalSessions: 1,
+      longestSessionMs: 0,
+
+      // Performance data
+      piecesPerMinute: 0,
+      linesPerMinute: 0,
+      totalInputs: 0,
+      optimalInputs: 0,
+
+      // Fault tracking
+      totalFaults: 0,
+      faultsByType: {},
+
+      // Line clear statistics
+      singleLines: 0,
+      doubleLines: 0,
+      tripleLines: 0,
+      tetrisLines: 0,
     },
     physics: createInitialPhysics(),
     inputLog: [],
@@ -156,12 +220,34 @@ export const reducer: (
     const completedLines = getCompletedLines(lockedBoard);
     const topOut = wouldTopOut(piece);
 
+    // Update basic piece stats
+    const newStats = {
+      ...baseState.stats,
+      piecesPlaced: baseState.stats.piecesPlaced + 1,
+      linesCleared: baseState.stats.linesCleared + completedLines.length,
+    };
+
+    // Update line clear type statistics
+    if (completedLines.length === 1) {
+      newStats.singleLines = baseState.stats.singleLines + 1;
+    } else if (completedLines.length === 2) {
+      newStats.doubleLines = baseState.stats.doubleLines + 1;
+    } else if (completedLines.length === 3) {
+      newStats.tripleLines = baseState.stats.tripleLines + 1;
+    } else if (completedLines.length === 4) {
+      newStats.tetrisLines = baseState.stats.tetrisLines + 1;
+    }
+
+    // Recalculate derived stats
+    const derivedStats = calculateDerivedStats(newStats);
+
     const nextState: GameState = {
       ...baseState,
       board: lockedBoard,
       active: undefined,
       canHold: true,
       inputLog: [],
+      stats: { ...newStats, ...derivedStats },
       physics: {
         ...baseState.physics,
         lockDelayStartTime: null,
@@ -254,9 +340,28 @@ export const reducer: (
       }
       // Use provided timestamp or lastGravityTime as a stable reference to remain pure
       const timestampMs = action.timestampMs ?? state.physics.lastGravityTime;
+
+      // Update session time
+      const sessionTimeMs = timestampMs - state.stats.sessionStartMs;
+      const updatedTimeMs = Math.max(0, sessionTimeMs);
+
+      const derivedStats = calculateDerivedStats({
+        ...state.stats,
+        timePlayedMs: updatedTimeMs,
+      });
+
       let newState = {
         ...state,
         tick: state.tick + 1,
+        stats: {
+          ...state.stats,
+          timePlayedMs: updatedTimeMs,
+          longestSessionMs: Math.max(
+            state.stats.longestSessionMs,
+            updatedTimeMs,
+          ),
+          ...derivedStats,
+        },
       };
 
       // Handle gravity if enabled and piece exists
@@ -652,6 +757,93 @@ export const reducer: (
         physics: {
           ...state.physics,
           lockDelayStartTime: null,
+        },
+      };
+    }
+
+    case "RecordPieceLock": {
+      const faultCounts: Record<string, number> = {
+        ...state.stats.faultsByType,
+      };
+
+      // Count faults by type
+      for (const fault of action.faults) {
+        faultCounts[fault] = (faultCounts[fault] ?? 0) + 1;
+      }
+
+      const newStats = {
+        ...state.stats,
+        attempts: state.stats.attempts + 1,
+        optimalPlacements: action.isOptimal
+          ? state.stats.optimalPlacements + 1
+          : state.stats.optimalPlacements,
+        incorrectPlacements: action.isOptimal
+          ? state.stats.incorrectPlacements
+          : state.stats.incorrectPlacements + 1,
+        totalInputs: state.stats.totalInputs + action.inputCount,
+        optimalInputs: state.stats.optimalInputs + action.optimalInputCount,
+        totalFaults: state.stats.totalFaults + action.faults.length,
+        faultsByType: faultCounts,
+      };
+
+      const derivedStats = calculateDerivedStats(newStats);
+
+      return {
+        ...state,
+        stats: {
+          ...newStats,
+          ...derivedStats,
+        },
+      };
+    }
+
+    case "UpdateSessionTime": {
+      const sessionTimeMs = action.timestampMs - state.stats.sessionStartMs;
+      const updatedTimeMs = Math.max(0, sessionTimeMs);
+
+      const derivedStats = calculateDerivedStats({
+        ...state.stats,
+        timePlayedMs: updatedTimeMs,
+      });
+
+      return {
+        ...state,
+        stats: {
+          ...state.stats,
+          timePlayedMs: updatedTimeMs,
+          longestSessionMs: Math.max(
+            state.stats.longestSessionMs,
+            updatedTimeMs,
+          ),
+          ...derivedStats,
+        },
+      };
+    }
+
+    case "RecordLineClear": {
+      const newStats = {
+        ...state.stats,
+        linesCleared: state.stats.linesCleared + action.linesCleared,
+      };
+
+      // Update line clear type statistics
+      if (action.lineType === "single") {
+        newStats.singleLines = state.stats.singleLines + 1;
+      } else if (action.lineType === "double") {
+        newStats.doubleLines = state.stats.doubleLines + 1;
+      } else if (action.lineType === "triple") {
+        newStats.tripleLines = state.stats.tripleLines + 1;
+      } else if (action.lineType === "tetris") {
+        newStats.tetrisLines = state.stats.tetrisLines + 1;
+      }
+
+      const derivedStats = calculateDerivedStats(newStats);
+
+      return {
+        ...state,
+        stats: {
+          ...newStats,
+          ...derivedStats,
         },
       };
     }
