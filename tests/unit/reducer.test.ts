@@ -5,6 +5,7 @@ import {
   GameplayConfig,
   Action,
 } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { SevenBagRng } from "../../src/core/rng";
 import { assertActivePiece } from "../test-helpers";
 
@@ -84,7 +85,7 @@ describe("Reducer", () => {
 
       const newState = reducer(stateWithActivePiece, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(newState.active).toBeUndefined();
@@ -101,7 +102,7 @@ describe("Reducer", () => {
       };
       const newState = reducer(originalState, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(originalState.tick).toBe(5);
@@ -119,7 +120,7 @@ describe("Reducer", () => {
 
       const newState = reducer(stateWithData, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(newState.hold).toBe("I");
@@ -130,16 +131,25 @@ describe("Reducer", () => {
 
   describe("Tick action", () => {
     it("should increment tick counter", () => {
-      const state1 = reducer(initialState, { type: "Tick", timestampMs: 0 });
+      const state1 = reducer(initialState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
       expect(state1.tick).toBe(1);
 
-      const state2 = reducer(state1, { type: "Tick", timestampMs: 0 });
+      const state2 = reducer(state1, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
       expect(state2.tick).toBe(2);
     });
 
     it("should not mutate original state", () => {
       const originalTick = initialState.tick;
-      const newState = reducer(initialState, { type: "Tick", timestampMs: 0 });
+      const newState = reducer(initialState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
 
       expect(initialState.tick).toBe(originalTick);
       expect(newState.tick).toBe(originalTick + 1);
@@ -156,7 +166,7 @@ describe("Reducer", () => {
 
       const newState = reducer(stateWithData, {
         type: "Tick",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       // Active piece may move due to gravity, but other properties should be preserved
@@ -260,8 +270,14 @@ describe("Reducer", () => {
         ...initialState,
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
-      reducer(stateWithActive, { type: "Lock", timestampMs: Date.now() });
-      reducer(initialState, { type: "Tick", timestampMs: 0 });
+      reducer(stateWithActive, {
+        type: "Lock",
+        timestampMs: createTimestamp(performance.now()),
+      });
+      reducer(initialState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
       reducer(initialState, {
         type: "EnqueueInput",
         event: { tMs: 1000, frame: 60, action: "HardDrop" },
@@ -271,14 +287,17 @@ describe("Reducer", () => {
     });
 
     it("should create new state objects for state changes", () => {
-      const newState1 = reducer(initialState, { type: "Tick", timestampMs: 0 });
+      const newState1 = reducer(initialState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
       const stateWithActive = {
         ...newState1,
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
       const newState2 = reducer(stateWithActive, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(newState1).not.toBe(initialState);

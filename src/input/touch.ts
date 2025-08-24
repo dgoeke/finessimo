@@ -1,5 +1,6 @@
 import { Action, KeyAction, InputEvent, GameState } from "../state/types";
 import { InputHandler, InputHandlerState, KeyBindings } from "./handler";
+import { fromNow } from "../types/timestamp";
 
 interface TouchZone {
   element: HTMLElement;
@@ -391,7 +392,7 @@ export class TouchInputHandler implements InputHandler {
     if (!this.dispatch) return;
 
     const inputEvent: InputEvent = {
-      tMs: Date.now(),
+      tMs: performance.now(),
       frame: this.frameCounter,
       action,
     };
@@ -415,7 +416,8 @@ export class TouchInputHandler implements InputHandler {
           this.dispatch({ type: "Rotate", dir: "CCW" });
           break;
         case "HardDrop":
-          this.dispatch({ type: "HardDrop", timestampMs: performance.now() });
+          // Use currentTimestamp() for game timing consistency
+          this.dispatch({ type: "HardDrop", timestampMs: fromNow() });
           break;
         case "Hold":
           this.dispatch({ type: "Hold" });

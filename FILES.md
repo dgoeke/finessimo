@@ -12,6 +12,10 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/state/types.ts: Core types and interfaces. GameState, Action union, Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Statistics tracking actions.
 - src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Comprehensive statistics tracking with derived metrics calculation.
 
+## Types
+
+- src/types/timestamp.ts: Branded timestamp types and helper functions. Provides Timestamp type, createTimestamp(), fromNow(), and validation utilities for type-safe timestamp handling throughout the app.
+
 ## Input
 
 - src/input/handler.ts: Input system with DOMInputHandler (keyboard + keybindings), MockInputHandler (testing), input normalization, DAS/ARR timing.

@@ -1,4 +1,5 @@
 import { Action, KeyAction, InputEvent, GameState } from "../state/types";
+import { createTimestamp } from "../types/timestamp";
 
 // Public type for configurable key bindings
 export type BindableAction =
@@ -215,7 +216,7 @@ export class MockInputHandler implements InputHandler {
     }
 
     const event: InputEvent = {
-      tMs: Date.now(),
+      tMs: performance.now(),
       frame: this.frameCounter,
       action,
     };
@@ -246,7 +247,10 @@ export class MockInputHandler implements InputHandler {
         this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
       case "HardDrop":
-        this.dispatch({ type: "HardDrop", timestampMs: event.tMs });
+        this.dispatch({
+          type: "HardDrop",
+          timestampMs: createTimestamp(event.tMs),
+        });
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
@@ -455,7 +459,7 @@ export class DOMInputHandler implements InputHandler {
     if (event.repeat) return;
 
     const inputEvent: InputEvent = {
-      tMs: Date.now(),
+      tMs: performance.now(),
       frame: this.frameCounter,
       action,
     };
@@ -478,7 +482,10 @@ export class DOMInputHandler implements InputHandler {
         this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
       case "HardDrop":
-        this.dispatch({ type: "HardDrop", timestampMs: inputEvent.tMs });
+        this.dispatch({
+          type: "HardDrop",
+          timestampMs: createTimestamp(inputEvent.tMs),
+        });
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
@@ -501,7 +508,7 @@ export class DOMInputHandler implements InputHandler {
     event.preventDefault();
 
     const inputEvent: InputEvent = {
-      tMs: Date.now(),
+      tMs: performance.now(),
       frame: this.frameCounter,
       action,
     };

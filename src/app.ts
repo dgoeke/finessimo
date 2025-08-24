@@ -1,4 +1,5 @@
 import { GameState, Action, TimingConfig, GameplayConfig } from "./state/types";
+import { createTimestamp, fromNow } from "./types/timestamp";
 import { reducer } from "./state/reducer";
 import { DOMInputHandler } from "./input/handler";
 import { TouchInputHandler } from "./input/touch";
@@ -168,7 +169,10 @@ export class FinessimoApp {
     }
 
     // Always dispatch Tick with timestamp for physics calculations
-    this.dispatch({ type: "Tick", timestampMs: currentTime });
+    this.dispatch({
+      type: "Tick",
+      timestampMs: createTimestamp(currentTime),
+    });
 
     // Handle line clear completion
     if (shouldCompleteLineClear(this.gameState, currentTime)) {
@@ -213,9 +217,15 @@ export class FinessimoApp {
     const previewCount = this.gameState.gameplay.nextPieceCount ?? 5;
     this.previewRenderer.render(this.gameState.nextQueue, previewCount);
 
-    // Render both left-side hold (desktop) and mobile hold
-    this.leftHoldRenderer.render(this.gameState.hold, this.gameState.canHold);
-    this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
+    // Render appropriate hold renderer based on layout
+    const isMobile = window.matchMedia("(max-width: 680px)").matches;
+    if (isMobile) {
+      // Mobile: Use mobile hold renderer
+      this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
+    } else {
+      // Desktop: Use left-side hold renderer
+      this.leftHoldRenderer.render(this.gameState.hold, this.gameState.canHold);
+    }
   }
 
   private dispatch(action: Action): void {
@@ -270,7 +280,7 @@ export class FinessimoApp {
     // This is a simple test method - in a real implementation,
     // input would come from the keyboard/touch handlers
     if (action === "lock") {
-      this.dispatch({ type: "Lock", timestampMs: performance.now() });
+      this.dispatch({ type: "Lock", timestampMs: fromNow() });
     }
   }
 
@@ -381,7 +391,7 @@ export function shouldCompleteLineClear(
   nowMs: number,
 ): boolean {
   if (state.status !== "lineClear") return false;
-  if (state.timing.lineClearDelayMs <= 0) return false;
+  if (state.timing.lineClearDelayMs === 0) return false; // Immediate clearing handled in reducer
   const start = state.physics.lineClearStartTime;
   if (start === null) return false; // not started
   return nowMs - start >= state.timing.lineClearDelayMs;

@@ -8,6 +8,7 @@ import {
   ActivePiece,
   Stats,
 } from "./types";
+import type { Timestamp } from "../types/timestamp";
 import type { FaultType } from "../finesse/calculator";
 import {
   createEmptyBoard,
@@ -255,7 +256,7 @@ export const reducer: (
   const lockCurrentPiece = (
     baseState: GameState,
     piece: ActivePiece,
-    timestampMs: number,
+    timestampMs: Timestamp,
   ): GameState => {
     const lockedBoard = lockPiece(baseState.board, piece);
     const completedLines = getCompletedLines(lockedBoard);

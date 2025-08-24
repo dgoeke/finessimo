@@ -1,5 +1,6 @@
 import { reducer } from "../../src/state/reducer";
 import { GameState, Action } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
 import { InvalidGameState } from "../test-types";
 
@@ -36,7 +37,10 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should return unchanged state for HardDrop action without active piece", () => {
-      const action: Action = { type: "HardDrop", timestampMs: 1000 };
+      const action: Action = {
+        type: "HardDrop",
+        timestampMs: createTimestamp(1000),
+      };
       const result = reducer(validState, action);
       expect(result).toBe(validState);
     });
@@ -183,7 +187,10 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { type: "HardDrop", timestampMs: 1000 };
+      const action: Action = {
+        type: "HardDrop",
+        timestampMs: createTimestamp(1000),
+      };
       const result = reducer(almostCompleteState, action);
 
       expect(result.active).toBeUndefined(); // Piece should be locked
@@ -198,7 +205,10 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         tick: undefined, // Invalid tick
       };
 
-      const action: Action = { type: "Lock", timestampMs: Date.now() };
+      const action: Action = {
+        type: "Lock",
+        timestampMs: createTimestamp(performance.now()),
+      };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });
@@ -209,7 +219,10 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         tick: "invalid" as unknown as number, // Invalid tick
       };
 
-      const action: Action = { type: "Tick", timestampMs: 0 };
+      const action: Action = {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });

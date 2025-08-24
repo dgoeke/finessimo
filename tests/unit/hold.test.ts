@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { reducer } from "../../src/state/reducer";
 import { GameState } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
@@ -129,7 +130,7 @@ describe("hold system", () => {
       // Lock piece (should re-enable hold)
       const newState = reducer(state, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
       expect(newState.canHold).toBe(true);
     });
@@ -142,7 +143,10 @@ describe("hold system", () => {
       expect(state.canHold).toBe(false);
 
       // Hard drop (should re-enable hold)
-      const newState = reducer(state, { type: "HardDrop", timestampMs: 1000 });
+      const newState = reducer(state, {
+        type: "HardDrop",
+        timestampMs: createTimestamp(1000),
+      });
       expect(newState.canHold).toBe(true);
     });
   });

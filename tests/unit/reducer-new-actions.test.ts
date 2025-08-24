@@ -11,7 +11,7 @@ describe("Reducer - new action branches", () => {
 
   it("handles UpdateFinesseFeedback", () => {
     const init = reducer(undefined, { type: "Init" });
-    const fb = { message: "ok", isOptimal: true, timestamp: Date.now() };
+    const fb = { message: "ok", isOptimal: true, timestamp: performance.now() };
     const state = reducer(init, {
       type: "UpdateFinesseFeedback",
       feedback: fb,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { reducer } from "../../src/state/reducer";
 import { GameState, Board, idx } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 
 function createTestState(): GameState {
   return reducer(undefined, {
@@ -65,7 +66,7 @@ describe("top-out detection", () => {
     // Trigger auto-lock
     const newState = reducer(stateWithFullBoard, {
       type: "Tick",
-      timestampMs: 1500 + 500,
+      timestampMs: createTimestamp(1500 + 500),
     });
 
     expect(newState.status).toBe("topOut");
@@ -89,7 +90,7 @@ describe("top-out detection", () => {
 
     const newState = reducer(stateWithFullBoard, {
       type: "HardDrop",
-      timestampMs: 1000,
+      timestampMs: createTimestamp(1000),
     });
 
     expect(newState.status).toBe("topOut");
@@ -117,7 +118,7 @@ describe("top-out detection", () => {
 
     const newState = reducer(safeState, {
       type: "Tick",
-      timestampMs: 1500 + 500,
+      timestampMs: createTimestamp(1500 + 500),
     });
 
     expect(newState.status).toBe("playing");

@@ -1,3 +1,5 @@
+import type { Timestamp } from "../types/timestamp";
+
 // Board representation (dense array)
 export interface Board {
   readonly width: 10;
@@ -94,7 +96,7 @@ export interface PhysicsState {
   lastGravityTime: number;
   lockDelayStartTime: number | null;
   isSoftDropping: boolean;
-  lineClearStartTime: number | null;
+  lineClearStartTime: Timestamp | null;
   lineClearLines: number[];
 }
 
@@ -177,17 +179,17 @@ export type Action =
       mode?: string;
       retainStats?: boolean;
     }
-  | { type: "Tick"; timestampMs: number }
+  | { type: "Tick"; timestampMs: Timestamp }
   | { type: "Spawn"; piece?: PieceId }
   | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
   | { type: "SoftDrop"; on: boolean }
   | { type: "Rotate"; dir: "CW" | "CCW" }
-  | { type: "HardDrop"; timestampMs: number }
+  | { type: "HardDrop"; timestampMs: Timestamp }
   | { type: "Hold" }
-  | { type: "Lock"; timestampMs: number }
-  | { type: "StartLockDelay"; timestampMs: number }
+  | { type: "Lock"; timestampMs: Timestamp }
+  | { type: "StartLockDelay"; timestampMs: Timestamp }
   | { type: "CancelLockDelay" }
-  | { type: "StartLineClear"; lines: number[]; timestampMs: number }
+  | { type: "StartLineClear"; lines: number[]; timestampMs: Timestamp }
   | { type: "CompleteLineClear" }
   | { type: "ClearLines"; lines: number[] }
   | { type: "EnqueueInput"; event: InputEvent }
