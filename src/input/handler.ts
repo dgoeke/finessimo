@@ -339,7 +339,7 @@ export class DOMInputHandler implements InputHandler {
     this.frameCounter++;
     const currentTime = nowMs;
 
-    // Handle DAS/ARR timing
+    // Handle DAS/ARR timing with catch-up for sub-frame repeats
     if (
       this.state.currentDirection !== undefined &&
       this.state.dasStartTime !== undefined
@@ -347,26 +347,26 @@ export class DOMInputHandler implements InputHandler {
       const dasElapsed = currentTime - this.state.dasStartTime;
 
       if (dasElapsed >= gameState.timing.dasMs) {
-        // DAS threshold reached, check for ARR
-        if (this.state.arrLastTime === undefined) {
-          // First DAS trigger
+        const arrMs = Math.max(1, gameState.timing.arrMs); // clamp to avoid zero/negatives
+        // Determine first due time for a repeat pulse
+        let nextTime =
+          this.state.arrLastTime !== undefined
+            ? this.state.arrLastTime + arrMs
+            : this.state.dasStartTime + gameState.timing.dasMs;
+
+        // Dispatch as many pulses as have accrued since last frame
+        // Safety cap to avoid pathological bursts after long tab suspension
+        let pulses = 0;
+        const MAX_PULSES_PER_UPDATE = 200;
+        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
           dispatch({
             type: "Move",
             dir: this.state.currentDirection,
             source: "das",
           });
-          this.state.arrLastTime = currentTime;
-        } else {
-          // Check ARR timing
-          const arrElapsed = currentTime - this.state.arrLastTime;
-          if (arrElapsed >= gameState.timing.arrMs) {
-            dispatch({
-              type: "Move",
-              dir: this.state.currentDirection,
-              source: "das",
-            });
-            this.state.arrLastTime = currentTime;
-          }
+          this.state.arrLastTime = nextTime;
+          nextTime += arrMs;
+          pulses++;
         }
       }
     }
@@ -381,12 +381,17 @@ export class DOMInputHandler implements InputHandler {
             gameState.timing.gravityMs / Math.max(1, gameState.timing.softDrop),
           ),
         );
-        if (
-          this.state.softDropLastTime === undefined ||
-          currentTime - this.state.softDropLastTime >= interval
-        ) {
+        let nextTime =
+          this.state.softDropLastTime !== undefined
+            ? this.state.softDropLastTime + interval
+            : currentTime;
+        let pulses = 0;
+        const MAX_PULSES_PER_UPDATE = 200;
+        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
           dispatch({ type: "SoftDrop", on: true });
-          this.state.softDropLastTime = currentTime;
+          this.state.softDropLastTime = nextTime;
+          nextTime += interval;
+          pulses++;
         }
       }
     }
