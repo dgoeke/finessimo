@@ -3,7 +3,7 @@ import { reducer } from "./state/reducer";
 import { DOMInputHandler } from "./input/handler";
 import { TouchInputHandler } from "./input/touch";
 import { BasicCanvasRenderer } from "./ui/canvas";
-import { BasicHudRenderer } from "./ui/hud";
+import { BasicFinesseRenderer } from "./ui/finesse-feedback";
 import { BasicPreviewRenderer } from "./ui/preview";
 import { BasicHoldRenderer } from "./ui/hold";
 import { BasicSettingsRenderer, GameSettings } from "./ui/settings";
@@ -15,7 +15,8 @@ export class FinessimoApp {
   private keyboardInputHandler: DOMInputHandler;
   private touchInputHandler?: TouchInputHandler;
   private canvasRenderer: BasicCanvasRenderer;
-  private hudRenderer: BasicHudRenderer;
+  private finesseRenderer: BasicFinesseRenderer;
+  private leftHoldRenderer: BasicHoldRenderer;
   private previewRenderer: BasicPreviewRenderer;
   private holdRenderer: BasicHoldRenderer;
   private settingsRenderer: BasicSettingsRenderer;
@@ -27,7 +28,8 @@ export class FinessimoApp {
     this.gameState = this.initializeState();
     this.keyboardInputHandler = new DOMInputHandler();
     this.canvasRenderer = new BasicCanvasRenderer();
-    this.hudRenderer = new BasicHudRenderer();
+    this.finesseRenderer = new BasicFinesseRenderer();
+    this.leftHoldRenderer = new BasicHoldRenderer();
     this.previewRenderer = new BasicPreviewRenderer();
     this.holdRenderer = new BasicHoldRenderer();
     this.settingsRenderer = new BasicSettingsRenderer();
@@ -42,12 +44,21 @@ export class FinessimoApp {
     return reducer(undefined, { type: "Init" });
   }
 
-  initialize(canvasElement: HTMLCanvasElement, hudElement: HTMLElement): void {
+  initialize(
+    canvasElement: HTMLCanvasElement,
+    finesseFeedbackElement: HTMLElement,
+  ): void {
     // Initialize renderers
     this.canvasRenderer.initialize(canvasElement);
-    this.hudRenderer.initialize(hudElement);
+    this.finesseRenderer.initialize(finesseFeedbackElement);
 
-    // Initialize preview and hold renderers
+    // Initialize left-side hold renderer
+    const leftHoldElement = document.getElementById("left-hold");
+    if (leftHoldElement) {
+      this.leftHoldRenderer.initialize(leftHoldElement);
+    }
+
+    // Initialize preview renderer (right side for desktop, mobile slot for mobile)
     const isMobile = window.matchMedia("(max-width: 680px)").matches;
     if (isMobile) {
       const mobileHold = document.getElementById("mobile-hold");
@@ -57,7 +68,6 @@ export class FinessimoApp {
     } else {
       const gameInfoElement = document.getElementById("game-info");
       if (gameInfoElement) {
-        this.holdRenderer.initialize(gameInfoElement);
         this.previewRenderer.initialize(gameInfoElement);
       }
     }
@@ -78,12 +88,6 @@ export class FinessimoApp {
     );
 
     // No on-page controls list; users can view in Settings
-
-    // Setup test controls
-    this.hudRenderer.setupTestControls(
-      this.dispatch.bind(this),
-      this.setGameMode.bind(this),
-    );
 
     // Setup settings button
     this.setupSettingsButton();
@@ -130,8 +134,9 @@ export class FinessimoApp {
   destroy(): void {
     this.stop();
     this.canvasRenderer.destroy();
-    this.hudRenderer.destroy();
+    this.finesseRenderer.destroy();
     this.previewRenderer.destroy();
+    this.leftHoldRenderer.destroy();
     this.holdRenderer.destroy();
     this.settingsRenderer.destroy();
   }
@@ -197,10 +202,13 @@ export class FinessimoApp {
 
   private render(): void {
     this.canvasRenderer.render(this.gameState);
-    this.hudRenderer.render(this.gameState);
+    this.finesseRenderer.render(this.gameState);
     // Determine preview count from gameplay config (fallback to 5)
     const previewCount = this.gameState.gameplay.nextPieceCount ?? 5;
     this.previewRenderer.render(this.gameState.nextQueue, previewCount);
+
+    // Render both left-side hold (desktop) and mobile hold
+    this.leftHoldRenderer.render(this.gameState.hold, this.gameState.canHold);
     this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
   }
 

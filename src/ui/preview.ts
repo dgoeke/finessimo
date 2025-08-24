@@ -48,17 +48,19 @@ export class BasicPreviewRenderer implements PreviewRenderer {
 
       if (canvas && ctx && pieceId) {
         this.renderPreviewPiece(ctx, canvas, pieceId, i === 0);
-        
+
         // Update label text based on desired count
         const previewSlot = canvas.parentElement;
-        const label = previewSlot?.querySelector('.preview-label') as HTMLElement;
+        const label = previewSlot?.querySelector(
+          ".preview-label",
+        ) as HTMLElement;
         if (label) {
           if (this.desiredCount === 1) {
             // Hide label when only one preview piece
-            label.textContent = '';
+            label.textContent = "";
           } else {
             // Show number for multiple preview pieces
-            label.textContent = i === 0 ? '1' : `${i + 1}`;
+            label.textContent = i === 0 ? "1" : `${i + 1}`;
           }
         }
       }
@@ -79,16 +81,15 @@ export class BasicPreviewRenderer implements PreviewRenderer {
   private createPreviewElements(): void {
     if (!this.container) return;
 
-    const previewSection = document.createElement("div");
-    previewSection.className = "preview-section";
-    previewSection.innerHTML = `
-      <h3 class="preview-title">Next</h3>
-      <div class="preview-container"></div>
+    // Create elements directly in the container instead of wrapping in preview-section
+    this.container.innerHTML = `
+      <div class="preview-container">
+        <h3 class="preview-title">Next</h3>
+      </div>
     `;
 
-    const previewContainer = previewSection.querySelector(".preview-container");
+    const previewContainer = this.container.querySelector(".preview-container");
     if (!previewContainer) {
-      this.container.appendChild(previewSection);
       return;
     }
 
@@ -118,8 +119,6 @@ export class BasicPreviewRenderer implements PreviewRenderer {
       this.canvases.push(canvas);
       this.contexts.push(ctx);
     }
-
-    this.container.appendChild(previewSection);
   }
 
   private renderPreviewPiece(
@@ -196,11 +195,8 @@ export class BasicPreviewRenderer implements PreviewRenderer {
 
   destroy(): void {
     if (this.container) {
-      // Find and remove preview section
-      const previewSection = this.container.querySelector(".preview-section");
-      if (previewSection) {
-        previewSection.remove();
-      }
+      // Clear the container contents directly
+      this.container.innerHTML = "";
     }
 
     this.container = undefined;

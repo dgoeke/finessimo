@@ -27,10 +27,10 @@ export class BasicHoldRenderer implements HoldRenderer {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Update container visual state based on canHold
+    // Remove container visual state changes - no more grayed out appearance
     const holdSection = this.container?.querySelector(".hold-section");
     if (holdSection) {
-      holdSection.classList.toggle("disabled", !canHold);
+      holdSection.classList.remove("disabled");
     }
 
     // Render hold piece if it exists
@@ -92,8 +92,8 @@ export class BasicHoldRenderer implements HoldRenderer {
     const offsetY =
       (this.canvas.height - pieceHeight) / 2 - minY * this.cellSize;
 
-    // Use reduced opacity when hold is disabled
-    const alpha = canHold ? 1.0 : 0.3;
+    // Always render piece at full opacity
+    const alpha = 1.0;
 
     // Render each cell
     for (const [dx, dy] of cells) {
@@ -101,6 +101,11 @@ export class BasicHoldRenderer implements HoldRenderer {
       const y = dy * this.cellSize + offsetY;
 
       this.drawHoldCell(x, y, piece.color, alpha);
+    }
+
+    // Draw diagonal slash when hold is disabled
+    if (!canHold) {
+      this.drawDisabledSlash();
     }
   }
 
@@ -135,6 +140,21 @@ export class BasicHoldRenderer implements HoldRenderer {
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
     return color; // fallback for non-hex colors
+  }
+
+  private drawDisabledSlash(): void {
+    if (!this.ctx || !this.canvas) return;
+
+    // Draw diagonal line from top-right to bottom-left
+    this.ctx.strokeStyle = "#888888"; // Gray color
+    this.ctx.lineWidth = 3;
+    this.ctx.lineCap = "round";
+
+    // Start from top-right corner, end at bottom-left corner
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.canvas.width - 4, 4); // Top-right with small margin
+    this.ctx.lineTo(4, this.canvas.height - 4); // Bottom-left with small margin
+    this.ctx.stroke();
   }
 
   destroy(): void {
