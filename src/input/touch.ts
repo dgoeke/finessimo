@@ -22,6 +22,12 @@ export class TouchInputHandler implements InputHandler {
   private frameCounter = 0;
   private touchZones: TouchZone[] = [];
   private container?: HTMLElement;
+  private started = false;
+
+  // Pre-bound DOM handlers to ensure removeEventListener works reliably
+  private onTouchStart = (e: TouchEvent) => this.handleTouchStart(e);
+  private onTouchMove = (e: TouchEvent) => this.handleTouchMove(e);
+  private onTouchEnd = (e: TouchEvent) => this.handleTouchEnd(e);
 
   // Touch gesture detection
   private activeTouches = new Map<
@@ -46,13 +52,18 @@ export class TouchInputHandler implements InputHandler {
   }
 
   start(): void {
+    if (this.started) return;
     this.createTouchControls();
     this.bindTouchEvents();
+    this.started = true;
   }
 
   stop(): void {
-    this.removeTouchControls();
+    if (!this.started) return;
+    // Unbind before removing the node so we have a container reference
     this.unbindTouchEvents();
+    this.removeTouchControls();
+    this.started = false;
   }
 
   update(gameState: GameState, nowMs: number): void {
@@ -226,52 +237,31 @@ export class TouchInputHandler implements InputHandler {
   private bindTouchEvents(): void {
     if (!this.container) return;
 
-    this.container.addEventListener(
-      "touchstart",
-      this.handleTouchStart.bind(this),
-      { passive: false },
-    );
-    this.container.addEventListener(
-      "touchmove",
-      this.handleTouchMove.bind(this),
-      { passive: false },
-    );
-    this.container.addEventListener(
-      "touchend",
-      this.handleTouchEnd.bind(this),
-      { passive: false },
-    );
-    this.container.addEventListener(
-      "touchcancel",
-      this.handleTouchEnd.bind(this),
-      { passive: false },
-    );
+    this.container.addEventListener("touchstart", this.onTouchStart, {
+      passive: true,
+    });
+    this.container.addEventListener("touchmove", this.onTouchMove, {
+      passive: true,
+    });
+    this.container.addEventListener("touchend", this.onTouchEnd, {
+      passive: true,
+    });
+    this.container.addEventListener("touchcancel", this.onTouchEnd, {
+      passive: true,
+    });
   }
 
   private unbindTouchEvents(): void {
     if (!this.container) return;
 
-    this.container.removeEventListener(
-      "touchstart",
-      this.handleTouchStart.bind(this),
-    );
-    this.container.removeEventListener(
-      "touchmove",
-      this.handleTouchMove.bind(this),
-    );
-    this.container.removeEventListener(
-      "touchend",
-      this.handleTouchEnd.bind(this),
-    );
-    this.container.removeEventListener(
-      "touchcancel",
-      this.handleTouchEnd.bind(this),
-    );
+    // Only capture flag needs to match; pass false
+    this.container.removeEventListener("touchstart", this.onTouchStart, false);
+    this.container.removeEventListener("touchmove", this.onTouchMove, false);
+    this.container.removeEventListener("touchend", this.onTouchEnd, false);
+    this.container.removeEventListener("touchcancel", this.onTouchEnd, false);
   }
 
   private handleTouchStart(event: TouchEvent): void {
-    event.preventDefault();
-
     for (const touch of Array.from(event.changedTouches)) {
       const element = document.elementFromPoint(
         touch.clientX,
@@ -299,8 +289,6 @@ export class TouchInputHandler implements InputHandler {
   }
 
   private handleTouchMove(event: TouchEvent): void {
-    event.preventDefault();
-
     for (const touch of Array.from(event.changedTouches)) {
       const touchData = this.activeTouches.get(touch.identifier);
 
@@ -338,8 +326,6 @@ export class TouchInputHandler implements InputHandler {
   }
 
   private handleTouchEnd(event: TouchEvent): void {
-    event.preventDefault();
-
     for (const touch of Array.from(event.changedTouches)) {
       const touchData = this.activeTouches.get(touch.identifier);
 
@@ -391,16 +377,34 @@ export class TouchInputHandler implements InputHandler {
   private triggerAction(action: KeyAction, phase: "down" | "up"): void {
     if (!this.dispatch) return;
 
+    // Determine the logical input to record and state transition to apply
+    let eventAction: KeyAction = action;
+    let stateAction: KeyAction = action;
+
+    if (phase === "up") {
+      // Map held inputs to their corresponding release actions
+      if (action === "LeftDown") {
+        eventAction = "LeftUp";
+        stateAction = "LeftUp";
+      } else if (action === "RightDown") {
+        eventAction = "RightUp";
+        stateAction = "RightUp";
+      } else if (action === "SoftDropDown") {
+        eventAction = "SoftDropUp";
+        stateAction = "SoftDropUp";
+      }
+    }
+
     const inputEvent: InputEvent = {
       tMs: performance.now(),
       frame: this.frameCounter,
-      action,
+      action: eventAction,
     };
 
     this.dispatch({ type: "EnqueueInput", event: inputEvent });
-    this.updateInternalState(action);
+    this.updateInternalState(stateAction);
 
-    // Dispatch game actions
+    // Dispatch game actions on press and releases that affect physics
     if (phase === "down") {
       switch (action) {
         case "LeftDown":
@@ -427,17 +431,11 @@ export class TouchInputHandler implements InputHandler {
           break;
       }
     } else if (phase === "up") {
-      switch (action) {
-        case "LeftDown":
-          this.updateInternalState("LeftUp");
-          break;
-        case "RightDown":
-          this.updateInternalState("RightUp");
-          break;
-        case "SoftDropDown":
+      switch (eventAction) {
+        case "SoftDropUp":
           this.dispatch({ type: "SoftDrop", on: false });
-          this.updateInternalState("SoftDropUp");
           break;
+        // LeftUp/RightUp only change internal DAS state; no immediate action
       }
     }
   }
