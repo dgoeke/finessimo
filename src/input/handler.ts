@@ -18,8 +18,8 @@ export function defaultKeyBindings(): KeyBindings {
     MoveRight: ["ArrowRight", "KeyD"],
     SoftDrop: ["ArrowDown", "KeyS"],
     HardDrop: ["Space"],
-    RotateCW: ["ArrowUp", "KeyW", "KeyX"],
-    RotateCCW: ["KeyZ"],
+    RotateCW: ["ArrowUp", "KeyX"],
+    RotateCCW: ["LCtrl", "KeyZ"],
     Hold: ["KeyC"],
   };
 }
