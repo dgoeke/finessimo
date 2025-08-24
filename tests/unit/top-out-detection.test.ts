@@ -1,23 +1,23 @@
-import { describe, it, expect } from '@jest/globals';
-import { reducer } from '../../src/state/reducer';
-import { GameState, Board, idx } from '../../src/state/types';
+import { describe, it, expect } from "@jest/globals";
+import { reducer } from "../../src/state/reducer";
+import { GameState, Board, idx } from "../../src/state/types";
 
 function createTestState(): GameState {
-  return reducer(undefined, { 
-    type: 'Init', 
-    seed: 'test', 
-    timing: { 
-      gravityEnabled: true, 
+  return reducer(undefined, {
+    type: "Init",
+    seed: "test",
+    timing: {
+      gravityEnabled: true,
       gravityMs: 1000,
-      lockDelayMs: 500 
-    } 
+      lockDelayMs: 500,
+    },
   });
 }
 
 // Create a board that prevents piece from moving down from negative y position
 function createAlmostFullBoard(): Board {
   const cells = new Uint8Array(200);
-  
+
   // Fill the board completely from row 0 down, except for exactly the T piece spawn footprint
   // T piece at (4, -1) with spawn rotation has cells: [1,0],[0,1],[1,1],[2,1]
   // Absolute positions would be: (5,-1), (4,0), (5,0), (6,0)
@@ -33,94 +33,93 @@ function createAlmostFullBoard(): Board {
       }
     }
   }
-  
+
   return {
     width: 10,
     height: 20,
-    cells
+    cells,
   };
 }
 
-describe('top-out detection', () => {
-  it('should detect top-out when piece locks with cells at y < 0', () => {
+describe("top-out detection", () => {
+  it("should detect top-out when piece locks with cells at y < 0", () => {
     const state = createTestState();
-    
+
     // Create state where piece will be forced to lock at y < 0
     const stateWithFullBoard: GameState = {
       ...state,
       board: createAlmostFullBoard(),
       active: {
-        id: 'T',
+        id: "T",
         x: 4,
         y: -1, // Piece position above visible board
-        rot: 'spawn'
+        rot: "spawn",
       },
       physics: {
         ...state.physics,
         lockDelayStartTime: 1000,
-        lastGravityTime: 0
-      }
+        lastGravityTime: 0,
+      },
     };
-    
+
     // Trigger auto-lock
-    const newState = reducer(stateWithFullBoard, { 
-      type: 'Tick', 
-      timestampMs: 1500 + 500 
+    const newState = reducer(stateWithFullBoard, {
+      type: "Tick",
+      timestampMs: 1500 + 500,
     });
-    
-    
-    expect(newState.status).toBe('topOut');
+
+    expect(newState.status).toBe("topOut");
     expect(newState.active).toBeUndefined();
   });
-  
-  it('should detect top-out on HardDrop when piece would lock above board', () => {
+
+  it("should detect top-out on HardDrop when piece would lock above board", () => {
     const state = createTestState();
-    
+
     // Use the same almost full board that prevents movement
     const stateWithFullBoard: GameState = {
       ...state,
       board: createAlmostFullBoard(),
       active: {
-        id: 'T',
+        id: "T",
         x: 4,
         y: -2, // T-piece high above board
-        rot: 'spawn'
-      }
+        rot: "spawn",
+      },
     };
-    
-    const newState = reducer(stateWithFullBoard, { 
-      type: 'HardDrop'
+
+    const newState = reducer(stateWithFullBoard, {
+      type: "HardDrop",
     });
-    
-    expect(newState.status).toBe('topOut');
+
+    expect(newState.status).toBe("topOut");
     expect(newState.active).toBeUndefined();
   });
-  
-  it('should not top-out when piece locks entirely within visible board', () => {
+
+  it("should not top-out when piece locks entirely within visible board", () => {
     const state = createTestState();
-    
+
     // Create state with piece that can lock safely
     const safeState: GameState = {
       ...state,
       active: {
-        id: 'T',
+        id: "T",
         x: 4,
         y: 18, // Safe position within board
-        rot: 'spawn'
+        rot: "spawn",
       },
       physics: {
         ...state.physics,
         lockDelayStartTime: 1000,
-        lastGravityTime: 0
-      }
+        lastGravityTime: 0,
+      },
     };
-    
-    const newState = reducer(safeState, { 
-      type: 'Tick', 
-      timestampMs: 1500 + 500 
+
+    const newState = reducer(safeState, {
+      type: "Tick",
+      timestampMs: 1500 + 500,
     });
-    
-    expect(newState.status).toBe('playing');
+
+    expect(newState.status).toBe("playing");
     expect(newState.active).toBeUndefined();
   });
 });

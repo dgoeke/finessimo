@@ -11,7 +11,7 @@
   --primary-600: #6676f6;
   --accent: #22d3ee;
   --border: #263043;
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
   --radius: 12px;
   --key-h: 26px;
 }
@@ -29,25 +29,45 @@
     --primary-600: #4338ca;
     --accent: #0ea5e9;
     --border: #e5e7eb;
-    --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 }
 
 /* Reset + base */
-* { box-sizing: border-box; }
-html, body { min-height: 100%; }
-html, body {
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  min-height: 100%;
+}
+html,
+body {
   overflow-x: hidden; /* Prevent minor horizontal jank on mobile */
   background:
-    radial-gradient(1200px 600px at 10% 0%, rgba(124,140,251,0.14), transparent 60%),
-    radial-gradient(1000px 500px at 90% 0%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(
+      1200px 600px at 10% 0%,
+      rgba(124, 140, 251, 0.14),
+      transparent 60%
+    ),
+    radial-gradient(
+      1000px 500px at 90% 0%,
+      rgba(34, 211, 238, 0.1),
+      transparent 60%
+    ),
     var(--bg);
 }
 body {
   margin: 0;
   padding: 0;
   color: var(--text);
-  font: 400 16px/1.55 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font:
+    400 16px/1.55 "Inter",
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    sans-serif;
 }
 
 /* Header */
@@ -67,27 +87,74 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.brand { display: flex; align-items: center; gap: 12px; }
-.logo { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: var(--shadow-md); }
-.brand-text .title { font-weight: 700; letter-spacing: 0.2px; color: var(--primary); }
-.brand-text .subtitle { font-size: 12px; color: var(--text-dim); }
-.header-actions { display: flex; align-items: center; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border); text-decoration: none; font-size: 12px; }
-.chip:hover { background: color-mix(in oklab, var(--bg-elev-2) 85%, white); }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+.brand-text .title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--primary);
+}
+.brand-text .subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  font-size: 12px;
+}
+.chip:hover {
+  background: color-mix(in oklab, var(--bg-elev-2) 85%, white);
+}
 
 /* App shell grid */
 .app.shell {
   max-width: 1200px;
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
   display: grid;
   grid-template-columns: minmax(260px, 320px) 1fr minmax(260px, 320px);
   gap: 20px;
   align-items: start;
 }
-.sidebar { display: flex; flex-direction: column; gap: 16px; }
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .panel {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--bg-elev-1) 92%, transparent), var(--bg-elev-2));
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--bg-elev-1) 92%, transparent),
+    var(--bg-elev-2)
+  );
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -95,14 +162,35 @@ body {
 }
 
 /* Board area */
-.game-area { display: grid; place-items: center; }
+.game-area {
+  display: grid;
+  place-items: center;
+}
 /* Mobile play grid containers (used on phones) */
-.mobile-play { width: 100%; display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start; }
-.mobile-hold-slot, .mobile-preview-slot { display: none; }
-.mobile-board-slot { display: block; }
-.mobile-hold-slot, .mobile-preview-slot { justify-content: center; }
+.mobile-play {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: start;
+}
+.mobile-hold-slot,
+.mobile-preview-slot {
+  display: none;
+}
+.mobile-board-slot {
+  display: block;
+}
+.mobile-hold-slot,
+.mobile-preview-slot {
+  justify-content: center;
+}
 .board-frame {
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.01)
+  );
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 2px);
   padding: 12px;
@@ -121,50 +209,120 @@ body {
 }
 
 /* HUD */
-#game-hud { min-height: 300px; }
+#game-hud {
+  min-height: 300px;
+}
 
 /* Controls */
 
 /* Footer removed */
 
 /* Focus visibility */
-:focus-visible { outline: 2px solid color-mix(in oklab, var(--primary) 70%, white); outline-offset: 2px; border-radius: 6px; }
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 70%, white);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
 
 /* Responsive */
 @media (max-width: 1100px) {
-  .app.shell { grid-template-columns: 1fr; }
-  .sidebar { order: 2; max-width: 680px; width: 100%; margin: 0 auto; }
-  .game-area { order: 1; }
-  #game-canvas { width: min(80vw, 320px); }
+  .app.shell {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    order: 2;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .game-area {
+    order: 1;
+  }
+  #game-canvas {
+    width: min(80vw, 320px);
+  }
 }
 
 @media (max-width: 680px) {
-  .header-inner { padding: 0 8px; }
-  .brand-text .title { font-size: 18px; }
-  .brand-text .subtitle { font-size: 11px; }
-  .panel { padding: 12px; border-radius: 10px; }
-  .controls-grid { gap: 6px 8px; }
+  .header-inner {
+    padding: 0 8px;
+  }
+  .brand-text .title {
+    font-size: 18px;
+  }
+  .brand-text .subtitle {
+    font-size: 11px;
+  }
+  .panel {
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .controls-grid {
+    gap: 6px 8px;
+  }
   /* Three-column mobile layout: 10% | 80% | 10% */
   /* Adjust to 15% | 70% | 15% */
-  .mobile-play { grid-template-columns: 0.15fr 0.7fr 0.15fr; gap: 6px; }
-  .mobile-hold-slot, .mobile-preview-slot { display: flex; }
-  .mobile-hold-slot { align-items: stretch; flex-direction: column; width: 100%; }
-  .mobile-preview-slot { align-items: stretch; flex-direction: column; width: 100%; }
+  .mobile-play {
+    grid-template-columns: 0.15fr 0.7fr 0.15fr;
+    gap: 6px;
+  }
+  .mobile-hold-slot,
+  .mobile-preview-slot {
+    display: flex;
+  }
+  .mobile-hold-slot {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+  .mobile-preview-slot {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
   /* Minimize frame chrome and maximize board area */
-  .board-frame { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-  .mobile-board-slot #game-canvas { width: 100% !important; height: auto; max-height: none; border-radius: 0; border: 0; }
+  .board-frame {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .mobile-board-slot #game-canvas {
+    width: 100% !important;
+    height: auto;
+    max-height: none;
+    border-radius: 0;
+    border: 0;
+  }
   /* Hide game state (left panel) and right panel/controls on mobile */
-  .left-panel, .right-panel { display: none; }
+  .left-panel,
+  .right-panel {
+    display: none;
+  }
   /* Fit side canvases within 10% columns and keep squares */
   .mobile-hold-slot .hold-canvas,
-  .mobile-preview-slot .preview-canvas { width: 100%; height: auto; }
-  .mobile-preview-slot .preview-slot { flex-direction: column; align-items: center; gap: 2px; }
+  .mobile-preview-slot .preview-canvas {
+    width: 100%;
+    height: auto;
+  }
+  .mobile-preview-slot .preview-slot {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
   .mobile-hold-slot .hold-section,
-  .mobile-preview-slot .preview-section { padding: 4px; }
+  .mobile-preview-slot .preview-section {
+    padding: 4px;
+  }
   /* Hold: maximize usable width inside a thin bordered box */
   /* Remove the inner wrapper box and let its children adopt the column layout */
-  .mobile-hold-slot .hold-section { display: contents; }
-  .mobile-preview-slot .preview-section { display: contents; }
+  .mobile-hold-slot .hold-section {
+    display: contents;
+  }
+  .mobile-preview-slot .preview-section {
+    display: contents;
+  }
   .mobile-hold-slot .hold-title {
     order: 1;
     display: block;
@@ -192,26 +350,86 @@ body {
     display: block;
   }
   /* NEXT header: minimal and uppercase */
-  .mobile-preview-slot .preview-title { display: block; font-size: 10px; margin: 0 0 2px 0; text-align: center; text-transform: uppercase; letter-spacing: 0.06em; }
+  .mobile-preview-slot .preview-title {
+    display: block;
+    font-size: 10px;
+    margin: 0 0 2px 0;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
   /* Hide right panel and controls on mobile */
-  .right-panel { display: none; }
+  .right-panel {
+    display: none;
+  }
   /* Ensure mobile preview shows all items vertically */
-  .mobile-preview-slot .preview-container { display: flex; flex-direction: column !important; gap: 2px; width: 100%; }
-  .mobile-preview-slot .preview-slot { display: block !important; width: 100%; gap: 0; background: transparent; border: 0; padding: 0; border-radius: 0; }
-  .mobile-preview-slot .preview-slot.main { padding: 0 !important; background: transparent !important; border: 0 !important; border-radius: 0 !important; }
-  .mobile-preview-slot .preview-label { display: none; }
-  .mobile-preview-slot .preview-canvas { width: 100%; height: auto; background: transparent; border: 0; border-radius: 0; }
-  .mobile-preview-slot .preview-slot.main .preview-canvas { background: transparent; border: 0; }
+  .mobile-preview-slot .preview-container {
+    display: flex;
+    flex-direction: column !important;
+    gap: 2px;
+    width: 100%;
+  }
+  .mobile-preview-slot .preview-slot {
+    display: block !important;
+    width: 100%;
+    gap: 0;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+  .mobile-preview-slot .preview-slot.main {
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+  .mobile-preview-slot .preview-label {
+    display: none;
+  }
+  .mobile-preview-slot .preview-canvas {
+    width: 100%;
+    height: auto;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+  .mobile-preview-slot .preview-slot.main .preview-canvas {
+    background: transparent;
+    border: 0;
+  }
   /* Convert bottom buttons to floating overlays so they don't cover board space */
-  .touch-buttons { background: transparent; border-top: 0; height: 0; padding: 0; }
-  .touch-zones { bottom: 0; }
-  .touch-button { position: absolute; bottom: 8px; width: 48px; height: 48px; border-radius: 999px; padding: 0; display: grid; place-items: center; }
-  .touch-button.hold-btn { left: 8px; }
-  .touch-button.hard-drop-btn { right: 8px; }
+  .touch-buttons {
+    background: transparent;
+    border-top: 0;
+    height: 0;
+    padding: 0;
+  }
+  .touch-zones {
+    bottom: 0;
+  }
+  .touch-button {
+    position: absolute;
+    bottom: 8px;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .touch-button.hold-btn {
+    left: 8px;
+  }
+  .touch-button.hard-drop-btn {
+    right: 8px;
+  }
 }
 
 @media (max-height: 700px) and (min-width: 680px) {
-  #game-canvas { max-height: 70vh; }
+  #game-canvas {
+    max-height: 70vh;
+  }
 }
 
 /* Game Info Section - Preview and Hold */
@@ -323,12 +541,12 @@ body {
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .preview-slot {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .preview-label {
     width: auto;
     text-align: center;
@@ -340,16 +558,17 @@ body {
     flex-direction: row;
     justify-content: space-around;
   }
-  
-  .hold-section, .preview-section {
+
+  .hold-section,
+  .preview-section {
     flex: 1;
     max-width: 45%;
   }
-  
+
   .preview-container {
     gap: 4px;
   }
-  
+
   .preview-slot:not(.main) {
     display: none; /* Hide secondary previews on mobile */
   }
@@ -386,7 +605,7 @@ body {
   right: 0;
   bottom: 0; /* Full-frame overlay, no reserved space */
   display: grid;
-  grid-template-areas: 
+  grid-template-areas:
     "rotate-ccw rotate-cw"
     "move-left move-right"
     "soft-drop soft-drop"
@@ -441,8 +660,12 @@ body {
   grid-area: soft-drop;
 }
 
-.touch-zone.hold { grid-area: hold; }
-.touch-zone.hard-drop { grid-area: hard-drop; }
+.touch-zone.hold {
+  grid-area: hold;
+}
+.touch-zone.hard-drop {
+  grid-area: hard-drop;
+}
 
 .touch-label {
   font-size: 24px;
@@ -504,12 +727,16 @@ body {
 
 /* Hide touch controls on desktop */
 @media (hover: hover) and (pointer: fine) {
-  .touch-controls-overlay { display: none !important; }
+  .touch-controls-overlay {
+    display: none !important;
+  }
 }
 
 /* Show touch controls on touch devices (still non-blocking for scroll) */
 @media (hover: none) and (pointer: coarse) {
-  .touch-controls-overlay { display: block; }
+  .touch-controls-overlay {
+    display: block;
+  }
 }
 
 /* Adjust main UI when touch controls are active */
@@ -690,7 +917,7 @@ body.touch-active .app.shell {
   float: right;
   font-size: 12px;
   color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   background: var(--bg-elev-2);
   padding: 2px 6px;
   border-radius: 3px;
@@ -749,7 +976,11 @@ body.touch-active .app.shell {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--bg-elev-1) 92%, transparent), var(--bg-elev-2));
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--bg-elev-1) 92%, transparent),
+    var(--bg-elev-2)
+  );
 }
 
 .keybind-label {
@@ -765,14 +996,19 @@ body.touch-active .app.shell {
   color: var(--primary);
   border-radius: 999px;
   padding: 6px 12px;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.keybind-button:hover { transform: translateY(-1px); border-color: var(--primary); }
-.keybind-button.listening { outline: 2px solid color-mix(in oklab, var(--primary) 70%, white); }
+.keybind-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+}
+.keybind-button.listening {
+  outline: 2px solid color-mix(in oklab, var(--primary) 70%, white);
+}
 
 .keybind-hint {
   font-size: 12px;
@@ -796,7 +1032,9 @@ body.touch-active .app.shell {
 }
 
 @media (max-width: 760px) {
-  .keybinds-list { grid-template-columns: 1fr; }
+  .keybinds-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Settings button in header */
@@ -826,25 +1064,25 @@ body.touch-active .app.shell {
     margin: 0;
     border-radius: 8px;
   }
-  
+
   .settings-tabs {
     flex-wrap: wrap;
   }
-  
+
   .tab-button {
     min-width: 33.333%;
     flex: none;
   }
-  
+
   .settings-panel {
     padding: 16px;
   }
-  
+
   .settings-footer {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .button {
     width: 100%;
   }

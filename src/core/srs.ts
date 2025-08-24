@@ -11,88 +11,197 @@
 // Wall Kick Tables
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
-export const KICKS_JLSTZ: Record<string, readonly (readonly [number, number])[]> = {
+export const KICKS_JLSTZ: Record<
+  string,
+  readonly (readonly [number, number])[]
+> = {
   // 0 -> R / R -> 0
-  'spawn->right': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
-  'right->spawn': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+  "spawn->right": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  "right->spawn": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
   // R -> 2 / 2 -> R
-  'right->two': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'two->right': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+  "right->two": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "two->right": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
   // 2 -> L / L -> 2
-  'two->left': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
-  'left->two': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+  "two->left": [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, -2],
+    [1, -2],
+  ],
+  "left->two": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
   // L -> 0 / 0 -> L
-  'left->spawn': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
-  'spawn->left': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+  "left->spawn": [
+    [0, 0],
+    [1, 0],
+    [1, -1],
+    [0, 2],
+    [1, 2],
+  ],
+  "spawn->left": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
 };
 
 // Standard kicks for I piece (SRS-compliant 4-way rotation)
 export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
   // 0 -> R / R -> 0
-  'spawn->right': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
-  'right->spawn': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+  "spawn->right": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
+  "right->spawn": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
   // R -> 2 / 2 -> R
-  'right->two': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
-  'two->right': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+  "right->two": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "two->right": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
   // 2 -> L / L -> 2
-  'two->left': [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
-  'left->two': [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+  "two->left": [
+    [0, 0],
+    [2, 0],
+    [-1, 0],
+    [2, 1],
+    [-1, -2],
+  ],
+  "left->two": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
+  ],
   // L -> 0 / 0 -> L
-  'left->spawn': [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
-  'spawn->left': [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+  "left->spawn": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "spawn->left": [
+    [0, 0],
+    [1, 0],
+    [-2, 0],
+    [1, -2],
+    [-2, 1],
+  ],
 };
 
-import { ActivePiece, Board, Rot } from '../state/types';
-import { canPlacePiece } from './board';
+import { ActivePiece, Board, Rot } from "../state/types";
+import { canPlacePiece } from "./board";
 
 // Helper function to get the appropriate kick table for a piece
-function getKickTable(pieceId: string): Record<string, readonly (readonly [number, number])[]> {
-  return pieceId === 'I' ? KICKS_I : KICKS_JLSTZ;
+function getKickTable(
+  pieceId: string,
+): Record<string, readonly (readonly [number, number])[]> {
+  return pieceId === "I" ? KICKS_I : KICKS_JLSTZ;
 }
 
 // Helper function to get the next rotation state
-export function getNextRotation(currentRot: Rot, direction: 'CW' | 'CCW'): Rot {
-  if (direction === 'CW') {
+export function getNextRotation(currentRot: Rot, direction: "CW" | "CCW"): Rot {
+  if (direction === "CW") {
     switch (currentRot) {
-      case 'spawn': return 'right';
-      case 'right': return 'two';
-      case 'two': return 'left';
-      case 'left': return 'spawn';
+      case "spawn":
+        return "right";
+      case "right":
+        return "two";
+      case "two":
+        return "left";
+      case "left":
+        return "spawn";
     }
   }
-  
-  if (direction === 'CCW') {
+
+  if (direction === "CCW") {
     switch (currentRot) {
-      case 'spawn': return 'left';
-      case 'left': return 'two';
-      case 'two': return 'right';
-      case 'right': return 'spawn';
+      case "spawn":
+        return "left";
+      case "left":
+        return "two";
+      case "two":
+        return "right";
+      case "right":
+        return "spawn";
     }
   }
-  
+
   return currentRot;
 }
 
 // Check if a rotation is valid (doesn't perform it, just checks)
 export function canRotate(
-  piece: ActivePiece, 
-  targetRot: Rot, 
-  board: Board
+  piece: ActivePiece,
+  targetRot: Rot,
+  board: Board,
 ): boolean {
   // O piece doesn't rotate
-  if (piece.id === 'O') {
+  if (piece.id === "O") {
     return piece.rot === targetRot;
   }
-  
+
   const testPiece = { ...piece, rot: targetRot };
   const kickKey = `${piece.rot}->${targetRot}`;
   const kickTable = getKickTable(piece.id);
   const kicks = kickTable[kickKey];
-  
+
   if (!kicks) {
     return false;
   }
-  
+
   // Try each kick offset
   for (const [dx, dy] of kicks) {
     // Wiki offsets use positive y upwards; our grid uses positive y downwards.
@@ -100,14 +209,14 @@ export function canRotate(
     const kickedPiece = {
       ...testPiece,
       x: piece.x + dx,
-      y: piece.y + appliedDy
+      y: piece.y + appliedDy,
     };
-    
+
     if (canPlacePiece(board, kickedPiece)) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -115,24 +224,24 @@ export function canRotate(
 // NOTE: This function only allows adjacent rotation states (90° rotations) per SRS rules.
 // Direct 180° rotations (spawn→two, two→spawn, right→left, left→right) are not supported.
 export function tryRotate(
-  piece: ActivePiece, 
-  targetRot: Rot, 
-  board: Board
+  piece: ActivePiece,
+  targetRot: Rot,
+  board: Board,
 ): ActivePiece | null {
   // O piece doesn't rotate
-  if (piece.id === 'O') {
+  if (piece.id === "O") {
     return piece.rot === targetRot ? piece : null;
   }
-  
+
   const testPiece = { ...piece, rot: targetRot };
   const kickKey = `${piece.rot}->${targetRot}`;
   const kickTable = getKickTable(piece.id);
   const kicks = kickTable[kickKey];
-  
+
   if (!kicks) {
     return null;
   }
-  
+
   // Try each kick offset
   for (const [dx, dy] of kicks) {
     // Invert dy to account for y-down coordinate system
@@ -140,13 +249,13 @@ export function tryRotate(
     const kickedPiece = {
       ...testPiece,
       x: piece.x + dx,
-      y: piece.y + appliedDy
+      y: piece.y + appliedDy,
     };
-    
+
     if (canPlacePiece(board, kickedPiece)) {
       return kickedPiece;
     }
   }
-  
+
   return null;
 }

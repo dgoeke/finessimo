@@ -1,154 +1,154 @@
-import { normalizeInputSequence } from '../../src/input/handler';
-import { InputEvent, KeyAction } from '../../src/state/types';
+import { normalizeInputSequence } from "../../src/input/handler";
+import { InputEvent, KeyAction } from "../../src/state/types";
 
-describe('Input Normalization', () => {
+describe("Input Normalization", () => {
   const createInputEvent = (action: KeyAction, tMs: number): InputEvent => ({
     tMs,
     frame: Math.floor(tMs / 16.67), // Approximate frame based on timestamp
-    action
+    action,
   });
 
-  describe('normalizeInputSequence', () => {
-    it('should filter irrelevant events', () => {
+  describe("normalizeInputSequence", () => {
+    it("should filter irrelevant events", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('LeftUp', 150),
-        createInputEvent('SoftDropDown', 200),
-        createInputEvent('HardDrop', 250)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("LeftUp", 150),
+        createInputEvent("SoftDropDown", 200),
+        createInputEvent("HardDrop", 250),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['LeftDown', 'HardDrop']);
+      expect(result).toEqual(["LeftDown", "HardDrop"]);
     });
 
-    it('should keep relevant events in order', () => {
+    it("should keep relevant events in order", () => {
       const events: InputEvent[] = [
-        createInputEvent('HardDrop', 300),
-        createInputEvent('RotateCW', 100),
-        createInputEvent('LeftDown', 200),
+        createInputEvent("HardDrop", 300),
+        createInputEvent("RotateCW", 100),
+        createInputEvent("LeftDown", 200),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW', 'LeftDown', 'HardDrop']);
+      expect(result).toEqual(["RotateCW", "LeftDown", "HardDrop"]);
     });
 
-    it('should cancel opposite directional inputs within window', () => {
+    it("should cancel opposite directional inputs within window", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RightDown', 130), // Within 50ms window
-        createInputEvent('RotateCW', 200)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RightDown", 130), // Within 50ms window
+        createInputEvent("RotateCW", 200),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW']);
+      expect(result).toEqual(["RotateCW"]);
     });
 
-    it('should not cancel opposite inputs outside window', () => {
+    it("should not cancel opposite inputs outside window", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RightDown', 200), // Outside 50ms window
-        createInputEvent('RotateCW', 300)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RightDown", 200), // Outside 50ms window
+        createInputEvent("RotateCW", 300),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['LeftDown', 'RightDown', 'RotateCW']);
+      expect(result).toEqual(["LeftDown", "RightDown", "RotateCW"]);
     });
 
-    it('should cancel RightDown -> LeftDown pairs', () => {
+    it("should cancel RightDown -> LeftDown pairs", () => {
       const events: InputEvent[] = [
-        createInputEvent('RightDown', 100),
-        createInputEvent('LeftDown', 120), // Within window
-        createInputEvent('RotateCW', 200)
+        createInputEvent("RightDown", 100),
+        createInputEvent("LeftDown", 120), // Within window
+        createInputEvent("RotateCW", 200),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW']);
+      expect(result).toEqual(["RotateCW"]);
     });
 
-    it('should handle multiple cancellation pairs', () => {
+    it("should handle multiple cancellation pairs", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RightDown', 120), // Pair 1
-        createInputEvent('RightDown', 200),
-        createInputEvent('LeftDown', 230), // Pair 2
-        createInputEvent('HardDrop', 300)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RightDown", 120), // Pair 1
+        createInputEvent("RightDown", 200),
+        createInputEvent("LeftDown", 230), // Pair 2
+        createInputEvent("HardDrop", 300),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['HardDrop']);
+      expect(result).toEqual(["HardDrop"]);
     });
 
-    it('should not cancel non-directional inputs', () => {
+    it("should not cancel non-directional inputs", () => {
       const events: InputEvent[] = [
-        createInputEvent('RotateCW', 100),
-        createInputEvent('RotateCCW', 120),
-        createInputEvent('Hold', 160)
+        createInputEvent("RotateCW", 100),
+        createInputEvent("RotateCCW", 120),
+        createInputEvent("Hold", 160),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW', 'RotateCCW', 'Hold']);
+      expect(result).toEqual(["RotateCW", "RotateCCW", "Hold"]);
     });
 
-    it('should handle edge case with same timestamp', () => {
+    it("should handle edge case with same timestamp", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RightDown', 100), // Same timestamp
-        createInputEvent('HardDrop', 200)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RightDown", 100), // Same timestamp
+        createInputEvent("HardDrop", 200),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['HardDrop']);
+      expect(result).toEqual(["HardDrop"]);
     });
 
-    it('should handle complex scenario with partial cancellations', () => {
+    it("should handle complex scenario with partial cancellations", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RotateCW', 120),
-        createInputEvent('RightDown', 140), // This should cancel with LeftDown
-        createInputEvent('LeftDown', 200),  // This should remain
-        createInputEvent('HardDrop', 250)
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RotateCW", 120),
+        createInputEvent("RightDown", 140), // This should cancel with LeftDown
+        createInputEvent("LeftDown", 200), // This should remain
+        createInputEvent("HardDrop", 250),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['RotateCW', 'LeftDown', 'HardDrop']);
+      expect(result).toEqual(["RotateCW", "LeftDown", "HardDrop"]);
     });
 
-    it('should work with different cancellation window sizes', () => {
+    it("should work with different cancellation window sizes", () => {
       const events: InputEvent[] = [
-        createInputEvent('LeftDown', 100),
-        createInputEvent('RightDown', 175), // 75ms apart
+        createInputEvent("LeftDown", 100),
+        createInputEvent("RightDown", 175), // 75ms apart
       ];
 
       // With 50ms window - should not cancel
       const result50 = normalizeInputSequence(events, 50);
-      expect(result50).toEqual(['LeftDown', 'RightDown']);
+      expect(result50).toEqual(["LeftDown", "RightDown"]);
 
       // With 100ms window - should cancel
       const result100 = normalizeInputSequence(events, 100);
       expect(result100).toEqual([]);
     });
 
-    it('should handle empty input array', () => {
+    it("should handle empty input array", () => {
       const result = normalizeInputSequence([], 50);
       expect(result).toEqual([]);
     });
 
-    it('should handle single input', () => {
-      const events: InputEvent[] = [createInputEvent('LeftDown', 100)];
+    it("should handle single input", () => {
+      const events: InputEvent[] = [createInputEvent("LeftDown", 100)];
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['LeftDown']);
+      expect(result).toEqual(["LeftDown"]);
     });
 
-    it('should preserve all hold and rotation inputs', () => {
+    it("should preserve all hold and rotation inputs", () => {
       const events: InputEvent[] = [
-        createInputEvent('Hold', 100),
-        createInputEvent('RotateCW', 150),
-        createInputEvent('RotateCCW', 200),
-        createInputEvent('HardDrop', 300)
+        createInputEvent("Hold", 100),
+        createInputEvent("RotateCW", 150),
+        createInputEvent("RotateCCW", 200),
+        createInputEvent("HardDrop", 300),
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(['Hold', 'RotateCW', 'RotateCCW', 'HardDrop']);
+      expect(result).toEqual(["Hold", "RotateCW", "RotateCCW", "HardDrop"]);
     });
   });
 });

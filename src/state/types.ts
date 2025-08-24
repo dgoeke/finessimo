@@ -17,8 +17,8 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 }
 
 // Pieces and rotation
-export type PieceId = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
-export type Rot = 'spawn' | 'right' | 'two' | 'left';
+export type PieceId = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
+export type Rot = "spawn" | "right" | "two" | "left";
 
 export interface TetrominoShape {
   id: PieceId;
@@ -36,17 +36,20 @@ export interface ActivePiece {
 
 // Config
 export interface GameplayConfig {
-  finesseCancelMs: number;   // default: 50
+  finesseCancelMs: number; // default: 50
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
-  nextPieceCount?: number;     // default 5 (preview count)
+  nextPieceCount?: number; // default 5 (preview count)
 }
+
+export type SoftDropSpeed = number | "infinite";
 
 export interface TimingConfig {
   tickHz: 60;
   dasMs: number;
   arrMs: number;
-  softDropCps: number;
+  // Soft drop: multiplier of gravity (number) or 'infinite' for instant drop without lock
+  softDrop: SoftDropSpeed;
   lockDelayMs: number;
   lineClearDelayMs: number;
   gravityEnabled: boolean;
@@ -55,13 +58,16 @@ export interface TimingConfig {
 
 // User actions at the input layer
 export type KeyAction =
-  | 'LeftDown' | 'LeftUp'
-  | 'RightDown' | 'RightUp'
-  | 'SoftDropDown' | 'SoftDropUp'
-  | 'HardDrop'
-  | 'RotateCW'
-  | 'RotateCCW'
-  | 'Hold';
+  | "LeftDown"
+  | "LeftUp"
+  | "RightDown"
+  | "RightUp"
+  | "SoftDropDown"
+  | "SoftDropUp"
+  | "HardDrop"
+  | "RotateCW"
+  | "RotateCCW"
+  | "Hold";
 
 export interface InputEvent {
   tMs: number;
@@ -93,7 +99,7 @@ export interface PhysicsState {
 }
 
 // Game state
-import type { SevenBagRng } from '../core/rng';
+import type { SevenBagRng } from "../core/rng";
 
 export interface Stats {
   // Minimal session stats for Iteration 6 groundwork
@@ -116,7 +122,7 @@ export interface GameState {
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
-  status: 'playing' | 'lineClear' | 'topOut';
+  status: "playing" | "lineClear" | "topOut";
   stats: Stats; // Basic stats; extended in Iteration 6
   physics: PhysicsState;
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
@@ -132,29 +138,38 @@ export interface GameState {
 
 // State transitions
 export type Action =
-  | { type: 'Init'; seed?: string; timing?: Partial<TimingConfig>; gameplay?: Partial<GameplayConfig>; mode?: string }
-  | { type: 'Tick'; timestampMs: number }
-  | { type: 'Spawn'; piece?: PieceId }
-  | { type: 'Move'; dir: -1 | 1; source: 'tap' | 'das' }
-  | { type: 'SoftDrop'; on: boolean }
-  | { type: 'Rotate'; dir: 'CW' | 'CCW' }
-  | { type: 'HardDrop' }
-  | { type: 'Hold' }
-  | { type: 'Lock' }
-  | { type: 'StartLockDelay'; timestampMs: number }
-  | { type: 'CancelLockDelay' }
-  | { type: 'StartLineClear'; lines: number[]; timestampMs: number }
-  | { type: 'CompleteLineClear' }
-  | { type: 'ClearLines'; lines: number[] }
-  | { type: 'EnqueueInput'; event: InputEvent }
-  | { type: 'SetMode'; mode: string }
-  | { type: 'UpdateFinesseFeedback'; feedback: FinesseUIFeedback | null }
-  | { type: 'UpdateModePrompt'; prompt: string | null }
+  | {
+      type: "Init";
+      seed?: string;
+      timing?: Partial<TimingConfig>;
+      gameplay?: Partial<GameplayConfig>;
+      mode?: string;
+    }
+  | { type: "Tick"; timestampMs: number }
+  | { type: "Spawn"; piece?: PieceId }
+  | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
+  | { type: "SoftDrop"; on: boolean }
+  | { type: "Rotate"; dir: "CW" | "CCW" }
+  | { type: "HardDrop" }
+  | { type: "Hold" }
+  | { type: "Lock" }
+  | { type: "StartLockDelay"; timestampMs: number }
+  | { type: "CancelLockDelay" }
+  | { type: "StartLineClear"; lines: number[]; timestampMs: number }
+  | { type: "CompleteLineClear" }
+  | { type: "ClearLines"; lines: number[] }
+  | { type: "EnqueueInput"; event: InputEvent }
+  | { type: "SetMode"; mode: string }
+  | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
+  | { type: "UpdateModePrompt"; prompt: string | null }
   // Settings updates
-  | { type: 'UpdateTiming'; timing: Partial<TimingConfig> }
-  | { type: 'UpdateGameplay'; gameplay: Partial<GameplayConfig> }
+  | { type: "UpdateTiming"; timing: Partial<TimingConfig> }
+  | { type: "UpdateGameplay"; gameplay: Partial<GameplayConfig> }
   // Mode/UI guidance
-  | { type: 'UpdateGuidance'; guidance: ModeGuidance | null }
-  | { type: 'UpdateModeData'; data: unknown };
+  | { type: "UpdateGuidance"; guidance: ModeGuidance | null }
+  | { type: "UpdateModeData"; data: unknown };
 
-export type Reducer = (s: Readonly<GameState> | undefined, a: Action) => GameState;
+export type Reducer = (
+  s: Readonly<GameState> | undefined,
+  a: Action,
+) => GameState;

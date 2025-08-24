@@ -39,6 +39,7 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 **UI (Canvas board + DOM UI)** → **Input Handler (Stateful: keyboard/touch + DAS/ARR timers)** → **Reducer (Pure Function)** → **Immutable State** → **Core Logic (movement, rotation, collision, line clear, RNG)** → **Finesse Calculator (post-lock)** → **Game Modes (via hooks)**
 
 Keybindings and Settings
+
 - A modal Settings panel exposes tabs for Timing, Gameplay, Visual, and Controls (Keybindings).
 - Keybindings are configurable and persisted locally (localStorage) under a single `finessimo` key (with both settings and keyBindings). The keyboard input handler loads these on startup and can be updated live via `setKeyBindings`.
 - While rebinding, the Settings panel adds `settings-open` to `<body>` so the keyboard handler ignores keydown/keyup to prevent interference.
@@ -124,6 +125,7 @@ To keep the core engine mode-agnostic, game modes expose a small set of pure hoo
   - Optional: provides a target/prompt/visual flags for UI overlays. The app stores this in `state.guidance`.
 
 `ModeGuidance`:
+
 - `target?: { x: number; rot: Rot }` — suggested placement for overlays/analyzers
 - `label?: string` — HUD text prompt
 - `visual?: { highlightTarget?: boolean; showPath?: boolean }` — overlay toggles
@@ -172,7 +174,7 @@ export interface GameplayConfig {
   finesseCancelMs: number; // default: 50
   // Visual/gameplay toggles
   ghostPieceEnabled?: boolean; // default: true
-  nextPieceCount?: number;     // default: 5 (preview count)
+  nextPieceCount?: number; // default: 5 (preview count)
 }
 
 export interface TimingConfig {

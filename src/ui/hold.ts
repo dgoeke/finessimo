@@ -1,5 +1,5 @@
-import { PieceId } from '../state/types';
-import { PIECES } from '../core/pieces';
+import { PieceId } from "../state/types";
+import { PIECES } from "../core/pieces";
 
 export interface HoldRenderer {
   initialize(container: HTMLElement): void;
@@ -20,7 +20,7 @@ export class BasicHoldRenderer implements HoldRenderer {
 
   render(holdPiece: PieceId | undefined, canHold: boolean): void {
     if (!this.canvas || !this.ctx) {
-      console.error('Hold renderer not initialized');
+      console.error("Hold renderer not initialized");
       return;
     }
 
@@ -28,9 +28,9 @@ export class BasicHoldRenderer implements HoldRenderer {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Update container visual state based on canHold
-    const holdSection = this.container?.querySelector('.hold-section');
+    const holdSection = this.container?.querySelector(".hold-section");
     if (holdSection) {
-      holdSection.classList.toggle('disabled', !canHold);
+      holdSection.classList.toggle("disabled", !canHold);
     }
 
     // Render hold piece if it exists
@@ -42,8 +42,8 @@ export class BasicHoldRenderer implements HoldRenderer {
   private createHoldElement(): void {
     if (!this.container) return;
 
-    const holdSection = document.createElement('div');
-    holdSection.className = 'hold-section';
+    const holdSection = document.createElement("div");
+    holdSection.className = "hold-section";
     holdSection.innerHTML = `
       <h3 class="hold-title">Hold</h3>
       <div class="hold-container">
@@ -51,14 +51,16 @@ export class BasicHoldRenderer implements HoldRenderer {
       </div>
     `;
 
-    const canvas = holdSection.querySelector('.hold-canvas') as HTMLCanvasElement;
+    const canvas = holdSection.querySelector(
+      ".hold-canvas",
+    ) as HTMLCanvasElement;
     if (!canvas) {
-      throw new Error('Failed to create hold canvas');
+      throw new Error("Failed to create hold canvas");
     }
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) {
-      throw new Error('Failed to get 2D rendering context for hold');
+      throw new Error("Failed to get 2D rendering context for hold");
     }
 
     this.canvas = canvas;
@@ -75,43 +77,49 @@ export class BasicHoldRenderer implements HoldRenderer {
 
     // Always use spawn rotation for hold display
     const cells = piece.cells.spawn;
-    
+
     // Calculate piece bounds to center it
     const minX = Math.min(...cells.map(([x]) => x));
     const maxX = Math.max(...cells.map(([x]) => x));
     const minY = Math.min(...cells.map(([, y]) => y));
     const maxY = Math.max(...cells.map(([, y]) => y));
-    
+
     const pieceWidth = (maxX - minX + 1) * this.cellSize;
     const pieceHeight = (maxY - minY + 1) * this.cellSize;
-    
+
     // Center the piece in the canvas
     const offsetX = (this.canvas.width - pieceWidth) / 2 - minX * this.cellSize;
-    const offsetY = (this.canvas.height - pieceHeight) / 2 - minY * this.cellSize;
+    const offsetY =
+      (this.canvas.height - pieceHeight) / 2 - minY * this.cellSize;
 
     // Use reduced opacity when hold is disabled
     const alpha = canHold ? 1.0 : 0.3;
-    
+
     // Render each cell
     for (const [dx, dy] of cells) {
       const x = dx * this.cellSize + offsetX;
       const y = dy * this.cellSize + offsetY;
-      
+
       this.drawHoldCell(x, y, piece.color, alpha);
     }
   }
 
-  private drawHoldCell(x: number, y: number, color: string, alpha: number): void {
+  private drawHoldCell(
+    x: number,
+    y: number,
+    color: string,
+    alpha: number,
+  ): void {
     if (!this.ctx) return;
-    
+
     // Set alpha for the fill
     const fillColor = this.addAlphaToColor(color, alpha);
-    const strokeColor = this.addAlphaToColor('#333333', alpha);
-    
+    const strokeColor = this.addAlphaToColor("#333333", alpha);
+
     // Fill cell
     this.ctx.fillStyle = fillColor;
     this.ctx.fillRect(x, y, this.cellSize, this.cellSize);
-    
+
     // Draw border
     this.ctx.strokeStyle = strokeColor;
     this.ctx.lineWidth = 1;
@@ -120,7 +128,7 @@ export class BasicHoldRenderer implements HoldRenderer {
 
   private addAlphaToColor(color: string, alpha: number): string {
     // Convert hex color to rgba with alpha
-    if (color.startsWith('#')) {
+    if (color.startsWith("#")) {
       const r = parseInt(color.slice(1, 3), 16);
       const g = parseInt(color.slice(3, 5), 16);
       const b = parseInt(color.slice(5, 7), 16);
@@ -132,12 +140,12 @@ export class BasicHoldRenderer implements HoldRenderer {
   destroy(): void {
     if (this.container) {
       // Find and remove hold section
-      const holdSection = this.container.querySelector('.hold-section');
+      const holdSection = this.container.querySelector(".hold-section");
       if (holdSection) {
         holdSection.remove();
       }
     }
-    
+
     this.container = undefined;
     this.canvas = undefined;
     this.ctx = undefined;

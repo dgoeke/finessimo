@@ -1,14 +1,14 @@
-import { GameState, Action, TimingConfig, GameplayConfig } from './state/types';
-import { reducer } from './state/reducer';
-import { DOMInputHandler } from './input/handler';
-import { TouchInputHandler } from './input/touch';
-import { BasicCanvasRenderer } from './ui/canvas';
-import { BasicHudRenderer } from './ui/hud';
-import { BasicPreviewRenderer } from './ui/preview';
-import { BasicHoldRenderer } from './ui/hold';
-import { BasicSettingsRenderer, GameSettings } from './ui/settings';
-import { gameModeRegistry } from './modes';
-import { finesseService } from './finesse/service';
+import { GameState, Action, TimingConfig, GameplayConfig } from "./state/types";
+import { reducer } from "./state/reducer";
+import { DOMInputHandler } from "./input/handler";
+import { TouchInputHandler } from "./input/touch";
+import { BasicCanvasRenderer } from "./ui/canvas";
+import { BasicHudRenderer } from "./ui/hud";
+import { BasicPreviewRenderer } from "./ui/preview";
+import { BasicHoldRenderer } from "./ui/hold";
+import { BasicSettingsRenderer, GameSettings } from "./ui/settings";
+import { gameModeRegistry } from "./modes";
+import { finesseService } from "./finesse/service";
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -31,87 +31,92 @@ export class FinessimoApp {
     this.previewRenderer = new BasicPreviewRenderer();
     this.holdRenderer = new BasicHoldRenderer();
     this.settingsRenderer = new BasicSettingsRenderer();
-    
+
     // Initialize touch input if touch is supported
-    if ('ontouchstart' in window) {
+    if ("ontouchstart" in window) {
       this.touchInputHandler = new TouchInputHandler();
     }
   }
 
   private initializeState(): GameState {
-    return reducer(undefined, { type: 'Init' });
+    return reducer(undefined, { type: "Init" });
   }
 
   initialize(canvasElement: HTMLCanvasElement, hudElement: HTMLElement): void {
-    
     // Initialize renderers
     this.canvasRenderer.initialize(canvasElement);
     this.hudRenderer.initialize(hudElement);
-    
+
     // Initialize preview and hold renderers
-    const isMobile = window.matchMedia('(max-width: 680px)').matches;
+    const isMobile = window.matchMedia("(max-width: 680px)").matches;
     if (isMobile) {
-      const mobileHold = document.getElementById('mobile-hold');
-      const mobilePreview = document.getElementById('mobile-preview');
+      const mobileHold = document.getElementById("mobile-hold");
+      const mobilePreview = document.getElementById("mobile-preview");
       if (mobileHold) this.holdRenderer.initialize(mobileHold);
       if (mobilePreview) this.previewRenderer.initialize(mobilePreview);
     } else {
-      const gameInfoElement = document.getElementById('game-info');
+      const gameInfoElement = document.getElementById("game-info");
       if (gameInfoElement) {
         this.holdRenderer.initialize(gameInfoElement);
         this.previewRenderer.initialize(gameInfoElement);
       }
     }
-    
+
     // Initialize input handlers
     this.keyboardInputHandler.init(this.dispatch.bind(this));
     this.keyboardInputHandler.start();
-    
+
     if (this.touchInputHandler) {
       this.touchInputHandler.init(this.dispatch.bind(this));
       this.touchInputHandler.start();
     }
-    
+
     // Initialize settings renderer
     this.settingsRenderer.initialize(document.body);
-    this.settingsRenderer.onSettingsChange(this.handleSettingsChange.bind(this));
+    this.settingsRenderer.onSettingsChange(
+      this.handleSettingsChange.bind(this),
+    );
 
     // No on-page controls list; users can view in Settings
-    
+
     // Setup test controls
-    this.hudRenderer.setupTestControls(this.dispatch.bind(this), this.setGameMode.bind(this));
-    
+    this.hudRenderer.setupTestControls(
+      this.dispatch.bind(this),
+      this.setGameMode.bind(this),
+    );
+
     // Setup settings button
     this.setupSettingsButton();
-    
+
     // Apply persisted settings on init (if present)
     try {
       const initialSettings = this.settingsRenderer.getCurrentSettings();
       const initialKeyBindings = this.settingsRenderer.getCurrentKeyBindings();
-      const toApply: Partial<GameSettings> = { ...initialSettings, keyBindings: initialKeyBindings };
+      const toApply: Partial<GameSettings> = {
+        ...initialSettings,
+        keyBindings: initialKeyBindings,
+      };
       this.handleSettingsChange(toApply);
     } catch {
       /* ignore persisted settings errors */
     }
-    
+
     // Spawn initial piece
     this.spawnNextPiece();
-    
+
     // Render initial state
     this.render();
-    
   }
 
   start(): void {
     if (this.isRunning) {
-      console.warn('Application is already running');
+      console.warn("Application is already running");
       return;
     }
-    
+
     this.isRunning = true;
     this.lastFrameTime = performance.now();
     this.gameLoop();
-    
   }
 
   stop(): void {
@@ -133,55 +138,67 @@ export class FinessimoApp {
 
   private gameLoop(): void {
     if (!this.isRunning) return;
-    
+
     const currentTime = performance.now();
     const deltaTime = currentTime - this.lastFrameTime;
-    
+
     // Fixed time step for game logic (60 Hz)
     if (deltaTime >= this.targetFrameTime) {
       this.update();
       this.render();
       this.lastFrameTime = currentTime;
     }
-    
+
     // Continue the loop
     requestAnimationFrame(() => this.gameLoop());
   }
 
   private update(): void {
     const currentTime = performance.now();
-    
+
     // Update input handlers using the same timestamp used for Tick/physics
     this.keyboardInputHandler.update(this.gameState, currentTime);
     if (this.touchInputHandler) {
       this.touchInputHandler.update(this.gameState, currentTime);
     }
-    
+
     // Always dispatch Tick with timestamp for physics calculations
-    this.dispatch({ type: 'Tick', timestampMs: currentTime });
-    
+    this.dispatch({ type: "Tick", timestampMs: currentTime });
+
     // Handle line clear completion
-    if (this.gameState.status === 'lineClear' && 
-        this.gameState.physics.lineClearStartTime && 
-        this.gameState.timing.lineClearDelayMs > 0) {
-      const timeSinceStart = currentTime - this.gameState.physics.lineClearStartTime;
+    if (
+      this.gameState.status === "lineClear" &&
+      this.gameState.physics.lineClearStartTime &&
+      this.gameState.timing.lineClearDelayMs > 0
+    ) {
+      const timeSinceStart =
+        currentTime - this.gameState.physics.lineClearStartTime;
       if (timeSinceStart >= this.gameState.timing.lineClearDelayMs) {
-        this.dispatch({ type: 'CompleteLineClear' });
+        this.dispatch({ type: "CompleteLineClear" });
       }
     }
-    
+
     // Auto-spawn piece if no active piece and game is playing
-    if (!this.gameState.active && this.gameState.status === 'playing') {
+    if (!this.gameState.active && this.gameState.status === "playing") {
       this.spawnNextPiece();
+    }
+
+    // Auto-restart on top-out: treat as game over and immediately restart
+    if (this.gameState.status === "topOut") {
+      const { timing, gameplay, currentMode } = this.gameState;
+      // Reinitialize with existing settings and mode
+      this.dispatch({ type: "Init", timing, gameplay, mode: currentMode });
+      this.spawnNextPiece();
+      return;
     }
 
     // Update guidance from current mode (only when changed)
     const mode = gameModeRegistry.get(this.gameState.currentMode);
-    if (mode && typeof mode.getGuidance === 'function') {
+    if (mode && typeof mode.getGuidance === "function") {
       const guidance = mode.getGuidance(this.gameState) || null;
       const prev = this.gameState.guidance || null;
       if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
-        this.dispatch({ type: 'UpdateGuidance', guidance });
+        this.dispatch({ type: "UpdateGuidance", guidance });
       }
     }
   }
@@ -196,38 +213,37 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
-    
     // Store previous state for finesse analysis
     const prevState = this.gameState;
-    
+
     // Apply the action through the reducer
     const newState = reducer(this.gameState, action);
-    
+
     // Check if state actually changed (for debugging)
     if (newState !== this.gameState) {
       // State changed; no console logging in production
     }
-    
+
     this.gameState = newState;
-    
+
     // Handle finesse analysis on piece lock for any lock source
     if (prevState.active && !newState.active) {
       this.handlePieceLock(prevState);
     }
   }
-  
+
   private handlePieceLock(prevState: GameState): void {
     if (!prevState.active) return;
-    
+
     const currentMode = gameModeRegistry.get(prevState.currentMode);
     if (!currentMode) return;
-    
+
     const finesseActions = finesseService.analyzePieceLock(
       prevState,
       prevState.active,
-      currentMode
+      currentMode,
     );
-    
+
     for (const action of finesseActions) {
       this.gameState = reducer(this.gameState, action);
     }
@@ -243,58 +259,61 @@ export class FinessimoApp {
     // Simulating input (no console logging)
     // This is a simple test method - in a real implementation,
     // input would come from the keyboard/touch handlers
-    if (action === 'lock') {
-      this.dispatch({ type: 'Lock' });
+    if (action === "lock") {
+      this.dispatch({ type: "Lock" });
     }
   }
-  
+
   // Public method to change game mode
   setGameMode(modeName: string): void {
     const mode = gameModeRegistry.get(modeName);
     if (mode) {
-      this.dispatch({ type: 'SetMode', mode: modeName });
+      this.dispatch({ type: "SetMode", mode: modeName });
       // Apply optional initial config from mode
-      if (typeof mode.initialConfig === 'function') {
+      if (typeof mode.initialConfig === "function") {
         const cfg = mode.initialConfig();
-        if (cfg.timing) this.dispatch({ type: 'UpdateTiming', timing: cfg.timing });
-        if (cfg.gameplay) this.dispatch({ type: 'UpdateGameplay', gameplay: cfg.gameplay });
+        if (cfg.timing)
+          this.dispatch({ type: "UpdateTiming", timing: cfg.timing });
+        if (cfg.gameplay)
+          this.dispatch({ type: "UpdateGameplay", gameplay: cfg.gameplay });
       }
-      
+
       if (mode.shouldPromptNext(this.gameState)) {
         const prompt = mode.getNextPrompt(this.gameState);
         if (prompt) {
-          this.dispatch({ type: 'UpdateModePrompt', prompt });
+          this.dispatch({ type: "UpdateModePrompt", prompt });
         }
       }
     }
   }
-  
+
   // Public method to get available game modes
   getAvailableModes(): string[] {
     return gameModeRegistry.list();
   }
-  
+
   // Setup settings button handler
   private setupSettingsButton(): void {
-    const settingsButton = document.getElementById('open-settings');
+    const settingsButton = document.getElementById("open-settings");
     if (settingsButton) {
-      settingsButton.addEventListener('click', () => {
+      settingsButton.addEventListener("click", () => {
         this.settingsRenderer.show();
       });
     }
   }
-  
+
   // Helper method to spawn the appropriate piece based on current mode
   private spawnNextPiece(): void {
     const mode = gameModeRegistry.get(this.gameState.currentMode);
-    const override = mode && typeof mode.onBeforeSpawn === 'function'
-      ? mode.onBeforeSpawn(this.gameState)
-      : null;
+    const override =
+      mode && typeof mode.onBeforeSpawn === "function"
+        ? mode.onBeforeSpawn(this.gameState)
+        : null;
     if (override && override.piece) {
-      this.dispatch({ type: 'Spawn', piece: override.piece });
+      this.dispatch({ type: "Spawn", piece: override.piece });
       return;
     }
-    this.dispatch({ type: 'Spawn' });
+    this.dispatch({ type: "Spawn" });
   }
 
   // Handle settings changes
@@ -303,22 +322,30 @@ export class FinessimoApp {
     const timing: Partial<TimingConfig> = {};
     if (newSettings.dasMs !== undefined) timing.dasMs = newSettings.dasMs;
     if (newSettings.arrMs !== undefined) timing.arrMs = newSettings.arrMs;
-    if (newSettings.softDropCps !== undefined) timing.softDropCps = newSettings.softDropCps;
-    if (newSettings.lockDelayMs !== undefined) timing.lockDelayMs = newSettings.lockDelayMs;
-    if (newSettings.lineClearDelayMs !== undefined) timing.lineClearDelayMs = newSettings.lineClearDelayMs;
-    if (newSettings.gravityMs !== undefined) timing.gravityMs = newSettings.gravityMs;
-    if (newSettings.gravityEnabled !== undefined) timing.gravityEnabled = newSettings.gravityEnabled;
+    if (newSettings.softDrop !== undefined)
+      timing.softDrop = newSettings.softDrop as TimingConfig["softDrop"];
+    if (newSettings.lockDelayMs !== undefined)
+      timing.lockDelayMs = newSettings.lockDelayMs;
+    if (newSettings.lineClearDelayMs !== undefined)
+      timing.lineClearDelayMs = newSettings.lineClearDelayMs;
+    if (newSettings.gravityMs !== undefined)
+      timing.gravityMs = newSettings.gravityMs;
+    if (newSettings.gravityEnabled !== undefined)
+      timing.gravityEnabled = newSettings.gravityEnabled;
     if (Object.keys(timing).length > 0) {
-      this.dispatch({ type: 'UpdateTiming', timing });
+      this.dispatch({ type: "UpdateTiming", timing });
     }
 
     // Dispatch gameplay/visual toggles that affect renderers
     const gameplay: Partial<GameplayConfig> = {};
-    if (newSettings.finesseCancelMs !== undefined) gameplay.finesseCancelMs = newSettings.finesseCancelMs;
-    if (newSettings.ghostPieceEnabled !== undefined) gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
-    if (newSettings.nextPieceCount !== undefined) gameplay.nextPieceCount = newSettings.nextPieceCount;
+    if (newSettings.finesseCancelMs !== undefined)
+      gameplay.finesseCancelMs = newSettings.finesseCancelMs;
+    if (newSettings.ghostPieceEnabled !== undefined)
+      gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
+    if (newSettings.nextPieceCount !== undefined)
+      gameplay.nextPieceCount = newSettings.nextPieceCount;
     if (Object.keys(gameplay).length > 0) {
-      this.dispatch({ type: 'UpdateGameplay', gameplay });
+      this.dispatch({ type: "UpdateGameplay", gameplay });
     }
 
     // Keybindings: update input handler and controls UI immediately
@@ -328,9 +355,12 @@ export class FinessimoApp {
 
     // Apply UI scale directly to document root
     if (newSettings.uiScale !== undefined) {
-      document.documentElement.style.setProperty('--ui-scale', newSettings.uiScale.toString());
+      document.documentElement.style.setProperty(
+        "--ui-scale",
+        newSettings.uiScale.toString(),
+      );
     }
-    
+
     // Other visual settings like themes can be applied here as needed
   }
 }

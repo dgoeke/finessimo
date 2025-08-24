@@ -1,16 +1,36 @@
-import { GameState, Action, Board, TimingConfig, GameplayConfig, PhysicsState, PieceId, ActivePiece } from './types';
-import { tryMove, dropToBottom, lockPiece, getCompletedLines, clearLines } from '../core/board';
-import { PIECES } from '../core/pieces';
-import { tryRotate, getNextRotation } from '../core/srs';
-import { createRng, getNextPiece, getNextPieces, SevenBagRng } from '../core/rng';
-import { createActivePiece, canSpawnPiece, isTopOut } from '../core/spawning';
+import {
+  GameState,
+  Action,
+  Board,
+  TimingConfig,
+  GameplayConfig,
+  PhysicsState,
+  PieceId,
+  ActivePiece,
+} from "./types";
+import {
+  tryMove,
+  dropToBottom,
+  lockPiece,
+  getCompletedLines,
+  clearLines,
+} from "../core/board";
+import { PIECES } from "../core/pieces";
+import { tryRotate, getNextRotation } from "../core/srs";
+import {
+  createRng,
+  getNextPiece,
+  getNextPieces,
+  SevenBagRng,
+} from "../core/rng";
+import { createActivePiece, canSpawnPiece, isTopOut } from "../core/spawning";
 
 // Create an empty board
 function createEmptyBoard(): Board {
   return {
     width: 10,
     height: 20,
-    cells: new Uint8Array(200)
+    cells: new Uint8Array(200),
   };
 }
 
@@ -19,18 +39,19 @@ const defaultTimingConfig: TimingConfig = {
   tickHz: 60,
   dasMs: 133,
   arrMs: 2,
-  softDropCps: 20,
+  // Default soft drop multiplier relative to gravity
+  softDrop: 10,
   lockDelayMs: 500,
   lineClearDelayMs: 0,
   gravityEnabled: false, // Gravity OFF by default per DESIGN.md
-  gravityMs: 500 // 500ms gravity for visibility
+  gravityMs: 500, // 500ms gravity for visibility
 };
 
 // Default gameplay configuration
 const defaultGameplayConfig: GameplayConfig = {
   finesseCancelMs: 50,
   ghostPieceEnabled: true,
-  nextPieceCount: 5
+  nextPieceCount: 5,
 };
 
 // Create initial physics state
@@ -40,7 +61,7 @@ function createInitialPhysics(): PhysicsState {
     lockDelayStartTime: null,
     isSoftDropping: false,
     lineClearStartTime: null,
-    lineClearLines: []
+    lineClearLines: [],
   };
 }
 
@@ -49,11 +70,11 @@ function createInitialState(
   seed?: string,
   timing?: Partial<TimingConfig>,
   gameplay?: Partial<GameplayConfig>,
-  mode?: string
+  mode?: string,
 ): GameState {
-  const rng = createRng(seed || 'default');
+  const rng = createRng(seed || "default");
   const { pieces: initialQueue, newRng } = getNextPieces(rng, 5); // Generate 5-piece preview
-  
+
   return {
     board: createEmptyBoard(),
     active: undefined,
@@ -64,7 +85,7 @@ function createInitialState(
     timing: { ...defaultTimingConfig, ...timing },
     gameplay: { ...defaultGameplayConfig, ...gameplay },
     tick: 0,
-    status: 'playing',
+    status: "playing",
     stats: {
       piecesPlaced: 0,
       linesCleared: 0,
@@ -72,30 +93,41 @@ function createInitialState(
       incorrectPlacements: 0,
       attempts: 0,
       startedAtMs: Date.now(),
-      timePlayedMs: 0
+      timePlayedMs: 0,
     },
     physics: createInitialPhysics(),
     inputLog: [],
-    currentMode: mode || 'freePlay',
+    currentMode: mode || "freePlay",
     modeData: null,
     finesseFeedback: null,
-    modePrompt: null
+    modePrompt: null,
   };
 }
 
-export const reducer: (state: Readonly<GameState> | undefined, action: Action) => GameState = (
+export const reducer: (
   state: Readonly<GameState> | undefined,
-  action: Action
+  action: Action,
+) => GameState = (
+  state: Readonly<GameState> | undefined,
+  action: Action,
 ): GameState => {
   // Defensive: if action is malformed, return state unchanged (including undefined)
-  const isValidAction = action && typeof action === 'object' && 'type' in (action as Record<string, unknown>);
+  const isValidAction =
+    action &&
+    typeof action === "object" &&
+    "type" in (action as Record<string, unknown>);
   if (!isValidAction) {
     return state as unknown as GameState;
   }
   if (state === undefined) {
     // Only initialize on Init; otherwise preserve undefined
-    if (action.type === 'Init') {
-      return createInitialState(action.seed, action.timing, action.gameplay, action.mode);
+    if (action.type === "Init") {
+      return createInitialState(
+        action.seed,
+        action.timing,
+        action.gameplay,
+        action.mode,
+      );
     }
     return state as unknown as GameState;
   }
@@ -104,7 +136,7 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
   const wouldTopOut = (piece: ActivePiece): boolean => {
     const shape = PIECES[piece.id];
     const cells = shape.cells[piece.rot];
-    
+
     for (const [, dy] of cells) {
       const cellY = piece.y + dy;
       if (cellY < 0) {
@@ -115,7 +147,11 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
   };
 
   // Helper: lock active piece, handle line clears (immediate if delay=0), reset piece/hold, and set status/topOut
-  const lockCurrentPiece = (baseState: GameState, piece: ActivePiece, timestampMs: number): GameState => {
+  const lockCurrentPiece = (
+    baseState: GameState,
+    piece: ActivePiece,
+    timestampMs: number,
+  ): GameState => {
     const lockedBoard = lockPiece(baseState.board, piece);
     const completedLines = getCompletedLines(lockedBoard);
     const topOut = wouldTopOut(piece);
@@ -128,12 +164,12 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
       inputLog: [],
       physics: {
         ...baseState.physics,
-        lockDelayStartTime: null
-      }
+        lockDelayStartTime: null,
+      },
     };
 
     if (topOut) {
-      return { ...nextState, status: 'topOut' };
+      return { ...nextState, status: "topOut" };
     }
 
     if (completedLines.length === 0) {
@@ -147,46 +183,55 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
       return {
         ...nextState,
         board: cleared,
-        status: 'playing',
+        status: "playing",
         physics: {
           ...nextState.physics,
           lineClearStartTime: null,
-          lineClearLines: []
-        }
+          lineClearLines: [],
+        },
       };
     }
 
     // Stage line clear animation
     return {
       ...nextState,
-      status: 'lineClear',
+      status: "lineClear",
       physics: {
         ...nextState.physics,
         lineClearStartTime: timestampMs,
-        lineClearLines: completedLines
-      }
+        lineClearLines: completedLines,
+      },
     };
   };
 
   switch (action.type) {
-    case 'UpdateTiming':
+    case "UpdateTiming":
       return {
         ...state,
-        timing: { ...state.timing, ...action.timing }
+        timing: { ...state.timing, ...action.timing },
       };
 
-    case 'UpdateGameplay':
+    case "UpdateGameplay":
       return {
         ...state,
-        gameplay: { ...state.gameplay, ...action.gameplay }
+        gameplay: { ...state.gameplay, ...action.gameplay },
       };
 
-    case 'Init':
-      return createInitialState(action.seed, action.timing, action.gameplay, action.mode);
+    case "Init":
+      return createInitialState(
+        action.seed,
+        action.timing,
+        action.gameplay,
+        action.mode,
+      );
 
-    case 'Lock':
+    case "Lock":
       // Defensive: only process if state has valid tick property
-      if (!state || typeof state !== 'object' || typeof state.tick !== 'number') {
+      if (
+        !state ||
+        typeof state !== "object" ||
+        typeof state.tick !== "number"
+      ) {
         return state;
       }
       // Stub implementation - demonstrates a state change for testing
@@ -195,28 +240,48 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
         active: undefined,
         canHold: true,
         inputLog: [], // Clear input log after lock
-        tick: state.tick + 1
+        tick: state.tick + 1,
       };
 
-    case 'Tick': {
+    case "Tick": {
       // Defensive: only process if state has valid tick property
-      if (!state || typeof state !== 'object' || typeof state.tick !== 'number') {
+      if (
+        !state ||
+        typeof state !== "object" ||
+        typeof state.tick !== "number"
+      ) {
         return state;
       }
       // Use provided timestamp or lastGravityTime as a stable reference to remain pure
       const timestampMs = action.timestampMs ?? state.physics.lastGravityTime;
       let newState = {
         ...state,
-        tick: state.tick + 1
+        tick: state.tick + 1,
       };
-      
+
       // Handle gravity if enabled and piece exists
-      if (state.timing.gravityEnabled && state.active && state.status === 'playing') {
-        const timeSinceLastGravity = timestampMs - state.physics.lastGravityTime;
-        const gravityInterval = state.physics.isSoftDropping ? 
-          Math.floor(1000 / state.timing.softDropCps) : 
-          state.timing.gravityMs;
-          
+      if (
+        state.timing.gravityEnabled &&
+        state.active &&
+        state.status === "playing"
+      ) {
+        const timeSinceLastGravity =
+          timestampMs - state.physics.lastGravityTime;
+        // Compute interval considering soft drop settings
+        let gravityInterval = state.timing.gravityMs;
+        if (state.physics.isSoftDropping) {
+          if (state.timing.softDrop === "infinite") {
+            // Infinite soft-drop handled on key press
+            gravityInterval = 1;
+          } else {
+            const m = Math.max(1, state.timing.softDrop);
+            gravityInterval = Math.max(
+              1,
+              Math.floor(state.timing.gravityMs / m),
+            );
+          }
+        }
+
         if (timeSinceLastGravity >= gravityInterval) {
           const movedPiece = tryMove(state.board, state.active, 0, 1);
           if (movedPiece) {
@@ -225,8 +290,8 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
               active: movedPiece,
               physics: {
                 ...newState.physics,
-                lastGravityTime: timestampMs
-              }
+                lastGravityTime: timestampMs,
+              },
             };
           } else if (!state.physics.lockDelayStartTime) {
             // Hit bottom, start lock delay
@@ -234,35 +299,38 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
               ...newState,
               physics: {
                 ...newState.physics,
-                lockDelayStartTime: timestampMs
-              }
+                lockDelayStartTime: timestampMs,
+              },
             };
           }
         }
-        
+
         // Check lock delay timeout
-        if (state.physics.lockDelayStartTime && 
-            (timestampMs - state.physics.lockDelayStartTime) >= state.timing.lockDelayMs) {
+        if (
+          state.physics.lockDelayStartTime &&
+          timestampMs - state.physics.lockDelayStartTime >=
+            state.timing.lockDelayMs
+        ) {
           // Auto-lock the piece and handle line clears/top-out
           if (newState.active) {
             newState = lockCurrentPiece(newState, newState.active, timestampMs);
           }
         }
       }
-      
+
       return newState;
     }
 
-    case 'Spawn': {
+    case "Spawn": {
       // Only spawn if no active piece and game is playing
-      if (state.active || state.status !== 'playing') {
+      if (state.active || state.status !== "playing") {
         return state;
       }
-      
+
       let pieceToSpawn: PieceId;
       let spawnRng: SevenBagRng = state.rng;
       const newQueue = [...state.nextQueue];
-      
+
       if (action.piece) {
         // Manual piece spawn (for testing) - don't advance queue/RNG
         pieceToSpawn = action.piece;
@@ -274,7 +342,7 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
         const nextFromQueue = newQueue.shift();
         if (!nextFromQueue) return state;
         pieceToSpawn = nextFromQueue;
-        
+
         // Refill queue to maintain exactly 5 pieces for preview
         while (newQueue.length < 5) {
           const { piece, newRng: updatedRng } = getNextPiece(spawnRng);
@@ -282,15 +350,15 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
           spawnRng = updatedRng;
         }
       }
-      
+
       // Check for top-out
       if (isTopOut(state.board, pieceToSpawn)) {
         return {
           ...state,
-          status: 'topOut'
+          status: "topOut",
         };
       }
-      
+
       const newPiece = createActivePiece(pieceToSpawn);
       return {
         ...state,
@@ -300,84 +368,101 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
         physics: {
           ...state.physics,
           lockDelayStartTime: null,
-          lastGravityTime: state.physics.lastGravityTime // Keep existing time - spawning doesn't need to update gravity timer
-        }
+          lastGravityTime: state.physics.lastGravityTime, // Keep existing time - spawning doesn't need to update gravity timer
+        },
       };
     }
 
-    case 'Move': {
+    case "Move": {
       // Only process if we have an active piece
       if (!state.active) {
         return state;
       }
-      
+
       // Always apply a single-cell move; DAS/ARR repeats are produced by the Input Handler
       const stepped = tryMove(state.board, state.active, action.dir, 0);
       if (!stepped) {
         return state; // Can't move
       }
-      
+
       // Cancel lock delay if piece moves
-      const newPhysics = state.physics.lockDelayStartTime ? {
-        ...state.physics,
-        lockDelayStartTime: null
-      } : state.physics;
-      
+      const newPhysics = state.physics.lockDelayStartTime
+        ? {
+            ...state.physics,
+            lockDelayStartTime: null,
+          }
+        : state.physics;
+
       return {
         ...state,
         active: stepped,
-        physics: newPhysics
+        physics: newPhysics,
       };
     }
 
-    case 'Rotate': {
+    case "Rotate": {
       // Only process if we have an active piece
       if (!state.active) {
         return state;
       }
-      
+
       const targetRot = getNextRotation(state.active.rot, action.dir);
-      const rotatedPiece = tryRotate(
-        state.active,
-        targetRot,
-        state.board
-      );
-      
+      const rotatedPiece = tryRotate(state.active, targetRot, state.board);
+
       if (!rotatedPiece) {
         return state; // Can't rotate
       }
-      
+
       // Cancel lock delay if piece rotates
-      const newPhysicsRotate = state.physics.lockDelayStartTime ? {
-        ...state.physics,
-        lockDelayStartTime: null
-      } : state.physics;
-      
+      const newPhysicsRotate = state.physics.lockDelayStartTime
+        ? {
+            ...state.physics,
+            lockDelayStartTime: null,
+          }
+        : state.physics;
+
       return {
         ...state,
         active: rotatedPiece,
-        physics: newPhysicsRotate
+        physics: newPhysicsRotate,
       };
     }
 
-    case 'HardDrop': {
+    case "HardDrop": {
       // Only process if we have an active piece
       if (!state.active) {
         return state;
       }
-      
+
       const droppedPiece = dropToBottom(state.board, state.active);
-      return lockCurrentPiece(state, droppedPiece, state.physics.lastGravityTime);
+      return lockCurrentPiece(
+        state,
+        droppedPiece,
+        state.physics.lastGravityTime,
+      );
     }
 
-    case 'SoftDrop': {
+    case "SoftDrop": {
       // Only process if we have an active piece
       if (!state.active) {
         return state;
       }
-      
+
       if (action.on) {
-        // Start soft drop - try to move down one cell
+        // Soft drop pressed
+        if (state.timing.softDrop === "infinite") {
+          // Teleport piece to bottom without locking
+          const toBottom = dropToBottom(state.board, state.active);
+          return {
+            ...state,
+            active: toBottom,
+            physics: {
+              ...state.physics,
+              isSoftDropping: true,
+            },
+          };
+        }
+        // Finite soft drop - move down one cell immediately
         const softDroppedPiece = tryMove(state.board, state.active, 0, 1);
         return {
           ...state,
@@ -385,32 +470,34 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
           physics: {
             ...state.physics,
             isSoftDropping: true,
-            lockDelayStartTime: softDroppedPiece ? null : state.physics.lockDelayStartTime
-          }
+            lockDelayStartTime: softDroppedPiece
+              ? null
+              : state.physics.lockDelayStartTime,
+          },
         };
       }
-      
+
       // Soft drop off
       return {
         ...state,
         physics: {
           ...state.physics,
-          isSoftDropping: false
-        }
+          isSoftDropping: false,
+        },
       };
     }
 
-    case 'Hold': {
+    case "Hold": {
       // Only process if we have an active piece and can hold
       if (!state.active || !state.canHold) {
         return state;
       }
-      
+
       const currentPieceId = state.active.id;
       let newActive: ActivePiece | undefined;
       const holdQueue = [...state.nextQueue];
       let newRng: SevenBagRng = state.rng;
-      
+
       if (state.hold) {
         // Swap with held piece
         newActive = createActivePiece(state.hold);
@@ -422,21 +509,21 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
         const nextPiece = holdQueue.shift();
         if (!nextPiece) return state;
         newActive = createActivePiece(nextPiece);
-        
+
         // Refill queue
         const { piece, newRng: updatedRng } = getNextPiece(newRng);
         holdQueue.push(piece);
         newRng = updatedRng;
       }
-      
+
       // Check if new piece can spawn
       if (!canSpawnPiece(state.board, newActive.id)) {
         return {
           ...state,
-          status: 'topOut'
+          status: "topOut",
         };
       }
-      
+
       return {
         ...state,
         active: newActive,
@@ -446,118 +533,128 @@ export const reducer: (state: Readonly<GameState> | undefined, action: Action) =
         rng: newRng,
         physics: {
           ...state.physics,
-          lockDelayStartTime: null
-        }
+          lockDelayStartTime: null,
+        },
       };
     }
 
-    case 'ClearLines': {
+    case "ClearLines": {
       const clearedBoard = clearLines(state.board, action.lines);
       return {
         ...state,
-        board: clearedBoard
+        board: clearedBoard,
       };
     }
 
-    case 'EnqueueInput': {
+    case "EnqueueInput": {
       // Defensive: only process if state has valid inputLog array
-      if (!state || typeof state !== 'object' || !Array.isArray(state.inputLog) || !action.event) {
+      if (
+        !state ||
+        typeof state !== "object" ||
+        !Array.isArray(state.inputLog) ||
+        !action.event
+      ) {
         return state;
       }
       return {
         ...state,
-        inputLog: [...state.inputLog, { ...action.event }]
+        inputLog: [...state.inputLog, { ...action.event }],
       };
     }
 
-    case 'SetMode': {
+    case "SetMode": {
       return {
         ...state,
         currentMode: action.mode,
         finesseFeedback: null,
-        modePrompt: null
+        modePrompt: null,
       };
     }
 
-    case 'UpdateFinesseFeedback': {
+    case "UpdateFinesseFeedback": {
       return {
         ...state,
-        finesseFeedback: action.feedback
+        finesseFeedback: action.feedback,
       };
     }
 
-    case 'UpdateModePrompt': {
+    case "UpdateModePrompt": {
       return {
         ...state,
-        modePrompt: action.prompt
+        modePrompt: action.prompt,
       };
     }
 
-    case 'UpdateGuidance': {
+    case "UpdateGuidance": {
       return {
         ...state,
-        guidance: action.guidance
+        guidance: action.guidance,
       };
     }
 
-    case 'UpdateModeData': {
+    case "UpdateModeData": {
       return {
         ...state,
-        modeData: action.data
+        modeData: action.data,
       };
     }
 
-    case 'StartLineClear': {
+    case "StartLineClear": {
       return {
         ...state,
-        status: 'lineClear',
+        status: "lineClear",
         physics: {
           ...state.physics,
           lineClearStartTime: action.timestampMs,
-          lineClearLines: action.lines
-        }
+          lineClearLines: action.lines,
+        },
       };
     }
 
-    case 'CompleteLineClear': {
+    case "CompleteLineClear": {
       // Clear the lines and return to playing state
-      if (state.status !== 'lineClear' || state.physics.lineClearLines.length === 0) {
+      if (
+        state.status !== "lineClear" ||
+        state.physics.lineClearLines.length === 0
+      ) {
         return state;
       }
-      
-      const compactedBoard = clearLines(state.board, state.physics.lineClearLines);
+
+      const compactedBoard = clearLines(
+        state.board,
+        state.physics.lineClearLines,
+      );
       return {
         ...state,
         board: compactedBoard,
-        status: 'playing',
+        status: "playing",
         physics: {
           ...state.physics,
           lineClearStartTime: null,
-          lineClearLines: []
-        }
+          lineClearLines: [],
+        },
       };
     }
 
-    case 'StartLockDelay': {
+    case "StartLockDelay": {
       return {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: action.timestampMs
-        }
+          lockDelayStartTime: action.timestampMs,
+        },
       };
     }
 
-    case 'CancelLockDelay': {
+    case "CancelLockDelay": {
       return {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: null
-        }
+          lockDelayStartTime: null,
+        },
       };
     }
-
 
     default:
       // No-op default case - returns state unchanged

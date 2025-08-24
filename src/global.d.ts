@@ -1,4 +1,4 @@
-import type { FinessimoApp } from './app';
+import type { FinessimoApp } from "./app";
 
 declare global {
   interface Window {
@@ -7,4 +7,3 @@ declare global {
 }
 
 export {};
-
