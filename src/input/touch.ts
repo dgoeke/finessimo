@@ -1,5 +1,6 @@
 import { Action, KeyAction, InputEvent, GameState } from "../state/types";
-import { InputHandler, InputHandlerState, KeyBindings } from "./handler";
+import { InputHandler, InputHandlerState, InputProcessor } from "./handler";
+import { KeyBindings } from "./keyboard";
 import { fromNow } from "../types/timestamp";
 
 interface TouchZone {
@@ -10,16 +11,9 @@ interface TouchZone {
 
 export class TouchInputHandler implements InputHandler {
   private dispatch?: (action: Action) => void;
-  private state: InputHandlerState = {
-    isLeftKeyDown: false,
-    isRightKeyDown: false,
-    isSoftDropDown: false,
-    dasStartTime: undefined,
-    arrLastTime: undefined,
-    currentDirection: undefined,
-    softDropLastTime: undefined,
-  };
+  private processor = new InputProcessor();
   private frameCounter = 0;
+  private latestGameState?: GameState;
   private touchZones: TouchZone[] = [];
   private container?: HTMLElement;
   private started = false;
@@ -49,6 +43,7 @@ export class TouchInputHandler implements InputHandler {
 
   init(dispatch: (action: Action) => void): void {
     this.dispatch = dispatch;
+    this.processor.init(dispatch);
   }
 
   start(): void {
@@ -67,66 +62,14 @@ export class TouchInputHandler implements InputHandler {
   }
 
   update(gameState: GameState, nowMs: number): void {
-    const dispatch = this.dispatch;
-    if (!dispatch) return;
+    if (!this.dispatch) return;
     this.frameCounter++;
-    const currentTime = nowMs;
-
-    // Handle DAS/ARR timing same as keyboard handler
-    if (
-      this.state.currentDirection !== undefined &&
-      this.state.dasStartTime !== undefined
-    ) {
-      const dasElapsed = currentTime - this.state.dasStartTime;
-
-      if (dasElapsed >= gameState.timing.dasMs) {
-        const arrMs = Math.max(1, gameState.timing.arrMs);
-        let nextTime =
-          this.state.arrLastTime !== undefined
-            ? this.state.arrLastTime + arrMs
-            : this.state.dasStartTime + gameState.timing.dasMs;
-        let pulses = 0;
-        const MAX_PULSES_PER_UPDATE = 200;
-        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
-          dispatch({
-            type: "Move",
-            dir: this.state.currentDirection,
-            source: "das",
-          });
-          this.state.arrLastTime = nextTime;
-          nextTime += arrMs;
-          pulses++;
-        }
-      }
-    }
-
-    // Handle soft drop repeat (finite speeds only) with catch-up pulses
-    if (this.state.isSoftDropDown) {
-      if (gameState.timing.softDrop !== "infinite") {
-        const interval = Math.max(
-          1,
-          Math.floor(
-            gameState.timing.gravityMs / Math.max(1, gameState.timing.softDrop),
-          ),
-        );
-        let nextTime =
-          this.state.softDropLastTime !== undefined
-            ? this.state.softDropLastTime + interval
-            : currentTime;
-        let pulses = 0;
-        const MAX_PULSES_PER_UPDATE = 200;
-        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
-          dispatch({ type: "SoftDrop", on: true });
-          this.state.softDropLastTime = nextTime;
-          nextTime += interval;
-          pulses++;
-        }
-      }
-    }
+    this.latestGameState = gameState; // Store for touch event handlers
+    this.processor.update(gameState, nowMs);
   }
 
   getState(): InputHandlerState {
-    return { ...this.state };
+    return this.processor.getState();
   }
 
   // Touch handler ignores keyboard bindings but must satisfy interface
@@ -377,122 +320,32 @@ export class TouchInputHandler implements InputHandler {
   private triggerAction(action: KeyAction, phase: "down" | "up"): void {
     if (!this.dispatch) return;
 
-    // Determine the logical input to record and state transition to apply
+    // Determine the logical input to record
     let eventAction: KeyAction = action;
-    let stateAction: KeyAction = action;
 
     if (phase === "up") {
       // Map held inputs to their corresponding release actions
       if (action === "LeftDown") {
         eventAction = "LeftUp";
-        stateAction = "LeftUp";
       } else if (action === "RightDown") {
         eventAction = "RightUp";
-        stateAction = "RightUp";
       } else if (action === "SoftDropDown") {
         eventAction = "SoftDropUp";
-        stateAction = "SoftDropUp";
       }
     }
 
     const inputEvent: InputEvent = {
-      tMs: performance.now(),
+      tMs: fromNow() as number,
       frame: this.frameCounter,
       action: eventAction,
     };
 
+    // Log the raw input event
     this.dispatch({ type: "EnqueueInput", event: inputEvent });
-    this.updateInternalState(stateAction);
 
-    // Dispatch game actions on press and releases that affect physics
-    if (phase === "down") {
-      switch (action) {
-        case "LeftDown":
-          this.dispatch({ type: "Move", dir: -1, source: "tap" });
-          break;
-        case "RightDown":
-          this.dispatch({ type: "Move", dir: 1, source: "tap" });
-          break;
-        case "RotateCW":
-          this.dispatch({ type: "Rotate", dir: "CW" });
-          break;
-        case "RotateCCW":
-          this.dispatch({ type: "Rotate", dir: "CCW" });
-          break;
-        case "HardDrop":
-          // Use currentTimestamp() for game timing consistency
-          this.dispatch({ type: "HardDrop", timestampMs: fromNow() });
-          break;
-        case "Hold":
-          this.dispatch({ type: "Hold" });
-          break;
-        case "SoftDropDown":
-          this.dispatch({ type: "SoftDrop", on: true });
-          break;
-      }
-    } else if (phase === "up") {
-      switch (eventAction) {
-        case "SoftDropUp":
-          this.dispatch({ type: "SoftDrop", on: false });
-          break;
-        // LeftUp/RightUp only change internal DAS state; no immediate action
-      }
-    }
-  }
-
-  private updateInternalState(action: KeyAction): void {
-    // Use performance.now() to match the timebase used in update(nowMs)
-    const currentTime = performance.now();
-
-    switch (action) {
-      case "LeftDown":
-        this.state.isLeftKeyDown = true;
-        this.state.currentDirection = -1;
-        this.state.dasStartTime = currentTime;
-        this.state.arrLastTime = undefined;
-        break;
-      case "LeftUp":
-        this.state.isLeftKeyDown = false;
-        if (this.state.currentDirection === -1) {
-          this.state.currentDirection = this.state.isRightKeyDown
-            ? 1
-            : undefined;
-          if (this.state.currentDirection === 1) {
-            this.state.dasStartTime = currentTime;
-          } else {
-            this.state.dasStartTime = undefined;
-          }
-          this.state.arrLastTime = undefined;
-        }
-        break;
-      case "RightDown":
-        this.state.isRightKeyDown = true;
-        this.state.currentDirection = 1;
-        this.state.dasStartTime = currentTime;
-        this.state.arrLastTime = undefined;
-        break;
-      case "RightUp":
-        this.state.isRightKeyDown = false;
-        if (this.state.currentDirection === 1) {
-          this.state.currentDirection = this.state.isLeftKeyDown
-            ? -1
-            : undefined;
-          if (this.state.currentDirection === -1) {
-            this.state.dasStartTime = currentTime;
-          } else {
-            this.state.dasStartTime = undefined;
-          }
-          this.state.arrLastTime = undefined;
-        }
-        break;
-      case "SoftDropDown":
-        this.state.isSoftDropDown = true;
-        this.state.softDropLastTime = currentTime;
-        break;
-      case "SoftDropUp":
-        this.state.isSoftDropDown = false;
-        this.state.softDropLastTime = undefined;
-        break;
+    // Process through InputProcessor (creates ProcessedActions automatically)
+    if (this.latestGameState) {
+      this.processor.processEvent(inputEvent, this.latestGameState);
     }
   }
 }

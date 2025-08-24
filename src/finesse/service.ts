@@ -6,10 +6,9 @@ import {
   Rot,
 } from "../state/types";
 import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
-import { finesseCalculator, Fault } from "./calculator";
+import { finesseCalculator, Fault, extractFinesseActions } from "./calculator";
 import { GameMode } from "../modes";
 import { dropToBottom } from "../core/board";
-import { normalizeInputSequence } from "../input/handler";
 import { PIECES } from "../core/pieces";
 
 export interface FinesseService {
@@ -58,11 +57,8 @@ export class DefaultFinesseService implements FinesseService {
       y: spawnTopLeft[1],
     };
 
-    // Normalize player input sequence using configured cancellation window
-    const playerInputs = normalizeInputSequence(
-      state.inputLog,
-      state.gameplay.finesseCancelMs,
-    );
+    // Extract finesse actions from processed input log for analysis
+    const playerInputs = extractFinesseActions(state.processedInputLog);
 
     // Analyze
     const finesseResult = finesseCalculator.analyze(
@@ -145,7 +141,7 @@ export class DefaultFinesseService implements FinesseService {
       actions.push({ type: "UpdateModeData", data: modeResult.modeData });
     }
 
-    // Clear the input log after analysis is complete
+    // Clear both input logs after analysis is complete
     actions.push({ type: "ClearInputLog" });
 
     return actions;

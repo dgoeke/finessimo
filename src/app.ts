@@ -1,7 +1,7 @@
 import { GameState, Action, TimingConfig, GameplayConfig } from "./state/types";
 import { createTimestamp, fromNow } from "./types/timestamp";
 import { reducer } from "./state/reducer";
-import { DOMInputHandler } from "./input/handler";
+import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { BasicCanvasRenderer } from "./ui/canvas";
 import { BasicFinesseRenderer } from "./ui/finesse-feedback";
@@ -14,7 +14,7 @@ import { finesseService } from "./finesse/service";
 
 export class FinessimoApp {
   private gameState: GameState;
-  private keyboardInputHandler: DOMInputHandler;
+  private keyboardInputHandler: KeyboardInputHandler;
   private touchInputHandler?: TouchInputHandler;
   private canvasRenderer: BasicCanvasRenderer;
   private finesseRenderer: BasicFinesseRenderer;
@@ -28,7 +28,7 @@ export class FinessimoApp {
 
   constructor() {
     this.gameState = this.initializeState();
-    this.keyboardInputHandler = new DOMInputHandler();
+    this.keyboardInputHandler = new KeyboardInputHandler();
     this.canvasRenderer = new BasicCanvasRenderer();
     this.finesseRenderer = new BasicFinesseRenderer();
     this.previewRenderer = new BasicPreviewRenderer();

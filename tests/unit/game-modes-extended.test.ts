@@ -60,6 +60,7 @@ const mockState = (): GameState => ({
     lineClearLines: [],
   },
   inputLog: [],
+  processedInputLog: [],
   currentMode: "freePlay",
   finesseFeedback: null,
   modePrompt: null,
@@ -71,8 +72,8 @@ describe("FreePlayMode - extended", () => {
     const state = mockState();
 
     const res: FinesseResult = {
-      optimalSequences: [["LeftDown", "LeftDown", "HardDrop"]],
-      playerSequence: ["LeftDown"], // shorter
+      optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
+      playerSequence: ["MoveLeft"], // shorter
       isOptimal: false,
       faults: [
         {

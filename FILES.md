@@ -6,11 +6,12 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 - src/main.ts: Browser entrypoint. Initializes FinessimoApp on DOM ready.
 - src/app.ts: Main app orchestrator. 60 FPS game loop, state management, finesse analysis integration, mode switching, settings dispatch.
+- src/global.d.ts: Global TypeScript declarations and ambient module types.
 
 ## State
 
-- src/state/types.ts: Core types and interfaces. GameState, Action union, Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Statistics tracking actions.
-- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Comprehensive statistics tracking with derived metrics calculation.
+- src/state/types.ts: Core types and interfaces. GameState, Action union, Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions.
+- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Comprehensive statistics tracking with derived metrics calculation.
 
 ## Types
 
@@ -18,8 +19,9 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Input
 
-- src/input/handler.ts: Input system with DOMInputHandler (keyboard + keybindings), MockInputHandler (testing), input normalization, DAS/ARR timing.
-- src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, simultaneous keyboard/touch support.
+- src/input/handler.ts: Centralized input processing engine. Contains InputProcessor class with pure functions for DAS/ARR timing, input normalization, ProcessedAction generation. All timing logic unified here. Also includes MockInputHandler for testing.
+- src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
+- src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
 
 ## Core Mechanics
 
@@ -31,8 +33,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Finesse
 
-- src/finesse/calculator.ts: BFS-based finesse calculation. Computes optimal input sequences, compares with player inputs, reports faults.
-- src/finesse/service.ts: Finesse integration. Target derivation, input analysis, fault injection, UI feedback actions. Statistics tracking integration with performance metrics.
+- src/finesse/calculator.ts: BFS-based finesse calculation with FinesseAction enum. Computes optimal sequences using abstract moves (MoveLeft/DASLeft/RotateCW/etc). Includes converter functions between ProcessedActions and FinesseActions. Reports faults and analysis.
+- src/finesse/service.ts: Finesse integration service. Operates on processedInputLog for analysis. Target derivation, input analysis using FinesseActions, fault injection, UI feedback actions. Statistics tracking integration with performance metrics.
 
 ## Modes
 
@@ -47,6 +49,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/ui/preview.ts: Next piece previews with mini canvases. Configurable display count.
 - src/ui/hold.ts: Hold piece display with availability state.
 - src/ui/finesse.ts: Finesse visualization. Target highlighting, path indicators, quality feedback.
+- src/ui/finesse-feedback.ts: Finesse feedback UI component. Displays finesse analysis results and suggestions.
+- src/ui/statistics.ts: Statistics display panel. Real-time game statistics, performance metrics, session tracking.
 - src/ui/settings.ts: Settings panel with tabs (Timing, Gameplay, Visual, Controls). localStorage persistence, keybinding support.
 - src/ui/styles.css: Complete CSS styling. Responsive design, touch controls, modals.
 
@@ -54,3 +58,4 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 - tests/test-types.ts: Type utilities for testing. InvalidGameState, MalformedAction types, type guards, helpers for creating test scenarios with invalid data.
 - tests/test-helpers.ts: Runtime assertion helpers. Type narrowing functions, safe array access, validation utilities for type-safe test code.
+- tests/helpers/assert.ts: Additional test assertion utilities and custom matchers.

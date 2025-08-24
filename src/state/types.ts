@@ -58,7 +58,7 @@ export interface TimingConfig {
   gravityMs: number; // Milliseconds between gravity drops
 }
 
-// User actions at the input layer
+// Raw input events from keyboard/touch handlers
 export type KeyAction =
   | "LeftDown"
   | "LeftUp"
@@ -66,9 +66,9 @@ export type KeyAction =
   | "RightUp"
   | "SoftDropDown"
   | "SoftDropUp"
-  | "HardDrop"
   | "RotateCW"
   | "RotateCCW"
+  | "HardDrop"
   | "Hold";
 
 export interface InputEvent {
@@ -76,6 +76,8 @@ export interface InputEvent {
   frame: number;
   action: KeyAction;
 }
+
+// Finesse move types for optimal play analysis
 
 // Game mode and finesse feedback
 export interface FinesseUIFeedback {
@@ -103,6 +105,7 @@ export interface PhysicsState {
 // Game state
 import type { SevenBagRng } from "../core/rng";
 import type { FaultType } from "../finesse/calculator";
+import type { ProcessedAction } from "../input/handler";
 
 export interface Stats {
   // Basic counters
@@ -160,6 +163,8 @@ export interface GameState {
   physics: PhysicsState;
   // Log is for the current piece only. It is cleared after the piece locks and is analyzed.
   inputLog: InputEvent[];
+  // Processed actions log for finesse analysis - contains structured actions with tap/das distinction
+  processedInputLog: ProcessedAction[];
   // Game mode and finesse feedback
   currentMode: string;
   modeData?: unknown;
@@ -193,6 +198,7 @@ export type Action =
   | { type: "CompleteLineClear" }
   | { type: "ClearLines"; lines: number[] }
   | { type: "EnqueueInput"; event: InputEvent }
+  | { type: "EnqueueProcessedInput"; processedAction: ProcessedAction }
   | { type: "SetMode"; mode: string }
   | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
   | { type: "UpdateModePrompt"; prompt: string | null }

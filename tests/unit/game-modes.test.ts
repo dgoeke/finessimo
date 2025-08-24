@@ -60,6 +60,7 @@ const mockGameState: GameState = {
     lineClearLines: [],
   },
   inputLog: [],
+  processedInputLog: [],
   currentMode: "freePlay",
   finesseFeedback: null,
   modePrompt: null,
@@ -73,20 +74,20 @@ const mockPiece: ActivePiece = {
 };
 
 const mockOptimalResult: FinesseResult = {
-  optimalSequences: [["LeftDown", "LeftDown", "HardDrop"]],
-  playerSequence: ["LeftDown", "LeftDown", "HardDrop"],
+  optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
+  playerSequence: ["MoveLeft", "MoveLeft", "HardDrop"],
   isOptimal: true,
   faults: [],
 };
 
 const mockSuboptimalResult: FinesseResult = {
-  optimalSequences: [["LeftDown", "LeftDown", "HardDrop"]],
+  optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
   playerSequence: [
-    "LeftDown",
-    "RightDown",
-    "LeftDown",
-    "LeftDown",
-    "LeftDown",
+    "MoveLeft",
+    "MoveRight",
+    "MoveLeft",
+    "MoveLeft",
+    "MoveLeft",
     "HardDrop",
   ],
   isOptimal: false,
@@ -208,7 +209,7 @@ describe("GuidedMode", () => {
     // Third attempt - should show hint
     result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
     expect(result.feedback).toContain("Optimal sequence:");
-    expect(result.feedback).toContain("LeftDown → LeftDown → HardDrop");
+    expect(result.feedback).toContain("MoveLeft → MoveLeft → HardDrop");
   });
 
   test("should provide next prompt when no active piece", () => {
