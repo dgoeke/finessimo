@@ -132,7 +132,7 @@ body {
   background: color-mix(in oklab, var(--bg-elev-2) 85%, white);
 }
 
-/* App shell grid */
+/* Unified 3-column layout */
 .app.shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -140,41 +140,34 @@ body {
     max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: 300px auto 300px;
+  grid-template-columns: 1fr auto 1fr;
   gap: 20px;
   align-items: start;
   justify-content: center;
 }
-.sidebar {
+
+.hold-column {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.left-panel {
-  align-items: flex-end;
-}
-
-.right-panel {
-  /* Invisible 300px wrapper - no styling */
-  width: 100%;
-  display: flex;
   justify-content: flex-start;
+  align-items: flex-end; /* Justify right toward board */
 }
 
-.right-panel-content {
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--bg-elev-1) 92%, transparent),
-    var(--bg-elev-2)
-  );
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--shadow-md);
-  display: inline-flex;
+.board-column {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   width: fit-content;
 }
+
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start; /* Justify left toward board */
+}
+
 .panel {
   background: linear-gradient(
     180deg,
@@ -187,10 +180,107 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Statistics Panel - removed duplicate styling since .panel class handles it */
+
+.stat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.stat-section:last-child {
+  margin-bottom: 0;
+}
+
+.stat-section h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.stat-label {
+  color: var(--text-dim);
+  flex: 1;
+}
+
+.stat-value {
+  color: var(--text);
+  font-weight: 500;
+  font-family: "JetBrains Mono", monospace;
+  text-align: right;
+}
+
+.stat-value.success {
+  color: #10b981;
+}
+
+.stat-value.error {
+  color: #ef4444;
+}
+
+.stat-value.excellent {
+  color: #10b981;
+}
+
+.stat-value.good {
+  color: var(--accent);
+}
+
+.stat-value.average {
+  color: #f59e0b;
+}
+
+.stat-value.poor {
+  color: #ef4444;
+}
+
+.fault-breakdown {
+  margin-left: 8px;
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+}
+
+/* Hide mobile-only elements on desktop */
+.mobile-only {
+  display: none;
+}
+
 /* Board area */
-.game-area {
-  display: grid;
-  place-items: center;
+.board-frame {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+}
+
+#game-canvas {
+  display: block;
+  /* Ensure proper aspect ratio */
+  aspect-ratio: 1 / 2;
+  /* Use available vertical space, but ensure side columns get at least 15% each */
+  height: min(
+    calc(100vh - var(--header-h) - 100px),
+    /* Full height minus header and padding */ calc(70vw * 2)
+      /* Max height based on 70% viewport width (100% - 15% - 15%) */
+  );
+  width: auto;
+  max-width: 70vw; /* Ensure side columns get at least 15% each */
+  image-rendering: pixelated;
+  background: #000;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
 }
 /* Mobile play grid containers (used on phones) */
 .mobile-play {
@@ -226,28 +316,16 @@ body {
   /* Fit contents without extra width */
   display: inline-block;
 }
-#game-canvas {
-  display: block;
-  /* Fixed width with responsive max, maintaining 1:2 aspect ratio */
-  width: min(360px, 40vh);
-  height: min(720px, 80vh);
-  /* Ensure consistent aspect ratio by constraining both dimensions */
-  max-width: 360px;
-  max-height: 720px;
-  image-rendering: pixelated;
-  background: #000;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
-}
 
 /* Finesse Feedback Panel */
 #finesse-feedback-panel {
-  min-height: 200px;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  box-shadow: none;
+  /* No border/background - content shows directly */
+}
+
+/* Statistics Panel */
+#statistics-panel {
+  min-height: auto;
+  font-size: 11px;
 }
 
 .mode-prompt {
@@ -311,25 +389,12 @@ body {
   border-radius: 6px;
 }
 
-/* Responsive */
+/* Responsive - only adjust spacing, not sizing logic */
 @media (max-width: 1100px) {
   .app.shell {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    order: 2;
-    max-width: 680px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .game-area {
-    order: 1;
-  }
-  #game-canvas {
-    width: min(320px, 35vh);
-    height: min(640px, 70vh);
-    max-width: 320px;
-    max-height: 640px;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    padding: 12px;
   }
 }
 
@@ -350,96 +415,11 @@ body {
   .controls-grid {
     gap: 6px 8px;
   }
-  /* Three-column mobile layout: 10% | 80% | 10% */
-  /* Adjust to 15% | 70% | 15% */
-  .mobile-play {
-    grid-template-columns: 0.15fr 0.7fr 0.15fr;
-    gap: 6px;
-  }
-  .mobile-hold-slot,
-  .mobile-preview-slot {
-    display: flex;
-  }
-  .mobile-hold-slot {
-    align-items: stretch;
-    flex-direction: column;
-    width: 100%;
-  }
-  .mobile-preview-slot {
-    align-items: stretch;
-    flex-direction: column;
-    width: 100%;
-  }
-  /* Minimize frame chrome and maximize board area */
-  .board-frame {
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-  .mobile-board-slot #game-canvas {
-    width: 100% !important;
-    /* Maintain 1:2 aspect ratio even on mobile */
-    aspect-ratio: 1/2;
-    height: auto !important;
-    max-height: none;
-    border-radius: 0;
-    border: 0;
-  }
-  /* Hide game state (left panel) and right panel/controls on mobile */
-  .left-panel,
-  .right-panel {
-    display: none;
-  }
-  /* Fit side canvases within 10% columns and keep squares */
-  .mobile-hold-slot .hold-canvas,
-  .mobile-preview-slot .preview-canvas {
-    width: 100%;
-    height: auto;
-  }
-  .mobile-preview-slot .preview-slot {
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-  .mobile-hold-slot .hold-section,
-  .mobile-preview-slot .preview-section {
-    padding: 4px;
-  }
-  /* Hold: maximize usable width inside a thin bordered box */
-  /* Remove the inner wrapper box and let its children adopt the column layout */
-  .mobile-hold-slot .hold-section {
-    display: contents;
-  }
-  .mobile-preview-slot .preview-section {
-    display: contents;
-  }
-  .mobile-hold-slot .hold-title {
-    order: 1;
-    display: block;
-    margin: 0 0 2px 0;
-    padding: 0;
-    font-size: 10px;
-    line-height: 1;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    text-align: center;
-  }
-  .mobile-hold-slot .hold-container {
-    order: 2;
-    display: block;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-  }
-  .mobile-hold-slot .hold-canvas {
-    width: 100%;
-    height: auto;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    display: block;
+
+  /* Even smaller screens: tighter spacing */
+  .app.shell {
+    gap: 8px;
+    padding: 8px;
   }
   /* NEXT header: minimal and uppercase */
   .mobile-preview-slot .preview-title {
@@ -515,12 +495,6 @@ body {
   }
   .touch-button.hard-drop-btn {
     right: 8px;
-  }
-}
-
-@media (max-height: 700px) and (min-width: 680px) {
-  #game-canvas {
-    max-height: 70vh;
   }
 }
 
@@ -639,42 +613,13 @@ body {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
-  .preview-container {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .preview-slot {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .preview-label {
-    width: auto;
-    text-align: center;
-  }
-}
-
 @media (max-width: 680px) {
-  .game-info-section {
-    flex-direction: row;
-    justify-content: space-around;
-  }
-
-  .hold-section,
-  .preview-section {
-    flex: 1;
-    max-width: 45%;
-  }
-
   .preview-container {
-    gap: 4px;
+    gap: 4px; /* Tighter spacing on mobile */
   }
 
-  .preview-slot:not(.main) {
-    display: none; /* Hide secondary previews on mobile */
+  .preview-canvas {
+    max-width: 60px; /* Smaller preview pieces on mobile to keep column thin */
   }
 }
 

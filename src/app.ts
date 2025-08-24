@@ -8,6 +8,7 @@ import { BasicFinesseRenderer } from "./ui/finesse-feedback";
 import { BasicPreviewRenderer } from "./ui/preview";
 import { BasicHoldRenderer } from "./ui/hold";
 import { BasicSettingsRenderer, GameSettings } from "./ui/settings";
+import { BasicStatisticsRenderer } from "./ui/statistics";
 import { gameModeRegistry } from "./modes";
 import { finesseService } from "./finesse/service";
 
@@ -17,10 +18,10 @@ export class FinessimoApp {
   private touchInputHandler?: TouchInputHandler;
   private canvasRenderer: BasicCanvasRenderer;
   private finesseRenderer: BasicFinesseRenderer;
-  private leftHoldRenderer: BasicHoldRenderer;
   private previewRenderer: BasicPreviewRenderer;
   private holdRenderer: BasicHoldRenderer;
   private settingsRenderer: BasicSettingsRenderer;
+  private statisticsRenderer: BasicStatisticsRenderer;
   private isRunning = false;
   private lastFrameTime = 0;
   private readonly targetFrameTime = 1000 / 60; // 60 FPS
@@ -30,10 +31,10 @@ export class FinessimoApp {
     this.keyboardInputHandler = new DOMInputHandler();
     this.canvasRenderer = new BasicCanvasRenderer();
     this.finesseRenderer = new BasicFinesseRenderer();
-    this.leftHoldRenderer = new BasicHoldRenderer();
     this.previewRenderer = new BasicPreviewRenderer();
     this.holdRenderer = new BasicHoldRenderer();
     this.settingsRenderer = new BasicSettingsRenderer();
+    this.statisticsRenderer = new BasicStatisticsRenderer();
 
     // Initialize touch input if touch is supported
     if ("ontouchstart" in window) {
@@ -53,24 +54,19 @@ export class FinessimoApp {
     this.canvasRenderer.initialize(canvasElement);
     this.finesseRenderer.initialize(finesseFeedbackElement);
 
-    // Initialize left-side hold renderer
-    const leftHoldElement = document.getElementById("left-hold");
-    if (leftHoldElement) {
-      this.leftHoldRenderer.initialize(leftHoldElement);
-    }
+    // Initialize unified layout components
+    const holdElement = document.getElementById("hold-container");
+    const previewElement = document.getElementById("preview-container");
+    const statisticsElement = document.getElementById("statistics-panel");
 
-    // Initialize preview renderer (right side for desktop, mobile slot for mobile)
-    const isMobile = window.matchMedia("(max-width: 680px)").matches;
-    if (isMobile) {
-      const mobileHold = document.getElementById("mobile-hold");
-      const mobilePreview = document.getElementById("mobile-preview");
-      if (mobileHold) this.holdRenderer.initialize(mobileHold);
-      if (mobilePreview) this.previewRenderer.initialize(mobilePreview);
-    } else {
-      const gameInfoElement = document.getElementById("game-info");
-      if (gameInfoElement) {
-        this.previewRenderer.initialize(gameInfoElement);
-      }
+    if (holdElement) {
+      this.holdRenderer.initialize(holdElement);
+    }
+    if (previewElement) {
+      this.previewRenderer.initialize(previewElement);
+    }
+    if (statisticsElement) {
+      this.statisticsRenderer.initialize(statisticsElement);
     }
 
     // Initialize input handlers
@@ -137,9 +133,9 @@ export class FinessimoApp {
     this.canvasRenderer.destroy();
     this.finesseRenderer.destroy();
     this.previewRenderer.destroy();
-    this.leftHoldRenderer.destroy();
     this.holdRenderer.destroy();
     this.settingsRenderer.destroy();
+    this.statisticsRenderer.destroy();
   }
 
   private gameLoop(): void {
@@ -217,15 +213,11 @@ export class FinessimoApp {
     const previewCount = this.gameState.gameplay.nextPieceCount ?? 5;
     this.previewRenderer.render(this.gameState.nextQueue, previewCount);
 
-    // Render appropriate hold renderer based on layout
-    const isMobile = window.matchMedia("(max-width: 680px)").matches;
-    if (isMobile) {
-      // Mobile: Use mobile hold renderer
-      this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
-    } else {
-      // Desktop: Use left-side hold renderer
-      this.leftHoldRenderer.render(this.gameState.hold, this.gameState.canHold);
-    }
+    // Render hold piece
+    this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
+
+    // Render statistics
+    this.statisticsRenderer.render(this.gameState);
   }
 
   private dispatch(action: Action): void {
