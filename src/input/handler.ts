@@ -423,7 +423,7 @@ export class DOMInputHandler implements InputHandler {
         keyBindings: this.bindings,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newStore));
-    } catch (e) {
+    } catch {
       // ignore storage errors
     }
   }
