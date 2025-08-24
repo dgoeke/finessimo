@@ -3,7 +3,7 @@ import {
   KeyBindings,
   defaultKeyBindings,
   BindableAction,
-} from "../input/handler";
+} from "../input/keyboard";
 
 export interface GameSettings {
   // Timing settings

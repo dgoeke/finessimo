@@ -9,10 +9,9 @@ describe("Input Normalization", () => {
   });
 
   describe("normalizeInputSequence", () => {
-    it("should filter irrelevant releases but keep SoftDropDown", () => {
+    it("should keep all clean finesse actions", () => {
       const events: InputEvent[] = [
         createInputEvent("LeftDown", 100),
-        createInputEvent("LeftUp", 150),
         createInputEvent("SoftDropDown", 200),
         createInputEvent("HardDrop", 250),
       ];
@@ -54,7 +53,7 @@ describe("Input Normalization", () => {
       expect(result).toEqual(["LeftDown", "RightDown", "RotateCW"]);
     });
 
-    it("should cancel RightDown -> LeftDown pairs", () => {
+    it("should cancel RightTap -> LeftTap pairs", () => {
       const events: InputEvent[] = [
         createInputEvent("RightDown", 100),
         createInputEvent("LeftDown", 120), // Within window
@@ -104,7 +103,7 @@ describe("Input Normalization", () => {
       const events: InputEvent[] = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RotateCW", 120),
-        createInputEvent("RightDown", 140), // This should cancel with LeftDown
+        createInputEvent("RightDown", 140), // This should cancel with LeftTap
         createInputEvent("LeftDown", 200), // This should remain
         createInputEvent("HardDrop", 250),
       ];

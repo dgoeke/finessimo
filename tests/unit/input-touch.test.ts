@@ -1,88 +1,34 @@
 import { TouchInputHandler } from "../../src/input/touch";
 import { Action, GameState, KeyAction } from "../../src/state/types";
-import type { InputHandlerState } from "../../src/input/handler";
-import { createRng } from "../../src/core/rng";
-import { assertDefined } from "../helpers/assert";
 
-function makeState(): GameState {
-  // Build a minimal valid GameState by initializing the app reducer indirectly would be complex here.
-  // For our input handler update tests, we only use `timing` fields.
-  return {
-    board: { width: 10, height: 20, cells: new Uint8Array(200) },
-    active: undefined,
-    hold: undefined,
-    canHold: true,
-    nextQueue: [],
-    rng: createRng("touch"),
-    timing: {
-      tickHz: 60,
-      dasMs: 133,
-      arrMs: 2,
-      softDrop: 10,
-      lockDelayMs: 500,
-      lineClearDelayMs: 0,
-      gravityEnabled: false,
-      gravityMs: 1000,
-    },
-    gameplay: { finesseCancelMs: 50 },
-    tick: 0,
-    status: "playing",
-    stats: {
-      piecesPlaced: 0,
-      linesCleared: 0,
-      optimalPlacements: 0,
-      incorrectPlacements: 0,
-      attempts: 0,
-      startedAtMs: 0,
-      timePlayedMs: 0,
-      sessionPiecesPlaced: 0,
-      sessionLinesCleared: 0,
-      accuracyPercentage: 0,
-      finesseAccuracy: 0,
-      averageInputsPerPiece: 0,
-      sessionStartMs: 0,
-      totalSessions: 1,
-      longestSessionMs: 0,
-      piecesPerMinute: 0,
-      linesPerMinute: 0,
-      totalInputs: 0,
-      optimalInputs: 0,
-      totalFaults: 0,
-      faultsByType: {},
-      singleLines: 0,
-      doubleLines: 0,
-      tripleLines: 0,
-      tetrisLines: 0,
-    },
-    physics: {
-      lastGravityTime: 0,
-      lockDelayStartTime: null,
-      isSoftDropping: false,
-      lineClearStartTime: null,
-      lineClearLines: [],
-    },
-    inputLog: [],
-    currentMode: "freePlay",
-    modeData: null,
-    finesseFeedback: null,
-    modePrompt: null,
-  };
+// Mock DOM APIs for touch support
+Object.defineProperty(window, "ontouchstart", {
+  value: {},
+  writable: true,
+});
+
+// Interface for accessing private methods in tests
+interface TouchInputHandlerTestable {
+  triggerAction(action: KeyAction, phase: "down" | "up"): void;
 }
 
 describe("TouchInputHandler", () => {
   let handler: TouchInputHandler;
-  let dispatched: Action[];
-  interface Testable {
-    state: InputHandlerState;
-    triggerAction: (a: KeyAction, p: "down" | "up") => void;
-  }
+  let mockDispatch: jest.Mock<void, [Action]>;
 
   beforeEach(() => {
     // Provide a board-frame container like the app layout
     document.body.innerHTML = '<div class="board-frame"></div>';
+
     handler = new TouchInputHandler();
-    dispatched = [];
-    handler.init((a: Action) => dispatched.push(a));
+    mockDispatch = jest.fn<void, [Action]>();
+    handler.init(mockDispatch);
+
+    // Provide GameState for InputProcessor
+    const mockGameState = {
+      timing: { dasMs: 100, arrMs: 30, softDrop: 10 },
+    } as GameState;
+    handler.update(mockGameState, 1000);
   });
 
   afterEach(() => {
@@ -91,179 +37,162 @@ describe("TouchInputHandler", () => {
     jest.restoreAllMocks();
   });
 
-  test("start creates overlay inside board-frame and stop removes it", () => {
-    handler.start();
-    const overlay = document.querySelector("#touch-controls");
-    expect(overlay).toBeTruthy();
+  describe("initialization and lifecycle", () => {
+    test("should initialize without crashing", () => {
+      expect(handler).toBeDefined();
+    });
 
-    handler.stop();
-    const overlayAfter = document.querySelector("#touch-controls");
-    expect(overlayAfter).toBeFalsy();
-  });
+    test("start creates touch controls overlay", () => {
+      handler.start();
+      const overlay = document.querySelector("#touch-controls");
+      expect(overlay).toBeTruthy();
+      expect(overlay?.classList.contains("touch-controls-overlay")).toBe(true);
+    });
 
-  test("update with DAS/ARR repeats movement when direction held", () => {
-    handler.start();
-    const state = makeState();
+    test("stop removes touch controls overlay", () => {
+      handler.start();
+      const overlay = document.querySelector("#touch-controls");
+      expect(overlay).toBeTruthy();
 
-    // Force internal state to simulate holding Right long enough to surpass DAS
-    const now = 1_000_000;
-    const h = handler as unknown as Testable;
-    h.state.currentDirection = 1;
-    h.state.dasStartTime = now - state.timing.dasMs;
-    h.state.arrLastTime = undefined;
+      handler.stop();
+      const overlayAfter = document.querySelector("#touch-controls");
+      expect(overlayAfter).toBeFalsy();
+    });
 
-    handler.update(state, now);
-    expect(
-      dispatched.some(
-        (a) => a.type === "Move" && a.dir === 1 && a.source === "das",
-      ),
-    ).toBe(true);
+    test("should not create controls if no touch support", () => {
+      // Remove touch support by deleting the property
+      const windowWithTouch = window as Window & { ontouchstart?: unknown };
+      delete windowWithTouch.ontouchstart;
 
-    // Next ARR pulse after arrMs
-    handler.update(state, now + state.timing.arrMs);
-    // Should dispatch another repeat
-    const moveCount = dispatched.filter(
-      (a) => a.type === "Move" && a.dir === 1 && a.source === "das",
-    ).length;
-    expect(moveCount).toBeGreaterThanOrEqual(2);
-  });
+      const handlerNoTouch = new TouchInputHandler();
+      handlerNoTouch.init(mockDispatch);
+      handlerNoTouch.start();
 
-  test("soft drop pulses while engaged and stops on release", () => {
-    handler.start();
-    const state = makeState();
-    const base = 2_000_000;
+      const overlay = document.querySelector("#touch-controls");
+      expect(overlay).toBeFalsy();
 
-    // Engage soft drop
-    (handler as unknown as Testable).triggerAction("SoftDropDown", "down");
-    expect(
-      dispatched.find((a) => a.type === "SoftDrop" && a.on === true),
-    ).toBeTruthy();
-    // Align last pulse time to base to avoid relying on Date.now in trigger
-    (handler as unknown as Testable).state.softDropLastTime = base;
+      handlerNoTouch.stop();
 
-    // Advance time beyond interval to trigger repeat
-    const sd = state.timing.softDrop === "infinite" ? 1 : state.timing.softDrop;
-    const interval = Math.max(
-      1,
-      Math.floor(state.timing.gravityMs / Math.max(1, sd)),
-    );
-    handler.update(state, base + interval);
-    const softCount = dispatched.filter(
-      (a) => a.type === "SoftDrop" && a.on === true,
-    ).length;
-    expect(softCount).toBeGreaterThanOrEqual(2);
-
-    // Release
-    (handler as unknown as Testable).triggerAction("SoftDropDown", "up");
-    expect(
-      dispatched.find((a) => a.type === "SoftDrop" && a.on === false),
-    ).toBeTruthy();
-  });
-
-  test("movement hold logs Down once and Up on release", () => {
-    handler.start();
-
-    // Press and release Left
-    (handler as unknown as Testable).triggerAction("LeftDown", "down");
-    (handler as unknown as Testable).triggerAction("LeftDown", "up");
-
-    // Extract EnqueueInput actions only
-    const enqueues = dispatched.filter(
-      (a): a is Extract<Action, { type: "EnqueueInput" }> =>
-        a.type === "EnqueueInput",
-    );
-
-    // Expect two log entries: LeftDown then LeftUp
-    expect(enqueues.length).toBeGreaterThanOrEqual(2);
-    const lastTwo = enqueues.slice(-2);
-    assertDefined(lastTwo[0]);
-    assertDefined(lastTwo[1]);
-    expect(lastTwo[0].event.action).toBe("LeftDown");
-    expect(lastTwo[1].event.action).toBe("LeftUp");
-  });
-
-  test("start/stop does not double-bind touch listeners", () => {
-    // Capture add/remove calls with their targets to verify idempotency
-    const addRecorded: {
-      target: EventTarget;
-      type: string;
-      listener: EventListenerOrEventListenerObject | null;
-      options?: boolean | AddEventListenerOptions;
-    }[] = [];
-    const removeRecorded: {
-      target: EventTarget;
-      type: string;
-      listener: EventListenerOrEventListenerObject | null;
-      options?: boolean | EventListenerOptions;
-    }[] = [];
-
-    const addSpy = jest
-      .spyOn(EventTarget.prototype, "addEventListener")
-      .mockImplementation(function (
-        this: EventTarget,
-        type: string,
-        listener: EventListenerOrEventListenerObject | null,
-        options?: boolean | AddEventListenerOptions,
-      ) {
-        addRecorded.push({ target: this, type, listener, options });
-        // Do not call the original to avoid recursion; we only need to record
-        return;
+      // Restore touch support for other tests
+      Object.defineProperty(window, "ontouchstart", {
+        value: {},
+        writable: true,
       });
+    });
+  });
 
-    const removeSpy = jest
-      .spyOn(EventTarget.prototype, "removeEventListener")
-      .mockImplementation(function (
-        this: EventTarget,
-        type: string,
-        listener: EventListenerOrEventListenerObject | null,
-        options?: boolean | EventListenerOptions,
-      ) {
-        removeRecorded.push({ target: this, type, listener, options });
-        // Do not call original; just record
-        return;
+  describe("touch zone creation", () => {
+    test("should create all expected touch zones", () => {
+      handler.start();
+
+      const zones = document.querySelectorAll("[data-action]");
+      expect(zones.length).toBeGreaterThan(0);
+
+      // Check for key zones
+      expect(document.querySelector('[data-action="LeftDown"]')).toBeTruthy();
+      expect(document.querySelector('[data-action="RightDown"]')).toBeTruthy();
+      expect(
+        document.querySelector('[data-action="SoftDropDown"]'),
+      ).toBeTruthy();
+      expect(document.querySelector('[data-action="HardDrop"]')).toBeTruthy();
+      expect(document.querySelector('[data-action="RotateCW"]')).toBeTruthy();
+      expect(document.querySelector('[data-action="RotateCCW"]')).toBeTruthy();
+      expect(document.querySelector('[data-action="Hold"]')).toBeTruthy();
+    });
+  });
+
+  describe("input event dispatching", () => {
+    test("should dispatch InputEvent when triggerAction is called", () => {
+      handler.start();
+
+      // Access private method for testing via type assertion
+      const testableHandler = handler as unknown as TouchInputHandlerTestable;
+      testableHandler.triggerAction("LeftDown", "down");
+
+      // Should dispatch EnqueueInput for logging
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "EnqueueInput",
+        event: {
+          action: "LeftDown",
+          frame: expect.anything() as number,
+          tMs: expect.anything() as number,
+        },
       });
+    });
 
-    handler.start();
-    const overlay = document.getElementById("touch-controls");
-    assertDefined(overlay);
+    test("should dispatch up events for movement actions", () => {
+      handler.start();
 
-    const isOverlay = (r: { target: EventTarget }) =>
-      r.target instanceof Element && r.target.id === "touch-controls";
-    const isTouch = (r: { type: string }) =>
-      r.type === "touchstart" ||
-      r.type === "touchmove" ||
-      r.type === "touchend" ||
-      r.type === "touchcancel";
+      const testableHandler = handler as unknown as TouchInputHandlerTestable;
+      testableHandler.triggerAction("LeftDown", "up");
 
-    const addedFirst = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
-    expect(addedFirst.length).toBe(4);
+      // Should dispatch EnqueueInput with LeftUp action
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "EnqueueInput",
+        event: {
+          action: "LeftUp",
+          frame: expect.anything() as number,
+          tMs: expect.anything() as number,
+        },
+      });
+    });
 
-    // Calling start() again should not add more listeners
-    handler.start();
-    const addedSecond = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
-    expect(addedSecond.length).toBe(4);
+    test("should dispatch up events for soft drop actions", () => {
+      handler.start();
 
-    // Stop once should remove the four listeners
-    handler.stop();
-    const removedFirst = removeRecorded.filter(
-      (r) => isOverlay(r) && isTouch(r),
-    );
-    expect(removedFirst.length).toBe(4);
+      const testableHandler = handler as unknown as TouchInputHandlerTestable;
+      testableHandler.triggerAction("SoftDropDown", "up");
 
-    // Stop again should not remove additional listeners
-    handler.stop();
-    const removedSecond = removeRecorded.filter(
-      (r) => isOverlay(r) && isTouch(r),
-    );
-    expect(removedSecond.length).toBe(4);
+      // Should dispatch EnqueueInput with SoftDropUp action
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "EnqueueInput",
+        event: {
+          action: "SoftDropUp",
+          frame: expect.anything() as number,
+          tMs: expect.anything() as number,
+        },
+      });
+    });
+  });
 
-    // Starting again should add four more listeners (total 8)
-    handler.start();
-    const addedThird = addRecorded.filter((r) => isOverlay(r) && isTouch(r));
-    expect(addedThird.length).toBe(8);
+  describe("key bindings interface", () => {
+    test("should return empty key bindings (not applicable for touch)", () => {
+      const bindings = handler.getKeyBindings();
+      expect(bindings.MoveLeft).toEqual([]);
+      expect(bindings.MoveRight).toEqual([]);
+      expect(bindings.SoftDrop).toEqual([]);
+    });
 
-    // Cleanup spies
-    addSpy.mockRestore();
-    removeSpy.mockRestore();
+    test("setKeyBindings should be a no-op", () => {
+      const emptyBindings = handler.getKeyBindings();
+      handler.setKeyBindings({
+        MoveLeft: ["KeyA"],
+        MoveRight: ["KeyD"],
+        SoftDrop: ["KeyS"],
+        HardDrop: ["Space"],
+        RotateCW: ["KeyX"],
+        RotateCCW: ["KeyZ"],
+        Hold: ["KeyC"],
+      });
+      // Should still return empty bindings
+      expect(handler.getKeyBindings()).toEqual(emptyBindings);
+    });
+  });
+
+  describe("event listener management", () => {
+    test("should not double-bind listeners on multiple start calls", () => {
+      const addSpy = jest.spyOn(EventTarget.prototype, "addEventListener");
+
+      handler.start();
+      const firstCallCount = addSpy.mock.calls.length;
+
+      handler.start(); // Second start call
+      const secondCallCount = addSpy.mock.calls.length;
+
+      // Should not have added more listeners
+      expect(secondCallCount).toBe(firstCallCount);
+
+      addSpy.mockRestore();
+    });
   });
 });

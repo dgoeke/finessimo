@@ -202,6 +202,7 @@ function createInitialState(
     stats: initialStats,
     physics: createInitialPhysics(),
     inputLog: [],
+    processedInputLog: [],
     currentMode: mode ?? "freePlay",
     modeData: null,
     finesseFeedback: null,
@@ -842,7 +843,18 @@ export const reducer: (
       return {
         ...state,
         inputLog: [],
+        processedInputLog: [],
       };
+    }
+
+    case "EnqueueProcessedInput": {
+      // First, add to log
+      const newState = {
+        ...state,
+        processedInputLog: [...state.processedInputLog, action.processedAction],
+      };
+      // Then recursively process the inner action
+      return reducer(newState, action.processedAction.action);
     }
 
     default:

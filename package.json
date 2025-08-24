@@ -17,7 +17,7 @@
     "clean": "rm -rf dist",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "pre-commit": "npm-run-all clean typecheck lint test format"
+    "pre-commit": "npm-run-all clean typecheck test lint format"
   },
   "keywords": [
     "tetris",

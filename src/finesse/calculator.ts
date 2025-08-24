@@ -1,11 +1,12 @@
-import { KeyAction, ActivePiece, GameplayConfig, Rot } from "../state/types";
+import { ActivePiece, GameplayConfig, Rot } from "../state/types";
 import { createEmptyBoard, canMove, moveToWall } from "../core/board";
 import { getNextRotation, tryRotate } from "../core/srs";
+import { ProcessedAction } from "../input/handler";
 
 // Finesse calculation result
 export interface FinesseResult {
-  optimalSequences: KeyAction[][]; // Can be multiple paths of the same length
-  playerSequence: KeyAction[]; // normalized
+  optimalSequences: FinesseAction[][]; // Can be multiple paths of the same length
+  playerSequence: FinesseAction[]; // normalized from player input
   isOptimal: boolean;
   faults: Fault[]; // Fault type to be defined
 }
@@ -18,11 +19,77 @@ export type FaultType =
   | "wrong_piece"
   | "wrong_target";
 
+// Finesse actions - abstract moves for optimal play analysis
+// These map 1:1 to icons/suggestions and make invalid states unrepresentable
+export type FinesseAction =
+  | "MoveLeft"
+  | "MoveRight"
+  | "DASLeft"
+  | "DASRight"
+  | "RotateCW"
+  | "RotateCCW"
+  | "HardDrop";
+
 // Fault types (to be expanded in later iterations)
 export interface Fault {
   type: FaultType;
   description: string;
   position?: number; // Index in the player sequence where fault occurs
+}
+
+// Convert ProcessedActions to FinesseActions for analysis
+export function extractFinesseActions(
+  processedActions: ProcessedAction[],
+): FinesseAction[] {
+  const finesseActions: FinesseAction[] = [];
+  let currentDASDirection: -1 | 1 | undefined;
+
+  for (const processedAction of processedActions) {
+    const { action } = processedAction;
+
+    switch (action.type) {
+      case "Move":
+        if (action.source === "tap") {
+          // Reset DAS state on tap
+          currentDASDirection = undefined;
+          if (action.dir === -1) {
+            finesseActions.push("MoveLeft");
+          } else if (action.dir === 1) {
+            finesseActions.push("MoveRight");
+          }
+        } else if (action.source === "das") {
+          // Coalesce consecutive DAS pulses in same direction
+          if (currentDASDirection !== action.dir) {
+            // Direction changed or first DAS pulse
+            currentDASDirection = action.dir;
+            if (action.dir === -1) {
+              finesseActions.push("DASLeft");
+            } else if (action.dir === 1) {
+              finesseActions.push("DASRight");
+            }
+          }
+          // If same direction, do nothing (coalesce)
+        }
+        break;
+      case "Rotate":
+        // Reset DAS state on non-move input
+        currentDASDirection = undefined;
+        finesseActions.push(action.dir === "CW" ? "RotateCW" : "RotateCCW");
+        break;
+      case "HardDrop":
+        // Reset DAS state on non-move input
+        currentDASDirection = undefined;
+        finesseActions.push("HardDrop");
+        break;
+      // Other action types are not relevant for finesse analysis
+      default:
+        // Reset DAS state on any other action
+        currentDASDirection = undefined;
+        break;
+    }
+  }
+
+  return finesseActions;
 }
 
 // Finesse Calculator interface
@@ -33,14 +100,14 @@ export interface FinesseCalculator {
     targetX: number,
     targetRot: Rot,
     config: GameplayConfig,
-  ): KeyAction[][];
+  ): FinesseAction[][];
 
   // Analyze player input for finesse optimality
   analyze(
     piece: ActivePiece,
     targetX: number,
     targetRot: Rot,
-    playerInputs: KeyAction[],
+    playerInputs: FinesseAction[],
     config: GameplayConfig,
   ): FinesseResult;
 }
@@ -52,19 +119,19 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     targetX: number,
     targetRot: Rot,
     _config: GameplayConfig,
-  ): KeyAction[][] {
+  ): FinesseAction[][] {
     void _config;
     // Use an empty board for finesse calculation (placement minimality is board-agnostic in trainer drills)
     const board = createEmptyBoard();
 
     interface Node {
       piece: ActivePiece;
-      path: KeyAction[];
+      path: FinesseAction[];
     }
     const start: Node = { piece, path: [] };
     const queue: Node[] = [start];
     const visited = new Set<string>();
-    const results: KeyAction[][] = [];
+    const results: FinesseAction[][] = [];
     let foundDepth: number | undefined;
 
     const keyOf = (p: ActivePiece): string => `${p.x},${p.y},${p.rot}`;
@@ -94,7 +161,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
         const k = keyOf(next);
         if (!visited.has(k)) {
           visited.add(k);
-          queue.push({ piece: next, path: [...path, "LeftDown"] });
+          queue.push({ piece: next, path: [...path, "MoveLeft"] });
         }
       }
 
@@ -104,7 +171,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
         const k = keyOf(next);
         if (!visited.has(k)) {
           visited.add(k);
-          queue.push({ piece: next, path: [...path, "RightDown"] });
+          queue.push({ piece: next, path: [...path, "MoveRight"] });
         }
       }
 
@@ -115,8 +182,8 @@ export class BfsFinesseCalculator implements FinesseCalculator {
           const k = keyOf(walled);
           if (!visited.has(k)) {
             visited.add(k);
-            // Represent both tap and hold as the same counted input: key down
-            queue.push({ piece: walled, path: [...path, "LeftDown"] });
+            // Wall movement using DAS
+            queue.push({ piece: walled, path: [...path, "DASLeft"] });
           }
         }
       }
@@ -128,7 +195,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
           const k = keyOf(walled);
           if (!visited.has(k)) {
             visited.add(k);
-            queue.push({ piece: walled, path: [...path, "RightDown"] });
+            queue.push({ piece: walled, path: [...path, "DASRight"] });
           }
         }
       }
@@ -161,7 +228,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     }
 
     // Deduplicate identical key sequences (hold vs tap can coincide)
-    const uniq = new Map<string, KeyAction[]>();
+    const uniq = new Map<string, FinesseAction[]>();
     for (const seq of results) {
       const key = seq.join("|");
       if (!uniq.has(key)) uniq.set(key, seq);
@@ -173,7 +240,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     piece: ActivePiece,
     targetX: number,
     targetRot: Rot,
-    playerInputs: KeyAction[],
+    playerInputs: FinesseAction[],
     config: GameplayConfig,
   ): FinesseResult {
     // Calculate optimal sequences (already includes HardDrop)
@@ -219,15 +286,15 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     };
   }
 
-  // Simple input normalization: drop releases and soft drop ups
+  // Input normalization: all FinesseActions are valid by design with clean architecture
   private normalizeInputs(
-    inputs: KeyAction[],
+    inputs: FinesseAction[],
     _config: GameplayConfig,
-  ): KeyAction[] {
+  ): FinesseAction[] {
     void _config;
-    return inputs.filter(
-      (a) => a !== "LeftUp" && a !== "RightUp" && a !== "SoftDropUp",
-    );
+
+    // With our clean architecture, all FinesseActions are already valid
+    return inputs;
   }
 }
 
