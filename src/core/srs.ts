@@ -63,10 +63,10 @@ export const KICKS_JLSTZ: Record<
   // L -> 0 / 0 -> L
   "left->spawn": [
     [0, 0],
-    [1, 0],
-    [1, -1],
+    [-1, 0],
+    [-1, -1],
     [0, 2],
-    [1, 2],
+    [-1, 2],
   ],
   "spawn->left": [
     [0, 0],
