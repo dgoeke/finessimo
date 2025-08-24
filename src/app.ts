@@ -192,8 +192,8 @@ export class FinessimoApp {
     // Update guidance from current mode (only when changed)
     const mode = gameModeRegistry.get(this.gameState.currentMode);
     if (mode && typeof mode.getGuidance === "function") {
-      const guidance = mode.getGuidance(this.gameState) || null;
-      const prev = this.gameState.guidance || null;
+      const guidance = mode.getGuidance(this.gameState) ?? null;
+      const prev = this.gameState.guidance ?? null;
       if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
         this.dispatch({ type: "UpdateGuidance", guidance });
       }
@@ -309,7 +309,7 @@ export class FinessimoApp {
       mode && typeof mode.onBeforeSpawn === "function"
         ? mode.onBeforeSpawn(this.gameState)
         : null;
-    if (override && override.piece) {
+    if (override?.piece) {
       this.dispatch({ type: "Spawn", piece: override.piece });
       return;
     }

@@ -215,7 +215,7 @@ export class TouchInputHandler implements InputHandler {
   }
 
   private removeTouchControls(): void {
-    if (this.container && this.container.parentNode) {
+    if (this.container?.parentNode) {
       this.container.parentNode.removeChild(this.container);
     }
     this.container = undefined;
@@ -342,7 +342,7 @@ export class TouchInputHandler implements InputHandler {
     for (const touch of Array.from(event.changedTouches)) {
       const touchData = this.activeTouches.get(touch.identifier);
 
-      if (touchData && touchData.zone) {
+      if (touchData?.zone) {
         const zone = touchData.zone;
         zone.element.classList.remove("active");
 

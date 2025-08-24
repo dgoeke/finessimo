@@ -633,7 +633,7 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   }
 
   destroy(): void {
-    if (this.settingsPanel && this.settingsPanel.parentNode) {
+    if (this.settingsPanel?.parentNode) {
       this.settingsPanel.parentNode.removeChild(this.settingsPanel);
     }
     this.container = undefined;
@@ -642,8 +642,8 @@ export class BasicSettingsRenderer implements SettingsRenderer {
 
   // --- Keybindings helpers ---
   private renderKeybindRow(label: string, action: BindableAction): string {
-    const code = this.currentKeyBindings[action]?.[0] || "";
-    const keyLabel = this.formatKey(code) || "Unbound";
+    const code = this.currentKeyBindings[action]?.[0] ?? "";
+    const keyLabel = this.formatKey(code) ?? "Unbound";
     return `
       <div class="keybind-row">
         <div class="keybind-label">${label}</div>
@@ -816,8 +816,8 @@ export class BasicSettingsRenderer implements SettingsRenderer {
       ["Hold", "Hold"],
     ];
     for (const [action] of all) {
-      const code = this.currentKeyBindings[action]?.[0] || "";
-      const label = this.formatKey(code) || "Unbound";
+      const code = this.currentKeyBindings[action]?.[0] ?? "";
+      const label = this.formatKey(code) ?? "Unbound";
       const btn = this.settingsPanel.querySelector<HTMLElement>(
         `[data-keybind-action="${action}"]`,
       );

@@ -29,14 +29,10 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     if (modePromptEl) {
       const promptTextEl = modePromptEl.querySelector(".prompt-text");
       if (promptTextEl) {
-        const label =
-          (gameState.guidance && gameState.guidance.label) ||
-          gameState.modePrompt;
-        promptTextEl.textContent = label || "No active prompt";
+        const label = gameState.guidance?.label ?? gameState.modePrompt;
+        promptTextEl.textContent = label ?? "No active prompt";
       }
-      const show =
-        (gameState.guidance && gameState.guidance.label) ||
-        gameState.modePrompt;
+      const show = gameState.guidance?.label ?? gameState.modePrompt;
       modePromptEl.style.display = show ? "block" : "none";
     }
 

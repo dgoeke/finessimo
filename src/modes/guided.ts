@@ -73,7 +73,7 @@ export class GuidedMode implements GameMode {
   }
 
   private getData(state: GameState): GuidedData {
-    const data = (state.modeData as GuidedData) || this.initModeData();
+    const data = (state.modeData as GuidedData) ?? this.initModeData();
     return {
       currentDrillIndex: data.currentDrillIndex ?? 0,
       attemptsOnCurrentDrill: data.attemptsOnCurrentDrill ?? 0,
@@ -157,7 +157,7 @@ export class GuidedMode implements GameMode {
       }
     }
 
-    const optimalLength = optimalSequences[0]?.length || 0;
+    const optimalLength = optimalSequences[0]?.length ?? 0;
     const extraInputs = playerSequence.length - optimalLength;
 
     let feedback = `✗ Try again! Used ${playerSequence.length} inputs, optimal is ${optimalLength}.`;

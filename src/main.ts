@@ -26,7 +26,7 @@ function initializeApp(app: FinessimoApp): void {
   // Get finesse feedback panel element
   const finesseFeedbackPanel = document.getElementById(
     "finesse-feedback-panel",
-  ) as HTMLElement;
+  )!;
   if (!finesseFeedbackPanel) {
     console.error(
       'Finesse feedback panel element with id "finesse-feedback-panel" not found',

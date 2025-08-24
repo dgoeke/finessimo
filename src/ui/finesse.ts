@@ -48,7 +48,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     }
 
     // Only render when there is guidance or finesse feedback to show
-    const guidance = gameState.guidance || null;
+    const guidance = gameState.guidance ?? null;
     if (!guidance && !gameState.finesseFeedback) {
       return;
     }
@@ -73,7 +73,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     ) {
       this.renderSequenceOverlay(
         visualization.optimalSequence,
-        visualization.currentStep || 0,
+        visualization.currentStep ?? 0,
       );
     }
 
@@ -418,16 +418,16 @@ export function createFinesseVisualization(
   if (gameState.finesseFeedback) {
     visualization.isOptimal = gameState.finesseFeedback.isOptimal;
     // Parse fault count from message if available
-    const faultMatch = gameState.finesseFeedback.message.match(/(\d+) fault/);
-    if (faultMatch && faultMatch[1]) {
+    const faultMatch = /(\d+) fault/.exec(gameState.finesseFeedback.message);
+    if (faultMatch?.[1]) {
       visualization.faultCount = parseInt(faultMatch[1]);
     }
   }
 
   // In guided mode, show target position and optimal path
   {
-    const guidance = gameState.guidance || null;
-    if (gameState.active && guidance && guidance.target) {
+    const guidance = gameState.guidance ?? null;
+    if (gameState.active && guidance?.target) {
       const targetInfo = {
         targetX: guidance.target.x,
         targetRot: guidance.target.rot,
