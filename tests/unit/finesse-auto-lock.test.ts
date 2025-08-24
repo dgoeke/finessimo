@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { reducer } from "../../src/state/reducer";
 import { GameState } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 
 describe("finesse analysis trigger logic", () => {
   it("should properly detect when a piece becomes inactive (auto-lock scenario)", () => {
@@ -40,7 +41,7 @@ describe("finesse analysis trigger logic", () => {
     // Trigger auto-lock by advancing time past lock delay
     const stateAfterAutoLock = reducer(stateWithActive, {
       type: "Tick",
-      timestampMs: 1500 + 500, // Past lock delay
+      timestampMs: createTimestamp(1500 + 500), // Past lock delay
     });
 
     // Verify that this scenario would trigger finesse analysis
@@ -80,7 +81,7 @@ describe("finesse analysis trigger logic", () => {
     // HardDrop should lock the piece
     const stateAfterHardDrop = reducer(stateWithActive, {
       type: "HardDrop",
-      timestampMs: 1000,
+      timestampMs: createTimestamp(1000),
     });
 
     // Verify piece lock detection for HardDrop

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { reducer } from "../../src/state/reducer";
 import { GameState } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
@@ -41,7 +42,7 @@ describe("physics system", () => {
         state.physics.lastGravityTime + state.timing.gravityMs + 1;
       const newState = reducer(state, {
         type: "Tick",
-        timestampMs: gravityTime,
+        timestampMs: createTimestamp(gravityTime),
       });
 
       expect(newState.active).toBeDefined();
@@ -59,7 +60,7 @@ describe("physics system", () => {
 
       const newState = reducer(state, {
         type: "Tick",
-        timestampMs: Date.now() + 2000,
+        timestampMs: createTimestamp(performance.now() + 2000),
       });
 
       assertActivePiece(newState);
@@ -70,7 +71,10 @@ describe("physics system", () => {
       let state = createStateWithPiece();
 
       // Move piece to bottom by hard dropping it
-      state = reducer(state, { type: "HardDrop", timestampMs: 1000 });
+      state = reducer(state, {
+        type: "HardDrop",
+        timestampMs: createTimestamp(1000),
+      });
 
       // Spawn a new piece and put it near the bottom manually
       state = reducer(state, { type: "Spawn", piece: "T" });
@@ -94,7 +98,7 @@ describe("physics system", () => {
       const gravityTime = 1000 + state.timing.gravityMs + 1;
       const newState = reducer(state, {
         type: "Tick",
-        timestampMs: gravityTime,
+        timestampMs: createTimestamp(gravityTime),
       });
 
       expect(newState.physics.lockDelayStartTime).toBe(gravityTime);
@@ -115,7 +119,7 @@ describe("physics system", () => {
       const expiredTime = 1000 + state.timing.lockDelayMs + 1;
       const newState = reducer(state, {
         type: "Tick",
-        timestampMs: expiredTime,
+        timestampMs: createTimestamp(expiredTime),
       });
 
       expect(newState.active).toBeUndefined();
@@ -168,7 +172,7 @@ describe("physics system", () => {
 
       const newState = reducer(state, {
         type: "Tick",
-        timestampMs: gravityTime,
+        timestampMs: createTimestamp(gravityTime),
       });
 
       assertActivePiece(state);
@@ -204,11 +208,11 @@ describe("physics system", () => {
 
     it("should start lock delay manually", () => {
       const state = createStateWithPiece();
-      const timestamp = Date.now();
+      const timestamp = performance.now();
 
       const newState = reducer(state, {
         type: "StartLockDelay",
-        timestampMs: timestamp,
+        timestampMs: createTimestamp(timestamp),
       });
 
       expect(newState.physics.lockDelayStartTime).toBe(timestamp);
@@ -230,13 +234,13 @@ describe("physics system", () => {
   describe("line clearing", () => {
     it("should start line clear animation", () => {
       const state = createTestState();
-      const timestamp = Date.now();
+      const timestamp = performance.now();
       const lines = [18, 19];
 
       const newState = reducer(state, {
         type: "StartLineClear",
         lines,
-        timestampMs: timestamp,
+        timestampMs: createTimestamp(timestamp),
       });
 
       expect(newState.status).toBe("lineClear");
@@ -260,7 +264,7 @@ describe("physics system", () => {
         status: "lineClear",
         physics: {
           ...state.physics,
-          lineClearStartTime: 1000,
+          lineClearStartTime: createTimestamp(1000),
           lineClearLines: [18, 19],
         },
       };

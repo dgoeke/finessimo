@@ -6,6 +6,7 @@ import {
   Board,
   idx,
 } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { SevenBagRng } from "../../src/core/rng";
 import { InvalidGameState } from "../test-types";
 import { assertDefined } from "../test-helpers";
@@ -20,7 +21,7 @@ describe("Reducer - Extended Coverage", () => {
   describe("Action type coverage", () => {
     it("should handle all defined action types without errors", () => {
       const actions: Action[] = [
-        { type: "Tick", timestampMs: 0 },
+        { type: "Tick", timestampMs: createTimestamp(1) },
         { type: "Spawn" },
         { type: "Move", dir: -1, source: "tap" },
         { type: "Move", dir: 1, source: "das" },
@@ -28,9 +29,9 @@ describe("Reducer - Extended Coverage", () => {
         { type: "SoftDrop", on: false },
         { type: "Rotate", dir: "CW" },
         { type: "Rotate", dir: "CCW" },
-        { type: "HardDrop", timestampMs: 1000 },
+        { type: "HardDrop", timestampMs: createTimestamp(1000) },
         { type: "Hold" },
-        { type: "Lock", timestampMs: Date.now() },
+        { type: "Lock", timestampMs: createTimestamp(performance.now()) },
         { type: "ClearLines", lines: [19] },
         {
           type: "EnqueueInput",
@@ -146,7 +147,10 @@ describe("Reducer - Extended Coverage", () => {
   describe("Tick action detailed testing", () => {
     it("should increment tick from any starting value", () => {
       const stateWithTicks = { ...initialState, tick: 42 };
-      const result = reducer(stateWithTicks, { type: "Tick", timestampMs: 0 });
+      const result = reducer(stateWithTicks, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
 
       expect(result.tick).toBe(43);
       expect(result).not.toBe(stateWithTicks); // New object
@@ -164,7 +168,10 @@ describe("Reducer - Extended Coverage", () => {
         status: "lineClear",
       };
 
-      const result = reducer(complexState, { type: "Tick", timestampMs: 0 });
+      const result = reducer(complexState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
 
       expect(result.tick).toBe(11);
       expect(result.active).toEqual(complexState.active);
@@ -191,7 +198,7 @@ describe("Reducer - Extended Coverage", () => {
 
       const result = reducer(stateWithPiece, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(result.active).toBeUndefined();
@@ -218,7 +225,7 @@ describe("Reducer - Extended Coverage", () => {
 
       const result = reducer(stateWithBoard, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(result.board).toBe(modifiedBoard); // Should preserve board reference
@@ -231,7 +238,7 @@ describe("Reducer - Extended Coverage", () => {
       const stateNoPiece = { ...initialState, active: undefined };
       const result = reducer(stateNoPiece, {
         type: "Lock",
-        timestampMs: Date.now(),
+        timestampMs: createTimestamp(performance.now()),
       });
 
       expect(result.active).toBeUndefined();
@@ -318,8 +325,14 @@ describe("Reducer - Extended Coverage", () => {
       const originalCanHold = originalState.canHold;
 
       // Try all actions that modify state
-      reducer(originalState, { type: "Tick", timestampMs: 0 });
-      reducer(originalState, { type: "Lock", timestampMs: Date.now() });
+      reducer(originalState, {
+        type: "Tick",
+        timestampMs: createTimestamp(1),
+      });
+      reducer(originalState, {
+        type: "Lock",
+        timestampMs: createTimestamp(performance.now()),
+      });
       reducer(originalState, {
         type: "EnqueueInput",
         event: { tMs: 1000, frame: 60, action: "HardDrop" },
@@ -346,7 +359,10 @@ describe("Reducer - Extended Coverage", () => {
 
       // Simulate rapid input sequence
       for (let i = 0; i < 100; i++) {
-        state = reducer(state, { type: "Tick", timestampMs: i });
+        state = reducer(state, {
+          type: "Tick",
+          timestampMs: createTimestamp(i + 1),
+        });
         tickCount++;
 
         if (i % 10 === 0) {
@@ -361,7 +377,10 @@ describe("Reducer - Extended Coverage", () => {
             ...state,
             active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
           };
-          state = reducer(state, { type: "Lock", timestampMs: Date.now() });
+          state = reducer(state, {
+            type: "Lock",
+            timestampMs: createTimestamp(performance.now()),
+          });
           tickCount++; // Lock also increments tick
         }
       }
@@ -416,7 +435,7 @@ describe("Reducer - Extended Coverage", () => {
         expect(() =>
           reducer(state as InvalidGameState as GameState, {
             type: "Tick",
-            timestampMs: 0,
+            timestampMs: createTimestamp(1),
           }),
         ).not.toThrow();
       });
@@ -437,14 +456,14 @@ describe("Reducer - Extended Coverage", () => {
         expect(() =>
           reducer(invalidState as InvalidGameState as GameState, {
             type: "Tick",
-            timestampMs: 0,
+            timestampMs: createTimestamp(1),
           }),
         ).not.toThrow();
 
         // Should return the invalid state unchanged (defensive behavior)
         const result = reducer(invalidState as InvalidGameState as GameState, {
           type: "Tick",
-          timestampMs: 0,
+          timestampMs: createTimestamp(1),
         });
         expect(result).toBe(invalidState);
       });

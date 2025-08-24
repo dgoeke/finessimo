@@ -5,6 +5,7 @@ import {
   FinesseUIFeedback,
   Rot,
 } from "../state/types";
+import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
 import { finesseCalculator, Fault } from "./calculator";
 import { GameMode } from "../modes";
 import { dropToBottom } from "../core/board";
@@ -111,7 +112,9 @@ export class DefaultFinesseService implements FinesseService {
     const feedback: FinesseUIFeedback = {
       message: modeResult.feedback,
       isOptimal: mergedResult.isOptimal,
-      timestamp: timestampMs ?? performance.now(),
+      timestamp: asNumber(
+        timestampMs ? createTimestamp(timestampMs) : fromNow(),
+      ),
     };
 
     actions.push({

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { reducer } from "../../src/state/reducer";
 import { GameState, Board, idx } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 import { shouldCompleteLineClear } from "../../src/app";
 
 function createStateWithDelay(delayMs: number): GameState {
@@ -25,7 +26,7 @@ function boardWithBottomGaps(): Board {
 }
 
 describe("line clear with non-zero delay", () => {
-  it("HardDrop sets lineClearStartTime to 0 (falsy) and app still completes after delay", () => {
+  it("HardDrop properly sets lineClearStartTime to valid timestamp and app completes after delay", () => {
     const state = createStateWithDelay(200);
     const s1: GameState = {
       ...state,
@@ -34,7 +35,10 @@ describe("line clear with non-zero delay", () => {
       // lastGravityTime remains 0 since gravity is disabled
     };
 
-    const afterDrop = reducer(s1, { type: "HardDrop", timestampMs: 1000 });
+    const afterDrop = reducer(s1, {
+      type: "HardDrop",
+      timestampMs: createTimestamp(1000),
+    });
     expect(afterDrop.status).toBe("lineClear");
     // lineClearStartTime should be set to current timestamp
     expect(afterDrop.physics.lineClearStartTime).toBeGreaterThan(0);
