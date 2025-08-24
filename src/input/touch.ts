@@ -68,28 +68,27 @@ export class TouchInputHandler implements InputHandler {
       const dasElapsed = currentTime - this.state.dasStartTime;
 
       if (dasElapsed >= gameState.timing.dasMs) {
-        if (this.state.arrLastTime === undefined) {
+        const arrMs = Math.max(1, gameState.timing.arrMs);
+        let nextTime =
+          this.state.arrLastTime !== undefined
+            ? this.state.arrLastTime + arrMs
+            : this.state.dasStartTime + gameState.timing.dasMs;
+        let pulses = 0;
+        const MAX_PULSES_PER_UPDATE = 200;
+        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
           dispatch({
             type: "Move",
             dir: this.state.currentDirection,
             source: "das",
           });
-          this.state.arrLastTime = currentTime;
-        } else {
-          const arrElapsed = currentTime - this.state.arrLastTime;
-          if (arrElapsed >= gameState.timing.arrMs) {
-            dispatch({
-              type: "Move",
-              dir: this.state.currentDirection,
-              source: "das",
-            });
-            this.state.arrLastTime = currentTime;
-          }
+          this.state.arrLastTime = nextTime;
+          nextTime += arrMs;
+          pulses++;
         }
       }
     }
 
-    // Handle soft drop repeat (finite speeds only)
+    // Handle soft drop repeat (finite speeds only) with catch-up pulses
     if (this.state.isSoftDropDown) {
       if (gameState.timing.softDrop !== "infinite") {
         const interval = Math.max(
@@ -98,12 +97,17 @@ export class TouchInputHandler implements InputHandler {
             gameState.timing.gravityMs / Math.max(1, gameState.timing.softDrop),
           ),
         );
-        if (
-          this.state.softDropLastTime === undefined ||
-          currentTime - this.state.softDropLastTime >= interval
-        ) {
+        let nextTime =
+          this.state.softDropLastTime !== undefined
+            ? this.state.softDropLastTime + interval
+            : currentTime;
+        let pulses = 0;
+        const MAX_PULSES_PER_UPDATE = 200;
+        while (nextTime <= currentTime && pulses < MAX_PULSES_PER_UPDATE) {
           dispatch({ type: "SoftDrop", on: true });
-          this.state.softDropLastTime = currentTime;
+          this.state.softDropLastTime = nextTime;
+          nextTime += interval;
+          pulses++;
         }
       }
     }

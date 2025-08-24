@@ -166,16 +166,8 @@ export class FinessimoApp {
     this.dispatch({ type: "Tick", timestampMs: currentTime });
 
     // Handle line clear completion
-    if (
-      this.gameState.status === "lineClear" &&
-      this.gameState.physics.lineClearStartTime &&
-      this.gameState.timing.lineClearDelayMs > 0
-    ) {
-      const timeSinceStart =
-        currentTime - this.gameState.physics.lineClearStartTime;
-      if (timeSinceStart >= this.gameState.timing.lineClearDelayMs) {
-        this.dispatch({ type: "CompleteLineClear" });
-      }
+    if (shouldCompleteLineClear(this.gameState, currentTime)) {
+      this.dispatch({ type: "CompleteLineClear" });
     }
 
     // Auto-spawn piece if no active piece and game is playing
@@ -363,4 +355,16 @@ export class FinessimoApp {
 
     // Other visual settings like themes can be applied here as needed
   }
+}
+
+// Exported for testing and clarity; encapsulates when line clear should complete
+export function shouldCompleteLineClear(
+  state: GameState,
+  nowMs: number,
+): boolean {
+  if (state.status !== "lineClear") return false;
+  if (state.timing.lineClearDelayMs <= 0) return false;
+  const start = state.physics.lineClearStartTime;
+  if (start === null) return false; // not started
+  return nowMs - start >= state.timing.lineClearDelayMs;
 }
