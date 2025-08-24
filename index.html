@@ -33,28 +33,21 @@
     </header>
 
     <main class="app shell">
-      <section class="sidebar left-panel">
-        <div id="left-hold"></div>
-        <div class="panel" id="finesse-feedback-panel"></div>
+      <section class="hold-column">
+        <div id="hold-container"></div>
+        <div id="finesse-feedback-panel"></div>
+        <div class="panel" id="statistics-panel"></div>
       </section>
 
-      <section class="game-area">
-        <div class="mobile-play" id="mobile-play">
-          <div class="mobile-hold-slot" id="mobile-hold"></div>
-          <div class="mobile-board-slot">
-            <div class="board-frame">
-              <canvas id="game-canvas" width="300" height="600"></canvas>
-            </div>
-          </div>
-          <div class="mobile-preview-slot" id="mobile-preview"></div>
+      <section class="board-column">
+        <div class="board-frame">
+          <canvas id="game-canvas" width="300" height="600"></canvas>
         </div>
       </section>
 
-      <aside class="sidebar right-panel">
-        <div class="right-panel-content" id="game-info">
-          <!-- Hold and Preview displays will be added here (desktop/tablet) -->
-        </div>
-      </aside>
+      <section class="preview-column">
+        <div id="preview-container"></div>
+      </section>
     </main>
 
     <script type="module" src="/src/main.ts"></script>
