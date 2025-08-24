@@ -1,2 +1,4 @@
 echo "🛠️ Running pre-commit checks..."
 npm run pre-commit
+
+echo "🚨️ Reminder: Make sure FILES.md is up to date with a concise summary of all Typescript in the repo, but only if this change added/removed/modified Typescript files or domain areas."

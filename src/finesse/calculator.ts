@@ -10,14 +10,17 @@ export interface FinesseResult {
   faults: Fault[]; // Fault type to be defined
 }
 
+// Fault types for type safety
+export type FaultType =
+  | "extra_input"
+  | "suboptimal_path"
+  | "unnecessary_rotation"
+  | "wrong_piece"
+  | "wrong_target";
+
 // Fault types (to be expanded in later iterations)
 export interface Fault {
-  type:
-    | "extra_input"
-    | "suboptimal_path"
-    | "unnecessary_rotation"
-    | "wrong_piece"
-    | "wrong_target";
+  type: FaultType;
   description: string;
   position?: number; // Index in the player sequence where fault occurs
 }

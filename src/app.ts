@@ -183,8 +183,14 @@ export class FinessimoApp {
     // Auto-restart on top-out: treat as game over and immediately restart
     if (this.gameState.status === "topOut") {
       const { timing, gameplay, currentMode } = this.gameState;
-      // Reinitialize with existing settings and mode
-      this.dispatch({ type: "Init", timing, gameplay, mode: currentMode });
+      // Reinitialize with existing settings and mode, retaining stats across sessions
+      this.dispatch({
+        type: "Init",
+        timing,
+        gameplay,
+        mode: currentMode,
+        retainStats: true,
+      });
       this.spawnNextPiece();
       return;
     }
@@ -228,11 +234,14 @@ export class FinessimoApp {
 
     // Handle finesse analysis on piece lock for any lock source
     if (prevState.active && !newState.active) {
-      this.handlePieceLock(prevState);
+      // Extract timestamp from Lock action, if available
+      const lockTimestamp =
+        action.type === "Lock" ? action.timestampMs : undefined;
+      this.handlePieceLock(prevState, lockTimestamp);
     }
   }
 
-  private handlePieceLock(prevState: GameState): void {
+  private handlePieceLock(prevState: GameState, timestampMs?: number): void {
     if (!prevState.active) return;
 
     const currentMode = gameModeRegistry.get(prevState.currentMode);
@@ -242,6 +251,7 @@ export class FinessimoApp {
       prevState,
       prevState.active,
       currentMode,
+      timestampMs,
     );
 
     for (const action of finesseActions) {
@@ -260,7 +270,7 @@ export class FinessimoApp {
     // This is a simple test method - in a real implementation,
     // input would come from the keyboard/touch handlers
     if (action === "lock") {
-      this.dispatch({ type: "Lock" });
+      this.dispatch({ type: "Lock", timestampMs: performance.now() });
     }
   }
 

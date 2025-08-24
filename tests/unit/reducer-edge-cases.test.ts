@@ -36,7 +36,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should return unchanged state for HardDrop action without active piece", () => {
-      const action: Action = { type: "HardDrop" };
+      const action: Action = { type: "HardDrop", timestampMs: 1000 };
       const result = reducer(validState, action);
       expect(result).toBe(validState);
     });
@@ -183,7 +183,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { type: "HardDrop" };
+      const action: Action = { type: "HardDrop", timestampMs: 1000 };
       const result = reducer(almostCompleteState, action);
 
       expect(result.active).toBeUndefined(); // Piece should be locked
@@ -198,7 +198,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         tick: undefined, // Invalid tick
       };
 
-      const action: Action = { type: "Lock" };
+      const action: Action = { type: "Lock", timestampMs: Date.now() };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
     });

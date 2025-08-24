@@ -82,17 +82,27 @@ describe("Reducer", () => {
         ],
       };
 
-      const newState = reducer(stateWithActivePiece, { type: "Lock" });
+      const newState = reducer(stateWithActivePiece, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(newState.active).toBeUndefined();
       expect(newState.canHold).toBe(true);
-      expect(newState.inputLog).toEqual([]);
+      expect(newState.inputLog).toEqual(stateWithActivePiece.inputLog); // inputLog is preserved until ClearInputLog action
       expect(newState.tick).toBe(stateWithActivePiece.tick + 1);
     });
 
     it("should not mutate the original state", () => {
-      const originalState = { ...initialState, tick: 5 };
-      const newState = reducer(originalState, { type: "Lock" });
+      const originalState = {
+        ...initialState,
+        tick: 5,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      const newState = reducer(originalState, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(originalState.tick).toBe(5);
       expect(newState.tick).toBe(6);
@@ -107,7 +117,10 @@ describe("Reducer", () => {
         status: "playing",
       };
 
-      const newState = reducer(stateWithData, { type: "Lock" });
+      const newState = reducer(stateWithData, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(newState.hold).toBe("I");
       expect(newState.nextQueue).toEqual(["T", "S", "Z"]);
@@ -243,7 +256,11 @@ describe("Reducer", () => {
       const originalCells = new Uint8Array(initialState.board.cells);
 
       // Try various actions that might mutate state
-      reducer(initialState, { type: "Lock" });
+      const stateWithActive = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      reducer(stateWithActive, { type: "Lock", timestampMs: Date.now() });
       reducer(initialState, { type: "Tick", timestampMs: 0 });
       reducer(initialState, {
         type: "EnqueueInput",
@@ -255,10 +272,17 @@ describe("Reducer", () => {
 
     it("should create new state objects for state changes", () => {
       const newState1 = reducer(initialState, { type: "Tick", timestampMs: 0 });
-      const newState2 = reducer(newState1, { type: "Lock" });
+      const stateWithActive = {
+        ...newState1,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      const newState2 = reducer(stateWithActive, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(newState1).not.toBe(initialState);
-      expect(newState2).not.toBe(newState1);
+      expect(newState2).not.toBe(stateWithActive);
       expect(newState2).not.toBe(initialState);
     });
   });

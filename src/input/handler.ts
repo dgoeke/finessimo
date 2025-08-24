@@ -246,7 +246,7 @@ export class MockInputHandler implements InputHandler {
         this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
       case "HardDrop":
-        this.dispatch({ type: "HardDrop" });
+        this.dispatch({ type: "HardDrop", timestampMs: event.tMs });
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
@@ -478,7 +478,7 @@ export class DOMInputHandler implements InputHandler {
         this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
       case "HardDrop":
-        this.dispatch({ type: "HardDrop" });
+        this.dispatch({ type: "HardDrop", timestampMs: inputEvent.tMs });
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });

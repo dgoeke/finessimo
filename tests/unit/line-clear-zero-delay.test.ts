@@ -106,6 +106,7 @@ describe("line clear with zero delay", () => {
 
     const newState = reducer(stateWithBoard, {
       type: "HardDrop",
+      timestampMs: 1000,
     });
 
     // Lines should be cleared immediately
