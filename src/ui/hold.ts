@@ -51,9 +51,7 @@ export class BasicHoldRenderer implements HoldRenderer {
       </div>
     `;
 
-    const canvas = holdSection.querySelector(
-      ".hold-canvas",
-    ) as HTMLCanvasElement;
+    const canvas = holdSection.querySelector<HTMLCanvasElement>(".hold-canvas");
     if (!canvas) {
       throw new Error("Failed to create hold canvas");
     }

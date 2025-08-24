@@ -23,7 +23,7 @@ describe("FinesseService", () => {
     state = { ...state, inputLog: events, gameplay: { finesseCancelMs: 50 } };
 
     // locked piece at spawn; final target is same column/rot, so optimal is HardDrop only
-    const topLeft = PIECES["T"].spawnTopLeft;
+    const topLeft = PIECES.T.spawnTopLeft;
     const locked: ActivePiece = {
       id: "T",
       rot: "spawn",

@@ -302,9 +302,10 @@ describe("SRS Rotation Logic", () => {
       };
       const originalKickTable = (global as GlobalWithKickTable).getKickTable;
       jest.doMock("../../src/core/srs", () => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const actual = jest.requireActual("../../src/core/srs");
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        const actual =
+          jest.requireActual<typeof import("../../src/core/srs")>(
+            "../../src/core/srs",
+          );
         return {
           ...actual,
           getKickTable: (): Record<string, unknown> => ({}), // Return empty kick table

@@ -7,7 +7,7 @@ export function assertDefined<T>(
   message?: string,
 ): asserts value is T {
   if (value === undefined || value === null) {
-    throw new Error(message || "Expected value to be defined");
+    throw new Error(message ?? "Expected value to be defined");
   }
 }
 
@@ -17,7 +17,7 @@ export function assertActivePiece(
   message?: string,
 ): asserts state is GameState & { active: ActivePiece } {
   if (!state.active) {
-    throw new Error(message || "Expected state to have an active piece");
+    throw new Error(message ?? "Expected state to have an active piece");
   }
 }
 
@@ -27,7 +27,7 @@ export function assertHasPiece(
   message?: string,
 ): asserts state is GameState & { hold: PieceId } {
   if (!state.hold) {
-    throw new Error(message || "Expected state to have a held piece");
+    throw new Error(message ?? "Expected state to have a held piece");
   }
 }
 
@@ -37,11 +37,11 @@ export function assertValidBag(
   message?: string,
 ): asserts rng is SevenBagRng & { currentBag: PieceId[] } {
   if (!rng.currentBag || rng.currentBag.length === 0) {
-    throw new Error(message || "Expected RNG to have a valid bag");
+    throw new Error(message ?? "Expected RNG to have a valid bag");
   }
   for (const piece of rng.currentBag) {
     if (!piece || !["I", "O", "T", "S", "Z", "J", "L"].includes(piece)) {
-      throw new Error(message || `Invalid piece in bag: ${piece}`);
+      throw new Error(message ?? `Invalid piece in bag: ${piece}`);
     }
   }
 }
@@ -94,7 +94,7 @@ export function assertArrayLength<T>(
 ): asserts arr is T[] {
   if (!arr || arr.length < minLength) {
     throw new Error(
-      message ||
+      message ??
         `Expected array to have at least ${minLength} elements, got ${arr?.length ?? 0}`,
     );
   }
@@ -117,6 +117,6 @@ export function assertType<T>(
   message?: string,
 ): asserts value is T {
   if (!validator(value)) {
-    throw new Error(message || "Value does not match expected type");
+    throw new Error(message ?? "Value does not match expected type");
   }
 }

@@ -72,7 +72,7 @@ function createInitialState(
   gameplay?: Partial<GameplayConfig>,
   mode?: string,
 ): GameState {
-  const rng = createRng(seed || "default");
+  const rng = createRng(seed ?? "default");
   const { pieces: initialQueue, newRng } = getNextPieces(rng, 5); // Generate 5-piece preview
 
   return {
@@ -97,7 +97,7 @@ function createInitialState(
     },
     physics: createInitialPhysics(),
     inputLog: [],
-    currentMode: mode || "freePlay",
+    currentMode: mode ?? "freePlay",
     modeData: null,
     finesseFeedback: null,
     modePrompt: null,
@@ -466,7 +466,7 @@ export const reducer: (
         const softDroppedPiece = tryMove(state.board, state.active, 0, 1);
         return {
           ...state,
-          active: softDroppedPiece || state.active,
+          active: softDroppedPiece ?? state.active,
           physics: {
             ...state.physics,
             isSoftDropping: true,

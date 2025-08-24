@@ -51,9 +51,7 @@ export class BasicPreviewRenderer implements PreviewRenderer {
 
         // Update label text based on desired count
         const previewSlot = canvas.parentElement;
-        const label = previewSlot?.querySelector(
-          ".preview-label",
-        ) as HTMLElement;
+        const label = previewSlot?.querySelector(".preview-label");
         if (label) {
           if (this.desiredCount === 1) {
             // Hide label when only one preview piece

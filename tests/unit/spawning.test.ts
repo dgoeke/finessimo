@@ -120,7 +120,7 @@ describe("spawning", () => {
       // This would be very rare in normal Tetris, but can test the logic
       // We'll block the exact cells where the piece would be at spawn
       const testPiece = createActivePiece("T");
-      const cells = PIECES["T"].cells["spawn"];
+      const cells = PIECES.T.cells.spawn;
 
       // Block one of the spawn cells that's within the visible board
       // Actually, since pieces spawn above board, let's test with modified spawn position

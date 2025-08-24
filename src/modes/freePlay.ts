@@ -38,7 +38,7 @@ export class FreePlayMode implements GameMode {
       };
     }
 
-    const optimalLength = optimalSequences[0]?.length || 0;
+    const optimalLength = optimalSequences[0]?.length ?? 0;
     const extraInputs = playerSequence.length - optimalLength;
 
     let feedback = `✗ Non-optimal finesse. Used ${playerSequence.length} inputs, optimal was ${optimalLength}.`;

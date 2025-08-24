@@ -251,7 +251,7 @@ describe("DOMInputHandler", () => {
       mockKeyDownHandler(leftDownEvent);
 
       mockDispatch.mockClear();
-      const press = handler.getState().dasStartTime as number;
+      const press = handler.getState().dasStartTime!;
       handler.update(gameState, press + gameState.timing.dasMs - 1);
 
       expect(mockDispatch).not.toHaveBeenCalledWith({
@@ -266,7 +266,7 @@ describe("DOMInputHandler", () => {
       mockKeyDownHandler(leftDownEvent);
 
       mockDispatch.mockClear();
-      const press = handler.getState().dasStartTime as number;
+      const press = handler.getState().dasStartTime!;
       handler.update(gameState, press + gameState.timing.dasMs + 1);
 
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -282,13 +282,13 @@ describe("DOMInputHandler", () => {
 
       mockDispatch.mockClear();
       // Trigger initial DAS
-      const press = handler.getState().dasStartTime as number;
+      const press = handler.getState().dasStartTime!;
       handler.update(gameState, press + gameState.timing.dasMs + 1);
 
       mockDispatch.mockClear();
 
       // Trigger ARR
-      const arrStart = handler.getState().arrLastTime as number;
+      const arrStart = handler.getState().arrLastTime!;
       handler.update(gameState, arrStart + gameState.timing.arrMs);
       const afterArr = arrStart + gameState.timing.arrMs + 1;
       handler.update(gameState, afterArr);

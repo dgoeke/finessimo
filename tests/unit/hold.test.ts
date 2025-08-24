@@ -198,12 +198,12 @@ describe("hold system", () => {
         // More iterations to ensure coverage
         if (state.active) {
           const piece = state.active.id;
-          pieceCounts.set(piece, (pieceCounts.get(piece) || 0) + 1);
+          pieceCounts.set(piece, (pieceCounts.get(piece) ?? 0) + 1);
         }
 
         // Also count pieces in queue
         for (const queuePiece of state.nextQueue) {
-          pieceCounts.set(queuePiece, (pieceCounts.get(queuePiece) || 0) + 1);
+          pieceCounts.set(queuePiece, (pieceCounts.get(queuePiece) ?? 0) + 1);
         }
 
         state = reducer(state, { type: "Hold" });
@@ -213,7 +213,7 @@ describe("hold system", () => {
       // With 20 iterations and queue tracking, all pieces should appear
       const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
       for (const piece of pieceTypes) {
-        expect(pieceCounts.get(piece) || 0).toBeGreaterThanOrEqual(1);
+        expect(pieceCounts.get(piece) ?? 0).toBeGreaterThanOrEqual(1);
       }
 
       // Total pieces should be reasonable (not all the same piece)

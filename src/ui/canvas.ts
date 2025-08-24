@@ -201,7 +201,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
       "#0000f0", // 6 - J
       "#f0a000", // 7 - L
     ];
-    return colors[cellValue] || "#ffffff";
+    return colors[cellValue] ?? "#ffffff";
   }
 
   destroy(): void {

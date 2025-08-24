@@ -186,7 +186,7 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
         for (let x = 0; x < board.width; x++) {
           const sourceIndex = idx(x, y);
           const targetIndex = idx(x, targetY);
-          newCells[targetIndex] = board.cells[sourceIndex] || 0;
+          newCells[targetIndex] = board.cells[sourceIndex] ?? 0;
         }
       }
       targetY--;
