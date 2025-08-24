@@ -1,52 +1,55 @@
-import { Action, KeyAction, InputEvent, GameState } from '../state/types';
+import { Action, KeyAction, InputEvent, GameState } from "../state/types";
 
 // Public type for configurable key bindings
 export type BindableAction =
-  | 'MoveLeft'
-  | 'MoveRight'
-  | 'SoftDrop'
-  | 'HardDrop'
-  | 'RotateCW'
-  | 'RotateCCW'
-  | 'Hold';
+  | "MoveLeft"
+  | "MoveRight"
+  | "SoftDrop"
+  | "HardDrop"
+  | "RotateCW"
+  | "RotateCCW"
+  | "Hold";
 
 export type KeyBindings = Record<BindableAction, string[]>; // KeyboardEvent.code values
 
 export function defaultKeyBindings(): KeyBindings {
   return {
-    MoveLeft: ['ArrowLeft', 'KeyA'],
-    MoveRight: ['ArrowRight', 'KeyD'],
-    SoftDrop: ['ArrowDown', 'KeyS'],
-    HardDrop: ['Space'],
-    RotateCW: ['ArrowUp', 'KeyW', 'KeyX'],
-    RotateCCW: ['KeyZ'],
-    Hold: ['KeyC']
+    MoveLeft: ["ArrowLeft", "KeyA"],
+    MoveRight: ["ArrowRight", "KeyD"],
+    SoftDrop: ["ArrowDown", "KeyS"],
+    HardDrop: ["Space"],
+    RotateCW: ["ArrowUp", "KeyW", "KeyX"],
+    RotateCCW: ["KeyZ"],
+    Hold: ["KeyC"],
   };
 }
 
-const STORAGE_KEY = 'finessimo';
-const LEGACY_BINDINGS_KEY = 'finessimo-keybindings';
+const STORAGE_KEY = "finessimo";
+const LEGACY_BINDINGS_KEY = "finessimo-keybindings";
 
 const BINDABLE_ACTIONS: readonly BindableAction[] = [
-  'MoveLeft',
-  'MoveRight',
-  'SoftDrop',
-  'HardDrop',
-  'RotateCW',
-  'RotateCCW',
-  'Hold'
+  "MoveLeft",
+  "MoveRight",
+  "SoftDrop",
+  "HardDrop",
+  "RotateCW",
+  "RotateCCW",
+  "Hold",
 ];
 
 function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null;
+  return typeof x === "object" && x !== null;
 }
 
-function hasKey<K extends string>(o: Record<string, unknown>, k: K): o is Record<K, unknown> {
+function hasKey<K extends string>(
+  o: Record<string, unknown>,
+  k: K,
+): o is Record<K, unknown> {
   return k in o;
 }
 
 function isStringArray(a: unknown): a is string[] {
-  return Array.isArray(a) && a.every((s) => typeof s === 'string');
+  return Array.isArray(a) && a.every((s) => typeof s === "string");
 }
 
 function coerceKeyBindings(maybe: unknown): KeyBindings {
@@ -61,10 +64,20 @@ function coerceKeyBindings(maybe: unknown): KeyBindings {
 }
 
 // Input normalization utility
-export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: number): KeyAction[] {
+export function normalizeInputSequence(
+  events: InputEvent[],
+  cancelWindowMs: number,
+): KeyAction[] {
   // Filter to only keep relevant events
-  const relevantEvents = events.filter(event => 
-    ['LeftDown', 'RightDown', 'RotateCW', 'RotateCCW', 'Hold', 'HardDrop'].includes(event.action)
+  const relevantEvents = events.filter((event) =>
+    [
+      "LeftDown",
+      "RightDown",
+      "RotateCW",
+      "RotateCCW",
+      "Hold",
+      "HardDrop",
+    ].includes(event.action),
   );
 
   // Sort by timestamp to ensure proper order
@@ -79,20 +92,22 @@ export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: num
 
     const current = sortedEvents[i];
     if (!current) continue;
-    
+
     for (let j = i + 1; j < sortedEvents.length; j++) {
       if (toRemove.has(j)) continue;
 
       const next = sortedEvents[j];
       if (!next) continue;
-      
+
       const timeDiff = next.tMs - current.tMs;
 
       if (timeDiff > cancelWindowMs) break; // Too far apart
 
       // Check for opposite directional inputs
-      if ((current.action === 'LeftDown' && next.action === 'RightDown') ||
-          (current.action === 'RightDown' && next.action === 'LeftDown')) {
+      if (
+        (current.action === "LeftDown" && next.action === "RightDown") ||
+        (current.action === "RightDown" && next.action === "LeftDown")
+      ) {
         toRemove.add(i);
         toRemove.add(j);
         break;
@@ -117,16 +132,16 @@ export function normalizeInputSequence(events: InputEvent[], cancelWindowMs: num
 export interface InputHandler {
   // Initialize the handler with a dispatch function
   init(dispatch: (action: Action) => void): void;
-  
+
   // Start listening for input events
   start(): void;
-  
+
   // Stop listening for input events
   stop(): void;
-  
+
   // Update handler state based on current game state (for DAS/ARR timing)
   update(gameState: GameState, nowMs: number): void;
-  
+
   // Get current internal state for debugging
   getState(): InputHandlerState;
 
@@ -156,7 +171,7 @@ export class MockInputHandler implements InputHandler {
     dasStartTime: undefined,
     arrLastTime: undefined,
     currentDirection: undefined,
-    softDropLastTime: undefined
+    softDropLastTime: undefined,
   };
   private frameCounter = 0;
 
@@ -173,7 +188,8 @@ export class MockInputHandler implements InputHandler {
   }
 
   update(_gameState: GameState, _nowMs: number): void {
-    void _gameState; void _nowMs;
+    void _gameState;
+    void _nowMs;
     // This would normally handle DAS/ARR timing
     // For the mock, we just increment the frame counter
     this.frameCounter++;
@@ -194,22 +210,22 @@ export class MockInputHandler implements InputHandler {
   // Mock method to simulate input events for testing
   simulateInput(action: KeyAction): void {
     if (!this.dispatch) {
-      console.error('MockInputHandler: dispatch not initialized');
+      console.error("MockInputHandler: dispatch not initialized");
       return;
     }
 
     const event: InputEvent = {
       tMs: Date.now(),
       frame: this.frameCounter,
-      action
+      action,
     };
 
     // MockInputHandler dispatching input
-    
+
     // Enqueue the input event
     this.dispatch({
-      type: 'EnqueueInput',
-      event
+      type: "EnqueueInput",
+      event,
     });
 
     // Update internal state based on the action
@@ -217,63 +233,63 @@ export class MockInputHandler implements InputHandler {
 
     // For certain actions, dispatch corresponding game actions
     switch (action) {
-      case 'LeftDown':
-        this.dispatch({ type: 'Move', dir: -1, source: 'tap' });
+      case "LeftDown":
+        this.dispatch({ type: "Move", dir: -1, source: "tap" });
         break;
-      case 'RightDown':
-        this.dispatch({ type: 'Move', dir: 1, source: 'tap' });
+      case "RightDown":
+        this.dispatch({ type: "Move", dir: 1, source: "tap" });
         break;
-      case 'RotateCW':
-        this.dispatch({ type: 'Rotate', dir: 'CW' });
+      case "RotateCW":
+        this.dispatch({ type: "Rotate", dir: "CW" });
         break;
-      case 'RotateCCW':
-        this.dispatch({ type: 'Rotate', dir: 'CCW' });
+      case "RotateCCW":
+        this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
-      case 'HardDrop':
-        this.dispatch({ type: 'HardDrop' });
+      case "HardDrop":
+        this.dispatch({ type: "HardDrop" });
         break;
-      case 'Hold':
-        this.dispatch({ type: 'Hold' });
+      case "Hold":
+        this.dispatch({ type: "Hold" });
         break;
-      case 'SoftDropDown':
-        this.dispatch({ type: 'SoftDrop', on: true });
+      case "SoftDropDown":
+        this.dispatch({ type: "SoftDrop", on: true });
         break;
-      case 'SoftDropUp':
-        this.dispatch({ type: 'SoftDrop', on: false });
+      case "SoftDropUp":
+        this.dispatch({ type: "SoftDrop", on: false });
         break;
     }
   }
 
   private updateInternalState(action: KeyAction): void {
     switch (action) {
-      case 'LeftDown':
+      case "LeftDown":
         this.state.isLeftKeyDown = true;
         this.state.currentDirection = -1;
-        this.state.dasStartTime = Date.now();
+        this.state.dasStartTime = performance.now();
         break;
-      case 'LeftUp':
+      case "LeftUp":
         this.state.isLeftKeyDown = false;
         if (this.state.currentDirection === -1) {
           this.state.currentDirection = undefined;
           this.state.dasStartTime = undefined;
         }
         break;
-      case 'RightDown':
+      case "RightDown":
         this.state.isRightKeyDown = true;
         this.state.currentDirection = 1;
-        this.state.dasStartTime = Date.now();
+        this.state.dasStartTime = performance.now();
         break;
-      case 'RightUp':
+      case "RightUp":
         this.state.isRightKeyDown = false;
         if (this.state.currentDirection === 1) {
           this.state.currentDirection = undefined;
           this.state.dasStartTime = undefined;
         }
         break;
-      case 'SoftDropDown':
+      case "SoftDropDown":
         this.state.isSoftDropDown = true;
         break;
-      case 'SoftDropUp':
+      case "SoftDropUp":
         this.state.isSoftDropDown = false;
         break;
     }
@@ -290,7 +306,7 @@ export class DOMInputHandler implements InputHandler {
     dasStartTime: undefined,
     arrLastTime: undefined,
     currentDirection: undefined,
-    softDropLastTime: undefined
+    softDropLastTime: undefined,
   };
   private frameCounter = 0;
   private boundKeyDownHandler: (event: KeyboardEvent) => void;
@@ -308,13 +324,13 @@ export class DOMInputHandler implements InputHandler {
   }
 
   start(): void {
-    document.addEventListener('keydown', this.boundKeyDownHandler);
-    document.addEventListener('keyup', this.boundKeyUpHandler);
+    document.addEventListener("keydown", this.boundKeyDownHandler);
+    document.addEventListener("keyup", this.boundKeyUpHandler);
   }
 
   stop(): void {
-    document.removeEventListener('keydown', this.boundKeyDownHandler);
-    document.removeEventListener('keyup', this.boundKeyUpHandler);
+    document.removeEventListener("keydown", this.boundKeyDownHandler);
+    document.removeEventListener("keyup", this.boundKeyUpHandler);
   }
 
   update(gameState: GameState, nowMs: number): void {
@@ -324,35 +340,54 @@ export class DOMInputHandler implements InputHandler {
     const currentTime = nowMs;
 
     // Handle DAS/ARR timing
-    if (this.state.currentDirection !== undefined && this.state.dasStartTime !== undefined) {
+    if (
+      this.state.currentDirection !== undefined &&
+      this.state.dasStartTime !== undefined
+    ) {
       const dasElapsed = currentTime - this.state.dasStartTime;
-      
+
       if (dasElapsed >= gameState.timing.dasMs) {
         // DAS threshold reached, check for ARR
         if (this.state.arrLastTime === undefined) {
           // First DAS trigger
-          dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+          dispatch({
+            type: "Move",
+            dir: this.state.currentDirection,
+            source: "das",
+          });
           this.state.arrLastTime = currentTime;
         } else {
           // Check ARR timing
           const arrElapsed = currentTime - this.state.arrLastTime;
           if (arrElapsed >= gameState.timing.arrMs) {
-            dispatch({ type: 'Move', dir: this.state.currentDirection, source: 'das' });
+            dispatch({
+              type: "Move",
+              dir: this.state.currentDirection,
+              source: "das",
+            });
             this.state.arrLastTime = currentTime;
           }
         }
       }
     }
 
-    // Handle soft drop repeat independent of gravity
+    // Handle soft drop repeat independent of gravity (finite speeds only)
     if (this.state.isSoftDropDown) {
-      const interval = Math.max(1, Math.floor(1000 / Math.max(1, gameState.timing.softDropCps)));
-      if (
-        this.state.softDropLastTime === undefined ||
-        currentTime - this.state.softDropLastTime >= interval
-      ) {
-        dispatch({ type: 'SoftDrop', on: true });
-        this.state.softDropLastTime = currentTime;
+      // If infinite soft drop is active, do not repeat; the reducer teleports on key press
+      if (gameState.timing.softDrop !== "infinite") {
+        const interval = Math.max(
+          1,
+          Math.floor(
+            gameState.timing.gravityMs / Math.max(1, gameState.timing.softDrop),
+          ),
+        );
+        if (
+          this.state.softDropLastTime === undefined ||
+          currentTime - this.state.softDropLastTime >= interval
+        ) {
+          dispatch({ type: "SoftDrop", on: true });
+          this.state.softDropLastTime = currentTime;
+        }
       }
     }
   }
@@ -370,7 +405,7 @@ export class DOMInputHandler implements InputHandler {
       HardDrop: [...bindings.HardDrop],
       RotateCW: [...bindings.RotateCW],
       RotateCCW: [...bindings.RotateCCW],
-      Hold: [...bindings.Hold]
+      Hold: [...bindings.Hold],
     };
     this.bindings = cloned;
     try {
@@ -378,7 +413,10 @@ export class DOMInputHandler implements InputHandler {
       const storeRaw = localStorage.getItem(STORAGE_KEY);
       const parsed: unknown = storeRaw ? JSON.parse(storeRaw) : {};
       const base: Record<string, unknown> = isRecord(parsed) ? parsed : {};
-      const newStore: Record<string, unknown> = { ...base, keyBindings: this.bindings };
+      const newStore: Record<string, unknown> = {
+        ...base,
+        keyBindings: this.bindings,
+      };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newStore));
     } catch (e) {
       // ignore storage errors
@@ -393,7 +431,7 @@ export class DOMInputHandler implements InputHandler {
       HardDrop: [...this.bindings.HardDrop],
       RotateCW: [...this.bindings.RotateCW],
       RotateCCW: [...this.bindings.RotateCCW],
-      Hold: [...this.bindings.Hold]
+      Hold: [...this.bindings.Hold],
     };
   }
 
@@ -401,9 +439,9 @@ export class DOMInputHandler implements InputHandler {
     if (!this.dispatch) return;
 
     // Ignore inputs when settings overlay is open to allow rebinding
-    if (document.body.classList.contains('settings-open')) return;
+    if (document.body.classList.contains("settings-open")) return;
 
-    const action = this.mapKeyToAction(event.code, 'down');
+    const action = this.mapKeyToAction(event.code, "down");
     if (!action) return;
 
     event.preventDefault();
@@ -414,34 +452,34 @@ export class DOMInputHandler implements InputHandler {
     const inputEvent: InputEvent = {
       tMs: Date.now(),
       frame: this.frameCounter,
-      action
+      action,
     };
 
-    this.dispatch({ type: 'EnqueueInput', event: inputEvent });
+    this.dispatch({ type: "EnqueueInput", event: inputEvent });
     this.updateInternalState(action);
 
     // Dispatch immediate game actions for certain inputs
     switch (action) {
-      case 'LeftDown':
-        this.dispatch({ type: 'Move', dir: -1, source: 'tap' });
+      case "LeftDown":
+        this.dispatch({ type: "Move", dir: -1, source: "tap" });
         break;
-      case 'RightDown':
-        this.dispatch({ type: 'Move', dir: 1, source: 'tap' });
+      case "RightDown":
+        this.dispatch({ type: "Move", dir: 1, source: "tap" });
         break;
-      case 'RotateCW':
-        this.dispatch({ type: 'Rotate', dir: 'CW' });
+      case "RotateCW":
+        this.dispatch({ type: "Rotate", dir: "CW" });
         break;
-      case 'RotateCCW':
-        this.dispatch({ type: 'Rotate', dir: 'CCW' });
+      case "RotateCCW":
+        this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
-      case 'HardDrop':
-        this.dispatch({ type: 'HardDrop' });
+      case "HardDrop":
+        this.dispatch({ type: "HardDrop" });
         break;
-      case 'Hold':
-        this.dispatch({ type: 'Hold' });
+      case "Hold":
+        this.dispatch({ type: "Hold" });
         break;
-      case 'SoftDropDown':
-        this.dispatch({ type: 'SoftDrop', on: true });
+      case "SoftDropDown":
+        this.dispatch({ type: "SoftDrop", on: true });
         break;
     }
   }
@@ -450,9 +488,9 @@ export class DOMInputHandler implements InputHandler {
     if (!this.dispatch) return;
 
     // Ignore inputs when settings overlay is open to allow rebinding
-    if (document.body.classList.contains('settings-open')) return;
+    if (document.body.classList.contains("settings-open")) return;
 
-    const action = this.mapKeyToAction(event.code, 'up');
+    const action = this.mapKeyToAction(event.code, "up");
     if (!action) return;
 
     event.preventDefault();
@@ -460,40 +498,40 @@ export class DOMInputHandler implements InputHandler {
     const inputEvent: InputEvent = {
       tMs: Date.now(),
       frame: this.frameCounter,
-      action
+      action,
     };
 
-    this.dispatch({ type: 'EnqueueInput', event: inputEvent });
+    this.dispatch({ type: "EnqueueInput", event: inputEvent });
     this.updateInternalState(action);
 
     // Handle soft drop release
-    if (action === 'SoftDropUp') {
-      this.dispatch({ type: 'SoftDrop', on: false });
+    if (action === "SoftDropUp") {
+      this.dispatch({ type: "SoftDrop", on: false });
     }
   }
 
-  private mapKeyToAction(code: string, type: 'down' | 'up'): KeyAction | null {
+  private mapKeyToAction(code: string, type: "down" | "up"): KeyAction | null {
     const b = this.bindings;
 
     // Determine which binding group this code belongs to
     const inList = (list: string[]): boolean => list.includes(code);
 
     // On keyup, we only emit for continuous actions (move and soft drop)
-    if (type === 'up') {
-      if (inList(b.MoveLeft)) return 'LeftUp';
-      if (inList(b.MoveRight)) return 'RightUp';
-      if (inList(b.SoftDrop)) return 'SoftDropUp';
+    if (type === "up") {
+      if (inList(b.MoveLeft)) return "LeftUp";
+      if (inList(b.MoveRight)) return "RightUp";
+      if (inList(b.SoftDrop)) return "SoftDropUp";
       return null;
     }
 
     // keydown
-    if (inList(b.MoveLeft)) return 'LeftDown';
-    if (inList(b.MoveRight)) return 'RightDown';
-    if (inList(b.SoftDrop)) return 'SoftDropDown';
-    if (inList(b.RotateCW)) return 'RotateCW';
-    if (inList(b.RotateCCW)) return 'RotateCCW';
-    if (inList(b.HardDrop)) return 'HardDrop';
-    if (inList(b.Hold)) return 'Hold';
+    if (inList(b.MoveLeft)) return "LeftDown";
+    if (inList(b.MoveRight)) return "RightDown";
+    if (inList(b.SoftDrop)) return "SoftDropDown";
+    if (inList(b.RotateCW)) return "RotateCW";
+    if (inList(b.RotateCCW)) return "RotateCCW";
+    if (inList(b.HardDrop)) return "HardDrop";
+    if (inList(b.Hold)) return "Hold";
     return null;
   }
 
@@ -503,7 +541,7 @@ export class DOMInputHandler implements InputHandler {
       const storeRaw = localStorage.getItem(STORAGE_KEY);
       if (storeRaw) {
         const store: unknown = JSON.parse(storeRaw);
-        if (isRecord(store) && hasKey(store, 'keyBindings')) {
+        if (isRecord(store) && hasKey(store, "keyBindings")) {
           return coerceKeyBindings(store.keyBindings);
         }
       }
@@ -528,19 +566,22 @@ export class DOMInputHandler implements InputHandler {
   }
 
   private updateInternalState(action: KeyAction): void {
-    const currentTime = Date.now();
+    // Use the same timebase as update(nowMs): performance.now()
+    const currentTime = performance.now();
 
     switch (action) {
-      case 'LeftDown':
+      case "LeftDown":
         this.state.isLeftKeyDown = true;
         this.state.currentDirection = -1;
         this.state.dasStartTime = currentTime;
         this.state.arrLastTime = undefined;
         break;
-      case 'LeftUp':
+      case "LeftUp":
         this.state.isLeftKeyDown = false;
         if (this.state.currentDirection === -1) {
-          this.state.currentDirection = this.state.isRightKeyDown ? 1 : undefined;
+          this.state.currentDirection = this.state.isRightKeyDown
+            ? 1
+            : undefined;
           if (this.state.currentDirection === 1) {
             this.state.dasStartTime = currentTime;
           } else {
@@ -549,16 +590,18 @@ export class DOMInputHandler implements InputHandler {
           this.state.arrLastTime = undefined;
         }
         break;
-      case 'RightDown':
+      case "RightDown":
         this.state.isRightKeyDown = true;
         this.state.currentDirection = 1;
         this.state.dasStartTime = currentTime;
         this.state.arrLastTime = undefined;
         break;
-      case 'RightUp':
+      case "RightUp":
         this.state.isRightKeyDown = false;
         if (this.state.currentDirection === 1) {
-          this.state.currentDirection = this.state.isLeftKeyDown ? -1 : undefined;
+          this.state.currentDirection = this.state.isLeftKeyDown
+            ? -1
+            : undefined;
           if (this.state.currentDirection === -1) {
             this.state.dasStartTime = currentTime;
           } else {
@@ -567,12 +610,12 @@ export class DOMInputHandler implements InputHandler {
           this.state.arrLastTime = undefined;
         }
         break;
-      case 'SoftDropDown':
+      case "SoftDropDown":
         this.state.isSoftDropDown = true;
         // immediate pulse happens on keydown via dispatch; set timing for repeats
         this.state.softDropLastTime = currentTime;
         break;
-      case 'SoftDropUp':
+      case "SoftDropUp":
         this.state.isSoftDropDown = false;
         this.state.softDropLastTime = undefined;
         break;

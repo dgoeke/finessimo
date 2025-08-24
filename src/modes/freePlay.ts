@@ -1,10 +1,16 @@
-import { GameState, ActivePiece, Rot, PieceId, ModeGuidance } from '../state/types';
-import { FinesseResult } from '../finesse/calculator';
-import { GameMode, GameModeResult } from './index';
+import {
+  GameState,
+  ActivePiece,
+  Rot,
+  PieceId,
+  ModeGuidance,
+} from "../state/types";
+import { FinesseResult } from "../finesse/calculator";
+import { GameMode, GameModeResult } from "./index";
 
 export class FreePlayMode implements GameMode {
-  readonly name = 'freePlay';
-  
+  readonly name = "freePlay";
+
   onBeforeSpawn(_state: GameState): { piece?: PieceId } | null {
     void _state;
     return null; // no override
@@ -14,55 +20,67 @@ export class FreePlayMode implements GameMode {
     void _state;
     return null; // no special guidance
   }
-  
+
   onPieceLocked(
-    _gameState: GameState, 
+    _gameState: GameState,
     finesseResult: FinesseResult,
     _lockedPiece: ActivePiece,
-    _finalPosition: ActivePiece
+    _finalPosition: ActivePiece,
   ): GameModeResult {
-    void _lockedPiece; void _finalPosition;
-    const { isOptimal, playerSequence, optimalSequences, faults } = finesseResult;
-    
+    void _lockedPiece;
+    void _finalPosition;
+    const { isOptimal, playerSequence, optimalSequences, faults } =
+      finesseResult;
+
     if (isOptimal) {
       return {
-        feedback: `✓ Optimal finesse! Used ${playerSequence.length} inputs.`
+        feedback: `✓ Optimal finesse! Used ${playerSequence.length} inputs.`,
       };
     }
-    
+
     const optimalLength = optimalSequences[0]?.length || 0;
     const extraInputs = playerSequence.length - optimalLength;
-    
+
     let feedback = `✗ Non-optimal finesse. Used ${playerSequence.length} inputs, optimal was ${optimalLength}.`;
-    
+
     if (extraInputs > 0) {
-      feedback += ` ${extraInputs} extra input${extraInputs > 1 ? 's' : ''}.`;
+      feedback += ` ${extraInputs} extra input${extraInputs > 1 ? "s" : ""}.`;
     }
-    
+
     if (faults.length > 0) {
-      const faultDescriptions = faults.map(f => f.description).join(', ');
+      const faultDescriptions = faults.map((f) => f.description).join(", ");
       feedback += ` Issues: ${faultDescriptions}`;
     }
-    
+
     return { feedback };
   }
-  
+
   shouldPromptNext(_gameState: GameState): boolean {
-    void _gameState; return false;
+    void _gameState;
+    return false;
   }
-  
+
   getNextPrompt(_gameState: GameState): string | null {
-    void _gameState; return null;
+    void _gameState;
+    return null;
   }
 
   // Free play analyzes the actual final target; no preset target
-  getTargetFor(_lockedPiece: ActivePiece, _gameState: GameState): { targetX: number; targetRot: Rot } | null {
-    void _lockedPiece; void _gameState; return null;
+  getTargetFor(
+    _lockedPiece: ActivePiece,
+    _gameState: GameState,
+  ): { targetX: number; targetRot: Rot } | null {
+    void _lockedPiece;
+    void _gameState;
+    return null;
   }
 
   getExpectedPiece(_gameState: GameState): PieceId | undefined {
-    void _gameState; return undefined;
+    void _gameState;
+    return undefined;
   }
-  
-  reset(): void { void 0; }
+
+  reset(): void {
+    void 0;
+  }
 }

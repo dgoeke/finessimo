@@ -1,58 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Finessimo</title>
-    <meta name="color-scheme" content="dark light">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/ui/styles.css">
-</head>
-<body>
+    <meta name="color-scheme" content="dark light" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
     <header class="site-header">
-        <div class="header-inner">
-            <div class="brand">
-                <div class="logo" aria-hidden="true">🎮</div>
-                <div class="brand-text">
-                    <div class="title">Finessimo</div>
-                    <div class="subtitle">Tetris Finesse Trainer</div>
-                </div>
-            </div>
-            <nav class="header-actions" aria-label="App actions">
-                <button class="settings-button" id="open-settings" type="button">Settings</button>
-                <a class="chip" href="#" role="button">Docs</a>
-            </nav>
+      <div class="header-inner">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">🎮</div>
+          <div class="brand-text">
+            <div class="title">Finessimo</div>
+            <div class="subtitle">Tetris Finesse Trainer</div>
+          </div>
         </div>
+        <nav class="header-actions" aria-label="App actions">
+          <button class="settings-button" id="open-settings" type="button">
+            Settings
+          </button>
+          <a class="chip" href="#" role="button">Docs</a>
+        </nav>
+      </div>
     </header>
 
     <main class="app shell">
-        <section class="sidebar left-panel">
-            <div class="panel" id="game-hud"></div>
-        </section>
+      <section class="sidebar left-panel">
+        <div class="panel" id="game-hud"></div>
+      </section>
 
-        <section class="game-area">
-            <div class="mobile-play" id="mobile-play">
-                <div class="mobile-hold-slot" id="mobile-hold"></div>
-                <div class="mobile-board-slot">
-                    <div class="board-frame">
-                        <canvas id="game-canvas" width="300" height="600"></canvas>
-                    </div>
-                </div>
-                <div class="mobile-preview-slot" id="mobile-preview"></div>
+      <section class="game-area">
+        <div class="mobile-play" id="mobile-play">
+          <div class="mobile-hold-slot" id="mobile-hold"></div>
+          <div class="mobile-board-slot">
+            <div class="board-frame">
+              <canvas id="game-canvas" width="300" height="600"></canvas>
             </div>
-        </section>
+          </div>
+          <div class="mobile-preview-slot" id="mobile-preview"></div>
+        </div>
+      </section>
 
-        <aside class="sidebar right-panel">
-            <div class="panel game-info-section" id="game-info">
-                <!-- Hold and Preview displays will be added here (desktop/tablet) -->
-            </div>
-        </aside>
+      <aside class="sidebar right-panel">
+        <div class="panel game-info-section" id="game-info">
+          <!-- Hold and Preview displays will be added here (desktop/tablet) -->
+        </div>
+      </aside>
     </main>
 
-    
-
     <script type="module" src="/src/main.ts"></script>
-</body>
+  </body>
 </html>

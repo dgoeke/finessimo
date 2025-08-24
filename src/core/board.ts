@@ -1,12 +1,18 @@
-import { Board, ActivePiece, PieceId, idx, isCellBlocked } from '../state/types';
-import { PIECES } from './pieces';
+import {
+  Board,
+  ActivePiece,
+  PieceId,
+  idx,
+  isCellBlocked,
+} from "../state/types";
+import { PIECES } from "./pieces";
 
 // Create an empty board
 export function createEmptyBoard(): Board {
   return {
     width: 10,
     height: 20,
-    cells: new Uint8Array(200)
+    cells: new Uint8Array(200),
   };
 }
 
@@ -14,60 +20,72 @@ export function createEmptyBoard(): Board {
 export function canPlacePiece(board: Board, piece: ActivePiece): boolean {
   const shape = PIECES[piece.id];
   const cells = shape.cells[piece.rot];
-  
+
   for (const [dx, dy] of cells) {
     const x = piece.x + dx;
     const y = piece.y + dy;
-    
+
     if (isCellBlocked(board, x, y)) {
       return false;
     }
   }
-  
+
   return true;
 }
 
 // Check if a piece can move in a given direction
-export function canMove(board: Board, piece: ActivePiece, dx: number, dy: number): boolean {
+export function canMove(
+  board: Board,
+  piece: ActivePiece,
+  dx: number,
+  dy: number,
+): boolean {
   const newPiece = {
     ...piece,
     x: piece.x + dx,
-    y: piece.y + dy
+    y: piece.y + dy,
   };
-  
+
   return canPlacePiece(board, newPiece);
 }
 
 // Move piece as far as possible in a direction (for DAS/ARR and wall charges)
-export function moveToWall(board: Board, piece: ActivePiece, direction: -1 | 1): ActivePiece {
+export function moveToWall(
+  board: Board,
+  piece: ActivePiece,
+  direction: -1 | 1,
+): ActivePiece {
   let currentPiece = piece;
-  
+
   while (canMove(board, currentPiece, direction, 0)) {
     currentPiece = {
       ...currentPiece,
-      x: currentPiece.x + direction
+      x: currentPiece.x + direction,
     };
   }
-  
+
   return currentPiece;
 }
 
 // Drop piece to bottom (for hard drop)
 export function dropToBottom(board: Board, piece: ActivePiece): ActivePiece {
   let currentPiece = piece;
-  
+
   while (canMove(board, currentPiece, 0, 1)) {
     currentPiece = {
       ...currentPiece,
-      y: currentPiece.y + 1
+      y: currentPiece.y + 1,
     };
   }
-  
+
   return currentPiece;
 }
 
 // Calculate ghost piece position (same as dropToBottom but more explicit naming)
-export function calculateGhostPosition(board: Board, piece: ActivePiece): ActivePiece {
+export function calculateGhostPosition(
+  board: Board,
+  piece: ActivePiece,
+): ActivePiece {
   return dropToBottom(board, piece);
 }
 
@@ -77,12 +95,17 @@ export function isAtBottom(board: Board, piece: ActivePiece): boolean {
 }
 
 // Try to move a piece, return new position or null if invalid
-export function tryMove(board: Board, piece: ActivePiece, dx: number, dy: number): ActivePiece | null {
+export function tryMove(
+  board: Board,
+  piece: ActivePiece,
+  dx: number,
+  dy: number,
+): ActivePiece | null {
   if (canMove(board, piece, dx, dy)) {
     return {
       ...piece,
       x: piece.x + dx,
-      y: piece.y + dy
+      y: piece.y + dy,
     };
   }
   return null;
@@ -93,30 +116,36 @@ export function lockPiece(board: Board, piece: ActivePiece): Board {
   const newCells = new Uint8Array(board.cells);
   const shape = PIECES[piece.id];
   const cells = shape.cells[piece.rot];
-  
+
   // Convert piece ID to cell value (simple mapping for now)
   const cellValue = getPieceValue(piece.id);
-  
+
   for (const [dx, dy] of cells) {
     const x = piece.x + dx;
     const y = piece.y + dy;
-    
+
     // Only lock cells that are within the visible board
     if (x >= 0 && x < board.width && y >= 0 && y < board.height) {
       newCells[idx(x, y)] = cellValue;
     }
   }
-  
+
   return {
     ...board,
-    cells: newCells
+    cells: newCells,
   };
 }
 
 // Convert piece ID to cell value
 function getPieceValue(pieceId: PieceId): number {
   const mapping: Record<PieceId, number> = {
-    'I': 1, 'O': 2, 'T': 3, 'S': 4, 'Z': 5, 'J': 6, 'L': 7
+    I: 1,
+    O: 2,
+    T: 3,
+    S: 4,
+    Z: 5,
+    J: 6,
+    L: 7,
   };
   return mapping[pieceId];
 }
@@ -124,7 +153,7 @@ function getPieceValue(pieceId: PieceId): number {
 // Check for completed lines
 export function getCompletedLines(board: Board): number[] {
   const completedLines: number[] = [];
-  
+
   for (let y = 0; y < board.height; y++) {
     let isComplete = true;
     for (let x = 0; x < board.width; x++) {
@@ -137,7 +166,7 @@ export function getCompletedLines(board: Board): number[] {
       completedLines.push(y);
     }
   }
-  
+
   return completedLines;
 }
 
@@ -146,10 +175,10 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
   if (linesToClear.length === 0) {
     return board;
   }
-  
+
   const newCells = new Uint8Array(200);
   let targetY = board.height - 1;
-  
+
   for (let y = board.height - 1; y >= 0; y--) {
     if (!linesToClear.includes(y)) {
       // Copy this line to the target position
@@ -163,9 +192,9 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
       targetY--;
     }
   }
-  
+
   return {
     ...board,
-    cells: newCells
+    cells: newCells,
   };
 }

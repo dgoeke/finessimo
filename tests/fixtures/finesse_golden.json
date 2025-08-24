@@ -1,17 +1,71 @@
 [
   { "piece": "T", "targetRot": "spawn", "targetX": 3, "expectedLen": 1 },
-  { "piece": "T", "targetRot": "spawn", "targetX": 0, "expectedLen": 2, "first": "LeftDown" },
-  { "piece": "T", "targetRot": "spawn", "targetX": 7, "expectedLen": 2, "first": "RightDown" },
-  { "piece": "T", "targetRot": "spawn", "targetX": 2, "expectedLen": 2, "first": "LeftDown" },
-  { "piece": "T", "targetRot": "spawn", "targetX": 4, "expectedLen": 2, "first": "RightDown" },
-  { "piece": "T", "targetRot": "spawn", "targetX": 1, "expectedLen": 3, "first": "LeftDown" },
-  { "piece": "T", "targetRot": "spawn", "targetX": 5, "expectedLen": 3, "first": "RightDown" },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 0,
+    "expectedLen": 2,
+    "first": "LeftDown"
+  },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 7,
+    "expectedLen": 2,
+    "first": "RightDown"
+  },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 2,
+    "expectedLen": 2,
+    "first": "LeftDown"
+  },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 4,
+    "expectedLen": 2,
+    "first": "RightDown"
+  },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 1,
+    "expectedLen": 3,
+    "first": "LeftDown"
+  },
+  {
+    "piece": "T",
+    "targetRot": "spawn",
+    "targetX": 5,
+    "expectedLen": 3,
+    "first": "RightDown"
+  },
 
   { "piece": "O", "targetRot": "spawn", "targetX": 4, "expectedLen": 1 },
-  { "piece": "O", "targetRot": "spawn", "targetX": 7, "expectedLen": 2, "first": "RightDown" },
+  {
+    "piece": "O",
+    "targetRot": "spawn",
+    "targetX": 7,
+    "expectedLen": 2,
+    "first": "RightDown"
+  },
 
   { "piece": "I", "targetRot": "spawn", "targetX": 3, "expectedLen": 1 },
-  { "piece": "I", "targetRot": "spawn", "targetX": 6, "expectedLen": 2, "first": "RightDown" },
-  { "piece": "I", "targetRot": "spawn", "targetX": 0, "expectedLen": 2, "first": "LeftDown" },
+  {
+    "piece": "I",
+    "targetRot": "spawn",
+    "targetX": 6,
+    "expectedLen": 2,
+    "first": "RightDown"
+  },
+  {
+    "piece": "I",
+    "targetRot": "spawn",
+    "targetX": 0,
+    "expectedLen": 2,
+    "first": "LeftDown"
+  },
   { "piece": "I", "targetRot": "right", "targetX": 7, "expectedLen": 3 }
 ]

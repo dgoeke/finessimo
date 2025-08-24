@@ -5,6 +5,7 @@ A web-based training application to learn "2-step finesse" - placing any tetromi
 ## Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
 

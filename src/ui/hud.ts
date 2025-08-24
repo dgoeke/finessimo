@@ -1,4 +1,4 @@
-import { GameState, Action } from '../state/types';
+import { GameState, Action } from "../state/types";
 
 export interface HudRenderer {
   initialize(container: HTMLElement): void;
@@ -21,7 +21,7 @@ export class BasicHudRenderer implements HudRenderer {
     modePrompt?: HTMLElement;
     finesseFeedback?: HTMLElement;
   } = {};
-  
+
   initialize(container: HTMLElement): void {
     this.container = container;
     this.createElements();
@@ -30,88 +30,93 @@ export class BasicHudRenderer implements HudRenderer {
 
   render(gameState: GameState): void {
     if (!this.container) {
-      console.error('HUD not initialized');
+      console.error("HUD not initialized");
       return;
     }
 
     // Update status
     const statusEl = this.elements.status;
     if (statusEl) statusEl.textContent = `Status: ${gameState.status}`;
-    
+
     // Update tick
     const tickEl = this.elements.tick;
     if (tickEl) tickEl.textContent = `Tick: ${gameState.tick}`;
-    
+
     // Update active piece
     const activePieceEl = this.elements.activePiece;
     if (activePieceEl) {
-      activePieceEl.textContent = gameState.active 
+      activePieceEl.textContent = gameState.active
         ? `Active: ${gameState.active.id} (${gameState.active.x}, ${gameState.active.y}, ${gameState.active.rot})`
-        : 'Active: None';
+        : "Active: None";
     }
-    
+
     // Update hold piece
     const holdPieceEl = this.elements.holdPiece;
     if (holdPieceEl) {
-      holdPieceEl.textContent = gameState.hold 
-        ? `Hold: ${gameState.hold}` 
-        : 'Hold: None';
+      holdPieceEl.textContent = gameState.hold
+        ? `Hold: ${gameState.hold}`
+        : "Hold: None";
     }
-    
+
     // Update can hold
     const canHoldEl = this.elements.canHold;
     if (canHoldEl) canHoldEl.textContent = `Can Hold: ${gameState.canHold}`;
-    
+
     // Update next queue
     const nextQueueEl = this.elements.nextQueue;
-    if (nextQueueEl) nextQueueEl.textContent = `Next: ${gameState.nextQueue.join(', ')}`;
-    
+    if (nextQueueEl)
+      nextQueueEl.textContent = `Next: ${gameState.nextQueue.join(", ")}`;
+
     // Update input log (compact, recent 5)
     const recentInputs = gameState.inputLog.slice(-5);
     const inputLogEl = this.elements.inputLog;
-    if (inputLogEl) inputLogEl.textContent = `Recent Inputs: ${recentInputs.map(e => e.action).join(', ')}`;
-    
+    if (inputLogEl)
+      inputLogEl.textContent = `Recent Inputs: ${recentInputs.map((e) => e.action).join(", ")}`;
+
     // Update config
     const configEl = this.elements.config;
     if (configEl) {
-      configEl.textContent = 
-        `Cancel Window: ${gameState.gameplay.finesseCancelMs}ms`;
+      configEl.textContent = `Cancel Window: ${gameState.gameplay.finesseCancelMs}ms`;
     }
-    
+
     // Update game mode
     const gameModeEl = this.elements.gameMode;
     if (gameModeEl) gameModeEl.textContent = `Mode: ${gameState.currentMode}`;
-    
+
     // Update mode prompt (prefer guidance label if present)
     const modePromptEl = this.elements.modePrompt;
     if (modePromptEl) {
-      const promptTextEl = modePromptEl.querySelector('.prompt-text');
+      const promptTextEl = modePromptEl.querySelector(".prompt-text");
       if (promptTextEl) {
-        const label = (gameState.guidance && gameState.guidance.label) || gameState.modePrompt;
-        promptTextEl.textContent = label || 'No active prompt';
+        const label =
+          (gameState.guidance && gameState.guidance.label) ||
+          gameState.modePrompt;
+        promptTextEl.textContent = label || "No active prompt";
       }
-      const show = (gameState.guidance && gameState.guidance.label) || gameState.modePrompt;
-      modePromptEl.style.display = show ? 'block' : 'none';
+      const show =
+        (gameState.guidance && gameState.guidance.label) ||
+        gameState.modePrompt;
+      modePromptEl.style.display = show ? "block" : "none";
     }
-    
+
     // Update finesse feedback
     const finesseFeedbackEl = this.elements.finesseFeedback;
     if (finesseFeedbackEl) {
       if (gameState.finesseFeedback) {
         finesseFeedbackEl.textContent = gameState.finesseFeedback.message;
-        finesseFeedbackEl.className = gameState.finesseFeedback.isOptimal 
-          ? 'finesse-feedback optimal' 
-          : 'finesse-feedback suboptimal';
-        finesseFeedbackEl.style.display = 'block';
+        finesseFeedbackEl.className = gameState.finesseFeedback.isOptimal
+          ? "finesse-feedback optimal"
+          : "finesse-feedback suboptimal";
+        finesseFeedbackEl.style.display = "block";
       } else {
-        finesseFeedbackEl.style.display = 'none';
+        finesseFeedbackEl.style.display = "none";
       }
     }
   }
 
   private createElements(): void {
     if (!this.container) return;
-    
+
     this.container.innerHTML = `
       <div class="hud-panel">
         <h2>Game State</h2>
@@ -228,47 +233,58 @@ export class BasicHudRenderer implements HudRenderer {
         }
       </style>
     `;
-    
+
     // Store references to elements
-    this.elements.status = this.container.querySelector('#status') ?? undefined;
-    this.elements.tick = this.container.querySelector('#tick') ?? undefined;
-    this.elements.activePiece = this.container.querySelector('#activePiece') ?? undefined;
-    this.elements.holdPiece = this.container.querySelector('#holdPiece') ?? undefined;
-    this.elements.canHold = this.container.querySelector('#canHold') ?? undefined;
-    this.elements.nextQueue = this.container.querySelector('#nextQueue') ?? undefined;
-    this.elements.inputLog = this.container.querySelector('#inputLog') ?? undefined;
-    this.elements.config = this.container.querySelector('#config') ?? undefined;
-    this.elements.gameMode = this.container.querySelector('#gameMode') ?? undefined;
-    this.elements.modePrompt = this.container.querySelector('#modePrompt') ?? undefined;
-    this.elements.finesseFeedback = this.container.querySelector('#finesseFeedback') ?? undefined;
+    this.elements.status = this.container.querySelector("#status") ?? undefined;
+    this.elements.tick = this.container.querySelector("#tick") ?? undefined;
+    this.elements.activePiece =
+      this.container.querySelector("#activePiece") ?? undefined;
+    this.elements.holdPiece =
+      this.container.querySelector("#holdPiece") ?? undefined;
+    this.elements.canHold =
+      this.container.querySelector("#canHold") ?? undefined;
+    this.elements.nextQueue =
+      this.container.querySelector("#nextQueue") ?? undefined;
+    this.elements.inputLog =
+      this.container.querySelector("#inputLog") ?? undefined;
+    this.elements.config = this.container.querySelector("#config") ?? undefined;
+    this.elements.gameMode =
+      this.container.querySelector("#gameMode") ?? undefined;
+    this.elements.modePrompt =
+      this.container.querySelector("#modePrompt") ?? undefined;
+    this.elements.finesseFeedback =
+      this.container.querySelector("#finesseFeedback") ?? undefined;
     // No action log; minimal HUD
   }
-  
+
   // Method to setup game mode controls
-  setupTestControls(dispatch: (action: Action) => void, setGameMode?: (mode: string) => void): void {
-    const setFreePlay = this.container?.querySelector('#setFreePlay');
-    const setGuided = this.container?.querySelector('#setGuided');
-    
-    setFreePlay?.addEventListener('click', () => {
+  setupTestControls(
+    dispatch: (action: Action) => void,
+    setGameMode?: (mode: string) => void,
+  ): void {
+    const setFreePlay = this.container?.querySelector("#setFreePlay");
+    const setGuided = this.container?.querySelector("#setGuided");
+
+    setFreePlay?.addEventListener("click", () => {
       if (setGameMode) {
-        setGameMode('freePlay');
+        setGameMode("freePlay");
       } else {
-        dispatch({ type: 'SetMode', mode: 'freePlay' });
+        dispatch({ type: "SetMode", mode: "freePlay" });
       }
     });
-    
-    setGuided?.addEventListener('click', () => {
+
+    setGuided?.addEventListener("click", () => {
       if (setGameMode) {
-        setGameMode('guided');
+        setGameMode("guided");
       } else {
-        dispatch({ type: 'SetMode', mode: 'guided' });
+        dispatch({ type: "SetMode", mode: "guided" });
       }
     });
   }
 
   destroy(): void {
     if (this.container) {
-      this.container.innerHTML = '';
+      this.container.innerHTML = "";
     }
     this.container = undefined;
     this.elements = {};

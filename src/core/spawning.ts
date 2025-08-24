@@ -1,6 +1,6 @@
-import { Board, ActivePiece, PieceId } from '../state/types';
-import { PIECES } from './pieces';
-import { canPlacePiece } from './board';
+import { Board, ActivePiece, PieceId } from "../state/types";
+import { PIECES } from "./pieces";
+import { canPlacePiece } from "./board";
 
 /**
  * Create a new active piece at spawn position
@@ -8,12 +8,12 @@ import { canPlacePiece } from './board';
 export function createActivePiece(pieceId: PieceId): ActivePiece {
   const shape = PIECES[pieceId];
   const [spawnX, spawnY] = shape.spawnTopLeft;
-  
+
   return {
     id: pieceId,
-    rot: 'spawn',
+    rot: "spawn",
     x: spawnX,
-    y: spawnY
+    y: spawnY,
   };
 }
 
@@ -39,7 +39,7 @@ export function isTopOut(board: Board, pieceId: PieceId): boolean {
 export function spawnWithHold(
   board: Board,
   nextPiece: PieceId,
-  currentHold?: PieceId
+  currentHold?: PieceId,
 ): [ActivePiece, PieceId | undefined] | null {
   // If no hold piece, just spawn the next piece
   if (!currentHold) {
@@ -49,13 +49,13 @@ export function spawnWithHold(
     }
     return [piece, undefined];
   }
-  
+
   // Try to spawn the held piece
   const heldPiece = createActivePiece(currentHold);
   if (!canPlacePiece(board, heldPiece)) {
     return null; // Top out
   }
-  
+
   // Swap: spawn held piece, next piece becomes new hold
   return [heldPiece, nextPiece];
 }
