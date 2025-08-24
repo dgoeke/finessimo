@@ -34,14 +34,17 @@ describe("line clear with non-zero delay", () => {
       // lastGravityTime remains 0 since gravity is disabled
     };
 
-    const afterDrop = reducer(s1, { type: "HardDrop" });
+    const afterDrop = reducer(s1, { type: "HardDrop", timestampMs: 1000 });
     expect(afterDrop.status).toBe("lineClear");
-    // Regression guard: previously app checked truthiness; 0 is valid and must be handled
-    expect(afterDrop.physics.lineClearStartTime).toBe(0);
+    // lineClearStartTime should be set to current timestamp
+    expect(afterDrop.physics.lineClearStartTime).toBeGreaterThan(0);
 
     // App helper should complete when enough time has elapsed
-    expect(shouldCompleteLineClear(afterDrop, 100)).toBe(false);
-    expect(shouldCompleteLineClear(afterDrop, 250)).toBe(true);
+    const clearStartTime = afterDrop.physics.lineClearStartTime!;
+    expect(shouldCompleteLineClear(afterDrop, clearStartTime + 100)).toBe(
+      false,
+    );
+    expect(shouldCompleteLineClear(afterDrop, clearStartTime + 250)).toBe(true);
 
     // Completing clears lines and returns to playing
     const completed = reducer(afterDrop, { type: "CompleteLineClear" });

@@ -177,7 +177,12 @@ describe("DOMInputHandler", () => {
       mockKeyDownHandler(spaceEvent);
       mockKeyDownHandler(keyCEvent);
 
-      expect(mockDispatch).toHaveBeenCalledWith({ type: "HardDrop" });
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "HardDrop",
+          timestampMs: expect.any(Number) as number,
+        }),
+      );
       expect(mockDispatch).toHaveBeenCalledWith({ type: "Hold" });
     });
 

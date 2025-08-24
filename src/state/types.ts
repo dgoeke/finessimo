@@ -100,6 +100,7 @@ export interface PhysicsState {
 
 // Game state
 import type { SevenBagRng } from "../core/rng";
+import type { FaultType } from "../finesse/calculator";
 
 export interface Stats {
   // Basic counters
@@ -111,9 +112,13 @@ export interface Stats {
   startedAtMs: number;
   timePlayedMs: number;
 
+  // Session-specific counters for accurate rate calculations
+  sessionPiecesPlaced: number;
+  sessionLinesCleared: number;
+
   // Comprehensive metrics
   accuracyPercentage: number; // optimalPlacements / attempts * 100
-  finesseAccuracy: number; // successful finesse placements / attempts * 100
+  finesseAccuracy: number; // optimalInputs / totalInputs * 100
   averageInputsPerPiece: number; // totalInputs / piecesPlaced
 
   // Session tracking
@@ -129,7 +134,7 @@ export interface Stats {
 
   // Fault tracking
   totalFaults: number;
-  faultsByType: Record<string, number>; // maps fault types to counts
+  faultsByType: Partial<Record<FaultType, number>>; // maps fault types to counts
 
   // Line clear statistics
   singleLines: number;
@@ -170,15 +175,16 @@ export type Action =
       timing?: Partial<TimingConfig>;
       gameplay?: Partial<GameplayConfig>;
       mode?: string;
+      retainStats?: boolean;
     }
   | { type: "Tick"; timestampMs: number }
   | { type: "Spawn"; piece?: PieceId }
   | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
   | { type: "SoftDrop"; on: boolean }
   | { type: "Rotate"; dir: "CW" | "CCW" }
-  | { type: "HardDrop" }
+  | { type: "HardDrop"; timestampMs: number }
   | { type: "Hold" }
-  | { type: "Lock" }
+  | { type: "Lock"; timestampMs: number }
   | { type: "StartLockDelay"; timestampMs: number }
   | { type: "CancelLockDelay" }
   | { type: "StartLineClear"; lines: number[]; timestampMs: number }
@@ -197,20 +203,12 @@ export type Action =
   // Statistics tracking actions
   | {
       type: "RecordPieceLock";
-      piece: PieceId;
       isOptimal: boolean;
       inputCount: number;
       optimalInputCount: number;
-      faults: string[];
-      timestampMs: number;
-      linesCleared: number;
+      faults: FaultType[];
     }
-  | { type: "UpdateSessionTime"; timestampMs: number }
-  | {
-      type: "RecordLineClear";
-      linesCleared: number;
-      lineType: "single" | "double" | "triple" | "tetris";
-    };
+  | { type: "ClearInputLog" };
 
 export type Reducer = (
   s: Readonly<GameState> | undefined,

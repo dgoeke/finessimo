@@ -127,7 +127,10 @@ describe("hold system", () => {
       expect(state.canHold).toBe(false);
 
       // Lock piece (should re-enable hold)
-      const newState = reducer(state, { type: "Lock" });
+      const newState = reducer(state, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
       expect(newState.canHold).toBe(true);
     });
 
@@ -139,7 +142,7 @@ describe("hold system", () => {
       expect(state.canHold).toBe(false);
 
       // Hard drop (should re-enable hold)
-      const newState = reducer(state, { type: "HardDrop" });
+      const newState = reducer(state, { type: "HardDrop", timestampMs: 1000 });
       expect(newState.canHold).toBe(true);
     });
   });

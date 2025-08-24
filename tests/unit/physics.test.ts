@@ -70,7 +70,7 @@ describe("physics system", () => {
       let state = createStateWithPiece();
 
       // Move piece to bottom by hard dropping it
-      state = reducer(state, { type: "HardDrop" });
+      state = reducer(state, { type: "HardDrop", timestampMs: 1000 });
 
       // Spawn a new piece and put it near the bottom manually
       state = reducer(state, { type: "Spawn", piece: "T" });

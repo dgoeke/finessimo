@@ -28,9 +28,9 @@ describe("Reducer - Extended Coverage", () => {
         { type: "SoftDrop", on: false },
         { type: "Rotate", dir: "CW" },
         { type: "Rotate", dir: "CCW" },
-        { type: "HardDrop" },
+        { type: "HardDrop", timestampMs: 1000 },
         { type: "Hold" },
-        { type: "Lock" },
+        { type: "Lock", timestampMs: Date.now() },
         { type: "ClearLines", lines: [19] },
         {
           type: "EnqueueInput",
@@ -68,8 +68,20 @@ describe("Reducer - Extended Coverage", () => {
       const state2 = reducer(undefined, { type: "Init" });
 
       expect(state1).not.toBe(state2); // Different objects
-      expect(state1).toEqual(state2); // Same content
       expect(state1.board.cells).not.toBe(state2.board.cells); // Different arrays
+
+      // Content should be the same except for timestamp fields
+      expect(state1.tick).toEqual(state2.tick);
+      expect(state1.status).toEqual(state2.status);
+      expect(state1.board.width).toEqual(state2.board.width);
+      expect(state1.board.height).toEqual(state2.board.height);
+      expect(state1.stats.piecesPlaced).toEqual(state2.stats.piecesPlaced);
+      expect(state1.stats.totalSessions).toEqual(state2.stats.totalSessions);
+      // startedAtMs is now initialized to 0 and set on first Tick
+      expect(typeof state1.stats.startedAtMs).toBe("number");
+      expect(typeof state2.stats.startedAtMs).toBe("number");
+      expect(state1.stats.startedAtMs).toBe(0);
+      expect(state2.stats.startedAtMs).toBe(0);
     });
 
     it("should create empty board with all zeros", () => {
@@ -177,11 +189,14 @@ describe("Reducer - Extended Coverage", () => {
         tick: 42,
       };
 
-      const result = reducer(stateWithPiece, { type: "Lock" });
+      const result = reducer(stateWithPiece, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(result.active).toBeUndefined();
       expect(result.canHold).toBe(true);
-      expect(result.inputLog).toEqual([]);
+      expect(result.inputLog).toEqual(stateWithPiece.inputLog); // inputLog is preserved until ClearInputLog action
       expect(result.tick).toBe(43); // Incremented
     });
 
@@ -201,7 +216,10 @@ describe("Reducer - Extended Coverage", () => {
         status: "playing",
       };
 
-      const result = reducer(stateWithBoard, { type: "Lock" });
+      const result = reducer(stateWithBoard, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(result.board).toBe(modifiedBoard); // Should preserve board reference
       expect(result.nextQueue).toEqual(["I", "O", "T"]);
@@ -211,7 +229,10 @@ describe("Reducer - Extended Coverage", () => {
 
     it("should work when no active piece exists", () => {
       const stateNoPiece = { ...initialState, active: undefined };
-      const result = reducer(stateNoPiece, { type: "Lock" });
+      const result = reducer(stateNoPiece, {
+        type: "Lock",
+        timestampMs: Date.now(),
+      });
 
       expect(result.active).toBeUndefined();
       expect(result.canHold).toBe(true);
@@ -298,7 +319,7 @@ describe("Reducer - Extended Coverage", () => {
 
       // Try all actions that modify state
       reducer(originalState, { type: "Tick", timestampMs: 0 });
-      reducer(originalState, { type: "Lock" });
+      reducer(originalState, { type: "Lock", timestampMs: Date.now() });
       reducer(originalState, {
         type: "EnqueueInput",
         event: { tMs: 1000, frame: 60, action: "HardDrop" },
@@ -335,15 +356,19 @@ describe("Reducer - Extended Coverage", () => {
           });
         }
         if (i % 20 === 0) {
-          state = reducer(state, { type: "Lock" });
+          // Add an active piece before attempting to lock
+          state = {
+            ...state,
+            active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+          };
+          state = reducer(state, { type: "Lock", timestampMs: Date.now() });
           tickCount++; // Lock also increments tick
         }
       }
 
       expect(state.tick).toBe(tickCount);
-      // Note: Last input at i=90 won't be cleared since 90%20 != 0
-      // This demonstrates that Lock clears the log, but final input remains
-      expect(state.inputLog.length).toBeLessThanOrEqual(1);
+      // inputLog is no longer cleared on Lock, so it accumulates during rapid inputs
+      expect(state.inputLog.length).toBeGreaterThan(0);
       expect(state.canHold).toBe(true);
     });
   });

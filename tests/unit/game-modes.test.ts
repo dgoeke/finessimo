@@ -33,6 +33,8 @@ const mockGameState: GameState = {
     attempts: 0,
     startedAtMs: 0,
     timePlayedMs: 0,
+    sessionPiecesPlaced: 0,
+    sessionLinesCleared: 0,
     accuracyPercentage: 0,
     finesseAccuracy: 0,
     averageInputsPerPiece: 0,

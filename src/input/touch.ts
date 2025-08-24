@@ -415,7 +415,7 @@ export class TouchInputHandler implements InputHandler {
           this.dispatch({ type: "Rotate", dir: "CCW" });
           break;
         case "HardDrop":
-          this.dispatch({ type: "HardDrop" });
+          this.dispatch({ type: "HardDrop", timestampMs: performance.now() });
           break;
         case "Hold":
           this.dispatch({ type: "Hold" });

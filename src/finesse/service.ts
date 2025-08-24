@@ -16,6 +16,7 @@ export interface FinesseService {
     state: GameState,
     lockedPiece: ActivePiece,
     gameMode: GameMode,
+    timestampMs?: number,
   ): Action[];
 }
 
@@ -24,6 +25,7 @@ export class DefaultFinesseService implements FinesseService {
     state: GameState,
     lockedPiece: ActivePiece,
     gameMode: GameMode,
+    timestampMs?: number,
   ): Action[] {
     const actions: Action[] = [];
 
@@ -108,8 +110,8 @@ export class DefaultFinesseService implements FinesseService {
 
     const feedback: FinesseUIFeedback = {
       message: modeResult.feedback,
-      isOptimal: finesseResult.isOptimal,
-      timestamp: Date.now(),
+      isOptimal: mergedResult.isOptimal,
+      timestamp: timestampMs ?? performance.now(),
     };
 
     actions.push({
@@ -118,20 +120,16 @@ export class DefaultFinesseService implements FinesseService {
     });
 
     // Add statistics tracking action
-    const optimalInputCount =
-      mergedResult.optimalSequences.length > 0
-        ? (mergedResult.optimalSequences[0]?.length ?? 0)
-        : 0;
+    const optimalInputCount = mergedResult.optimalSequences.length
+      ? Math.min(...mergedResult.optimalSequences.map((s) => s.length))
+      : 0;
 
     actions.push({
       type: "RecordPieceLock",
-      piece: lockedPiece.id,
       isOptimal: mergedResult.isOptimal,
       inputCount: playerInputs.length,
       optimalInputCount,
       faults: faults.map((f) => f.type),
-      timestampMs: Date.now(),
-      linesCleared: 0, // Will be updated by reducer based on board state
     });
 
     if (modeResult.nextPrompt) {
@@ -143,6 +141,9 @@ export class DefaultFinesseService implements FinesseService {
     if (modeResult.modeData !== undefined) {
       actions.push({ type: "UpdateModeData", data: modeResult.modeData });
     }
+
+    // Clear the input log after analysis is complete
+    actions.push({ type: "ClearInputLog" });
 
     return actions;
   }
