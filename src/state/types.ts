@@ -102,7 +102,7 @@ export interface PhysicsState {
 import type { SevenBagRng } from "../core/rng";
 
 export interface Stats {
-  // Minimal session stats for Iteration 6 groundwork
+  // Basic counters
   piecesPlaced: number;
   linesCleared: number;
   optimalPlacements: number;
@@ -110,6 +110,32 @@ export interface Stats {
   attempts: number;
   startedAtMs: number;
   timePlayedMs: number;
+
+  // Comprehensive metrics
+  accuracyPercentage: number; // optimalPlacements / attempts * 100
+  finesseAccuracy: number; // successful finesse placements / attempts * 100
+  averageInputsPerPiece: number; // totalInputs / piecesPlaced
+
+  // Session tracking
+  sessionStartMs: number;
+  totalSessions: number;
+  longestSessionMs: number;
+
+  // Performance data
+  piecesPerMinute: number;
+  linesPerMinute: number;
+  totalInputs: number;
+  optimalInputs: number;
+
+  // Fault tracking
+  totalFaults: number;
+  faultsByType: Record<string, number>; // maps fault types to counts
+
+  // Line clear statistics
+  singleLines: number;
+  doubleLines: number;
+  tripleLines: number;
+  tetrisLines: number;
 }
 
 export interface GameState {
@@ -167,7 +193,24 @@ export type Action =
   | { type: "UpdateGameplay"; gameplay: Partial<GameplayConfig> }
   // Mode/UI guidance
   | { type: "UpdateGuidance"; guidance: ModeGuidance | null }
-  | { type: "UpdateModeData"; data: unknown };
+  | { type: "UpdateModeData"; data: unknown }
+  // Statistics tracking actions
+  | {
+      type: "RecordPieceLock";
+      piece: PieceId;
+      isOptimal: boolean;
+      inputCount: number;
+      optimalInputCount: number;
+      faults: string[];
+      timestampMs: number;
+      linesCleared: number;
+    }
+  | { type: "UpdateSessionTime"; timestampMs: number }
+  | {
+      type: "RecordLineClear";
+      linesCleared: number;
+      lineType: "single" | "double" | "triple" | "tetris";
+    };
 
 export type Reducer = (
   s: Readonly<GameState> | undefined,

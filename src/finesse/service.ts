@@ -117,6 +117,23 @@ export class DefaultFinesseService implements FinesseService {
       feedback,
     });
 
+    // Add statistics tracking action
+    const optimalInputCount =
+      mergedResult.optimalSequences.length > 0
+        ? (mergedResult.optimalSequences[0]?.length ?? 0)
+        : 0;
+
+    actions.push({
+      type: "RecordPieceLock",
+      piece: lockedPiece.id,
+      isOptimal: mergedResult.isOptimal,
+      inputCount: playerInputs.length,
+      optimalInputCount,
+      faults: faults.map((f) => f.type),
+      timestampMs: Date.now(),
+      linesCleared: 0, // Will be updated by reducer based on board state
+    });
+
     if (modeResult.nextPrompt) {
       actions.push({
         type: "UpdateModePrompt",
