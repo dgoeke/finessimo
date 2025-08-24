@@ -51,11 +51,15 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
 
       if (accEl) {
         accEl.textContent = this.formatPercentage(stats.accuracyPercentage);
-        accEl.className = `accuracy-value ${this.getAccuracyClass(stats.accuracyPercentage)}`;
+        const accClass = this.getAccuracyClass(stats.accuracyPercentage);
+        accEl.classList.remove("excellent", "good", "average", "poor");
+        accEl.classList.add("stat-value", "accuracy-value", accClass);
       }
       if (finesseEl) {
         finesseEl.textContent = this.formatPercentage(stats.finesseAccuracy);
-        finesseEl.className = `finesse-value ${this.getAccuracyClass(stats.finesseAccuracy)}`;
+        const finesseClass = this.getAccuracyClass(stats.finesseAccuracy);
+        finesseEl.classList.remove("excellent", "good", "average", "poor");
+        finesseEl.classList.add("stat-value", "finesse-value", finesseClass);
       }
     }
 
@@ -266,7 +270,7 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
   }
 
   private formatFaultBreakdown(
-    faultsByType: Partial<Record<string, number>>,
+    faultsByType: GameState["stats"]["faultsByType"],
   ): string {
     const entries = Object.entries(faultsByType);
     if (entries.length === 0) {
