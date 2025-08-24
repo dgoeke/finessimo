@@ -74,6 +74,7 @@ export function normalizeInputSequence(
     [
       "LeftDown",
       "RightDown",
+      "SoftDropDown",
       "RotateCW",
       "RotateCCW",
       "Hold",
