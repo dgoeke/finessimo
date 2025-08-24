@@ -47,20 +47,7 @@ export class BasicPreviewRenderer implements PreviewRenderer {
       const ctx = this.contexts[i];
 
       if (canvas && ctx && pieceId) {
-        this.renderPreviewPiece(ctx, canvas, pieceId, i === 0);
-
-        // Update label text based on desired count
-        const previewSlot = canvas.parentElement;
-        const label = previewSlot?.querySelector(".preview-label");
-        if (label) {
-          if (this.desiredCount === 1) {
-            // Hide label when only one preview piece
-            label.textContent = "";
-          } else {
-            // Show number for multiple preview pieces
-            label.textContent = i === 0 ? "1" : `${i + 1}`;
-          }
-        }
+        this.renderPreviewPiece(ctx, canvas, pieceId);
       }
     }
 
@@ -94,11 +81,7 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     // Create individual preview slots
     for (let i = 0; i < this.previewCount; i++) {
       const previewSlot = document.createElement("div");
-      previewSlot.className = `preview-slot ${i === 0 ? "main" : "secondary"}`;
-
-      const label = document.createElement("div");
-      label.className = "preview-label";
-      // Label text will be set dynamically in render method
+      previewSlot.className = "preview-slot";
 
       const canvas = document.createElement("canvas");
       canvas.className = "preview-canvas";
@@ -110,7 +93,6 @@ export class BasicPreviewRenderer implements PreviewRenderer {
         throw new Error("Failed to get 2D rendering context for preview");
       }
 
-      previewSlot.appendChild(label);
       previewSlot.appendChild(canvas);
       previewContainer.appendChild(previewSlot);
 
@@ -123,7 +105,6 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     ctx: CanvasRenderingContext2D,
     canvas: HTMLCanvasElement,
     pieceId: PieceId,
-    isNext: boolean,
   ): void {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -147,8 +128,8 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     const offsetX = (canvas.width - pieceWidth) / 2 - minX * this.cellSize;
     const offsetY = (canvas.height - pieceHeight) / 2 - minY * this.cellSize;
 
-    // Set opacity based on position (next piece is fully opaque)
-    const alpha = isNext ? 1.0 : 0.7;
+    // Set uniform opacity for all preview pieces
+    const alpha = 0.8;
 
     // Render each cell
     for (const [dx, dy] of cells) {

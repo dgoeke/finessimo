@@ -93,11 +93,11 @@ body {
   gap: 12px;
 }
 .logo {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 6px;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   box-shadow: var(--shadow-md);
 }
@@ -105,10 +105,6 @@ body {
   font-weight: 700;
   letter-spacing: 0.2px;
   color: var(--primary);
-}
-.brand-text .subtitle {
-  font-size: 12px;
-  color: var(--text-dim);
 }
 .header-actions {
   display: flex;
@@ -118,18 +114,24 @@ body {
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
+  justify-content: center;
+  gap: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
   background: var(--bg-elev-2);
   color: var(--text);
   border: 1px solid var(--border);
   text-decoration: none;
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 .chip:hover {
-  background: color-mix(in oklab, var(--bg-elev-2) 85%, white);
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 
 /* Unified 3-column layout */
@@ -140,7 +142,7 @@ body {
     max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(65px, 1fr) auto minmax(65px, 1fr);
   gap: 20px;
   align-items: start;
   justify-content: center;
@@ -152,13 +154,16 @@ body {
   gap: 16px;
   justify-content: flex-start;
   align-items: flex-end; /* Justify right toward board */
+  min-width: 65px;
 }
 
 .board-column {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
   width: fit-content;
+  gap: 16px;
 }
 
 .preview-column {
@@ -166,6 +171,7 @@ body {
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start; /* Justify left toward board */
+  min-width: 65px;
 }
 
 .panel {
@@ -269,14 +275,16 @@ body {
   display: block;
   /* Ensure proper aspect ratio */
   aspect-ratio: 1 / 2;
-  /* Use available vertical space, but ensure side columns get at least 15% each */
+  /* Use available vertical space, but allow side columns to maintain their 65px minimum */
   height: min(
     calc(100vh - var(--header-h) - 100px),
-    /* Full height minus header and padding */ calc(70vw * 2)
-      /* Max height based on 70% viewport width (100% - 15% - 15%) */
+    /* Full height minus header and padding */ calc((100vw - 130px - 72px) * 2)
+      /* Max height based on available width minus 130px for side columns and 72px for gaps+padding */
   );
   width: auto;
-  max-width: 70vw; /* Ensure side columns get at least 15% each */
+  max-width: calc(
+    100vw - 130px - 72px
+  ); /* Ensure side columns get their 100px minimum plus gaps+padding */
   image-rendering: pixelated;
   background: #000;
   border-radius: 8px;
@@ -317,15 +325,18 @@ body {
   display: inline-block;
 }
 
-/* Finesse Feedback Panel */
-#finesse-feedback-panel {
-  /* No border/background - content shows directly */
-}
-
 /* Statistics Panel */
 #statistics-panel {
   min-height: auto;
   font-size: 11px;
+}
+
+/* Hide statistics panel when viewport is too narrow (panel would be < 150px) */
+@media (max-width: 652px) {
+  /* 150px for panel + 130px for both columns + 300px min board + 72px gaps/padding = 652px */
+  #statistics-panel {
+    display: none;
+  }
 }
 
 .mode-prompt {
@@ -392,9 +403,19 @@ body {
 /* Responsive - only adjust spacing, not sizing logic */
 @media (max-width: 1100px) {
   .app.shell {
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(65px, 1fr) auto minmax(65px, 1fr);
     gap: 12px;
     padding: 12px;
+  }
+
+  #game-canvas {
+    max-width: calc(
+      100vw - 130px - 48px
+    ); /* 130px for columns, 48px for gaps+padding at this breakpoint */
+    height: min(
+      calc(100vh - var(--header-h) - 100px),
+      calc((100vw - 130px - 48px) * 2)
+    );
   }
 }
 
@@ -404,9 +425,6 @@ body {
   }
   .brand-text .title {
     font-size: 18px;
-  }
-  .brand-text .subtitle {
-    font-size: 11px;
   }
   .panel {
     padding: 12px;
@@ -420,6 +438,16 @@ body {
   .app.shell {
     gap: 8px;
     padding: 8px;
+  }
+
+  #game-canvas {
+    max-width: calc(
+      100vw - 130px - 32px
+    ); /* 130px for columns, 32px for gaps+padding at this breakpoint */
+    height: min(
+      calc(100vh - var(--header-h) - 100px),
+      calc((100vw - 130px - 32px) * 2)
+    );
   }
   /* NEXT header: minimal and uppercase */
   .mobile-preview-slot .preview-title {
@@ -450,25 +478,12 @@ body {
     padding: 0;
     border-radius: 0;
   }
-  .mobile-preview-slot .preview-slot.main {
-    padding: 0 !important;
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-  }
-  .mobile-preview-slot .preview-label {
-    display: none;
-  }
   .mobile-preview-slot .preview-canvas {
     width: 100%;
     height: auto;
     background: transparent;
     border: 0;
     border-radius: 0;
-  }
-  .mobile-preview-slot .preview-slot.main .preview-canvas {
-    background: transparent;
-    border: 0;
   }
   /* Convert bottom buttons to floating overlays so they don't cover board space */
   .touch-buttons {
@@ -511,11 +526,6 @@ body {
 
 /* Hold Section */
 .hold-section {
-  background: var(--bg-elev-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
-  transition: opacity 0.2s ease;
   text-align: center;
   display: inline-block;
   margin: 0 auto;
@@ -542,17 +552,11 @@ body {
 
 .hold-canvas {
   display: block;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: #000;
 }
 
 /* Preview Section */
 .preview-section {
-  background: var(--bg-elev-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
   display: inline-block;
   margin: 0 auto;
 }
@@ -581,35 +585,9 @@ body {
   margin: 0 auto;
 }
 
-.preview-slot.main {
-  padding: 4px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.preview-label {
-  font-size: 10px;
-  color: var(--text-dim);
-  width: 24px;
-  text-align: right;
-  font-weight: 500;
-}
-
-.preview-slot.main .preview-label {
-  color: var(--text);
-  font-weight: 600;
-}
-
 .preview-canvas {
   display: block;
   background: transparent;
-}
-
-.preview-slot.main .preview-canvas {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
 }
 
 /* Responsive adjustments */
@@ -1084,25 +1062,6 @@ body.touch-active .app.shell {
   .keybinds-list {
     grid-template-columns: 1fr;
   }
-}
-
-/* Settings button in header */
-.settings-button {
-  background: var(--bg-elev-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.settings-button:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
 }
 
 /* Responsive adjustments for settings */
