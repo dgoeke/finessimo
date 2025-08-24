@@ -9,7 +9,7 @@ describe("Input Normalization", () => {
   });
 
   describe("normalizeInputSequence", () => {
-    it("should filter irrelevant events", () => {
+    it("should filter irrelevant releases but keep SoftDropDown", () => {
       const events: InputEvent[] = [
         createInputEvent("LeftDown", 100),
         createInputEvent("LeftUp", 150),
@@ -18,7 +18,7 @@ describe("Input Normalization", () => {
       ];
 
       const result = normalizeInputSequence(events, 50);
-      expect(result).toEqual(["LeftDown", "HardDrop"]);
+      expect(result).toEqual(["LeftDown", "SoftDropDown", "HardDrop"]);
     });
 
     it("should keep relevant events in order", () => {
