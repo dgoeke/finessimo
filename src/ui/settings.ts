@@ -370,10 +370,10 @@ export class BasicSettingsRenderer implements SettingsRenderer {
               <div class="keybinds-list">
                 ${this.renderKeybindRow("Move Left", "MoveLeft")}
                 ${this.renderKeybindRow("Move Right", "MoveRight")}
+                ${this.renderKeybindRow("Rotate CCW", "RotateCCW")}
+                ${this.renderKeybindRow("Rotate CW", "RotateCW")}
                 ${this.renderKeybindRow("Soft Drop", "SoftDrop")}
                 ${this.renderKeybindRow("Hard Drop", "HardDrop")}
-                ${this.renderKeybindRow("Rotate CW", "RotateCW")}
-                ${this.renderKeybindRow("Rotate CCW", "RotateCCW")}
                 ${this.renderKeybindRow("Hold", "Hold")}
               </div>
             </div>
