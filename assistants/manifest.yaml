@@ -1,0 +1,27 @@
+version: 1
+project:
+  name: Finessimo
+  purpose: "Tetris 2-step finesse trainer"
+  primary_docs:
+    - path: DESIGN.md
+    - path: FILES.md
+  repo_rules:
+    precommit_cmd: "npm run pre-commit"
+    no_suppressions: true
+  core_principles:
+    - "Functional architecture: immutable state + pure reducers"
+    - "Unidirectional data flow: UI → Input Handler → Reducer → State → UI"
+    - "Side-effects live only in Input Handler; core logic is pure"
+
+assistants:
+  - id: claude-code
+    vendor: anthropic
+    output_file: "CLAUDE.md"
+    style: "concise, example-driven; propose diffs; never add lint/TS suppressions"
+    model_notes: "Claude Code"
+    extra_prompts:
+      - "If tests fail because you improved correctness or safety, update tests rather than weakening code. Preserve existing behavior only when it’s legitimately correct."
+  - id: generic-agents
+    vendor: generic
+    output_file: "AGENTS.md"
+    style: "portable across IDEs and CLIs"

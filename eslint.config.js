@@ -21,6 +21,12 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist", "build", "node_modules", "eslint.config.js"],
+    ignores: [
+      "dist",
+      "build",
+      "node_modules",
+      "eslint.config.js",
+      "assistants/templates/**/*.hbs",
+    ],
   },
 );
