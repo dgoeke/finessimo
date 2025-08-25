@@ -19,7 +19,6 @@ export class BasicHudRenderer implements HudRenderer {
     config?: HTMLElement;
     gameMode?: HTMLElement;
     modePrompt?: HTMLElement;
-    finesseFeedback?: HTMLElement;
   } = {};
 
   initialize(container: HTMLElement): void {
@@ -94,20 +93,6 @@ export class BasicHudRenderer implements HudRenderer {
       const show = gameState.guidance?.label ?? gameState.modePrompt;
       modePromptEl.style.display = show ? "block" : "none";
     }
-
-    // Update finesse feedback
-    const finesseFeedbackEl = this.elements.finesseFeedback;
-    if (finesseFeedbackEl) {
-      if (gameState.finesseFeedback) {
-        finesseFeedbackEl.textContent = gameState.finesseFeedback.message;
-        finesseFeedbackEl.className = gameState.finesseFeedback.isOptimal
-          ? "finesse-feedback optimal"
-          : "finesse-feedback suboptimal";
-        finesseFeedbackEl.style.display = "block";
-      } else {
-        finesseFeedbackEl.style.display = "none";
-      }
-    }
   }
 
   private createElements(): void {
@@ -129,10 +114,6 @@ export class BasicHudRenderer implements HudRenderer {
         <div id="modePrompt" class="mode-prompt" style="display: none;">
           <h3>Current Challenge</h3>
           <div class="prompt-text">No active prompt</div>
-        </div>
-        
-        <div id="finesseFeedback" class="finesse-feedback" style="display: none;">
-          Finesse feedback will appear here
         </div>
         
         <h3>Game Modes</h3>
@@ -248,8 +229,6 @@ export class BasicHudRenderer implements HudRenderer {
       this.container.querySelector("#gameMode") ?? undefined;
     this.elements.modePrompt =
       this.container.querySelector("#modePrompt") ?? undefined;
-    this.elements.finesseFeedback =
-      this.container.querySelector("#finesseFeedback") ?? undefined;
     // No action log; minimal HUD
   }
 

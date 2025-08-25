@@ -259,21 +259,20 @@ export class BasicSettingsRenderer implements SettingsRenderer {
             <!-- Timing Settings -->
             <div class="settings-panel active" id="timing-panel">
               <div class="setting-group">
-                <label>DAS Delay (ms)</label>
+                <label>DAS - Delayed Auto Shift (ms)</label>
                 <input type="range" id="das-delay" min="50" max="300" step="1" value="${this.currentSettings.dasMs}">
                 <span class="value-display">${this.currentSettings.dasMs}ms</span>
               </div>
               
               <div class="setting-group">
-                <label>ARR Rate (ms)</label>
+                <label>ARR - Automatic Repeat Rate (ms)</label>
                 <input type="range" id="arr-rate" min="0" max="100" step="1" value="${this.currentSettings.arrMs}">
                 <span class="value-display">${this.currentSettings.arrMs}ms</span>
               </div>
               
               <div class="setting-group">
-                <label>Soft Drop Speed (× Gravity)</label>
+                <label>SDF - Soft Drop Factor (× Gravity)</label>
                 ${(() => {
-                  // gravityMs only used to derive from legacy values; not needed now
                   const m =
                     this.currentSettings.softDrop === "infinite"
                       ? 41

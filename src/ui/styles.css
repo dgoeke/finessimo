@@ -366,27 +366,109 @@ body {
 }
 
 .finesse-feedback {
-  padding: 12px 16px;
-  margin: 12px 0;
   border-radius: var(--radius);
   font-weight: 600;
   font-size: 14px;
   text-align: center;
-  border: 2px solid;
   background: transparent;
   transition: all 0.2s ease;
   max-width: 280px;
   word-wrap: break-word;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
-.finesse-feedback.optimal {
-  border-color: #4caf50;
-  color: #4caf50;
+.finesse-feedback-overlay {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  z-index: 9999;
+  background: rgba(120, 0, 0, 1);
+  color: white;
+  padding: 12px 20px;
+  border-bottom: 2px solid color-mix(in oklab, var(--primary) 65%, black);
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  font-size: 16px;
+  text-align: center;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  width: fit-content;
+  max-width: 95vw;
+  white-space: nowrap;
+  transition:
+    transform 0.3s ease-out,
+    opacity 0.3s ease-out,
+    visibility 0.3s ease-out;
+  opacity: 0;
+  visibility: hidden;
 }
 
-.finesse-feedback.suboptimal {
-  border-color: #f44336;
-  color: #f44336;
+.finesse-feedback-overlay.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.finesse-feedback-overlay.hide {
+  opacity: 0;
+  visibility: visible;
+  transition:
+    transform 0.3s ease-out,
+    opacity 1s ease-out;
+}
+
+/* Finesse action icons */
+.finesse-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.finesse-icon:hover {
+  background: var(--bg-elev-1);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: scale(1.05);
+}
+
+/* Finesse icons in the overlay need different styling */
+.finesse-feedback-overlay .finesse-icon {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.finesse-feedback-overlay .finesse-icon:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+  transform: scale(1.05);
 }
 
 /* Controls */

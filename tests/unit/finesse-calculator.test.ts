@@ -1,8 +1,5 @@
-import {
-  finesseCalculator,
-  Fault,
-  FinesseAction,
-} from "../../src/finesse/calculator";
+import { finesseCalculator, Fault } from "../../src/finesse/calculator";
+import { FinesseAction } from "../../src/state/types";
 import { PIECES } from "../../src/core/pieces";
 import { createEmptyBoard, moveToWall } from "../../src/core/board";
 import { getNextRotation, tryRotate } from "../../src/core/srs";
