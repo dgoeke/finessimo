@@ -644,6 +644,7 @@ export const reducer: (
           return {
             ...state,
             active: toBottom,
+            processedInputLog: [...state.processedInputLog, action],
             physics: {
               ...state.physics,
               isSoftDropping: true,
@@ -655,6 +656,7 @@ export const reducer: (
         return {
           ...state,
           active: softDroppedPiece ?? state.active,
+          processedInputLog: [...state.processedInputLog, action],
           physics: {
             ...state.physics,
             isSoftDropping: true,

@@ -86,6 +86,7 @@ export type FinesseAction =
   | "DASRight"
   | "RotateCW"
   | "RotateCCW"
+  | "SoftDrop"
   | "HardDrop";
 
 // Finesse move types for optimal play analysis
