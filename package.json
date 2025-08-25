@@ -32,7 +32,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "robot3": "^1.1.1"
+    "robot3": "^1.1.1",
+    "tinykeys": "^1.4.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

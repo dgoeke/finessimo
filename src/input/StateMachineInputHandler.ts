@@ -9,6 +9,7 @@ import {
 } from "./keyboard";
 import { DASMachineService } from "./machines/das";
 import { fromNow, createTimestamp } from "../types/timestamp";
+import tinykeys from "tinykeys";
 
 export class StateMachineInputHandler implements InputHandler {
   private dispatch: ((action: Action) => void) | null = null;
@@ -22,9 +23,8 @@ export class StateMachineInputHandler implements InputHandler {
   private lastDasMs?: number;
   private lastArrMs?: number;
 
-  // Pre-bound handlers for event listeners
-  private boundKeyDownHandler = this.handleKeyDown.bind(this);
-  private boundKeyUpHandler = this.handleKeyUp.bind(this);
+  // TinyKeys unsubscribe function
+  private tinyKeysUnsubscribe?: () => void;
 
   constructor(dasMs = 133, arrMs = 2) {
     this.dasService = new DASMachineService({
@@ -49,13 +49,16 @@ export class StateMachineInputHandler implements InputHandler {
     this.softDropLastTime = undefined;
     this.dasService.reset();
 
-    document.addEventListener("keydown", this.boundKeyDownHandler);
-    document.addEventListener("keyup", this.boundKeyUpHandler);
+    // Register TinyKeys bindings
+    const bindings = this.buildTinyKeysBindings();
+    this.tinyKeysUnsubscribe = tinykeys(window, bindings);
   }
 
   stop(): void {
-    document.removeEventListener("keydown", this.boundKeyDownHandler);
-    document.removeEventListener("keyup", this.boundKeyUpHandler);
+    if (this.tinyKeysUnsubscribe) {
+      this.tinyKeysUnsubscribe();
+      this.tinyKeysUnsubscribe = undefined;
+    }
     this.dasService.reset();
   }
 
@@ -140,6 +143,13 @@ export class StateMachineInputHandler implements InputHandler {
   setKeyBindings(bindings: KeyBindings): void {
     this.bindings = { ...bindings };
     saveBindingsToStorage(bindings);
+    
+    // Rebuild TinyKeys bindings if currently active
+    if (this.tinyKeysUnsubscribe) {
+      this.tinyKeysUnsubscribe();
+      const newBindings = this.buildTinyKeysBindings();
+      this.tinyKeysUnsubscribe = tinykeys(window, newBindings);
+    }
   }
 
   getKeyBindings(): KeyBindings {
@@ -234,70 +244,30 @@ export class StateMachineInputHandler implements InputHandler {
     this.handleMovementKeyUp(direction, timestamp);
   }
 
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (!this.dispatch) return;
-
-    // Ignore inputs when settings overlay is open
-    if (document.body.classList.contains("settings-open")) return;
-
-    // Ignore inputs when game is not playing
-    if (this.currentGameState && this.currentGameState.status !== "playing")
-      return;
-
-    const keyBinding = mapKeyToBinding(event.code, this.bindings);
-    if (!keyBinding) return;
-
-    event.preventDefault();
-
-    // Ignore repeats
-    if (event.repeat) return;
-    if (this.keyStates.get(event.code)) return;
-
-    this.keyStates.set(event.code, true);
-
-    const timestamp = fromNow() as number;
-
-    // Handle different key types
-    switch (keyBinding) {
-      case "MoveLeft": {
-        this.handleMovementDown(keyBinding, timestamp);
-        break;
+  private buildTinyKeysBindings(): Record<string, (event: KeyboardEvent) => void> {
+    const bindings: Record<string, (event: KeyboardEvent) => void> = {};
+    
+    // For each action in our bindings, create both keydown and keyup handlers
+    for (const [action, keyCodes] of Object.entries(this.bindings) as [BindableAction, string[]][]) {
+      for (const keyCode of keyCodes) {
+        // Convert KeyboardEvent.code to TinyKeys pattern
+        const keydownPattern = keyCode;
+        const keyupPattern = `${keyCode}|keyup`;
+        
+        bindings[keydownPattern] = (event: KeyboardEvent) => {
+          this.handleKeyEvent(action, 'down', event);
+        };
+        
+        bindings[keyupPattern] = (event: KeyboardEvent) => {
+          this.handleKeyEvent(action, 'up', event);
+        };
       }
-
-      case "MoveRight": {
-        this.handleMovementDown(keyBinding, timestamp);
-        break;
-      }
-
-      case "RotateCW":
-        this.dispatch({ type: "Rotate", dir: "CW" });
-        break;
-
-      case "RotateCCW":
-        this.dispatch({ type: "Rotate", dir: "CCW" });
-        break;
-
-      case "HardDrop":
-        this.dispatch({
-          type: "HardDrop",
-          timestampMs: createTimestamp(timestamp),
-        });
-        break;
-
-      case "Hold":
-        this.dispatch({ type: "Hold" });
-        break;
-
-      case "SoftDrop":
-        this.dispatch({ type: "SoftDrop", on: true });
-        // Soft drop already dispatched above
-        this.isSoftDropDown = true;
-        this.softDropLastTime = timestamp;
-        break;
     }
+    
+    return bindings;
   }
 
-  private handleKeyUp(event: KeyboardEvent): void {
+  private handleKeyEvent(binding: BindableAction, phase: 'down' | 'up', event: KeyboardEvent): void {
     if (!this.dispatch) return;
 
     // Ignore inputs when settings overlay is open
@@ -307,29 +277,74 @@ export class StateMachineInputHandler implements InputHandler {
     if (this.currentGameState && this.currentGameState.status !== "playing")
       return;
 
-    const keyBinding = mapKeyToBinding(event.code, this.bindings);
-    if (!keyBinding) return;
-
     event.preventDefault();
-    this.keyStates.delete(event.code);
 
     const timestamp = fromNow() as number;
 
-    // Handle key releases
-    switch (keyBinding) {
-      case "MoveLeft":
-        this.handleMovementUp(keyBinding, timestamp);
-        break;
+    if (phase === 'down') {
+      // Ignore repeats
+      if (event.repeat) return;
+      if (this.keyStates.get(event.code)) return;
 
-      case "MoveRight":
-        this.handleMovementUp(keyBinding, timestamp);
-        break;
+      this.keyStates.set(event.code, true);
 
-      case "SoftDrop":
-        this.dispatch({ type: "SoftDrop", on: false });
-        // Soft drop already dispatched above
-        this.isSoftDropDown = false;
-        break;
+      // Handle different key types
+      switch (binding) {
+        case "MoveLeft": {
+          this.handleMovementDown(binding, timestamp);
+          break;
+        }
+
+        case "MoveRight": {
+          this.handleMovementDown(binding, timestamp);
+          break;
+        }
+
+        case "RotateCW":
+          this.dispatch({ type: "Rotate", dir: "CW" });
+          break;
+
+        case "RotateCCW":
+          this.dispatch({ type: "Rotate", dir: "CCW" });
+          break;
+
+        case "HardDrop":
+          this.dispatch({
+            type: "HardDrop",
+            timestampMs: createTimestamp(timestamp),
+          });
+          break;
+
+        case "Hold":
+          this.dispatch({ type: "Hold" });
+          break;
+
+        case "SoftDrop":
+          this.dispatch({ type: "SoftDrop", on: true });
+          // Soft drop already dispatched above
+          this.isSoftDropDown = true;
+          this.softDropLastTime = timestamp;
+          break;
+      }
+    } else {
+      // Handle key releases
+      this.keyStates.delete(event.code);
+
+      switch (binding) {
+        case "MoveLeft":
+          this.handleMovementUp(binding, timestamp);
+          break;
+
+        case "MoveRight":
+          this.handleMovementUp(binding, timestamp);
+          break;
+
+        case "SoftDrop":
+          this.dispatch({ type: "SoftDrop", on: false });
+          // Soft drop already dispatched above
+          this.isSoftDropDown = false;
+          break;
+      }
     }
   }
 
