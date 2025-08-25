@@ -1,4 +1,9 @@
-import { ActivePiece, GameplayConfig, Rot } from "../state/types";
+import {
+  ActivePiece,
+  GameplayConfig,
+  Rot,
+  FinesseAction,
+} from "../state/types";
 import { createEmptyBoard, canMove, moveToWall } from "../core/board";
 import { getNextRotation, tryRotate } from "../core/srs";
 import { ProcessedAction } from "../input/handler";
@@ -18,17 +23,6 @@ export type FaultType =
   | "unnecessary_rotation"
   | "wrong_piece"
   | "wrong_target";
-
-// Finesse actions - abstract moves for optimal play analysis
-// These map 1:1 to icons/suggestions and make invalid states unrepresentable
-export type FinesseAction =
-  | "MoveLeft"
-  | "MoveRight"
-  | "DASLeft"
-  | "DASRight"
-  | "RotateCW"
-  | "RotateCCW"
-  | "HardDrop";
 
 // Fault types (to be expanded in later iterations)
 export interface Fault {

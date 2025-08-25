@@ -77,11 +77,22 @@ export interface InputEvent {
   action: KeyAction;
 }
 
+// Finesse actions - abstract moves for optimal play analysis
+// These map 1:1 to icons/suggestions and make invalid states unrepresentable
+export type FinesseAction =
+  | "MoveLeft"
+  | "MoveRight"
+  | "DASLeft"
+  | "DASRight"
+  | "RotateCW"
+  | "RotateCCW"
+  | "HardDrop";
+
 // Finesse move types for optimal play analysis
 
 // Game mode and finesse feedback
 export interface FinesseUIFeedback {
-  message: string;
+  optimalSequence?: FinesseAction[];
   isOptimal: boolean;
   timestamp: number;
 }

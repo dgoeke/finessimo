@@ -1,4 +1,4 @@
-import { GameState } from "../state/types";
+import { GameState, FinesseAction } from "../state/types";
 
 export interface FinesseRenderer {
   initialize(container: HTMLElement): void;
@@ -12,6 +12,23 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     finesseFeedback?: HTMLElement;
     modePrompt?: HTMLElement;
   } = {};
+  private lastFeedbackTimestamp: number | null = null;
+  private isShowing = false;
+  private onTransitionEnd: ((ev: TransitionEvent) => void) | null = null;
+
+  private static readonly ICON_MAP: Record<FinesseAction, string> = {
+    MoveLeft: "←",
+    MoveRight: "→",
+    DASLeft: "⇤",
+    DASRight: "⇥",
+    RotateCW: "↻",
+    RotateCCW: "↺",
+    HardDrop: "⤓",
+  };
+
+  private getActionIcon(action: FinesseAction): string {
+    return BasicFinesseRenderer.ICON_MAP[action];
+  }
 
   initialize(container: HTMLElement): void {
     this.container = container;
@@ -39,16 +56,86 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     // Update finesse feedback
     const finesseFeedbackEl = this.elements.finesseFeedback;
     if (finesseFeedbackEl) {
-      if (
-        gameState.finesseFeedback &&
-        gameState.finesseFeedback.isOptimal === false
-      ) {
-        finesseFeedbackEl.textContent = gameState.finesseFeedback.message;
-        finesseFeedbackEl.className = "finesse-feedback suboptimal";
-        finesseFeedbackEl.style.display = "block";
+      const fb = gameState.finesseFeedback;
+      const seq = fb?.optimalSequence;
+      const hasSeq =
+        !!fb && fb.isOptimal === false && Array.isArray(seq) && seq.length > 0;
+      if (hasSeq && fb && Array.isArray(seq)) {
+        const currentTimestamp = fb.timestamp;
+        const now = performance.now();
+        const shouldShow = now - currentTimestamp < 1000;
+        const isNewTimestamp =
+          this.lastFeedbackTimestamp === null ||
+          currentTimestamp !== this.lastFeedbackTimestamp;
+
+        // Build icons via DOM APIs and provide accessible text
+        const frag = document.createDocumentFragment();
+        const readableActions: string[] = [];
+        for (const action of seq) {
+          const span = document.createElement("span");
+          span.classList.add("finesse-icon");
+          span.textContent = this.getActionIcon(action);
+          const readable = this.getReadableAction(action);
+          span.title = readable;
+          span.setAttribute("aria-hidden", "true");
+          frag.appendChild(span);
+          readableActions.push(readable);
+        }
+
+        finesseFeedbackEl.replaceChildren(frag);
+        finesseFeedbackEl.classList.add("finesse-feedback-overlay");
+
+        // Rising edge or fresh event while visible: retrigger animation
+        if (shouldShow && (isNewTimestamp || !this.isShowing)) {
+          this.lastFeedbackTimestamp = currentTimestamp;
+          finesseFeedbackEl.classList.remove("show");
+          finesseFeedbackEl.classList.remove("hide");
+          void finesseFeedbackEl.offsetHeight;
+          finesseFeedbackEl.style.removeProperty("visibility");
+          finesseFeedbackEl.classList.add("show");
+          this.isShowing = true;
+        } else if (!shouldShow && this.isShowing) {
+          // Falling edge: fade out
+          finesseFeedbackEl.classList.remove("show");
+          finesseFeedbackEl.classList.add("hide");
+          this.isShowing = false;
+        }
+
+        // Accessible description of the full sequence
+        finesseFeedbackEl.setAttribute(
+          "aria-label",
+          `Suggested finesse: ${readableActions.join(", ")}`,
+        );
       } else {
-        finesseFeedbackEl.style.display = "none";
+        this.lastFeedbackTimestamp = null;
+        // Hide with fade-out animation
+        finesseFeedbackEl.classList.remove("show");
+        finesseFeedbackEl.classList.add("hide");
+        finesseFeedbackEl.removeAttribute("aria-label");
+        this.isShowing = false;
       }
+    }
+  }
+
+  // Human-readable labels for accessibility
+  private getReadableAction(action: FinesseAction): string {
+    switch (action) {
+      case "MoveLeft":
+        return "Move Left";
+      case "MoveRight":
+        return "Move Right";
+      case "DASLeft":
+        return "DAS Left";
+      case "DASRight":
+        return "DAS Right";
+      case "RotateCW":
+        return "Rotate Clockwise";
+      case "RotateCCW":
+        return "Rotate Counter-Clockwise";
+      case "HardDrop":
+        return "Hard Drop";
+      default:
+        return action;
     }
   }
 
@@ -61,7 +148,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
         <div class="prompt-text">No active prompt</div>
       </div>
       
-      <div id="finesseFeedback" class="finesse-feedback" style="display: none;">
+      <div id="finesseFeedback" class="finesse-feedback-overlay">
         Finesse feedback will appear here
       </div>
     `;
@@ -71,13 +158,31 @@ export class BasicFinesseRenderer implements FinesseRenderer {
       this.container.querySelector("#modePrompt") ?? undefined;
     this.elements.finesseFeedback =
       this.container.querySelector("#finesseFeedback") ?? undefined;
+
+    // Setup transition end handler to finalize visibility after fade-out
+    const el = this.elements.finesseFeedback;
+    if (el) {
+      this.onTransitionEnd = (ev: TransitionEvent) => {
+        if (ev.propertyName === "opacity" && el.classList.contains("hide")) {
+          el.style.visibility = "hidden";
+        }
+      };
+      el.addEventListener("transitionend", this.onTransitionEnd);
+    }
   }
 
   destroy(): void {
+    const el = this.elements.finesseFeedback;
+    if (el && this.onTransitionEnd) {
+      el.removeEventListener("transitionend", this.onTransitionEnd);
+    }
     if (this.container) {
       this.container.innerHTML = "";
     }
     this.container = undefined;
     this.elements = {};
+    this.onTransitionEnd = null;
+    this.lastFeedbackTimestamp = null;
+    this.isShowing = false;
   }
 }

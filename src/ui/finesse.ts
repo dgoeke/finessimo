@@ -367,11 +367,8 @@ export function createFinesseVisualization(
   // Extract information from finesse feedback
   if (gameState.finesseFeedback) {
     visualization.isOptimal = gameState.finesseFeedback.isOptimal;
-    // Parse fault count from message if available
-    const faultMatch = /(\d+) fault/.exec(gameState.finesseFeedback.message);
-    if (faultMatch?.[1]) {
-      visualization.faultCount = parseInt(faultMatch[1]);
-    }
+    // For now, we don't have fault count in the new structure
+    // This could be enhanced later to show sequence information
   }
 
   // In guided mode, show target position and optimal path
