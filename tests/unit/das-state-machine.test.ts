@@ -109,7 +109,7 @@ describe("DAS State Machine", () => {
 
       test("emits tap move only after key up (confirmed tap)", () => {
         const service = new DASMachineService();
-        
+
         // KEY_DOWN should not emit action yet
         const downActions = service.send({
           type: "KEY_DOWN",
@@ -117,7 +117,7 @@ describe("DAS State Machine", () => {
           timestamp: 1500,
         });
         expect(downActions).toHaveLength(0);
-        
+
         // KEY_UP should emit the TapMove
         const upActions = service.send({
           type: "KEY_UP",
@@ -363,7 +363,11 @@ describe("DAS State Machine", () => {
         direction: -1,
         timestamp: 1000,
       });
-      const actions1 = service.send({ type: "KEY_UP", direction: -1, timestamp: 1050 });
+      const actions1 = service.send({
+        type: "KEY_UP",
+        direction: -1,
+        timestamp: 1050,
+      });
 
       // Second tap quickly after
       service.send({
@@ -371,7 +375,11 @@ describe("DAS State Machine", () => {
         direction: -1,
         timestamp: 1100,
       });
-      const actions2 = service.send({ type: "KEY_UP", direction: -1, timestamp: 1150 });
+      const actions2 = service.send({
+        type: "KEY_UP",
+        direction: -1,
+        timestamp: 1150,
+      });
 
       expect(actions1).toHaveLength(1);
       expect(actions2).toHaveLength(1);
@@ -463,7 +471,7 @@ describe("DAS State Machine", () => {
 
       // No action emitted on KEY_DOWN in new architecture
       expect(actions).toHaveLength(0);
-      
+
       // Verify state switched to charging with new direction
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1200);
@@ -803,14 +811,14 @@ describe("DAS State Machine", () => {
 
       expect(downActions).toHaveLength(0); // No action on KEY_DOWN
       expect(service.getState().context.dasStartTime).toBe(1000);
-      
+
       // Action is emitted on KEY_UP
       const upActions = service.send({
         type: "KEY_UP",
         direction: 1,
         timestamp: 1050,
       });
-      
+
       expect(upActions).toHaveLength(1); // Should emit action on KEY_UP
       if (isTapMoveAction(upActions[0])) {
         expect(upActions[0].timestampMs).toBe(1050);
