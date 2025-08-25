@@ -149,7 +149,9 @@ describe("StateMachineInputHandler", () => {
       handler.init(dispatchMock);
 
       // Test that the handler is initialized by trying a public method
+      // Complete a tap sequence to trigger dispatch
       handler.handleMovement("LeftDown", 1000);
+      handler.handleMovement("LeftUp", 1050);
       expect(dispatchMock).toHaveBeenCalled();
     });
   });
@@ -175,7 +177,9 @@ describe("StateMachineInputHandler", () => {
     });
 
     test("handleMovement dispatches TapMove actions", () => {
+      // Complete tap sequence: down then up
       handler.handleMovement("LeftDown", 1000);
+      handler.handleMovement("LeftUp", 1050);
 
       expect(dispatchMock).toHaveBeenCalledWith({
         type: "TapMove",
@@ -264,6 +268,7 @@ describe("StateMachineInputHandler", () => {
       // Test by observing behavior rather than internal state
       handler.init(dispatchMock);
       handler.handleMovement("LeftDown", 1000);
+      handler.handleMovement("LeftUp", 1050);
 
       expect(dispatchMock).toHaveBeenCalled();
     });
@@ -274,6 +279,7 @@ describe("StateMachineInputHandler", () => {
       // Test by observing behavior rather than internal state
       handler.init(dispatchMock);
       handler.handleMovement("LeftDown", 1000);
+      handler.handleMovement("LeftUp", 1050);
 
       expect(dispatchMock).toHaveBeenCalled();
     });
@@ -369,11 +375,14 @@ describe("StateMachineInputHandler", () => {
       handler.handleMovement("LeftDown", 1000);
       expect(handler.getState().currentDirection).toBe(-1);
 
-      // Press right (should switch)
+      // Press right (should switch and auto-complete left as tap)
       handler.handleMovement("RightDown", 1100);
       expect(handler.getState().currentDirection).toBe(1);
+      expect(dispatchMock).toHaveBeenCalledTimes(1); // Left direction auto-completed as tap
 
-      expect(dispatchMock).toHaveBeenCalledTimes(2);
+      // Complete the right tap to get another dispatch
+      handler.handleMovement("RightUp", 1150);
+      expect(dispatchMock).toHaveBeenCalledTimes(2); // Left auto-tap + right manual tap
     });
   });
 });

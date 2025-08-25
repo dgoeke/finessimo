@@ -129,14 +129,10 @@ describe("StateMachineInputHandler", () => {
       handler.update(mockGameState, 1000);
     });
 
-    it("should dispatch input event on left key down", () => {
+    it("should dispatch input event on left key down and up (complete tap)", () => {
       handler.start();
 
-      const keyEvent = new KeyboardEvent("keydown", {
-        code: "ArrowLeft",
-        repeat: false,
-      });
-
+      // Find keydown handler
       const keyDownCall = mockAddEventListener.mock.calls.find(
         (call) => call[0] === "keydown",
       );
@@ -145,9 +141,32 @@ describe("StateMachineInputHandler", () => {
       }
       const keyDownHandler = keyDownCall[1];
 
-      keyDownHandler(keyEvent);
+      // Find keyup handler
+      const keyUpCall = mockAddEventListener.mock.calls.find(
+        (call) => call[0] === "keyup",
+      );
+      if (!keyUpCall || typeof keyUpCall[1] !== "function") {
+        throw new Error("keyup handler not found");
+      }
+      const keyUpHandler = keyUpCall[1];
 
-      // Should dispatch TapMove for left movement
+      // Simulate key down (should not dispatch yet)
+      const keyDownEvent = new KeyboardEvent("keydown", {
+        code: "ArrowLeft",
+        repeat: false,
+      });
+      keyDownHandler(keyDownEvent);
+
+      // No dispatch on keydown
+      expect(mockDispatch).not.toHaveBeenCalled();
+
+      // Simulate key up (should dispatch TapMove)
+      const keyUpEvent = new KeyboardEvent("keyup", {
+        code: "ArrowLeft",
+      });
+      keyUpHandler(keyUpEvent);
+
+      // Should dispatch TapMove for completed tap
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "TapMove",
         dir: -1,

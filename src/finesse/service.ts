@@ -59,11 +59,6 @@ export class DefaultFinesseService implements FinesseService {
 
     // Extract finesse actions from processed input log
     const playerInputs = extractFinesseActions(state.processedInputLog);
-    
-    // Debug logging for input extraction
-    console.log("🔍 INPUT DEBUG:");
-    console.log("  Raw processedInputLog:", state.processedInputLog.map(a => ({type: a.type, dir: 'dir' in a ? a.dir : undefined})));
-    console.log("  Extracted playerInputs:", playerInputs);
 
     // Analyze
     const finesseResult = finesseCalculator.analyze(
@@ -102,15 +97,6 @@ export class DefaultFinesseService implements FinesseService {
       faults,
       isOptimal: finesseResult.isOptimal && faults.length === 0,
     };
-
-    // Debug logging for non-optimal finesse sequences
-    if (!mergedResult.isOptimal) {
-      console.log("🎯 FINESSE DEBUG:");
-      console.log("  Player sequence:", mergedResult.playerSequence);
-      console.log("  Optimal sequences:", mergedResult.optimalSequences);
-      console.log("  Faults:", mergedResult.faults);
-      console.log("  Piece:", lockedPiece.id, "target:", `x=${targetX}, rot=${targetRot}`);
-    }
 
     const modeResult = gameMode.onPieceLocked(
       state,
