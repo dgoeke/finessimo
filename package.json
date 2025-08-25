@@ -17,7 +17,10 @@
     "clean": "rm -rf dist",
     "format": "prettier --write --log-level warn .",
     "format:check": "prettier --check .",
-    "pre-commit": "npm-run-all clean typecheck test lint format"
+    "pre-commit": "npm-run-all clean typecheck test lint format",
+    "assistants:build": "node scripts/build-assistants.cjs",
+    "assistants:validate": "node scripts/validate-assistants.cjs",
+    "assistants:pre-commit": "npm-run-all assistants:validate assistants:build && git diff --exit-code -- CLAUDE.md AGENTS.md || (echo '📝 Run assistants:build and commit outputs' && exit 1)"
   },
   "keywords": [
     "tetris",
@@ -36,10 +39,14 @@
     "@types/node": "^24.3.0",
     "@typescript-eslint/eslint-plugin": "^8.40.0",
     "@typescript-eslint/parser": "^8.40.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "eslint": "^9.34.0",
+    "handlebars": "^4.7.8",
     "husky": "^9.1.7",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
+    "js-yaml": "^4.1.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.6.2",
     "ts-jest": "^29.1.0",

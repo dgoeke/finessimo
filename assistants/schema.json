@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["version", "project", "assistants"],
+  "properties": {
+    "version": { "type": "integer" },
+    "project": {
+      "type": "object",
+      "required": [
+        "name",
+        "purpose",
+        "primary_docs",
+        "repo_rules",
+        "core_principles"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "purpose": { "type": "string" },
+        "primary_docs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": { "path": { "type": "string" } }
+          }
+        },
+        "repo_rules": {
+          "type": "object",
+          "required": ["precommit_cmd", "no_suppressions"],
+          "properties": {
+            "precommit_cmd": { "type": "string" },
+            "no_suppressions": { "type": "boolean" }
+          }
+        },
+        "core_principles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "assistants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "vendor", "output_file"],
+        "properties": {
+          "id": { "type": "string" },
+          "vendor": { "type": "string" },
+          "output_file": { "type": "string" },
+          "style": { "type": "string" },
+          "model_notes": { "type": "string" },
+          "extra_prompts": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

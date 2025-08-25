@@ -65,7 +65,3 @@ temp/
 
 # Local development
 .local
-
-# Claude Code configuration files
-CLAUDE.md
-AGENTS.md
