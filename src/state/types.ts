@@ -198,6 +198,10 @@ export type Action =
   | { type: "Tick"; timestampMs: Timestamp }
   | { type: "Spawn"; piece?: PieceId }
   | { type: "Move"; dir: -1 | 1; source: "tap" | "das" }
+  | { type: "TapMove"; dir: -1 | 1; timestampMs?: Timestamp }
+  | { type: "HoldMove"; dir: -1 | 1; timestampMs?: Timestamp }
+  | { type: "RepeatMove"; dir: -1 | 1; timestampMs?: Timestamp }
+  | { type: "HoldStart"; dir: -1 | 1; timestampMs?: Timestamp }
   | { type: "SoftDrop"; on: boolean }
   | { type: "Rotate"; dir: "CW" | "CCW" }
   | { type: "HardDrop"; timestampMs: Timestamp }

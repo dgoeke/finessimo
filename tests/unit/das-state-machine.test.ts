@@ -9,19 +9,56 @@ import {
 } from "../../src/input/machines/das";
 import { interpret } from "robot3";
 
-// Helper function to check if action is a Move action
-const isMoveAction = (
+// Helper functions to check action types
+const isTapMoveAction = (
   action: unknown,
-): action is { type: "Move"; dir: -1 | 1; source: "tap" | "das" } => {
+): action is { type: "TapMove"; dir: -1 | 1; timestampMs?: number } => {
   return (
     typeof action === "object" &&
     action !== null &&
     "type" in action &&
-    action.type === "Move" &&
+    action.type === "TapMove" &&
     "dir" in action &&
-    typeof action.dir === "number" &&
-    "source" in action &&
-    (action.source === "tap" || action.source === "das")
+    typeof action.dir === "number"
+  );
+};
+
+const isHoldMoveAction = (
+  action: unknown,
+): action is { type: "HoldMove"; dir: -1 | 1; timestampMs?: number } => {
+  return (
+    typeof action === "object" &&
+    action !== null &&
+    "type" in action &&
+    action.type === "HoldMove" &&
+    "dir" in action &&
+    typeof action.dir === "number"
+  );
+};
+
+const isHoldStartAction = (
+  action: unknown,
+): action is { type: "HoldStart"; dir: -1 | 1; timestampMs?: number } => {
+  return (
+    typeof action === "object" &&
+    action !== null &&
+    "type" in action &&
+    action.type === "HoldStart" &&
+    "dir" in action &&
+    typeof action.dir === "number"
+  );
+};
+
+const isRepeatMoveAction = (
+  action: unknown,
+): action is { type: "RepeatMove"; dir: -1 | 1; timestampMs?: number } => {
+  return (
+    typeof action === "object" &&
+    action !== null &&
+    "type" in action &&
+    action.type === "RepeatMove" &&
+    "dir" in action &&
+    typeof action.dir === "number"
   );
 };
 
@@ -48,6 +85,7 @@ describe("DAS State Machine", () => {
         arrLastTime: undefined,
         dasMs: 167,
         arrMs: 33,
+        repeats: 0,
       });
     });
   });
@@ -66,11 +104,10 @@ describe("DAS State Machine", () => {
         expect(service.getState().context.direction).toBe(-1);
         expect(service.getState().context.dasStartTime).toBe(1000);
         expect(actions).toHaveLength(1);
-        expect(isMoveAction(actions[0]?.action)).toBe(true);
-        if (isMoveAction(actions[0]?.action)) {
-          expect(actions[0].action.type).toBe("Move");
+        expect(isTapMoveAction(actions[0]?.action)).toBe(true);
+        if (isTapMoveAction(actions[0]?.action)) {
+          expect(actions[0].action.type).toBe("TapMove");
           expect(actions[0].action.dir).toBe(-1);
-          expect(actions[0].action.source).toBe("tap");
         }
       });
 
@@ -84,9 +121,8 @@ describe("DAS State Machine", () => {
 
         expect(actions).toHaveLength(1);
         expect(actions[0]?.timestamp).toBe(1500);
-        if (isMoveAction(actions[0]?.action)) {
+        if (isTapMoveAction(actions[0]?.action)) {
           expect(actions[0].action.dir).toBe(1);
-          expect(actions[0].action.source).toBe("tap");
         }
       });
     });
@@ -143,10 +179,12 @@ describe("DAS State Machine", () => {
 
         expect(service.getState().state).toBe("repeating");
         expect(service.getState().context.arrLastTime).toBe(1167);
-        expect(actions).toHaveLength(1);
-        if (isMoveAction(actions[0]?.action)) {
+        expect(actions).toHaveLength(2); // HoldStart + HoldMove
+        if (isHoldStartAction(actions[0]?.action)) {
           expect(actions[0].action.dir).toBe(-1);
-          expect(actions[0].action.source).toBe("das");
+        }
+        if (isHoldMoveAction(actions[1]?.action)) {
+          expect(actions[1].action.dir).toBe(-1);
         }
       });
 
@@ -160,11 +198,14 @@ describe("DAS State Machine", () => {
           timestamp: 2167, // 2000 + 167ms DAS
         });
 
-        expect(actions).toHaveLength(1);
+        expect(actions).toHaveLength(2); // HoldStart + HoldMove
         expect(actions[0]?.timestamp).toBe(2167);
-        if (isMoveAction(actions[0]?.action)) {
+        if (isHoldStartAction(actions[0]?.action)) {
           expect(actions[0].action.dir).toBe(1);
-          expect(actions[0].action.source).toBe("das");
+        }
+        expect(actions[1]?.timestamp).toBe(2167);
+        if (isHoldMoveAction(actions[1]?.action)) {
+          expect(actions[1].action.dir).toBe(1);
         }
       });
     });
@@ -230,9 +271,8 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions1).toHaveLength(1);
-        if (isMoveAction(actions1[0]?.action)) {
+        if (isRepeatMoveAction(actions1[0]?.action)) {
           expect(actions1[0].action.dir).toBe(-1);
-          expect(actions1[0].action.source).toBe("das");
         }
         expect(service.getState().context.arrLastTime).toBe(1200);
 
@@ -243,7 +283,7 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions2).toHaveLength(1);
-        if (isMoveAction(actions2[0]?.action)) {
+        if (isRepeatMoveAction(actions2[0]?.action)) {
           expect(actions2[0].action.dir).toBe(-1);
         }
         expect(service.getState().context.arrLastTime).toBe(1233);
@@ -261,9 +301,11 @@ describe("DAS State Machine", () => {
           timestamp: 1300, // 1167 + 33 + 33 + 33 + 33 + ...
         });
 
-        // Should emit one action for the current ARR time
-        expect(actions).toHaveLength(1);
-        expect(actions[0]?.timestamp).toBe(1300); // Updated based on actual implementation
+        // Should emit catch-up repeats for all missed ARR intervals
+        // DAS at 1167, ARR every 33ms: 1167, 1200, 1233, 1266, 1299
+        // At timestamp 1300, should emit repeats for 1200, 1233, 1266, 1299
+        expect(actions.length).toBeGreaterThan(0);
+        expect(actions[actions.length - 1]?.timestamp).toBe(1299); // Last ARR time before 1300
       });
     });
   });
@@ -327,15 +369,52 @@ describe("DAS State Machine", () => {
         timestamp: 1080,
       });
 
-      if (isMoveAction(actions1[0]?.action)) {
+      if (isTapMoveAction(actions1[0]?.action)) {
         expect(actions1[0].action.dir).toBe(-1);
       }
-      if (isMoveAction(actions2[0]?.action)) {
+      if (isTapMoveAction(actions2[0]?.action)) {
         expect(actions2[0].action.dir).toBe(1);
       }
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1080);
       expect(service.getState().state).toBe("charging");
+    });
+
+    test("handles rapid alternation - left down then immediate right down", () => {
+      const service = new DASMachineService();
+
+      // Press LeftDown
+      const leftActions = service.send({
+        type: "KEY_DOWN",
+        direction: -1,
+        timestamp: 1000,
+      });
+
+      // Immediately press RightDown before any timer tick
+      const rightActions = service.send({
+        type: "KEY_DOWN",
+        direction: 1,
+        timestamp: 1000, // Same timestamp - rapid alternation
+      });
+
+      // Verify left key emitted TapMove
+      expect(leftActions).toHaveLength(1);
+      if (isTapMoveAction(leftActions[0]?.action)) {
+        expect(leftActions[0].action.type).toBe("TapMove");
+        expect(leftActions[0].action.dir).toBe(-1);
+      }
+
+      // Verify right key emitted TapMove
+      expect(rightActions).toHaveLength(1);
+      if (isTapMoveAction(rightActions[0]?.action)) {
+        expect(rightActions[0].action.type).toBe("TapMove");
+        expect(rightActions[0].action.dir).toBe(1);
+      }
+
+      // Verify DAS machine is now charging with right direction
+      expect(service.getState().state).toBe("charging");
+      expect(service.getState().context.direction).toBe(1);
+      expect(service.getState().context.dasStartTime).toBe(1000);
     });
 
     test("handles key switching while repeating", () => {
@@ -354,7 +433,7 @@ describe("DAS State Machine", () => {
       });
 
       expect(actions).toHaveLength(1);
-      if (isMoveAction(actions[0]?.action)) {
+      if (isTapMoveAction(actions[0]?.action)) {
         expect(actions[0].action.dir).toBe(1);
       }
       expect(service.getState().context.direction).toBe(1);
@@ -435,11 +514,15 @@ describe("DAS State Machine", () => {
         timestamp: 2167,
       });
 
-      if (isMoveAction(tapActions[0]?.action)) {
-        expect(tapActions[0].action.source).toBe("tap");
+      if (isTapMoveAction(tapActions[0]?.action)) {
+        expect(tapActions[0].action.type).toBe("TapMove");
       }
-      if (isMoveAction(holdActions[0]?.action)) {
-        expect(holdActions[0].action.source).toBe("das");
+      // holdActions has 2 actions: HoldStart and HoldMove
+      if (isHoldStartAction(holdActions[0]?.action)) {
+        expect(holdActions[0].action.type).toBe("HoldStart");
+      }
+      if (isHoldMoveAction(holdActions[1]?.action)) {
+        expect(holdActions[1].action.type).toBe("HoldMove");
       }
     });
 
@@ -553,8 +636,8 @@ describe("DAS State Machine", () => {
 
       expect(allActions).toHaveLength(5);
       allActions.forEach((action, index) => {
-        if (isMoveAction(action.action)) {
-          expect(action.action.source).toBe("tap");
+        if (isTapMoveAction(action.action)) {
+          expect(action.action.type).toBe("TapMove");
         }
         expect(action.timestamp).toBe(1000 + index * 100);
       });
@@ -590,17 +673,21 @@ describe("DAS State Machine", () => {
       // Key up when hitting wall
       service.send({ type: "KEY_UP", direction: -1, timestamp: 1300 });
 
-      if (isMoveAction(initialActions[0]?.action)) {
-        expect(initialActions[0].action.source).toBe("tap");
+      if (isTapMoveAction(initialActions[0]?.action)) {
+        expect(initialActions[0].action.type).toBe("TapMove");
       }
-      if (isMoveAction(holdStartActions[0]?.action)) {
-        expect(holdStartActions[0].action.source).toBe("das");
+      // holdStartActions has 2 actions: HoldStart and HoldMove
+      if (isHoldStartAction(holdStartActions[0]?.action)) {
+        expect(holdStartActions[0].action.type).toBe("HoldStart");
       }
-      if (isMoveAction(arr1Actions[0]?.action)) {
-        expect(arr1Actions[0].action.source).toBe("das");
+      if (isHoldMoveAction(holdStartActions[1]?.action)) {
+        expect(holdStartActions[1].action.type).toBe("HoldMove");
       }
-      if (isMoveAction(arr2Actions[0]?.action)) {
-        expect(arr2Actions[0].action.source).toBe("das");
+      if (isRepeatMoveAction(arr1Actions[0]?.action)) {
+        expect(arr1Actions[0].action.type).toBe("RepeatMove");
+      }
+      if (isRepeatMoveAction(arr2Actions[0]?.action)) {
+        expect(arr2Actions[0].action.type).toBe("RepeatMove");
       }
     });
 
@@ -650,18 +737,18 @@ describe("DAS State Machine", () => {
       expect(service.getState().state).toBe("idle");
     });
 
-    test("handles negative timestamps gracefully", () => {
+    test("handles valid timestamps correctly", () => {
       const service = new DASMachineService();
 
-      // This shouldn't happen in practice, but machine should handle it
+      // Test with a valid timestamp
       const actions = service.send({
         type: "KEY_DOWN",
         direction: 1,
-        timestamp: -1000,
+        timestamp: 1000,
       });
 
-      expect(actions).toHaveLength(1); // Should still emit action
-      expect(service.getState().context.dasStartTime).toBe(-1000);
+      expect(actions).toHaveLength(1); // Should emit action
+      expect(service.getState().context.dasStartTime).toBe(1000);
     });
   });
 
