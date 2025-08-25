@@ -6,7 +6,7 @@ import {
 } from "../state/types";
 import { createEmptyBoard, canMove, moveToWall } from "../core/board";
 import { getNextRotation, tryRotate } from "../core/srs";
-import { ProcessedAction } from "../input/handler";
+import type { Action } from "../state/types";
 
 // Finesse calculation result
 export interface FinesseResult {
@@ -31,39 +31,35 @@ export interface Fault {
   position?: number; // Index in the player sequence where fault occurs
 }
 
-// Convert ProcessedActions to FinesseActions for analysis
-export function extractFinesseActions(
-  processedActions: ProcessedAction[],
-): FinesseAction[] {
+// Convert Actions to FinesseActions for analysis
+export function extractFinesseActions(actions: Action[]): FinesseAction[] {
   const finesseActions: FinesseAction[] = [];
   let currentDASDirection: -1 | 1 | undefined;
 
-  for (const processedAction of processedActions) {
-    const { action } = processedAction;
-
+  for (const action of actions) {
     switch (action.type) {
-      case "Move":
-        if (action.source === "tap") {
-          // Reset DAS state on tap
-          currentDASDirection = undefined;
-          if (action.dir === -1) {
-            finesseActions.push("MoveLeft");
-          } else if (action.dir === 1) {
-            finesseActions.push("MoveRight");
-          }
-        } else if (action.source === "das") {
-          // Coalesce consecutive DAS pulses in same direction
-          if (currentDASDirection !== action.dir) {
-            // Direction changed or first DAS pulse
-            currentDASDirection = action.dir;
-            if (action.dir === -1) {
-              finesseActions.push("DASLeft");
-            } else if (action.dir === 1) {
-              finesseActions.push("DASRight");
-            }
-          }
-          // If same direction, do nothing (coalesce)
+      case "TapMove":
+        // Reset DAS state on tap
+        currentDASDirection = undefined;
+        if (action.dir === -1) {
+          finesseActions.push("MoveLeft");
+        } else if (action.dir === 1) {
+          finesseActions.push("MoveRight");
         }
+        break;
+      case "HoldMove":
+      case "RepeatMove":
+        // Coalesce consecutive DAS pulses in same direction
+        if (currentDASDirection !== action.dir) {
+          // Direction changed or first DAS pulse
+          currentDASDirection = action.dir;
+          if (action.dir === -1) {
+            finesseActions.push("DASLeft");
+          } else if (action.dir === 1) {
+            finesseActions.push("DASRight");
+          }
+        }
+        // If same direction, do nothing (coalesce)
         break;
       case "Rotate":
         // Reset DAS state on non-move input

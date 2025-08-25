@@ -2,9 +2,8 @@ import { describe, test, expect } from "@jest/globals";
 import { DefaultFinesseService } from "../../src/finesse/service";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { reducer } from "../../src/state/reducer";
-import type { GameState, ActivePiece, InputEvent } from "../../src/state/types";
+import type { GameState, ActivePiece, Action } from "../../src/state/types";
 import { PIECES } from "../../src/core/pieces";
-import { ProcessedAction } from "../../src/input/handler";
 import { createTimestamp } from "../../src/types/timestamp";
 
 function baseState(): GameState {
@@ -17,21 +16,12 @@ describe("FinesseService", () => {
 
   test("uses normalization window to cancel opposite taps", () => {
     let state = baseState();
-    const events: InputEvent[] = [
-      { tMs: 100, frame: 6, action: "LeftDown" },
-      { tMs: 130, frame: 8, action: "RightDown" }, // within 50ms → cancel
-      { tMs: 200, frame: 12, action: "HardDrop" },
-    ];
     // The opposite taps cancel out, leaving only HardDrop
-    const processedActions: ProcessedAction[] = [
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(200) },
-        timestamp: 200,
-      },
+    const processedActions: Action[] = [
+      { type: "HardDrop", timestampMs: createTimestamp(200) },
     ];
     state = {
       ...state,
-      inputLog: events,
       processedInputLog: processedActions,
       gameplay: { finesseCancelMs: 50 },
     };
@@ -48,28 +38,20 @@ describe("FinesseService", () => {
     const actions = service.analyzePieceLock(state, locked, mode);
     const feedback = actions.find((a) => a.type === "UpdateFinesseFeedback");
     expect(feedback).toBeTruthy();
-    // Should be optimal because normalized to just HardDrop
+    // Should be optimal because it's just HardDrop (1 input)
     // @ts-expect-error narrowing by runtime check above
     expect(feedback.feedback.isOptimal).toBe(true);
   });
 
   test("analyzes from spawn state (not current pre-lock position)", () => {
     let state = baseState();
-    // Player performed minimal inputs to go from spawn x=3 to x=0: DASLeft + HardDrop
-    const events: InputEvent[] = [
-      { tMs: 100, frame: 6, action: "LeftDown" },
-      { tMs: 200, frame: 12, action: "HardDrop" },
-    ];
-    const processedActions: ProcessedAction[] = [
-      { action: { type: "Move", dir: -1, source: "das" }, timestamp: 100 },
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(200) },
-        timestamp: 200,
-      },
+    // Player performed minimal inputs to go from spawn x=3 to x=0: HoldMove + HardDrop
+    const processedActions: Action[] = [
+      { type: "HoldMove", dir: -1 },
+      { type: "HardDrop", timestampMs: createTimestamp(200) },
     ];
     state = {
       ...state,
-      inputLog: events,
       processedInputLog: processedActions,
       gameplay: { finesseCancelMs: 50 },
     };
@@ -89,14 +71,8 @@ describe("FinesseService", () => {
   test("creates actions with custom timestamp", () => {
     let state = baseState();
     const customTimestamp = 12345;
-    const events: InputEvent[] = [{ tMs: 100, frame: 6, action: "HardDrop" }];
-    const processedActions: ProcessedAction[] = [
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(100) },
-        timestamp: 100,
-      },
-    ];
-    state = { ...state, inputLog: events, processedInputLog: processedActions };
+    const processedActions: Action[] = [];
+    state = { ...state, processedInputLog: processedActions };
 
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 };
     const actions = service.analyzePieceLock(
@@ -116,14 +92,8 @@ describe("FinesseService", () => {
 
   test("always includes ClearInputLog action as final action", () => {
     let state = baseState();
-    const events: InputEvent[] = [{ tMs: 100, frame: 6, action: "HardDrop" }];
-    const processedActions: ProcessedAction[] = [
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(100) },
-        timestamp: 100,
-      },
-    ];
-    state = { ...state, inputLog: events, processedInputLog: processedActions };
+    const processedActions: Action[] = [];
+    state = { ...state, processedInputLog: processedActions };
 
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 };
     const actions = service.analyzePieceLock(state, locked, mode);
@@ -135,14 +105,10 @@ describe("FinesseService", () => {
 
   test("calculates optimal input count correctly", () => {
     let state = baseState();
-    const events: InputEvent[] = [{ tMs: 100, frame: 6, action: "HardDrop" }];
-    const processedActions: ProcessedAction[] = [
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(100) },
-        timestamp: 100,
-      },
+    const processedActions: Action[] = [
+      { type: "HardDrop", timestampMs: createTimestamp(100) },
     ];
-    state = { ...state, inputLog: events, processedInputLog: processedActions };
+    state = { ...state, processedInputLog: processedActions };
 
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 }; // At spawn position
     const actions = service.analyzePieceLock(state, locked, mode);
@@ -159,14 +125,10 @@ describe("FinesseService", () => {
 
   test("returns actions array with required action types", () => {
     let state = baseState();
-    const events: InputEvent[] = [{ tMs: 100, frame: 6, action: "HardDrop" }];
-    const processedActions: ProcessedAction[] = [
-      {
-        action: { type: "HardDrop", timestampMs: createTimestamp(100) },
-        timestamp: 100,
-      },
+    const processedActions: Action[] = [
+      { type: "HardDrop", timestampMs: createTimestamp(100) },
     ];
-    state = { ...state, inputLog: events, processedInputLog: processedActions };
+    state = { ...state, processedInputLog: processedActions };
 
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 };
     const actions = service.analyzePieceLock(state, locked, mode);

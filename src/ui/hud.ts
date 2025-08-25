@@ -67,10 +67,10 @@ export class BasicHudRenderer implements HudRenderer {
       nextQueueEl.textContent = `Next: ${gameState.nextQueue.join(", ")}`;
 
     // Update input log (compact, recent 5)
-    const recentInputs = gameState.inputLog.slice(-5);
+    const recentInputs = gameState.processedInputLog.slice(-5);
     const inputLogEl = this.elements.inputLog;
     if (inputLogEl)
-      inputLogEl.textContent = `Recent Inputs: ${recentInputs.map((e) => e.action).join(", ")}`;
+      inputLogEl.textContent = `Recent Inputs: ${recentInputs.map((a) => a.type).join(", ")}`;
 
     // Update config
     const configEl = this.elements.config;

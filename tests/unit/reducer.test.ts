@@ -31,7 +31,7 @@ describe("Reducer", () => {
       expect(state.nextQueue).toHaveLength(5); // New system pre-fills queue
       expect(state.tick).toBe(0);
       expect(state.status).toBe("playing");
-      expect(state.inputLog).toEqual([]);
+      expect(state.processedInputLog).toEqual([]);
     });
 
     it("should accept custom seed", () => {
@@ -77,9 +77,9 @@ describe("Reducer", () => {
         ...initialState,
         active: { id: "T", rot: "spawn", x: 4, y: 0 },
         canHold: false,
-        inputLog: [
-          { tMs: 1000, frame: 60, action: "RotateCW" },
-          { tMs: 1100, frame: 66, action: "HardDrop" },
+        processedInputLog: [
+          { type: "Rotate", dir: "CW" },
+          { type: "HardDrop", timestampMs: createTimestamp(1100) },
         ],
       };
 
@@ -90,7 +90,9 @@ describe("Reducer", () => {
 
       expect(newState.active).toBeUndefined();
       expect(newState.canHold).toBe(true);
-      expect(newState.inputLog).toEqual(stateWithActivePiece.inputLog); // inputLog is preserved until ClearInputLog action
+      expect(newState.processedInputLog).toEqual(
+        stateWithActivePiece.processedInputLog,
+      ); // processedInputLog is preserved
       expect(newState.tick).toBe(stateWithActivePiece.tick + 1);
     });
 
@@ -181,71 +183,6 @@ describe("Reducer", () => {
     });
   });
 
-  describe("EnqueueInput action", () => {
-    it("should add input event to log", () => {
-      const inputEvent = {
-        tMs: 1000,
-        frame: 60,
-        action: "RotateCW" as const,
-      };
-
-      const newState = reducer(initialState, {
-        type: "EnqueueInput",
-        event: inputEvent,
-      });
-
-      expect(newState.inputLog).toHaveLength(1);
-      expect(newState.inputLog[0]).toEqual(inputEvent);
-    });
-
-    it("should append to existing input log", () => {
-      const stateWithInput: GameState = {
-        ...initialState,
-        inputLog: [{ tMs: 500, frame: 30, action: "LeftDown" }],
-      };
-
-      const newInputEvent = {
-        tMs: 1000,
-        frame: 60,
-        action: "HardDrop" as const,
-      };
-
-      const newState = reducer(stateWithInput, {
-        type: "EnqueueInput",
-        event: newInputEvent,
-      });
-
-      expect(newState.inputLog).toHaveLength(2);
-      expect(newState.inputLog[1]).toEqual(newInputEvent);
-    });
-
-    it("should not mutate original input log", () => {
-      const originalInputLog = [
-        { tMs: 500, frame: 30, action: "LeftDown" as const },
-      ];
-      const stateWithInput: GameState = {
-        ...initialState,
-        inputLog: originalInputLog,
-      };
-
-      const newInputEvent = {
-        tMs: 1000,
-        frame: 60,
-        action: "HardDrop" as const,
-      };
-
-      const newState = reducer(stateWithInput, {
-        type: "EnqueueInput",
-        event: newInputEvent,
-      });
-
-      expect(originalInputLog).toHaveLength(1);
-      expect(stateWithInput.inputLog).toHaveLength(1);
-      expect(newState.inputLog).toHaveLength(2);
-      expect(newState.inputLog).not.toBe(originalInputLog);
-    });
-  });
-
   describe("Default case (unknown actions)", () => {
     it("should return state unchanged for unknown action", () => {
       const unknownAction = { type: "UnknownAction" } as unknown as Action;
@@ -279,8 +216,8 @@ describe("Reducer", () => {
         timestampMs: createTimestamp(1),
       });
       reducer(initialState, {
-        type: "EnqueueInput",
-        event: { tMs: 1000, frame: 60, action: "HardDrop" },
+        type: "TapMove",
+        dir: 1,
       });
 
       expect(initialState.board.cells).toEqual(originalCells);
@@ -303,6 +240,97 @@ describe("Reducer", () => {
       expect(newState1).not.toBe(initialState);
       expect(newState2).not.toBe(stateWithActive);
       expect(newState2).not.toBe(initialState);
+    });
+  });
+
+  describe("processedInputLog", () => {
+    it("should append TapMove, HoldMove, RepeatMove actions to processedInputLog", () => {
+      const timestamp = createTimestamp(1000);
+
+      // Start with empty log
+      expect(initialState.processedInputLog).toEqual([]);
+
+      // Add an active piece first
+      const stateWithPiece = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+
+      // Dispatch TapMove action
+      const stateAfterTap = reducer(stateWithPiece, {
+        type: "TapMove",
+        dir: -1,
+        timestampMs: timestamp,
+      });
+
+      expect(stateAfterTap.processedInputLog).toHaveLength(1);
+      expect(stateAfterTap.processedInputLog[0]).toEqual({
+        type: "TapMove",
+        dir: -1,
+        timestampMs: timestamp,
+      });
+
+      // Dispatch RepeatMove action
+      const stateAfterRepeat = reducer(stateAfterTap, {
+        type: "RepeatMove",
+        dir: 1,
+        timestampMs: timestamp,
+      });
+
+      expect(stateAfterRepeat.processedInputLog).toHaveLength(2);
+      expect(stateAfterRepeat.processedInputLog[1]).toEqual({
+        type: "RepeatMove",
+        dir: 1,
+        timestampMs: timestamp,
+      });
+
+      // Dispatch HoldMove action
+      const stateAfterHold = reducer(stateAfterRepeat, {
+        type: "HoldMove",
+        dir: -1,
+        timestampMs: timestamp,
+      });
+
+      expect(stateAfterHold.processedInputLog).toHaveLength(3);
+      expect(stateAfterHold.processedInputLog[2]).toEqual({
+        type: "HoldMove",
+        dir: -1,
+        timestampMs: timestamp,
+      });
+    });
+
+    it("should preserve timestamps in processedInputLog", () => {
+      const timestamp1 = createTimestamp(1000);
+      const timestamp2 = createTimestamp(2000);
+
+      // Add an active piece first
+      let state: GameState = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+
+      // Dispatch actions with different timestamps
+      state = reducer(state, {
+        type: "TapMove",
+        dir: -1,
+        timestampMs: timestamp1,
+      });
+
+      state = reducer(state, {
+        type: "RepeatMove",
+        dir: 1,
+        timestampMs: timestamp2,
+      });
+
+      expect(state.processedInputLog).toHaveLength(2);
+      const firstAction = state.processedInputLog[0];
+      const secondAction = state.processedInputLog[1];
+      if (firstAction?.type === "TapMove") {
+        expect(firstAction.timestampMs).toBe(timestamp1);
+      }
+      if (secondAction?.type === "RepeatMove") {
+        expect(secondAction.timestampMs).toBe(timestamp2);
+      }
     });
   });
 });

@@ -1,6 +1,6 @@
-import { Action, KeyAction, InputEvent, GameState } from "../state/types";
-import { fromNow } from "../types/timestamp";
-import { InputHandler, InputHandlerState, InputProcessor } from "./handler";
+import { Action, GameState } from "../state/types";
+import { InputHandler, InputHandlerState } from "./handler";
+import { StateMachineInputHandler } from "./StateMachineInputHandler";
 
 // Public type for configurable key bindings
 export type BindableAction =
@@ -130,153 +130,48 @@ export function saveBindingsToStorage(bindings: KeyBindings): void {
 // KeyboardInputHandler class - handles DOM events and delegates to pure functions
 export class KeyboardInputHandler implements InputHandler {
   private dispatch?: (action: Action) => void;
-  private processor = new InputProcessor();
-  private keyBindings: KeyBindings = defaultKeyBindings();
-  private frameCounter = 0;
-  private latestGameState?: GameState;
+  private stateMachineHandler: StateMachineInputHandler;
 
-  // Pre-bound handlers to ensure removeEventListener works correctly
-  private boundKeyDownHandler = this.handleKeyDown.bind(this);
-  private boundKeyUpHandler = this.handleKeyUp.bind(this);
+  constructor() {
+    this.stateMachineHandler = new StateMachineInputHandler();
+  }
 
   init(dispatch: (action: Action) => void): void {
     this.dispatch = dispatch;
-    this.processor.init(dispatch);
-    this.keyBindings = loadBindingsFromStorage();
+    this.stateMachineHandler.init(dispatch);
   }
 
   start(): void {
-    document.addEventListener("keydown", this.boundKeyDownHandler);
-    document.addEventListener("keyup", this.boundKeyUpHandler);
+    this.stateMachineHandler.start();
   }
 
   stop(): void {
-    document.removeEventListener("keydown", this.boundKeyDownHandler);
-    document.removeEventListener("keyup", this.boundKeyUpHandler);
+    this.stateMachineHandler.stop();
   }
 
   update(gameState: GameState, nowMs: number): void {
     if (!this.dispatch) return;
-    this.frameCounter++;
-    this.latestGameState = gameState; // Store for key event handlers
-    this.processor.update(gameState, nowMs);
+    this.stateMachineHandler.update(gameState, nowMs);
   }
 
   getState(): InputHandlerState {
-    return this.processor.getState();
+    return this.stateMachineHandler.getState();
   }
 
   setKeyBindings(bindings: KeyBindings): void {
-    this.keyBindings = bindings;
-    saveBindingsToStorage(bindings);
+    this.stateMachineHandler.setKeyBindings(bindings);
   }
 
   getKeyBindings(): KeyBindings {
-    return { ...this.keyBindings };
+    return this.stateMachineHandler.getKeyBindings();
   }
 
-  private handleKeyDown(event: KeyboardEvent): void {
-    if (!this.dispatch) return;
-
-    // Ignore inputs when settings overlay is open to allow rebinding
-    if (document.body.classList.contains("settings-open")) return;
-
-    const keyBinding = mapKeyToBinding(event.code, this.keyBindings);
-    if (!keyBinding) return;
-
-    event.preventDefault();
-
-    // Prevent key repeat
-    if (event.repeat) return;
-
-    const currentTime = fromNow();
-    const currentTimeMs = currentTime as number;
-
-    // Create InputEvent and process through InputProcessor
-    let keyAction: KeyAction;
-    switch (keyBinding) {
-      case "MoveLeft":
-        keyAction = "LeftDown";
-        break;
-      case "MoveRight":
-        keyAction = "RightDown";
-        break;
-      case "RotateCW":
-        keyAction = "RotateCW";
-        break;
-      case "RotateCCW":
-        keyAction = "RotateCCW";
-        break;
-      case "HardDrop":
-        keyAction = "HardDrop";
-        break;
-      case "Hold":
-        keyAction = "Hold";
-        break;
-      case "SoftDrop":
-        keyAction = "SoftDropDown";
-        break;
-      default:
-        return;
-    }
-
-    const inputEvent: InputEvent = {
-      tMs: currentTimeMs,
-      frame: this.frameCounter,
-      action: keyAction,
-    };
-
-    // Log the raw input event
-    this.dispatch({ type: "EnqueueInput", event: inputEvent });
-
-    // Process through InputProcessor (creates ProcessedActions automatically)
-    if (this.latestGameState) {
-      this.processor.processEvent(inputEvent, this.latestGameState);
-    }
+  getStateMachineInputHandler(): StateMachineInputHandler {
+    return this.stateMachineHandler;
   }
 
-  private handleKeyUp(event: KeyboardEvent): void {
-    if (!this.dispatch) return;
-
-    // Ignore inputs when settings overlay is open to allow rebinding
-    if (document.body.classList.contains("settings-open")) return;
-
-    const keyBinding = mapKeyToBinding(event.code, this.keyBindings);
-    if (!keyBinding) return;
-
-    event.preventDefault();
-    const currentTime = fromNow();
-    const currentTimeMs = currentTime as number;
-
-    // Create InputEvent for key releases and process through InputProcessor
-    let keyAction: KeyAction;
-    switch (keyBinding) {
-      case "MoveLeft":
-        keyAction = "LeftUp";
-        break;
-      case "MoveRight":
-        keyAction = "RightUp";
-        break;
-      case "SoftDrop":
-        keyAction = "SoftDropUp";
-        break;
-      // Other keys don't need key-up handling
-      default:
-        return;
-    }
-
-    const inputEvent: InputEvent = {
-      tMs: currentTimeMs,
-      frame: this.frameCounter,
-      action: keyAction,
-    };
-
-    // Log the raw input event
-    this.dispatch({ type: "EnqueueInput", event: inputEvent });
-
-    // Process through InputProcessor
-    if (this.latestGameState) {
-      this.processor.processEvent(inputEvent, this.latestGameState);
-    }
+  // Prime timing on the state-machine to avoid first-frame mismatch
+  applyTiming(timing: { dasMs: number; arrMs: number }): void {
+    this.stateMachineHandler.applyTiming(timing);
   }
 }

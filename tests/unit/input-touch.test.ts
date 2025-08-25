@@ -1,5 +1,5 @@
 import { TouchInputHandler } from "../../src/input/touch";
-import { Action, GameState, KeyAction } from "../../src/state/types";
+import { Action, KeyAction, GameState } from "../../src/state/types";
 
 // Mock DOM APIs for touch support
 Object.defineProperty(window, "ontouchstart", {
@@ -24,11 +24,9 @@ describe("TouchInputHandler", () => {
     mockDispatch = jest.fn<void, [Action]>();
     handler.init(mockDispatch);
 
-    // Provide GameState for InputProcessor
-    const mockGameState = {
-      timing: { dasMs: 100, arrMs: 30, softDrop: 10 },
-    } as GameState;
-    handler.update(mockGameState, 1000);
+    // TouchInputHandler update method now requires gameState and timestamp
+    const mockGameState = { status: "playing" } as GameState;
+    handler.update(mockGameState, Date.now());
   });
 
   afterEach(() => {
@@ -102,39 +100,29 @@ describe("TouchInputHandler", () => {
   });
 
   describe("input event dispatching", () => {
-    test("should dispatch InputEvent when triggerAction is called", () => {
+    test("should dispatch InputEvent for non-movement actions", () => {
       handler.start();
 
       // Access private method for testing via type assertion
       const testableHandler = handler as unknown as TouchInputHandlerTestable;
-      testableHandler.triggerAction("LeftDown", "down");
+      testableHandler.triggerAction("RotateCW", "down");
 
-      // Should dispatch EnqueueInput for logging
+      // Should dispatch Rotate action for non-movement actions
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "EnqueueInput",
-        event: {
-          action: "LeftDown",
-          frame: expect.anything() as number,
-          tMs: expect.anything() as number,
-        },
+        type: "Rotate",
+        dir: "CW",
       });
     });
 
-    test("should dispatch up events for movement actions", () => {
+    test("should not dispatch EnqueueInput for movement actions directly", () => {
       handler.start();
 
       const testableHandler = handler as unknown as TouchInputHandlerTestable;
-      testableHandler.triggerAction("LeftDown", "up");
+      testableHandler.triggerAction("LeftDown", "down");
 
-      // Should dispatch EnqueueInput with LeftUp action
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: "EnqueueInput",
-        event: {
-          action: "LeftUp",
-          frame: expect.anything() as number,
-          tMs: expect.anything() as number,
-        },
-      });
+      // Movement actions should be handled by the StateMachineInputHandler
+      // and not dispatch any actions directly from touch handler
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
     test("should dispatch up events for soft drop actions", () => {
@@ -143,29 +131,24 @@ describe("TouchInputHandler", () => {
       const testableHandler = handler as unknown as TouchInputHandlerTestable;
       testableHandler.triggerAction("SoftDropDown", "up");
 
-      // Should dispatch EnqueueInput with SoftDropUp action
+      // Should dispatch SoftDrop action with on: false
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "EnqueueInput",
-        event: {
-          action: "SoftDropUp",
-          frame: expect.anything() as number,
-          tMs: expect.anything() as number,
-        },
+        type: "SoftDrop",
+        on: false,
       });
     });
   });
 
   describe("key bindings interface", () => {
-    test("should return empty key bindings (not applicable for touch)", () => {
+    test("should return default key bindings from state machine handler", () => {
       const bindings = handler.getKeyBindings();
-      expect(bindings.MoveLeft).toEqual([]);
-      expect(bindings.MoveRight).toEqual([]);
-      expect(bindings.SoftDrop).toEqual([]);
+      expect(bindings.MoveLeft).toEqual(["ArrowLeft", "KeyA"]);
+      expect(bindings.MoveRight).toEqual(["ArrowRight", "KeyD"]);
+      expect(bindings.SoftDrop).toEqual(["ArrowDown", "KeyS"]);
     });
 
-    test("setKeyBindings should be a no-op", () => {
-      const emptyBindings = handler.getKeyBindings();
-      handler.setKeyBindings({
+    test("setKeyBindings should update state machine handler bindings", () => {
+      const customBindings = {
         MoveLeft: ["KeyA"],
         MoveRight: ["KeyD"],
         SoftDrop: ["KeyS"],
@@ -173,9 +156,18 @@ describe("TouchInputHandler", () => {
         RotateCW: ["KeyX"],
         RotateCCW: ["KeyZ"],
         Hold: ["KeyC"],
-      });
-      // Should still return empty bindings
-      expect(handler.getKeyBindings()).toEqual(emptyBindings);
+      };
+
+      handler.setKeyBindings(customBindings);
+      const updatedBindings = handler.getKeyBindings();
+
+      expect(updatedBindings.MoveLeft).toEqual(["KeyA"]);
+      expect(updatedBindings.MoveRight).toEqual(["KeyD"]);
+      expect(updatedBindings.SoftDrop).toEqual(["KeyS"]);
+      expect(updatedBindings.HardDrop).toEqual(["Space"]);
+      expect(updatedBindings.RotateCW).toEqual(["KeyX"]);
+      expect(updatedBindings.RotateCCW).toEqual(["KeyZ"]);
+      expect(updatedBindings.Hold).toEqual(["KeyC"]);
     });
   });
 

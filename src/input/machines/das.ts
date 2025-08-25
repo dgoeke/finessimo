@@ -7,7 +7,7 @@
  * ROBOT3 ARCHITECTURE OVERVIEW:
  * - robot3 uses IMMUTABLE context - never mutate context directly
  * - Reducers return NEW context objects, they don't mutate the existing one
- * - Actions are for SIDE EFFECTS (like emitting ProcessedActions), not state changes
+ * - Actions are for SIDE EFFECTS (like emitting Actions), not state changes
  * - State transitions are defined declaratively with guards and reducers
  *
  * ROBOT3 API PATTERNS:
@@ -34,7 +34,7 @@ import {
   action,
   interpret,
 } from "robot3";
-import type { ProcessedAction } from "../handler";
+import type { Action } from "../../state/types";
 import { createTimestamp } from "../../types/timestamp";
 
 export type DASState = "idle" | "charging" | "repeating";
@@ -243,10 +243,10 @@ export const updateConfig = (ctx: DASContext, event: DASEvent): DASContext => {
  */
 export const createDASMachine = (
   initialContext: DASContext,
-  onAction?: (action: ProcessedAction) => void, // Callback to emit ProcessedActions
+  onAction?: (action: Action) => void, // Callback to emit Actions
 ) => {
   /*
-   * ROBOT3 ACTION FUNCTIONS - Handle side effects (ProcessedAction emission)
+   * ROBOT3 ACTION FUNCTIONS - Handle side effects (Action emission)
    * Actions receive (context, event) and perform side effects
    * Actions do NOT return anything - they are for side effects only
    * Actions are called AFTER reducers, so context contains the updated state
@@ -256,12 +256,9 @@ export const createDASMachine = (
   const emitTapAction = (_ctx: DASContext, event: DASEvent) => {
     if (event.type === "KEY_DOWN" && onAction) {
       onAction({
-        action: {
-          type: "TapMove",
-          dir: event.direction, // Direction from the key press event
-          timestampMs: createTimestamp(event.timestamp),
-        },
-        timestamp: event.timestamp,
+        type: "TapMove",
+        dir: event.direction, // Direction from the key press event
+        timestampMs: createTimestamp(event.timestamp),
       });
     }
   };
@@ -271,12 +268,9 @@ export const createDASMachine = (
     if (ctx.direction !== undefined && onAction && "timestamp" in event) {
       // First emit HoldStart for analytics/logging
       onAction({
-        action: {
-          type: "HoldStart",
-          dir: ctx.direction,
-          timestampMs: createTimestamp(event.timestamp),
-        },
-        timestamp: event.timestamp,
+        type: "HoldStart",
+        dir: ctx.direction,
+        timestampMs: createTimestamp(event.timestamp),
       });
     }
   };
@@ -285,12 +279,9 @@ export const createDASMachine = (
   const emitHoldMove = (ctx: DASContext, event: DASEvent) => {
     if (ctx.direction !== undefined && onAction && "timestamp" in event) {
       onAction({
-        action: {
-          type: "HoldMove",
-          dir: ctx.direction, // Direction from context (what key is held)
-          timestampMs: createTimestamp(event.timestamp),
-        },
-        timestamp: event.timestamp,
+        type: "HoldMove",
+        dir: ctx.direction, // Direction from context (what key is held)
+        timestampMs: createTimestamp(event.timestamp),
       });
     }
   };
@@ -304,23 +295,21 @@ export const createDASMachine = (
       ctx.dasStartTime !== undefined
     ) {
       const safeArrMs = Math.max(1, ctx.arrMs);
-      const baseTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
-      const repeats = ctx.repeats || 1;
+      // After updateContextARR, arrLastTime points to the most recent repeat time
+      // and ctx.repeats indicates how many repeats elapsed since the previous arrLastTime.
+      // Reconstruct the series to emit all missed repeats in order.
+      const latestTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
+      const repeats = Math.max(1, ctx.repeats || 1);
+      const startTime = latestTime - (repeats - 1) * safeArrMs;
 
-      // Emit multiple ProcessedActions for catch-up repeats
-      for (let i = 0; i < repeats; i++) {
-        const actionTimestamp = baseTime + i * safeArrMs;
-        // Only emit actions with timestamps <= event.timestamp
-        if (actionTimestamp <= event.timestamp) {
-          onAction({
-            action: {
-              type: "RepeatMove",
-              dir: ctx.direction, // Direction from context (what key is held)
-              timestampMs: createTimestamp(actionTimestamp),
-            },
-            timestamp: actionTimestamp,
-          });
-        }
+      // Policy: emit only the latest eligible repeat to limit per-tick bursts
+      const actionTimestamp = startTime + (repeats - 1) * safeArrMs;
+      if (actionTimestamp <= event.timestamp) {
+        onAction({
+          type: "RepeatMove",
+          dir: ctx.direction,
+          timestampMs: createTimestamp(actionTimestamp),
+        });
       }
     }
   };
@@ -422,8 +411,8 @@ export const createDASMachine = (
 
 // Default context factory with validation
 export const createDefaultDASContext = (
-  dasMs = 167, // Default DAS: 167ms (about 10 frames at 60fps)
-  arrMs = 33, // Default ARR: 33ms (about 2 frames at 60fps)
+  dasMs = 133, // Default per DESIGN.md
+  arrMs = 2, // Default per DESIGN.md
 ): DASContext => ({
   direction: undefined, // No key held initially
   dasStartTime: undefined, // No DAS timer active
@@ -453,7 +442,7 @@ interface Robot3Service {
  *
  * This class provides a clean API for the DAS state machine:
  * 1. Creates and manages the robot3 service
- * 2. Collects ProcessedActions from the action callbacks
+ * 2. Collects Actions from the action callbacks
  * 3. Provides methods for sending events and getting state
  *
  * IMPORTANT: This is a THIN wrapper - no duplicate state machine logic!
@@ -461,14 +450,14 @@ interface Robot3Service {
  */
 export class DASMachineService {
   private service: Robot3Service; // Robot3 service instance
-  private actionQueue: ProcessedAction[] = []; // Queue for collecting emitted actions
+  private actionQueue: Action[] = []; // Queue for collecting emitted actions
   private currentStateName: DASState; // Current state name stored from interpret callback
 
   constructor(initialContext?: DASContext) {
     const context = initialContext ?? createDefaultDASContext();
     this.currentStateName = "idle"; // Initialize with default state
 
-    // Create the robot3 machine with action callback to collect ProcessedActions
+    // Create the robot3 machine with action callback to collect Actions
     const machine = createDASMachine(context, (action) => {
       this.actionQueue.push(action); // Collect actions from robot3 action() callbacks
     });
@@ -485,7 +474,7 @@ export class DASMachineService {
    * Send event to robot3 service and return any emitted actions
    * This is the main interface for triggering state transitions
    */
-  send(event: DASEvent): ProcessedAction[] {
+  send(event: DASEvent): Action[] {
     this.service.send(event); // Send event to robot3 (triggers transitions)
     const actions = [...this.actionQueue]; // Copy collected actions
     this.actionQueue = []; // Clear queue for next send
@@ -504,7 +493,7 @@ export class DASMachineService {
   }
 
   /** Thin wrapper around sending UPDATE_CONFIG event */
-  updateConfig(dasMs: number, arrMs: number): ProcessedAction[] {
+  updateConfig(dasMs: number, arrMs: number): Action[] {
     return this.send({ type: "UPDATE_CONFIG", dasMs, arrMs });
   }
 

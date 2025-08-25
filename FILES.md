@@ -27,7 +27,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Input
 
-- src/input/handler.ts: Centralized input processing engine. Contains InputProcessor class with pure functions for DAS/ARR timing, input normalization, ProcessedAction generation. All timing logic unified here. Also includes MockInputHandler for testing.
+- src/input/handler.ts: Pure input utilities and mock. Provides `normalizeInputSequence`, pure DAS/ARR calculators, and a `MockInputHandler` used in tests. Core app input is handled by the state-machine-based handler below.
 - src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
 - src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
 - src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
@@ -61,7 +61,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/ui/hud.ts: Game state HUD. Status, stats, mode info, finesse feedback display.
 - src/ui/preview.ts: Next piece previews with mini canvases. Configurable display count.
 - src/ui/hold.ts: Hold piece display with availability state.
-- src/ui/finesse.ts: Finesse visualization. Target highlighting, path indicators, quality feedback.
+- src/ui/finesse.ts: Finesse visualization. Target highlighting, path indicators, and progress overlay driven by `processedInputLog` coalesced into FinesseActions.
 - src/ui/finesse-feedback.ts: Finesse feedback UI component. Displays finesse analysis results and suggestions.
 - src/ui/statistics.ts: Statistics display panel. Real-time game statistics, performance metrics, session tracking.
 - src/ui/settings.ts: Settings panel with tabs (Timing, Gameplay, Visual, Controls). localStorage persistence, keybinding support.

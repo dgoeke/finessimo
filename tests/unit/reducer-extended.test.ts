@@ -1,15 +1,8 @@
 import { reducer } from "../../src/state/reducer";
-import {
-  GameState,
-  Action,
-  InputEvent,
-  Board,
-  idx,
-} from "../../src/state/types";
+import { GameState, Action, Board, idx } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 import { SevenBagRng } from "../../src/core/rng";
 import { InvalidGameState } from "../test-types";
-import { assertDefined } from "../test-helpers";
 
 describe("Reducer - Extended Coverage", () => {
   let initialState: GameState;
@@ -23,8 +16,8 @@ describe("Reducer - Extended Coverage", () => {
       const actions: Action[] = [
         { type: "Tick", timestampMs: createTimestamp(1) },
         { type: "Spawn" },
-        { type: "Move", dir: -1, source: "tap" },
-        { type: "Move", dir: 1, source: "das" },
+        { type: "TapMove", dir: -1 },
+        { type: "HoldMove", dir: 1 },
         { type: "SoftDrop", on: true },
         { type: "SoftDrop", on: false },
         { type: "Rotate", dir: "CW" },
@@ -33,10 +26,7 @@ describe("Reducer - Extended Coverage", () => {
         { type: "Hold" },
         { type: "Lock", timestampMs: createTimestamp(performance.now()) },
         { type: "ClearLines", lines: [19] },
-        {
-          type: "EnqueueInput",
-          event: { tMs: 1000, frame: 60, action: "HardDrop" },
-        },
+        { type: "TapMove", dir: 1 },
       ];
 
       actions.forEach((action) => {
@@ -164,7 +154,7 @@ describe("Reducer - Extended Coverage", () => {
         hold: "I",
         canHold: false,
         nextQueue: ["T", "S", "Z"],
-        inputLog: [{ tMs: 1000, frame: 60, action: "RotateCW" }],
+        processedInputLog: [{ type: "Rotate", dir: "CW" }],
         status: "lineClear",
       };
 
@@ -178,7 +168,7 @@ describe("Reducer - Extended Coverage", () => {
       expect(result.hold).toBe(complexState.hold);
       expect(result.canHold).toBe(complexState.canHold);
       expect(result.nextQueue).toEqual(complexState.nextQueue);
-      expect(result.inputLog).toEqual(complexState.inputLog);
+      expect(result.processedInputLog).toEqual(complexState.processedInputLog);
       expect(result.status).toBe(complexState.status);
     });
   });
@@ -189,9 +179,9 @@ describe("Reducer - Extended Coverage", () => {
         ...initialState,
         active: { id: "T", rot: "right", x: 5, y: 10 },
         canHold: false,
-        inputLog: [
-          { tMs: 1000, frame: 60, action: "RotateCW" },
-          { tMs: 1100, frame: 66, action: "RightDown" },
+        processedInputLog: [
+          { type: "Rotate", dir: "CW" },
+          { type: "TapMove", dir: 1 },
         ],
         tick: 42,
       };
@@ -203,7 +193,9 @@ describe("Reducer - Extended Coverage", () => {
 
       expect(result.active).toBeUndefined();
       expect(result.canHold).toBe(true);
-      expect(result.inputLog).toEqual(stateWithPiece.inputLog); // inputLog is preserved until ClearInputLog action
+      expect(result.processedInputLog).toEqual(
+        stateWithPiece.processedInputLog,
+      ); // inputLog is preserved until ClearInputLog action
       expect(result.tick).toBe(43); // Incremented
     });
 
@@ -243,77 +235,73 @@ describe("Reducer - Extended Coverage", () => {
 
       expect(result.active).toBeUndefined();
       expect(result.canHold).toBe(true);
-      expect(result.inputLog).toEqual([]);
+      expect(result.processedInputLog).toEqual([]);
     });
   });
 
-  describe("EnqueueInput action detailed testing", () => {
-    it("should append inputs to existing log", () => {
-      const existingEvents: InputEvent[] = [
-        { tMs: 1000, frame: 60, action: "LeftDown" },
-        { tMs: 1100, frame: 66, action: "RotateCW" },
+  describe("Action processing and state updates", () => {
+    it("should append move actions to processedInputLog when there's an active piece", () => {
+      const existingActions: Action[] = [
+        { type: "TapMove", dir: -1 },
+        { type: "Rotate", dir: "CW" },
       ];
 
-      const stateWithInputs = { ...initialState, inputLog: existingEvents };
-      const newEvent: InputEvent = { tMs: 1200, frame: 72, action: "HardDrop" };
+      const stateWithActions = {
+        ...initialState,
+        processedInputLog: existingActions,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      const newAction: Action = { type: "TapMove", dir: 1 };
 
-      const result = reducer(stateWithInputs, {
-        type: "EnqueueInput",
-        event: newEvent,
-      });
+      const result = reducer(stateWithActions, newAction);
 
-      expect(result.inputLog).toHaveLength(3);
-      expect(result.inputLog[0]).toEqual(existingEvents[0]);
-      expect(result.inputLog[1]).toEqual(existingEvents[1]);
-      expect(result.inputLog[2]).toEqual(newEvent);
+      expect(result.processedInputLog).toHaveLength(3);
+      expect(result.processedInputLog[0]).toEqual(existingActions[0]);
+      expect(result.processedInputLog[1]).toEqual(existingActions[1]);
+      expect(result.processedInputLog[2]).toEqual(newAction);
     });
 
-    it("should handle all KeyAction types", () => {
-      const keyActions = [
-        "LeftDown",
-        "LeftUp",
-        "RightDown",
-        "RightUp",
-        "SoftDropDown",
-        "SoftDropUp",
-        "HardDrop",
-        "RotateCW",
-        "RotateCCW",
-        "Hold",
-      ] as const;
+    it("should handle all movement action types", () => {
+      const moveActions: Action[] = [
+        { type: "TapMove", dir: -1 },
+        { type: "TapMove", dir: 1 },
+        { type: "HoldMove", dir: -1 },
+        { type: "HoldMove", dir: 1 },
+        { type: "RepeatMove", dir: -1 },
+        { type: "RepeatMove", dir: 1 },
+      ];
 
-      let currentState = initialState;
-
-      keyActions.forEach((action, index) => {
-        const event: InputEvent = {
-          tMs: 1000 + index * 100,
-          frame: 60 + index * 6,
-          action,
-        };
-        currentState = reducer(currentState, { type: "EnqueueInput", event });
-      });
-
-      expect(currentState.inputLog).toHaveLength(keyActions.length);
-      keyActions.forEach((action, index) => {
-        assertDefined(currentState.inputLog[index]);
-        expect(currentState.inputLog[index].action).toBe(action);
-      });
-    });
-
-    it("should preserve exact InputEvent structure", () => {
-      const complexEvent: InputEvent = {
-        tMs: 1234.56789,
-        frame: 12345,
-        action: "RotateCCW",
+      let currentState: GameState = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
 
-      const result = reducer(initialState, {
-        type: "EnqueueInput",
-        event: complexEvent,
+      moveActions.forEach((action) => {
+        currentState = reducer(currentState, action);
       });
 
-      expect(result.inputLog[0]).toEqual(complexEvent);
-      expect(result.inputLog[0]).not.toBe(complexEvent); // Should be copied
+      expect(currentState.processedInputLog).toHaveLength(moveActions.length);
+      moveActions.forEach((action, index) => {
+        expect(currentState.processedInputLog[index]).toEqual(action);
+      });
+    });
+
+    it("should preserve exact Action structure in processedInputLog", () => {
+      const complexAction: Action = {
+        type: "HoldMove",
+        dir: -1,
+      };
+
+      const stateWithPiece = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      const result = reducer(stateWithPiece, complexAction);
+
+      expect(result.processedInputLog).toHaveLength(1);
+      expect(result.processedInputLog[0]).toEqual(complexAction);
+      // Actions are not deep copied in the reducer, they're passed by reference
+      expect(result.processedInputLog[0]).toBe(complexAction);
     });
   });
 
@@ -321,7 +309,7 @@ describe("Reducer - Extended Coverage", () => {
     it("should never modify input state object", () => {
       const originalState = { ...initialState };
       const originalTick = originalState.tick;
-      const originalInputLogLength = originalState.inputLog.length;
+      const originalInputLogLength = originalState.processedInputLog.length;
       const originalCanHold = originalState.canHold;
 
       // Try all actions that modify state
@@ -333,24 +321,35 @@ describe("Reducer - Extended Coverage", () => {
         type: "Lock",
         timestampMs: createTimestamp(performance.now()),
       });
-      reducer(originalState, {
-        type: "EnqueueInput",
-        event: { tMs: 1000, frame: 60, action: "HardDrop" },
+      const stateWithPiece = {
+        ...originalState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      reducer(stateWithPiece, {
+        type: "TapMove",
+        dir: -1,
       });
 
       // Check that the original state object wasn't modified
       expect(originalState.tick).toBe(originalTick);
-      expect(originalState.inputLog.length).toBe(originalInputLogLength);
+      expect(originalState.processedInputLog.length).toBe(
+        originalInputLogLength,
+      );
       expect(originalState.canHold).toBe(originalCanHold);
     });
 
     it("should create new objects for nested state changes", () => {
-      const event: InputEvent = { tMs: 1000, frame: 60, action: "LeftDown" };
-      const result = reducer(initialState, { type: "EnqueueInput", event });
+      const stateWithPiece = {
+        ...initialState,
+        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+      };
+      const result = reducer(stateWithPiece, { type: "TapMove", dir: -1 });
 
-      expect(result).not.toBe(initialState);
-      expect(result.inputLog).not.toBe(initialState.inputLog);
-      expect(result.board).toBe(initialState.board); // Board unchanged, can share reference
+      expect(result).not.toBe(stateWithPiece);
+      expect(result.processedInputLog).not.toBe(
+        stateWithPiece.processedInputLog,
+      );
+      expect(result.board).toBe(stateWithPiece.board); // Board unchanged, can share reference
     });
 
     it("should handle rapid state changes without corruption", () => {
@@ -366,9 +365,14 @@ describe("Reducer - Extended Coverage", () => {
         tickCount++;
 
         if (i % 10 === 0) {
+          // Add an active piece before attempting to move
+          state = {
+            ...state,
+            active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+          };
           state = reducer(state, {
-            type: "EnqueueInput",
-            event: { tMs: i * 100, frame: i * 6, action: "LeftDown" },
+            type: "TapMove",
+            dir: -1,
           });
         }
         if (i % 20 === 0) {
@@ -387,7 +391,7 @@ describe("Reducer - Extended Coverage", () => {
 
       expect(state.tick).toBe(tickCount);
       // inputLog is no longer cleared on Lock, so it accumulates during rapid inputs
-      expect(state.inputLog.length).toBeGreaterThan(0);
+      expect(state.processedInputLog.length).toBeGreaterThan(0);
       expect(state.canHold).toBe(true);
     });
   });
@@ -411,8 +415,8 @@ describe("Reducer - Extended Coverage", () => {
       });
     });
 
-    it("should handle EnqueueInput with missing event", () => {
-      const malformedAction = { type: "EnqueueInput" }; // Missing event
+    it("should handle TapMove with invalid direction", () => {
+      const malformedAction = { type: "TapMove", dir: "invalid" }; // Invalid direction
 
       expect(() =>
         reducer(initialState, malformedAction as unknown as Action),
@@ -422,9 +426,9 @@ describe("Reducer - Extended Coverage", () => {
         malformedAction as unknown as Action,
       );
 
-      // Should return original state unchanged when event is missing
+      // Should return original state unchanged when no active piece or invalid direction
       expect(result).toBe(initialState);
-      expect(result.inputLog.length).toBe(0);
+      expect(result.processedInputLog.length).toBe(0);
     });
 
     it("should handle some corrupt state gracefully", () => {
@@ -469,25 +473,25 @@ describe("Reducer - Extended Coverage", () => {
       });
     });
 
-    it("should handle invalid EnqueueInput defensively", () => {
+    it("should handle invalid TapMove defensively", () => {
       const invalidStates = [
         null,
         {},
-        { inputLog: "not-an-array" },
-        { inputLog: null },
+        { processedInputLog: "not-an-array" },
+        { processedInputLog: null },
       ];
 
       invalidStates.forEach((invalidState) => {
         expect(() =>
           reducer(invalidState as InvalidGameState as GameState, {
-            type: "EnqueueInput",
-            event: { tMs: 1000, frame: 60, action: "HardDrop" },
+            type: "TapMove",
+            dir: -1,
           }),
         ).not.toThrow();
 
         const result = reducer(invalidState as InvalidGameState as GameState, {
-          type: "EnqueueInput",
-          event: { tMs: 1000, frame: 60, action: "HardDrop" },
+          type: "TapMove",
+          dir: -1,
         });
         expect(result).toBe(invalidState);
       });
