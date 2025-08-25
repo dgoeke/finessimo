@@ -6,9 +6,9 @@ import {
   calculateGhostPosition,
   createEmptyBoard,
   tryMove,
+  moveToWall,
 } from "../core/board";
 import { tryRotate, getNextRotation } from "../core/srs";
-import { normalizeInputSequence } from "../input/handler";
 
 export interface FinesseVisualization {
   targetPosition?: ActivePiece;
@@ -464,13 +464,19 @@ function generatePathTrace(
     const action = sequence[i];
     if (!action) continue;
 
-    // Move/rotate using core logic on empty board to match BFS behavior
-    if (action === "LeftDown") {
+    // Map FinesseAction values to movement/rotation
+    if (action === "MoveLeft") {
       const moved = tryMove(emptyBoard, currentPiece, -1, 0);
       currentPiece = moved ?? currentPiece;
-    } else if (action === "RightDown") {
+    } else if (action === "MoveRight") {
       const moved = tryMove(emptyBoard, currentPiece, 1, 0);
       currentPiece = moved ?? currentPiece;
+    } else if (action === "DASLeft") {
+      const walled = moveToWall(emptyBoard, currentPiece, -1);
+      currentPiece = walled;
+    } else if (action === "DASRight") {
+      const walled = moveToWall(emptyBoard, currentPiece, 1);
+      currentPiece = walled;
     } else if (action === "RotateCW") {
       const rot = getNextRotation(currentPiece.rot, "CW");
       const rotated = tryRotate(currentPiece, rot, emptyBoard);
@@ -497,10 +503,46 @@ function calculateCurrentStep(
   gameState: GameState,
   optimalSequence: string[],
 ): number {
-  // Normalize the inputs with cancellation window to align with finesse analysis
-  const normalized = normalizeInputSequence(
-    gameState.inputLog,
-    gameState.gameplay.finesseCancelMs,
-  );
-  return Math.min(normalized.length, optimalSequence.length);
+  const player = extractPlayerFinesseActionsForProgress(gameState);
+  return Math.min(player.length, optimalSequence.length);
+}
+
+// Build player finesse actions mirroring the service’s extraction logic
+function extractPlayerFinesseActionsForProgress(state: GameState): string[] {
+  const finesseActions: string[] = [];
+  let currentDASDirection: -1 | 1 | undefined;
+
+  // Movement from processedInputLog
+  for (const a of state.processedInputLog) {
+    if (a.type === "TapMove") {
+      currentDASDirection = undefined;
+      finesseActions.push(a.dir === -1 ? "MoveLeft" : "MoveRight");
+    } else if (a.type === "HoldMove" || a.type === "RepeatMove") {
+      if (currentDASDirection !== a.dir) {
+        currentDASDirection = a.dir;
+        finesseActions.push(a.dir === -1 ? "DASLeft" : "DASRight");
+      }
+      // else coalesce consecutive repeats in same direction
+    }
+  }
+
+  // Non-movement actions from processedInputLog
+  for (const action of state.processedInputLog) {
+    switch (action.type) {
+      case "Rotate":
+        currentDASDirection = undefined;
+        if (action.dir === "CW") {
+          finesseActions.push("RotateCW");
+        } else {
+          finesseActions.push("RotateCCW");
+        }
+        break;
+      case "HardDrop":
+        currentDASDirection = undefined;
+        finesseActions.push("HardDrop");
+        break;
+    }
+  }
+
+  return finesseActions;
 }

@@ -25,7 +25,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Actions without active piece", () => {
     it("should return unchanged state for Move action without active piece", () => {
-      const action: Action = { type: "Move", dir: -1, source: "tap" };
+      const action: Action = { type: "TapMove", dir: -1 };
       const result = reducer(validState, action);
       expect(result).toBe(validState); // Same reference
     });
@@ -75,7 +75,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Move action edge cases", () => {
     it("should handle DAS movement source", () => {
-      const action: Action = { type: "Move", dir: -1, source: "das" };
+      const action: Action = { type: "HoldMove", dir: -1 };
       const result = reducer(stateWithActivePiece, action);
 
       expect(result).not.toBe(stateWithActivePiece);
@@ -95,7 +95,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { type: "Move", dir: -1, source: "tap" };
+      const action: Action = { type: "TapMove", dir: -1 };
       const result = reducer(edgeState, action);
       expect(result).toBe(edgeState); // No movement possible
     });
@@ -225,31 +225,6 @@ describe("Reducer Edge Cases and Error Conditions", () => {
       };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
-    });
-
-    it("should handle EnqueueInput with invalid state", () => {
-      const invalidState: InvalidGameState = {
-        ...validState,
-        inputLog: null as unknown as undefined, // Invalid inputLog
-      };
-
-      const action: Action = {
-        type: "EnqueueInput",
-        event: { tMs: 1000, frame: 60, action: "HardDrop" },
-      };
-
-      const result = reducer(invalidState as GameState, action);
-      expect(result).toBe(invalidState);
-    });
-
-    it("should handle EnqueueInput with missing event", () => {
-      const action = {
-        type: "EnqueueInput" as const,
-        event: undefined,
-      } as unknown as Action;
-
-      const result = reducer(validState, action);
-      expect(result).toBe(validState);
     });
   });
 

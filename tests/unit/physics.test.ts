@@ -189,7 +189,7 @@ describe("physics system", () => {
         physics: { ...state.physics, lockDelayStartTime: 1000 },
       };
 
-      const newState = reducer(state, { type: "Move", dir: 1, source: "tap" });
+      const newState = reducer(state, { type: "TapMove", dir: 1 });
 
       expect(newState.physics.lockDelayStartTime).toBeNull();
     });

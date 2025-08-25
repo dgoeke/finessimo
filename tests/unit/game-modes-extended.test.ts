@@ -59,7 +59,6 @@ const mockState = (): GameState => ({
     lineClearStartTime: null,
     lineClearLines: [],
   },
-  inputLog: [],
   processedInputLog: [],
   currentMode: "freePlay",
   finesseFeedback: null,

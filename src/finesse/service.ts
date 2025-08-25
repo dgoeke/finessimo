@@ -3,11 +3,11 @@ import {
   Action,
   ActivePiece,
   FinesseUIFeedback,
+  FinesseAction,
   Rot,
 } from "../state/types";
 import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
 import { finesseCalculator, Fault } from "./calculator";
-import { extractFinesseActions } from "./calculator";
 import { GameMode } from "../modes";
 import { dropToBottom } from "../core/board";
 import { PIECES } from "../core/pieces";
@@ -58,8 +58,8 @@ export class DefaultFinesseService implements FinesseService {
       y: spawnTopLeft[1],
     };
 
-    // Extract finesse actions from processed input log for analysis
-    const playerInputs = extractFinesseActions(state.processedInputLog);
+    // Extract finesse actions from both processed movement inputs and raw non-movement inputs
+    const playerInputs = this.extractAllFinesseActions(state);
 
     // Analyze
     const finesseResult = finesseCalculator.analyze(
@@ -145,10 +145,65 @@ export class DefaultFinesseService implements FinesseService {
       actions.push({ type: "UpdateModeData", data: modeResult.modeData });
     }
 
-    // Clear both input logs after analysis is complete
+    // Clear the processed input log after analysis
     actions.push({ type: "ClearInputLog" });
 
     return actions;
+  }
+
+  private extractAllFinesseActions(state: GameState): FinesseAction[] {
+    const finesseActions: FinesseAction[] = [];
+    let currentDASDirection: -1 | 1 | undefined;
+
+    // Extract movement actions from processedInputLog
+    for (const action of state.processedInputLog) {
+      switch (action.type) {
+        case "TapMove":
+          // Reset DAS state on tap
+          currentDASDirection = undefined;
+          if (action.dir === -1) {
+            finesseActions.push("MoveLeft");
+          } else if (action.dir === 1) {
+            finesseActions.push("MoveRight");
+          }
+          break;
+        case "HoldMove":
+        case "RepeatMove":
+          // Coalesce consecutive DAS pulses in same direction
+          if (currentDASDirection !== action.dir) {
+            // Direction changed or first DAS pulse
+            currentDASDirection = action.dir;
+            if (action.dir === -1) {
+              finesseActions.push("DASLeft");
+            } else if (action.dir === 1) {
+              finesseActions.push("DASRight");
+            }
+          }
+          // If same direction, do nothing (coalesce)
+          break;
+      }
+    }
+
+    // Extract non-movement actions from processedInputLog
+    for (const action of state.processedInputLog) {
+      switch (action.type) {
+        case "Rotate":
+          // Reset DAS state on non-move input
+          currentDASDirection = undefined;
+          if (action.dir === "CW") {
+            finesseActions.push("RotateCW");
+          } else {
+            finesseActions.push("RotateCCW");
+          }
+          break;
+        case "HardDrop":
+          currentDASDirection = undefined;
+          finesseActions.push("HardDrop");
+          break;
+      }
+    }
+
+    return finesseActions;
   }
 }
 

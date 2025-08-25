@@ -1,9 +1,5 @@
 import type { Action, GameState } from "../state/types";
-import type {
-  InputHandler,
-  InputHandlerState,
-  ProcessedAction,
-} from "./handler";
+import type { InputHandler, InputHandlerState } from "./handler";
 import type { KeyBindings, BindableAction } from "./keyboard";
 import {
   defaultKeyBindings,
@@ -22,12 +18,13 @@ export class StateMachineInputHandler implements InputHandler {
   private frameCount = 0;
   private isSoftDropDown = false;
   private softDropLastTime: number | undefined;
+  private currentGameState?: GameState;
 
   // Pre-bound handlers for event listeners
   private boundKeyDownHandler = this.handleKeyDown.bind(this);
   private boundKeyUpHandler = this.handleKeyUp.bind(this);
 
-  constructor(dasMs = 150, arrMs = 30) {
+  constructor(dasMs = 133, arrMs = 2) {
     this.dasService = new DASMachineService({
       direction: undefined,
       dasStartTime: undefined,
@@ -62,6 +59,9 @@ export class StateMachineInputHandler implements InputHandler {
 
   update(gameState: GameState, nowMs: number): void {
     if (!this.dispatch) return;
+
+    // Store current game state for use in key handlers
+    this.currentGameState = gameState;
 
     if (gameState.status !== "playing") {
       return;
@@ -109,10 +109,7 @@ export class StateMachineInputHandler implements InputHandler {
       const MAX_PULSES_PER_UPDATE = 200;
 
       while (nextTime <= nowMs && pulses < MAX_PULSES_PER_UPDATE) {
-        this.logProcessedAction({
-          action: { type: "SoftDrop", on: true },
-          timestamp: nextTime,
-        });
+        this.dispatch({ type: "SoftDrop", on: true });
 
         this.softDropLastTime = nextTime;
         nextTime += interval;
@@ -145,11 +142,103 @@ export class StateMachineInputHandler implements InputHandler {
     return { ...this.bindings };
   }
 
+  // Apply timing immediately to DAS machine to avoid startup mismatch
+  applyTiming(
+    dasMsOrTiming: number | { dasMs: number; arrMs: number },
+    maybeArrMs?: number,
+  ): void {
+    if (typeof dasMsOrTiming === "number") {
+      const arrMs = maybeArrMs ?? this.dasService.getState().context.arrMs;
+      this.dasService.updateConfig(dasMsOrTiming, arrMs);
+    } else {
+      this.dasService.updateConfig(dasMsOrTiming.dasMs, dasMsOrTiming.arrMs);
+    }
+  }
+
+  // Public method to handle soft drop state from touch with proper timestamp
+  setSoftDrop(isDown: boolean, tMs: number): void {
+    if (!this.dispatch) return;
+
+    this.isSoftDropDown = isDown;
+    if (isDown) {
+      this.softDropLastTime = tMs;
+      this.dispatch({ type: "SoftDrop", on: true });
+    } else {
+      this.dispatch({ type: "SoftDrop", on: false });
+    }
+  }
+
+  // Public method to handle movement from touch with proper timestamp
+  handleMovement(
+    action: "LeftDown" | "LeftUp" | "RightDown" | "RightUp",
+    tMs: number,
+  ): void {
+    if (!this.dispatch) return;
+
+    // Ignore inputs when settings overlay is open
+    if (document.body.classList.contains("settings-open")) return;
+
+    // Ignore movement when game is not playing
+    if (this.currentGameState && this.currentGameState.status !== "playing")
+      return;
+
+    const keyBinding = action.includes("Left") ? "MoveLeft" : "MoveRight";
+    const isDown = action.includes("Down");
+
+    if (isDown) {
+      this.handleMovementDown(keyBinding, tMs);
+    } else {
+      this.handleMovementUp(keyBinding, tMs);
+    }
+  }
+
+  private handleMovementDown(
+    keyBinding: "MoveLeft" | "MoveRight",
+    timestamp: number,
+  ): void {
+    if (!this.dispatch) return;
+
+    const direction: -1 | 1 = keyBinding === "MoveLeft" ? -1 : 1;
+
+    // Guard against repeated KEY_DOWN for same direction
+    if (this.dasService.getState().context.direction === direction) {
+      return;
+    }
+
+    // For keyboard events, check for multiple keys bound to same action
+    const codes = this.bindings[keyBinding];
+    const anotherDown = codes.some((c) => this.keyStates.get(c));
+
+    if (
+      this.dasService.getState().context.direction === direction &&
+      anotherDown
+    ) {
+      return;
+    }
+
+    this.handleMovementKeyDown(direction, timestamp);
+  }
+
+  private handleMovementUp(
+    keyBinding: "MoveLeft" | "MoveRight",
+    timestamp: number,
+  ): void {
+    if (!this.dispatch) return;
+
+    const direction: -1 | 1 = keyBinding === "MoveLeft" ? -1 : 1;
+
+    this.handleMovementKeyUp(direction, timestamp);
+  }
+
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.dispatch) return;
 
     // Ignore inputs when settings overlay is open
     if (document.body.classList.contains("settings-open")) return;
+
+    // Ignore inputs when game is not playing
+    if (this.currentGameState && this.currentGameState.status !== "playing")
+      return;
 
     const keyBinding = mapKeyToBinding(event.code, this.bindings);
     if (!keyBinding) return;
@@ -167,107 +256,37 @@ export class StateMachineInputHandler implements InputHandler {
     // Handle different key types
     switch (keyBinding) {
       case "MoveLeft": {
-        this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "LeftDown" },
-        });
-        const leftCodes = this.bindings[keyBinding];
-        const leftAnotherDown = leftCodes.some(
-          (c) => c !== event.code && this.keyStates.get(c),
-        );
-        if (
-          this.dasService.getState().context.direction === -1 &&
-          leftAnotherDown
-        )
-          return;
-        this.handleMovementKeyDown(-1);
+        this.handleMovementDown(keyBinding, timestamp);
         break;
       }
 
       case "MoveRight": {
-        this.dispatch({
-          type: "EnqueueInput",
-          event: {
-            tMs: timestamp,
-            frame: this.frameCount,
-            action: "RightDown",
-          },
-        });
-        const rightCodes = this.bindings[keyBinding];
-        const rightAnotherDown = rightCodes.some(
-          (c) => c !== event.code && this.keyStates.get(c),
-        );
-        if (
-          this.dasService.getState().context.direction === 1 &&
-          rightAnotherDown
-        )
-          return;
-        this.handleMovementKeyDown(1);
+        this.handleMovementDown(keyBinding, timestamp);
         break;
       }
 
       case "RotateCW":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "RotateCW" },
-        });
-        this.logProcessedAction({
-          action: { type: "Rotate", dir: "CW" },
-          timestamp,
-        });
+        this.dispatch({ type: "Rotate", dir: "CW" });
         break;
 
       case "RotateCCW":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: {
-            tMs: timestamp,
-            frame: this.frameCount,
-            action: "RotateCCW",
-          },
-        });
-        this.logProcessedAction({
-          action: { type: "Rotate", dir: "CCW" },
-          timestamp,
-        });
+        this.dispatch({ type: "Rotate", dir: "CCW" });
         break;
 
       case "HardDrop":
         this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "HardDrop" },
-        });
-        this.logProcessedAction({
-          action: { type: "HardDrop", timestampMs: createTimestamp(timestamp) },
-          timestamp,
+          type: "HardDrop",
+          timestampMs: createTimestamp(timestamp),
         });
         break;
 
       case "Hold":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "Hold" },
-        });
-        this.logProcessedAction({
-          action: { type: "Hold" },
-          timestamp,
-        });
+        this.dispatch({ type: "Hold" });
         break;
 
       case "SoftDrop":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: {
-            tMs: timestamp,
-            frame: this.frameCount,
-            action: "SoftDropDown",
-          },
-        });
         this.dispatch({ type: "SoftDrop", on: true });
-        this.logProcessedAction({
-          action: { type: "SoftDrop", on: true },
-          timestamp,
-        });
+        // Soft drop already dispatched above
         this.isSoftDropDown = true;
         this.softDropLastTime = timestamp;
         break;
@@ -280,6 +299,10 @@ export class StateMachineInputHandler implements InputHandler {
     // Ignore inputs when settings overlay is open
     if (document.body.classList.contains("settings-open")) return;
 
+    // Ignore inputs when game is not playing
+    if (this.currentGameState && this.currentGameState.status !== "playing")
+      return;
+
     const keyBinding = mapKeyToBinding(event.code, this.bindings);
     if (!keyBinding) return;
 
@@ -291,42 +314,23 @@ export class StateMachineInputHandler implements InputHandler {
     // Handle key releases
     switch (keyBinding) {
       case "MoveLeft":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "LeftUp" },
-        });
-        this.handleMovementKeyUp(-1);
+        this.handleMovementUp(keyBinding, timestamp);
         break;
 
       case "MoveRight":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: { tMs: timestamp, frame: this.frameCount, action: "RightUp" },
-        });
-        this.handleMovementKeyUp(1);
+        this.handleMovementUp(keyBinding, timestamp);
         break;
 
       case "SoftDrop":
-        this.dispatch({
-          type: "EnqueueInput",
-          event: {
-            tMs: timestamp,
-            frame: this.frameCount,
-            action: "SoftDropUp",
-          },
-        });
         this.dispatch({ type: "SoftDrop", on: false });
-        this.logProcessedAction({
-          action: { type: "SoftDrop", on: false },
-          timestamp,
-        });
+        // Soft drop already dispatched above
         this.isSoftDropDown = false;
         break;
     }
   }
 
-  private handleMovementKeyDown(dir: -1 | 1): void {
-    const timestamp = fromNow() as number;
+  private handleMovementKeyDown(dir: -1 | 1, timestamp?: number): void {
+    const tMs = timestamp ?? (fromNow() as number);
     const currentDirection = this.dasService.getState().context.direction;
 
     // If opposite direction is held, stop current direction
@@ -334,7 +338,7 @@ export class StateMachineInputHandler implements InputHandler {
       const actions = this.dasService.send({
         type: "KEY_UP",
         direction: currentDirection,
-        timestamp,
+        timestamp: tMs,
       });
       this.processActions(actions);
     }
@@ -343,13 +347,13 @@ export class StateMachineInputHandler implements InputHandler {
     const actions = this.dasService.send({
       type: "KEY_DOWN",
       direction: dir,
-      timestamp,
+      timestamp: tMs,
     });
     this.processActions(actions);
   }
 
-  private handleMovementKeyUp(dir: -1 | 1): void {
-    const timestamp = fromNow() as number;
+  private handleMovementKeyUp(dir: -1 | 1, timestamp?: number): void {
+    const tMs = timestamp ?? (fromNow() as number);
     const currentDirection = this.dasService.getState().context.direction;
 
     if (currentDirection === dir) {
@@ -365,7 +369,7 @@ export class StateMachineInputHandler implements InputHandler {
         const actions = this.dasService.send({
           type: "KEY_UP",
           direction: dir,
-          timestamp,
+          timestamp: tMs,
         });
         this.processActions(actions);
 
@@ -380,7 +384,7 @@ export class StateMachineInputHandler implements InputHandler {
             const newActions = this.dasService.send({
               type: "KEY_DOWN",
               direction: oppositeDir,
-              timestamp,
+              timestamp: tMs,
             });
             this.processActions(newActions);
             break;
@@ -390,49 +394,24 @@ export class StateMachineInputHandler implements InputHandler {
     }
   }
 
-  private processActions(actions: ProcessedAction[]): void {
+  private processActions(actions: Action[]): void {
     if (!this.dispatch) return;
 
-    for (const processedAction of actions) {
-      // The DAS machine now emits the specific action types directly
-      const action = processedAction.action;
-
-      // For TapMove/HoldMove/RepeatMove: log the original classified action first, then legacy mirror
+    for (const action of actions) {
+      // For TapMove/HoldMove/RepeatMove: dispatch directly
       if (
         action.type === "TapMove" ||
         action.type === "HoldMove" ||
         action.type === "RepeatMove"
       ) {
-        // Log the original classified processed action
-        this.logProcessedAction(processedAction);
-
-        const source = action.type === "TapMove" ? "tap" : "das";
-
-        // Log the legacy mirror ProcessedAction for backward compatibility
-        this.logProcessedAction({
-          action: {
-            type: "Move",
-            dir: action.dir,
-            source,
-          },
-          timestamp: processedAction.timestamp,
-        });
+        // Actions already have timestamps from DAS machine
+        this.dispatch(action);
       } else if (action.type === "HoldStart") {
-        // HoldStart is only logged for analytics, not dispatched to reducer
-        this.logProcessedAction(processedAction);
+        // HoldStart is currently ignored and will be handled in a future phase
       } else {
-        // Dispatch non-move actions directly
+        // Dispatch other actions directly
         this.dispatch(action);
       }
     }
-  }
-
-  private logProcessedAction(action: ProcessedAction): void {
-    if (!this.dispatch) return;
-
-    this.dispatch({
-      type: "EnqueueProcessedInput",
-      processedAction: action,
-    });
   }
 }

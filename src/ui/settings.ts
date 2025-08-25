@@ -157,11 +157,11 @@ export class BasicSettingsRenderer implements SettingsRenderer {
   private getDefaultSettings(): GameSettings {
     return {
       // Timing settings (matching default TimingConfig)
-      dasMs: 167, // ~10 frames at 60fps
-      arrMs: 33, // ~2 frames at 60fps
+      dasMs: 133,
+      arrMs: 2,
       softDrop: 10, // UI multiplier (× gravity); 41 => infinite in UI
       lockDelayMs: 500, // 0.5 seconds
-      lineClearDelayMs: 300, // 0.3 seconds
+      lineClearDelayMs: 0,
 
       // Gameplay settings
       gravityEnabled: false, // Disabled by default for trainer

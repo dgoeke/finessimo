@@ -19,9 +19,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
     state = reducer(state, {
       type: "HardDrop",
       timestampMs: createTimestamp(1000),
@@ -70,9 +70,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
     state = reducer(state, {
       type: "HardDrop",
       timestampMs: createTimestamp(2000),
@@ -107,9 +107,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
     state = reducer(state, {
       type: "HardDrop",
       timestampMs: createTimestamp(3000),
@@ -119,7 +119,7 @@ describe("Line Clear Edge Cases", () => {
     expect(state.active).toBeUndefined();
 
     // Try to move non-existent piece
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
 
     // Should be unchanged
     expect(state.status).toBe("lineClear");
@@ -142,9 +142,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
 
     const lockTime = 5000;
     state = reducer(state, {
@@ -181,9 +181,9 @@ describe("Line Clear Edge Cases", () => {
 
     // First line clear
     state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { type: "TapMove", dir: 1 });
     state = reducer(state, {
       type: "HardDrop",
       timestampMs: createTimestamp(4000),

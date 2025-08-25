@@ -30,9 +30,9 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
     // I piece spawns at x=3 with cells at [0,1],[1,1],[2,1],[3,1] relative to piece
     // At x=3, this puts cells at board positions x=3,4,5,6
     // We want to fill x=6,7,8,9 to complete the line (since x=0-5 are already filled)
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=4 -> cells at 4,5,6,7
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=5 -> cells at 5,6,7,8
-    state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=6 -> cells at 6,7,8,9
+    state = reducer(state, { type: "TapMove", dir: 1 }); // x=4 -> cells at 4,5,6,7
+    state = reducer(state, { type: "TapMove", dir: 1 }); // x=5 -> cells at 5,6,7,8
+    state = reducer(state, { type: "TapMove", dir: 1 }); // x=6 -> cells at 6,7,8,9
     state = reducer(state, {
       type: "HardDrop",
       timestampMs: createTimestamp(1000),
@@ -198,9 +198,9 @@ describe("Line Clearing Regression Tests", () => {
       state = reducer(state, { type: "Spawn", piece: "I" });
       if (state.active) {
         // Move I piece to complete both lines (x=6 -> cells at 6,7,8,9)
-        state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=4
-        state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=5
-        state = reducer(state, { type: "Move", dir: 1, source: "tap" }); // x=6
+        state = reducer(state, { type: "TapMove", dir: 1 }); // x=4
+        state = reducer(state, { type: "TapMove", dir: 1 }); // x=5
+        state = reducer(state, { type: "TapMove", dir: 1 }); // x=6
         state = reducer(state, {
           type: "HardDrop",
           timestampMs: createTimestamp(1000),

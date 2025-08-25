@@ -201,7 +201,6 @@ function createInitialState(
     status: "playing",
     stats: initialStats,
     physics: createInitialPhysics(),
-    inputLog: [],
     processedInputLog: [],
     currentMode: mode ?? "freePlay",
     modeData: null,
@@ -333,6 +332,34 @@ export const reducer: (
         lineClearStartTime: timestampMs,
         lineClearLines: completedLines,
       },
+    };
+  };
+
+  // Helper: Apply movement to the active piece
+  const applyMovement = (baseState: GameState, dir: -1 | 1): GameState => {
+    // Only process if we have an active piece and valid state
+    if (!baseState?.active) {
+      return baseState;
+    }
+
+    // Always apply a single-cell move; DAS/ARR repeats are produced by the Input Handler
+    const stepped = tryMove(baseState.board, baseState.active, dir, 0);
+    if (!stepped) {
+      return baseState; // Can't move
+    }
+
+    // Cancel lock delay if piece moves
+    const newPhysics = baseState.physics.lockDelayStartTime
+      ? {
+          ...baseState.physics,
+          lockDelayStartTime: null,
+        }
+      : baseState.physics;
+
+    return {
+      ...baseState,
+      active: stepped,
+      physics: newPhysics,
     };
   };
 
@@ -526,31 +553,25 @@ export const reducer: (
       };
     }
 
-    case "Move": {
-      // Only process if we have an active piece
-      if (!state.active) {
+    // Processed move actions are appended to processedInputLog here (in the reducer).
+    // Input handlers should not log separately to avoid duplication.
+    case "TapMove":
+    case "HoldMove":
+    case "RepeatMove": {
+      const newState = applyMovement(state, action.dir);
+      // If movement didn't change state (no active piece or blocked), don't log the action
+      if (newState === state) {
         return state;
       }
-
-      // Always apply a single-cell move; DAS/ARR repeats are produced by the Input Handler
-      const stepped = tryMove(state.board, state.active, action.dir, 0);
-      if (!stepped) {
-        return state; // Can't move
-      }
-
-      // Cancel lock delay if piece moves
-      const newPhysics = state.physics.lockDelayStartTime
-        ? {
-            ...state.physics,
-            lockDelayStartTime: null,
-          }
-        : state.physics;
-
       return {
-        ...state,
-        active: stepped,
-        physics: newPhysics,
+        ...newState,
+        processedInputLog: [...newState.processedInputLog, action],
       };
+    }
+
+    case "HoldStart": {
+      // Analytics/logging only - return state unchanged
+      return state;
     }
 
     case "Rotate": {
@@ -699,22 +720,6 @@ export const reducer: (
       };
     }
 
-    case "EnqueueInput": {
-      // Defensive: only process if state has valid inputLog array
-      if (
-        !state ||
-        typeof state !== "object" ||
-        !Array.isArray(state.inputLog) ||
-        !action.event
-      ) {
-        return state;
-      }
-      return {
-        ...state,
-        inputLog: [...state.inputLog, { ...action.event }],
-      };
-    }
-
     case "SetMode": {
       return {
         ...state,
@@ -842,19 +847,8 @@ export const reducer: (
     case "ClearInputLog": {
       return {
         ...state,
-        inputLog: [],
         processedInputLog: [],
       };
-    }
-
-    case "EnqueueProcessedInput": {
-      // First, add to log
-      const newState = {
-        ...state,
-        processedInputLog: [...state.processedInputLog, action.processedAction],
-      };
-      // Then recursively process the inner action
-      return reducer(newState, action.processedAction.action);
     }
 
     default:

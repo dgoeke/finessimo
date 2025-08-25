@@ -1,11 +1,11 @@
 import {
-  KeyboardInputHandler,
   mapKeyToBinding,
   defaultKeyBindings,
   loadBindingsFromStorage,
   saveBindingsToStorage,
   KeyBindings,
 } from "../../src/input/keyboard";
+import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
 import { Action, GameState } from "../../src/state/types";
 
 // Mock DOM APIs
@@ -38,12 +38,12 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
 });
 
-describe("KeyboardInputHandler", () => {
-  let handler: KeyboardInputHandler;
+describe("StateMachineInputHandler", () => {
+  let handler: StateMachineInputHandler;
   let mockDispatch: jest.Mock<void, [Action]>;
 
   beforeEach(() => {
-    handler = new KeyboardInputHandler();
+    handler = new StateMachineInputHandler();
     mockDispatch = jest.fn<void, [Action]>();
 
     mockAddEventListener.mockClear();
@@ -121,8 +121,9 @@ describe("KeyboardInputHandler", () => {
 
   describe("input event handling", () => {
     beforeEach(() => {
-      // Provide GameState for InputProcessor
+      // Provide GameState for StateMachineInputHandler - it needs status: 'playing' to dispatch inputs
       const mockGameState = {
+        status: "playing",
         timing: { dasMs: 100, arrMs: 30, softDrop: 10 },
       } as GameState;
       handler.update(mockGameState, 1000);
@@ -146,14 +147,11 @@ describe("KeyboardInputHandler", () => {
 
       keyDownHandler(keyEvent);
 
-      // Should dispatch EnqueueInput for logging
+      // Should dispatch TapMove for left movement
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "EnqueueInput",
-        event: {
-          action: "LeftDown",
-          frame: expect.anything() as number,
-          tMs: expect.anything() as number,
-        },
+        type: "TapMove",
+        dir: -1,
+        timestampMs: expect.anything() as number,
       });
     });
 
@@ -174,15 +172,8 @@ describe("KeyboardInputHandler", () => {
 
       keyUpHandler(keyEvent);
 
-      // Should dispatch EnqueueInput for logging
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: "EnqueueInput",
-        event: {
-          action: "LeftUp",
-          frame: expect.anything() as number,
-          tMs: expect.anything() as number,
-        },
-      });
+      // Key up events don't dispatch actions in the new DAS system
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
     it("should ignore key repeat events", () => {

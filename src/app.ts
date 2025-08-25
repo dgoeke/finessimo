@@ -75,6 +75,10 @@ export class FinessimoApp {
 
     if (this.touchInputHandler) {
       this.touchInputHandler.init(this.dispatch.bind(this));
+      // Set reference to keyboard handler for proper timestamp propagation
+      this.touchInputHandler.setStateMachineInputHandler(
+        this.keyboardInputHandler.getStateMachineInputHandler(),
+      );
       this.touchInputHandler.start();
     }
 
@@ -98,6 +102,8 @@ export class FinessimoApp {
         keyBindings: initialKeyBindings,
       };
       this.handleSettingsChange(toApply);
+      // Prime the input handler timing with the current game state's timing
+      this.keyboardInputHandler.applyTiming(this.gameState.timing);
     } catch {
       /* ignore persisted settings errors */
     }
@@ -159,9 +165,11 @@ export class FinessimoApp {
     const currentTime = performance.now();
 
     // Update input handlers using the same timestamp used for Tick/physics
+    // Only the keyboard handler calls the shared state machine update to avoid double-calls
     this.keyboardInputHandler.update(this.gameState, currentTime);
     if (this.touchInputHandler) {
-      this.touchInputHandler.update(this.gameState, currentTime);
+      // Touch handler only updates its frame counter, not the shared state machine
+      this.touchInputHandler.update(this.gameState, currentTime, true);
     }
 
     // Always dispatch Tick with timestamp for physics calculations
@@ -363,6 +371,9 @@ export class FinessimoApp {
     // Keybindings: update input handler and controls UI immediately
     if (newSettings.keyBindings) {
       this.keyboardInputHandler.setKeyBindings(newSettings.keyBindings);
+      if (this.touchInputHandler) {
+        this.touchInputHandler.setKeyBindings(newSettings.keyBindings);
+      }
     }
 
     // Apply UI scale directly to document root

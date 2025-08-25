@@ -7,6 +7,7 @@ import {
   updateContextARR,
   updateConfig,
 } from "../../src/input/machines/das";
+import { Action } from "../../src/state/types";
 import { interpret } from "robot3";
 
 // Helper functions to check action types
@@ -83,8 +84,8 @@ describe("DAS State Machine", () => {
         direction: undefined,
         dasStartTime: undefined,
         arrLastTime: undefined,
-        dasMs: 167,
-        arrMs: 33,
+        dasMs: 133,
+        arrMs: 2,
         repeats: 0,
       });
     });
@@ -104,10 +105,10 @@ describe("DAS State Machine", () => {
         expect(service.getState().context.direction).toBe(-1);
         expect(service.getState().context.dasStartTime).toBe(1000);
         expect(actions).toHaveLength(1);
-        expect(isTapMoveAction(actions[0]?.action)).toBe(true);
-        if (isTapMoveAction(actions[0]?.action)) {
-          expect(actions[0].action.type).toBe("TapMove");
-          expect(actions[0].action.dir).toBe(-1);
+        expect(isTapMoveAction(actions[0])).toBe(true);
+        if (isTapMoveAction(actions[0])) {
+          expect(actions[0].type).toBe("TapMove");
+          expect(actions[0].dir).toBe(-1);
         }
       });
 
@@ -120,9 +121,9 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions).toHaveLength(1);
-        expect(actions[0]?.timestamp).toBe(1500);
-        if (isTapMoveAction(actions[0]?.action)) {
-          expect(actions[0].action.dir).toBe(1);
+        if (isTapMoveAction(actions[0])) {
+          expect(actions[0].dir).toBe(1);
+          expect(actions[0].timestampMs).toBe(1500);
         }
       });
     });
@@ -168,6 +169,7 @@ describe("DAS State Machine", () => {
     describe("charging → repeating (hold classification)", () => {
       test("transitions to repeating when DAS timer expires", () => {
         const service = new DASMachineService();
+        service.updateConfig(167, 33);
 
         service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
 
@@ -180,16 +182,17 @@ describe("DAS State Machine", () => {
         expect(service.getState().state).toBe("repeating");
         expect(service.getState().context.arrLastTime).toBe(1167);
         expect(actions).toHaveLength(2); // HoldStart + HoldMove
-        if (isHoldStartAction(actions[0]?.action)) {
-          expect(actions[0].action.dir).toBe(-1);
+        if (isHoldStartAction(actions[0])) {
+          expect(actions[0].dir).toBe(-1);
         }
-        if (isHoldMoveAction(actions[1]?.action)) {
-          expect(actions[1].action.dir).toBe(-1);
+        if (isHoldMoveAction(actions[1])) {
+          expect(actions[1].dir).toBe(-1);
         }
       });
 
       test("emits hold start action when transitioning to repeating", () => {
         const service = new DASMachineService();
+        service.updateConfig(167, 33);
 
         service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
 
@@ -199,13 +202,13 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions).toHaveLength(2); // HoldStart + HoldMove
-        expect(actions[0]?.timestamp).toBe(2167);
-        if (isHoldStartAction(actions[0]?.action)) {
-          expect(actions[0].action.dir).toBe(1);
+        if (isHoldStartAction(actions[0])) {
+          expect(actions[0].dir).toBe(1);
+          expect(actions[0].timestampMs).toBe(2167);
         }
-        expect(actions[1]?.timestamp).toBe(2167);
-        if (isHoldMoveAction(actions[1]?.action)) {
-          expect(actions[1].action.dir).toBe(1);
+        if (isHoldMoveAction(actions[1])) {
+          expect(actions[1].dir).toBe(1);
+          expect(actions[1].timestampMs).toBe(2167);
         }
       });
     });
@@ -213,6 +216,7 @@ describe("DAS State Machine", () => {
     describe("repeating → idle", () => {
       test("returns to idle on key up from repeating", () => {
         const service = new DASMachineService();
+        service.updateConfig(167, 33);
 
         // Get to repeating state
         service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
@@ -259,6 +263,7 @@ describe("DAS State Machine", () => {
     describe("repeating → repeating (ARR)", () => {
       test("emits repeat moves at ARR rate", () => {
         const service = new DASMachineService();
+        service.updateConfig(167, 33);
 
         // Get to repeating state
         service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
@@ -271,8 +276,8 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions1).toHaveLength(1);
-        if (isRepeatMoveAction(actions1[0]?.action)) {
-          expect(actions1[0].action.dir).toBe(-1);
+        if (isRepeatMoveAction(actions1[0])) {
+          expect(actions1[0].dir).toBe(-1);
         }
         expect(service.getState().context.arrLastTime).toBe(1200);
 
@@ -283,14 +288,15 @@ describe("DAS State Machine", () => {
         });
 
         expect(actions2).toHaveLength(1);
-        if (isRepeatMoveAction(actions2[0]?.action)) {
-          expect(actions2[0].action.dir).toBe(-1);
+        if (isRepeatMoveAction(actions2[0])) {
+          expect(actions2[0].dir).toBe(-1);
         }
         expect(service.getState().context.arrLastTime).toBe(1233);
       });
 
       test("handles multiple ARR pulses in rapid succession", () => {
         const service = new DASMachineService();
+        service.updateConfig(167, 33);
 
         service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1000 });
         service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS
@@ -305,7 +311,10 @@ describe("DAS State Machine", () => {
         // DAS at 1167, ARR every 33ms: 1167, 1200, 1233, 1266, 1299
         // At timestamp 1300, should emit repeats for 1200, 1233, 1266, 1299
         expect(actions.length).toBeGreaterThan(0);
-        expect(actions[actions.length - 1]?.timestamp).toBe(1299); // Last ARR time before 1300
+        const lastAction = actions[actions.length - 1];
+        if (isRepeatMoveAction(lastAction)) {
+          expect(lastAction.timestampMs).toBe(1299); // Last ARR time before 1300
+        }
       });
     });
   });
@@ -313,6 +322,7 @@ describe("DAS State Machine", () => {
   describe("Timing Edge Cases", () => {
     test("handles key down/up at exact DAS boundary", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
 
@@ -369,11 +379,11 @@ describe("DAS State Machine", () => {
         timestamp: 1080,
       });
 
-      if (isTapMoveAction(actions1[0]?.action)) {
-        expect(actions1[0].action.dir).toBe(-1);
+      if (isTapMoveAction(actions1[0])) {
+        expect(actions1[0].dir).toBe(-1);
       }
-      if (isTapMoveAction(actions2[0]?.action)) {
-        expect(actions2[0].action.dir).toBe(1);
+      if (isTapMoveAction(actions2[0])) {
+        expect(actions2[0].dir).toBe(1);
       }
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1080);
@@ -399,16 +409,16 @@ describe("DAS State Machine", () => {
 
       // Verify left key emitted TapMove
       expect(leftActions).toHaveLength(1);
-      if (isTapMoveAction(leftActions[0]?.action)) {
-        expect(leftActions[0].action.type).toBe("TapMove");
-        expect(leftActions[0].action.dir).toBe(-1);
+      if (isTapMoveAction(leftActions[0])) {
+        expect(leftActions[0].type).toBe("TapMove");
+        expect(leftActions[0].dir).toBe(-1);
       }
 
       // Verify right key emitted TapMove
       expect(rightActions).toHaveLength(1);
-      if (isTapMoveAction(rightActions[0]?.action)) {
-        expect(rightActions[0].action.type).toBe("TapMove");
-        expect(rightActions[0].action.dir).toBe(1);
+      if (isTapMoveAction(rightActions[0])) {
+        expect(rightActions[0].type).toBe("TapMove");
+        expect(rightActions[0].dir).toBe(1);
       }
 
       // Verify DAS machine is now charging with right direction
@@ -419,6 +429,7 @@ describe("DAS State Machine", () => {
 
     test("handles key switching while repeating", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       // Get to repeating with left
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
@@ -433,8 +444,8 @@ describe("DAS State Machine", () => {
       });
 
       expect(actions).toHaveLength(1);
-      if (isTapMoveAction(actions[0]?.action)) {
-        expect(actions[0].action.dir).toBe(1);
+      if (isTapMoveAction(actions[0])) {
+        expect(actions[0].dir).toBe(1);
       }
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1200);
@@ -459,6 +470,7 @@ describe("DAS State Machine", () => {
 
     test("handles very long hold periods", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
       service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS
@@ -478,6 +490,7 @@ describe("DAS State Machine", () => {
   describe("Action Emission", () => {
     test("emits correct action timestamps", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       const actions1 = service.send({
         type: "KEY_DOWN",
@@ -492,8 +505,12 @@ describe("DAS State Machine", () => {
         timestamp: 1434, // 1401 + 33
       });
 
-      expect(actions1[0]?.timestamp).toBe(1234); // Tap timestamp
-      expect(actions2[0]?.timestamp).toBe(1434); // ARR timestamp
+      if (isTapMoveAction(actions1[0])) {
+        expect(actions1[0].timestampMs).toBe(1234); // Tap timestamp
+      }
+      if (isRepeatMoveAction(actions2[0])) {
+        expect(actions2[0].timestampMs).toBe(1434); // ARR timestamp
+      }
     });
 
     test("emits proper action types for tap vs hold", () => {
@@ -514,15 +531,15 @@ describe("DAS State Machine", () => {
         timestamp: 2167,
       });
 
-      if (isTapMoveAction(tapActions[0]?.action)) {
-        expect(tapActions[0].action.type).toBe("TapMove");
+      if (isTapMoveAction(tapActions[0])) {
+        expect(tapActions[0].type).toBe("TapMove");
       }
       // holdActions has 2 actions: HoldStart and HoldMove
-      if (isHoldStartAction(holdActions[0]?.action)) {
-        expect(holdActions[0].action.type).toBe("HoldStart");
+      if (isHoldStartAction(holdActions[0])) {
+        expect(holdActions[0].type).toBe("HoldStart");
       }
-      if (isHoldMoveAction(holdActions[1]?.action)) {
-        expect(holdActions[1].action.type).toBe("HoldMove");
+      if (isHoldMoveAction(holdActions[1])) {
+        expect(holdActions[1].type).toBe("HoldMove");
       }
     });
 
@@ -564,6 +581,7 @@ describe("DAS State Machine", () => {
 
     test("updates timing state during repeating", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1000 });
       service.send({ type: "TIMER_TICK", timestamp: 1167 });
@@ -590,8 +608,9 @@ describe("DAS State Machine", () => {
     test("updates configuration dynamically", () => {
       const service = new DASMachineService();
 
-      expect(service.getState().context.dasMs).toBe(167);
-      expect(service.getState().context.arrMs).toBe(33);
+      // Defaults adhere to DESIGN.md
+      expect(service.getState().context.dasMs).toBe(133);
+      expect(service.getState().context.arrMs).toBe(2);
 
       service.updateConfig(100, 16);
 
@@ -616,7 +635,7 @@ describe("DAS State Machine", () => {
 
     test("handles rapid tap sequences", () => {
       const service = new DASMachineService();
-      const allActions: { action: unknown; timestamp: number }[] = [];
+      const allActions: Action[] = [];
 
       // Rapid left taps
       for (let i = 0; i < 5; i++) {
@@ -636,10 +655,10 @@ describe("DAS State Machine", () => {
 
       expect(allActions).toHaveLength(5);
       allActions.forEach((action, index) => {
-        if (isTapMoveAction(action.action)) {
-          expect(action.action.type).toBe("TapMove");
+        if (isTapMoveAction(action)) {
+          expect(action.type).toBe("TapMove");
+          expect(action.timestampMs).toBe(1000 + index * 100);
         }
-        expect(action.timestamp).toBe(1000 + index * 100);
       });
     });
 
@@ -673,21 +692,21 @@ describe("DAS State Machine", () => {
       // Key up when hitting wall
       service.send({ type: "KEY_UP", direction: -1, timestamp: 1300 });
 
-      if (isTapMoveAction(initialActions[0]?.action)) {
-        expect(initialActions[0].action.type).toBe("TapMove");
+      if (isTapMoveAction(initialActions[0])) {
+        expect(initialActions[0].type).toBe("TapMove");
       }
       // holdStartActions has 2 actions: HoldStart and HoldMove
-      if (isHoldStartAction(holdStartActions[0]?.action)) {
-        expect(holdStartActions[0].action.type).toBe("HoldStart");
+      if (isHoldStartAction(holdStartActions[0])) {
+        expect(holdStartActions[0].type).toBe("HoldStart");
       }
-      if (isHoldMoveAction(holdStartActions[1]?.action)) {
-        expect(holdStartActions[1].action.type).toBe("HoldMove");
+      if (isHoldMoveAction(holdStartActions[1])) {
+        expect(holdStartActions[1].type).toBe("HoldMove");
       }
-      if (isRepeatMoveAction(arr1Actions[0]?.action)) {
-        expect(arr1Actions[0].action.type).toBe("RepeatMove");
+      if (isRepeatMoveAction(arr1Actions[0])) {
+        expect(arr1Actions[0].type).toBe("RepeatMove");
       }
-      if (isRepeatMoveAction(arr2Actions[0]?.action)) {
-        expect(arr2Actions[0].action.type).toBe("RepeatMove");
+      if (isRepeatMoveAction(arr2Actions[0])) {
+        expect(arr2Actions[0].type).toBe("RepeatMove");
       }
     });
 
@@ -768,6 +787,7 @@ describe("DAS State Machine", () => {
 
     test("handles corrupted context state gracefully", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       // Get to repeating state first
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
@@ -857,6 +877,7 @@ describe("DAS State Machine", () => {
 
     test("ignores timer events when ARR conditions not met", () => {
       const service = new DASMachineService();
+      service.updateConfig(167, 33);
 
       // Get to repeating state
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
