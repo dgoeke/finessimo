@@ -19,6 +19,8 @@ export class StateMachineInputHandler implements InputHandler {
   private isSoftDropDown = false;
   private softDropLastTime: number | undefined;
   private currentGameState?: GameState;
+  private lastDasMs?: number;
+  private lastArrMs?: number;
 
   // Pre-bound handlers for event listeners
   private boundKeyDownHandler = this.handleKeyDown.bind(this);
@@ -69,12 +71,14 @@ export class StateMachineInputHandler implements InputHandler {
 
     this.frameCount++;
 
-    // Update DAS timing from game state
+    // Update DAS timing from game state - only when it changes
     if (gameState.timing) {
-      this.dasService.updateConfig(
-        gameState.timing.dasMs,
-        gameState.timing.arrMs,
-      );
+      const { dasMs, arrMs } = gameState.timing;
+      if (this.lastDasMs !== dasMs || this.lastArrMs !== arrMs) {
+        this.dasService.updateConfig(dasMs, arrMs);
+        this.lastDasMs = dasMs;
+        this.lastArrMs = arrMs;
+      }
     }
 
     // Send timer tick to DAS machine if a direction is active

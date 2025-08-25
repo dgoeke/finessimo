@@ -104,26 +104,30 @@ describe("DAS State Machine", () => {
         expect(service.getState().state).toBe("charging");
         expect(service.getState().context.direction).toBe(-1);
         expect(service.getState().context.dasStartTime).toBe(1000);
-        expect(actions).toHaveLength(1);
-        expect(isTapMoveAction(actions[0])).toBe(true);
-        if (isTapMoveAction(actions[0])) {
-          expect(actions[0].type).toBe("TapMove");
-          expect(actions[0].dir).toBe(-1);
-        }
+        expect(actions).toHaveLength(0); // No immediate action - wait to see if it's tap or hold
       });
 
-      test("emits tap move immediately on key down", () => {
+      test("emits tap move only after key up (confirmed tap)", () => {
         const service = new DASMachineService();
-        const actions = service.send({
+        
+        // KEY_DOWN should not emit action yet
+        const downActions = service.send({
           type: "KEY_DOWN",
           direction: 1,
           timestamp: 1500,
         });
-
-        expect(actions).toHaveLength(1);
-        if (isTapMoveAction(actions[0])) {
-          expect(actions[0].dir).toBe(1);
-          expect(actions[0].timestampMs).toBe(1500);
+        expect(downActions).toHaveLength(0);
+        
+        // KEY_UP should emit the TapMove
+        const upActions = service.send({
+          type: "KEY_UP",
+          direction: 1,
+          timestamp: 1550,
+        });
+        expect(upActions).toHaveLength(1);
+        if (isTapMoveAction(upActions[0])) {
+          expect(upActions[0].dir).toBe(1);
+          expect(upActions[0].timestampMs).toBe(1550); // Uses KEY_UP timestamp
         }
       });
     });
@@ -146,7 +150,11 @@ describe("DAS State Machine", () => {
         expect(service.getState().state).toBe("idle");
         expect(service.getState().context.direction).toBeUndefined();
         expect(service.getState().context.dasStartTime).toBeUndefined();
-        expect(actions).toHaveLength(0); // No additional actions for tap
+        expect(actions).toHaveLength(1); // TapMove emitted on KEY_UP
+        if (isTapMoveAction(actions[0])) {
+          expect(actions[0].dir).toBe(-1);
+          expect(actions[0].timestampMs).toBe(1100);
+        }
       });
 
       test("classifies as tap when released at exact DAS boundary", () => {
@@ -162,7 +170,11 @@ describe("DAS State Machine", () => {
         });
 
         expect(service.getState().state).toBe("idle");
-        expect(actions).toHaveLength(0); // Still classified as tap
+        expect(actions).toHaveLength(1); // TapMove emitted on KEY_UP
+        if (isTapMoveAction(actions[0])) {
+          expect(actions[0].dir).toBe(-1);
+          expect(actions[0].timestampMs).toBe(1166);
+        }
       });
     });
 
@@ -335,27 +347,31 @@ describe("DAS State Machine", () => {
 
       // At exactly the boundary, should still be classified as tap (< DAS)
       expect(service.getState().state).toBe("idle");
-      expect(actions).toHaveLength(0);
+      expect(actions).toHaveLength(1); // TapMove emitted on KEY_UP
+      if (isTapMoveAction(actions[0])) {
+        expect(actions[0].dir).toBe(-1);
+        expect(actions[0].timestampMs).toBe(1167);
+      }
     });
 
     test("handles multiple rapid key presses", () => {
       const service = new DASMachineService();
 
       // First tap
-      const actions1 = service.send({
+      service.send({
         type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
       });
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1050 });
+      const actions1 = service.send({ type: "KEY_UP", direction: -1, timestamp: 1050 });
 
       // Second tap quickly after
-      const actions2 = service.send({
+      service.send({
         type: "KEY_DOWN",
         direction: -1,
         timestamp: 1100,
       });
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1150 });
+      const actions2 = service.send({ type: "KEY_UP", direction: -1, timestamp: 1150 });
 
       expect(actions1).toHaveLength(1);
       expect(actions2).toHaveLength(1);
@@ -393,38 +409,40 @@ describe("DAS State Machine", () => {
     test("handles rapid alternation - left down then immediate right down", () => {
       const service = new DASMachineService();
 
-      // Press LeftDown
+      // Press LeftDown - no action emitted yet
       const leftActions = service.send({
         type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
       });
 
-      // Immediately press RightDown before any timer tick
+      // Immediately press RightDown before any timer tick - switches to right key
       const rightActions = service.send({
         type: "KEY_DOWN",
         direction: 1,
         timestamp: 1000, // Same timestamp - rapid alternation
       });
 
-      // Verify left key emitted TapMove
-      expect(leftActions).toHaveLength(1);
-      if (isTapMoveAction(leftActions[0])) {
-        expect(leftActions[0].type).toBe("TapMove");
-        expect(leftActions[0].dir).toBe(-1);
-      }
+      // No actions emitted on KEY_DOWN events in new architecture
+      expect(leftActions).toHaveLength(0);
+      expect(rightActions).toHaveLength(0);
 
-      // Verify right key emitted TapMove
-      expect(rightActions).toHaveLength(1);
-      if (isTapMoveAction(rightActions[0])) {
-        expect(rightActions[0].type).toBe("TapMove");
-        expect(rightActions[0].dir).toBe(1);
-      }
-
-      // Verify DAS machine is now charging with right direction
+      // Verify DAS machine is now charging with right direction (left key was overridden)
       expect(service.getState().state).toBe("charging");
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1000);
+
+      // Now release the right key to get a tap action
+      const upActions = service.send({
+        type: "KEY_UP",
+        direction: 1,
+        timestamp: 1050,
+      });
+      expect(upActions).toHaveLength(1);
+      if (isTapMoveAction(upActions[0])) {
+        expect(upActions[0].type).toBe("TapMove");
+        expect(upActions[0].dir).toBe(1);
+      }
     });
 
     test("handles key switching while repeating", () => {
@@ -436,20 +454,31 @@ describe("DAS State Machine", () => {
       service.send({ type: "TIMER_TICK", timestamp: 1167 });
       expect(service.getState().state).toBe("repeating");
 
-      // Switch to right
+      // Switch to right - this should transition to charging state
       const actions = service.send({
         type: "KEY_DOWN",
         direction: 1,
         timestamp: 1200,
       });
 
-      expect(actions).toHaveLength(1);
-      if (isTapMoveAction(actions[0])) {
-        expect(actions[0].dir).toBe(1);
-      }
+      // No action emitted on KEY_DOWN in new architecture
+      expect(actions).toHaveLength(0);
+      
+      // Verify state switched to charging with new direction
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1200);
       expect(service.getState().state).toBe("charging");
+
+      // To get an action, we need to release the key
+      const upActions = service.send({
+        type: "KEY_UP",
+        direction: 1,
+        timestamp: 1250,
+      });
+      expect(upActions).toHaveLength(1);
+      if (isTapMoveAction(upActions[0])) {
+        expect(upActions[0].dir).toBe(1);
+      }
     });
 
     test("handles zero ARR timing", () => {
@@ -543,10 +572,10 @@ describe("DAS State Machine", () => {
       }
     });
 
-    test("does not emit extra actions on key up", () => {
+    test("emits TapMove on tap key up, no extra actions on hold key up", () => {
       const service = new DASMachineService();
 
-      // Tap case
+      // Tap case - should emit TapMove on KEY_UP
       service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
       const tapUpActions = service.send({
         type: "KEY_UP",
@@ -554,17 +583,20 @@ describe("DAS State Machine", () => {
         timestamp: 1100,
       });
 
-      // Hold case
+      // Hold case - should not emit extra actions on KEY_UP (already emitted HoldMove)
       service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
-      service.send({ type: "TIMER_TICK", timestamp: 2167 });
+      service.send({ type: "TIMER_TICK", timestamp: 2167 }); // Triggers HoldStart + HoldMove
       const holdUpActions = service.send({
         type: "KEY_UP",
         direction: 1,
         timestamp: 2300,
       });
 
-      expect(tapUpActions).toHaveLength(0);
-      expect(holdUpActions).toHaveLength(0);
+      expect(tapUpActions).toHaveLength(1); // TapMove for confirmed tap
+      if (isTapMoveAction(tapUpActions[0])) {
+        expect(tapUpActions[0].dir).toBe(-1);
+      }
+      expect(holdUpActions).toHaveLength(0); // No extra actions for hold release
     });
   });
 
@@ -639,25 +671,28 @@ describe("DAS State Machine", () => {
 
       // Rapid left taps
       for (let i = 0; i < 5; i++) {
-        const downActions = service.send({
+        // KEY_DOWN no longer emits actions
+        service.send({
           type: "KEY_DOWN",
           direction: -1,
           timestamp: 1000 + i * 100,
         });
-        allActions.push(...downActions);
 
-        service.send({
+        // Actions are emitted on KEY_UP
+        const upActions = service.send({
           type: "KEY_UP",
           direction: -1,
           timestamp: 1000 + i * 100 + 50,
         });
+        allActions.push(...upActions);
       }
 
       expect(allActions).toHaveLength(5);
       allActions.forEach((action, index) => {
         if (isTapMoveAction(action)) {
           expect(action.type).toBe("TapMove");
-          expect(action.timestampMs).toBe(1000 + index * 100);
+          // Timestamp is now from KEY_UP event (50ms after KEY_DOWN)
+          expect(action.timestampMs).toBe(1000 + index * 100 + 50);
         }
       });
     });
@@ -759,15 +794,27 @@ describe("DAS State Machine", () => {
     test("handles valid timestamps correctly", () => {
       const service = new DASMachineService();
 
-      // Test with a valid timestamp
-      const actions = service.send({
+      // Test with a valid timestamp - KEY_DOWN no longer emits actions
+      const downActions = service.send({
         type: "KEY_DOWN",
         direction: 1,
         timestamp: 1000,
       });
 
-      expect(actions).toHaveLength(1); // Should emit action
+      expect(downActions).toHaveLength(0); // No action on KEY_DOWN
       expect(service.getState().context.dasStartTime).toBe(1000);
+      
+      // Action is emitted on KEY_UP
+      const upActions = service.send({
+        type: "KEY_UP",
+        direction: 1,
+        timestamp: 1050,
+      });
+      
+      expect(upActions).toHaveLength(1); // Should emit action on KEY_UP
+      if (isTapMoveAction(upActions[0])) {
+        expect(upActions[0].timestampMs).toBe(1050);
+      }
     });
   });
 
@@ -931,7 +978,7 @@ describe("DAS State Machine", () => {
         direction: -1,
         timestamp: 2200,
       });
-      expect(actions).toHaveLength(1); // New key down emits action
+      expect(actions).toHaveLength(0); // No action on KEY_DOWN
       expect(service.getState().state).toBe("charging"); // Transitions to charging
 
       // Test updateConfig return branch (line 163)
@@ -1015,7 +1062,11 @@ describe("DAS State Machine", () => {
       expect(service.getState().state).toBe("idle");
       expect(service.getState().context.direction).toBeUndefined();
       expect(service.getState().context.dasStartTime).toBeUndefined();
-      expect(actions).toHaveLength(0); // No DAS action should be emitted
+      expect(actions).toHaveLength(1); // TapMove should be emitted (edge case: released after DAS but still counts as tap)
+      if (isTapMoveAction(actions[0])) {
+        expect(actions[0].dir).toBe(-1);
+        expect(actions[0].timestampMs).toBe(1200);
+      }
     });
 
     test("ignores key release for different direction while repeating", () => {
