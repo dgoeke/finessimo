@@ -3,7 +3,6 @@ import type { InputHandler, InputHandlerState } from "./handler";
 import type { KeyBindings, BindableAction } from "./keyboard";
 import {
   defaultKeyBindings,
-  mapKeyToBinding,
   loadBindingsFromStorage,
   saveBindingsToStorage,
 } from "./keyboard";
@@ -16,15 +15,19 @@ export class StateMachineInputHandler implements InputHandler {
   private bindings: KeyBindings = defaultKeyBindings();
   private keyStates = new Map<string, boolean>();
   private dasService: DASMachineService;
-  private frameCount = 0;
   private isSoftDropDown = false;
   private softDropLastTime: number | undefined;
   private currentGameState?: GameState;
   private lastDasMs?: number;
   private lastArrMs?: number;
 
-  // TinyKeys unsubscribe function
-  private tinyKeysUnsubscribe?: () => void;
+  // TinyKeys unsubscribe functions
+  private tinyKeysUnsubDown?: () => void;
+  private tinyKeysUnsubUp?: () => void;
+  
+  // Bound event handlers for cleanup
+  private resetAllInputsBound = this.resetAllInputs.bind(this);
+  private onVisibilityChangeBound = this.onVisibilityChange.bind(this);
 
   constructor(dasMs = 133, arrMs = 2) {
     this.dasService = new DASMachineService({
@@ -43,22 +46,31 @@ export class StateMachineInputHandler implements InputHandler {
   }
 
   start(): void {
-    this.frameCount = 0;
     this.keyStates.clear();
     this.isSoftDropDown = false;
     this.softDropLastTime = undefined;
     this.dasService.reset();
 
     // Register TinyKeys bindings
-    const bindings = this.buildTinyKeysBindings();
-    this.tinyKeysUnsubscribe = tinykeys(window, bindings);
+    const downBindings = this.buildDownBindings();
+    const upBindings = this.buildUpBindings();
+    this.tinyKeysUnsubDown = tinykeys(window, downBindings);
+    this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: 'keyup' });
+    
+    // Add safety event listeners for focus loss
+    window.addEventListener('blur', this.resetAllInputsBound);
+    document.addEventListener('visibilitychange', this.onVisibilityChangeBound);
   }
 
   stop(): void {
-    if (this.tinyKeysUnsubscribe) {
-      this.tinyKeysUnsubscribe();
-      this.tinyKeysUnsubscribe = undefined;
-    }
+    this.tinyKeysUnsubDown?.();
+    this.tinyKeysUnsubUp?.();
+    this.tinyKeysUnsubDown = this.tinyKeysUnsubUp = undefined;
+    
+    // Remove safety event listeners
+    window.removeEventListener('blur', this.resetAllInputsBound);
+    document.removeEventListener('visibilitychange', this.onVisibilityChangeBound);
+    
     this.dasService.reset();
   }
 
@@ -72,7 +84,6 @@ export class StateMachineInputHandler implements InputHandler {
       return;
     }
 
-    this.frameCount++;
 
     // Update DAS timing from game state - only when it changes
     if (gameState.timing) {
@@ -144,11 +155,17 @@ export class StateMachineInputHandler implements InputHandler {
     this.bindings = { ...bindings };
     saveBindingsToStorage(bindings);
     
+    // Clear key states to prevent stale state from old bindings
+    this.keyStates.clear();
+    
     // Rebuild TinyKeys bindings if currently active
-    if (this.tinyKeysUnsubscribe) {
-      this.tinyKeysUnsubscribe();
-      const newBindings = this.buildTinyKeysBindings();
-      this.tinyKeysUnsubscribe = tinykeys(window, newBindings);
+    if (this.tinyKeysUnsubDown || this.tinyKeysUnsubUp) {
+      this.tinyKeysUnsubDown?.();
+      this.tinyKeysUnsubUp?.();
+      const downBindings = this.buildDownBindings();
+      const upBindings = this.buildUpBindings();
+      this.tinyKeysUnsubDown = tinykeys(window, downBindings);
+      this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: 'keyup' });
     }
   }
 
@@ -244,38 +261,85 @@ export class StateMachineInputHandler implements InputHandler {
     this.handleMovementKeyUp(direction, timestamp);
   }
 
-  private buildTinyKeysBindings(): Record<string, (event: KeyboardEvent) => void> {
+  private buildDownBindings(): Record<string, (event: KeyboardEvent) => void> {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
     
-    // For each action in our bindings, create both keydown and keyup handlers
     for (const [action, keyCodes] of Object.entries(this.bindings) as [BindableAction, string[]][]) {
       for (const keyCode of keyCodes) {
-        // Convert KeyboardEvent.code to TinyKeys pattern
-        const keydownPattern = keyCode;
-        const keyupPattern = `${keyCode}|keyup`;
-        
-        bindings[keydownPattern] = (event: KeyboardEvent) => {
+        bindings[keyCode] = (event: KeyboardEvent) => {
           this.handleKeyEvent(action, 'down', event);
-        };
-        
-        bindings[keyupPattern] = (event: KeyboardEvent) => {
-          this.handleKeyEvent(action, 'up', event);
         };
       }
     }
     
     return bindings;
   }
+  
+  private buildUpBindings(): Record<string, (event: KeyboardEvent) => void> {
+    const bindings: Record<string, (event: KeyboardEvent) => void> = {};
+    
+    // Only bind keyup for actions that need release handling
+    const upActions: BindableAction[] = ['MoveLeft', 'MoveRight', 'SoftDrop'];
+    
+    for (const [action, keyCodes] of Object.entries(this.bindings) as [BindableAction, string[]][]) {
+      if (upActions.includes(action)) {
+        for (const keyCode of keyCodes) {
+          bindings[keyCode] = (event: KeyboardEvent) => {
+            this.handleKeyEvent(action, 'up', event);
+          };
+        }
+      }
+    }
+    
+    return bindings;
+  }
+  
+  private resetAllInputs(t = fromNow() as number): void {
+    // Release DAS direction if any
+    const dir = this.dasService.getState().context.direction;
+    if (dir !== undefined) {
+      this.dasService.send({ type: 'KEY_UP', direction: dir, timestamp: t });
+    }
+    
+    // Clear soft drop
+    if (this.isSoftDropDown) {
+      this.dispatch?.({ type: 'SoftDrop', on: false });
+      this.isSoftDropDown = false;
+    }
+    this.softDropLastTime = undefined;
+    
+    // Clear keyboard state
+    this.keyStates.clear();
+  }
+  
+  private onVisibilityChange(): void {
+    if (document.hidden) {
+      this.resetAllInputs();
+    }
+  }
 
   private handleKeyEvent(binding: BindableAction, phase: 'down' | 'up', event: KeyboardEvent): void {
     if (!this.dispatch) return;
 
-    // Ignore inputs when settings overlay is open
-    if (document.body.classList.contains("settings-open")) return;
-
-    // Ignore inputs when game is not playing
-    if (this.currentGameState && this.currentGameState.status !== "playing")
+    // Check if gameplay is blocked
+    const blocked = document.body.classList.contains('settings-open') ||
+                    (this.currentGameState && this.currentGameState.status !== 'playing');
+    
+    if (blocked) {
+      // Always process releases even when blocked to prevent stuck inputs
+      if (phase === 'up') {
+        this.keyStates.delete(event.code);
+        const t = fromNow() as number;
+        if (binding === 'MoveLeft' || binding === 'MoveRight') {
+          this.handleMovementUp(binding, t);
+        }
+        if (binding === 'SoftDrop') {
+          this.dispatch?.({ type: 'SoftDrop', on: false });
+          this.isSoftDropDown = false;
+        }
+      }
       return;
+    }
 
     event.preventDefault();
 
@@ -321,7 +385,6 @@ export class StateMachineInputHandler implements InputHandler {
 
         case "SoftDrop":
           this.dispatch({ type: "SoftDrop", on: true });
-          // Soft drop already dispatched above
           this.isSoftDropDown = true;
           this.softDropLastTime = timestamp;
           break;
@@ -341,7 +404,6 @@ export class StateMachineInputHandler implements InputHandler {
 
         case "SoftDrop":
           this.dispatch({ type: "SoftDrop", on: false });
-          // Soft drop already dispatched above
           this.isSoftDropDown = false;
           break;
       }
