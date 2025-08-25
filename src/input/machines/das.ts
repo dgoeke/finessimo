@@ -254,10 +254,10 @@ export const createDASMachine = (
 
   // Action: Emit a tap move (immediate move on key press)
   const emitTapAction = (_ctx: DASContext, event: DASEvent) => {
-    if (event.type === "KEY_DOWN" && onAction) {
+    if (event.type === "KEY_UP" && onAction && "direction" in event) {
       onAction({
         type: "TapMove",
-        dir: event.direction, // Direction from the key press event
+        dir: event.direction, // Direction from the KEY_UP event
         timestampMs: createTimestamp(event.timestamp),
       });
     }
@@ -328,7 +328,7 @@ export const createDASMachine = (
           "charging", // Target state
           guard(isKeyDown), // Guard: Check if it's a key down
           reduce(updateContextKeyDown), // Reducer: Update context with key info
-          action(emitTapAction), // Action: Emit immediate tap move
+          // Don't emit tap action yet - wait to see if it's a tap or hold
         ),
         transition(
           "UPDATE_CONFIG", // Allow config updates in idle
@@ -345,12 +345,14 @@ export const createDASMachine = (
           "idle", // Go back to idle (tap detected)
           guard(isKeyUpBeforeDAS), // Guard: Released within DAS window
           reduce(updateContextKeyUp), // Reducer: Clear all state
+          action(emitTapAction), // Action: Now we know it was a tap
         ),
         transition(
           "KEY_UP", // Key released after DAS expires but before tick
           "idle", // Go back to idle (edge case handling)
           guard(isKeyUpAfterDAS), // Guard: Released after DAS but before repeat
           reduce(updateContextKeyUp), // Reducer: Clear all state
+          action(emitTapAction), // Action: Still counts as a tap
         ),
         transition(
           "TIMER_TICK", // Timer tick while charging

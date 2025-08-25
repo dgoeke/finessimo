@@ -1,10 +1,20 @@
-import { finesseCalculator, Fault } from "../../src/finesse/calculator";
+import {
+  finesseCalculator,
+  Fault,
+  extractFinesseActions,
+} from "../../src/finesse/calculator";
 import { FinesseAction } from "../../src/state/types";
 import { PIECES } from "../../src/core/pieces";
 import { createEmptyBoard, moveToWall } from "../../src/core/board";
 import { getNextRotation, tryRotate } from "../../src/core/srs";
-import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
+import type {
+  ActivePiece,
+  GameplayConfig,
+  Rot,
+  Action,
+} from "../../src/state/types";
 import { assertDefined } from "../test-helpers";
+import { createTimestamp } from "../../src/types/timestamp";
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
 
@@ -296,5 +306,155 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const seqs = finesseCalculator.calculateOptimal(piece, right.x, rot, cfg);
     const minLen = Math.min(...seqs.map((s) => s.length));
     expect(minLen).toBe(3); // Rotate + RightDAS + HardDrop
+  });
+});
+
+describe("extractFinesseActions", () => {
+  const timestamp = createTimestamp(1000);
+
+  test("converts TapMove actions correctly", () => {
+    const actions: Action[] = [
+      { type: "TapMove", dir: -1, timestampMs: timestamp },
+      { type: "TapMove", dir: 1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["MoveLeft", "MoveRight"]);
+  });
+
+  test("converts Rotate actions correctly", () => {
+    const actions: Action[] = [
+      { type: "Rotate", dir: "CW" },
+      { type: "Rotate", dir: "CCW" },
+    ];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["RotateCW", "RotateCCW"]);
+  });
+
+  test("converts HardDrop actions correctly", () => {
+    const actions: Action[] = [{ type: "HardDrop", timestampMs: timestamp }];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["HardDrop"]);
+  });
+
+  test("maps each hold-run action to DAS action (no coalescing)", () => {
+    // Simulate a typical hold-run: HoldStart → HoldMove → RepeatMove → RepeatMove
+    const actions: Action[] = [
+      { type: "HoldStart", dir: -1, timestampMs: timestamp },
+      { type: "HoldMove", dir: -1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    // Only HoldMove maps to DASLeft, HoldStart and RepeatMove return undefined
+    expect(result).toEqual(["DASLeft"]);
+  });
+
+  test("maps each right DAS action individually (no coalescing)", () => {
+    const actions: Action[] = [
+      { type: "HoldStart", dir: 1, timestampMs: timestamp },
+      { type: "HoldMove", dir: 1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    // Only HoldMove maps to DASRight, HoldStart and RepeatMove return undefined
+    expect(result).toEqual(["DASRight"]);
+  });
+
+  test("maps all hold-run actions individually with rotation", () => {
+    const actions: Action[] = [
+      // First hold-run left
+      { type: "HoldStart", dir: -1, timestampMs: timestamp },
+      { type: "HoldMove", dir: -1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
+      // Rotation in between
+      { type: "Rotate", dir: "CW" },
+      // Second hold-run right
+      { type: "HoldStart", dir: 1, timestampMs: timestamp },
+      { type: "HoldMove", dir: 1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
+    expect(result).toEqual(["DASLeft", "RotateCW", "DASRight"]);
+  });
+
+  test("handles mixed sequence with taps and holds", () => {
+    const actions: Action[] = [
+      { type: "TapMove", dir: -1, timestampMs: timestamp },
+      { type: "TapMove", dir: -1, timestampMs: timestamp },
+      { type: "Rotate", dir: "CW" },
+      { type: "HoldStart", dir: 1, timestampMs: timestamp },
+      { type: "HoldMove", dir: 1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+      { type: "HardDrop", timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
+    expect(result).toEqual([
+      "MoveLeft",
+      "MoveLeft",
+      "RotateCW",
+      "DASRight",
+      "HardDrop",
+    ]);
+  });
+
+  test("ignores irrelevant action types", () => {
+    const actions: Action[] = [
+      { type: "TapMove", dir: -1, timestampMs: timestamp },
+      { type: "Tick", timestampMs: timestamp },
+      { type: "Spawn" },
+      { type: "Rotate", dir: "CW" },
+    ];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["MoveLeft", "RotateCW"]);
+  });
+
+  test("handles empty action list", () => {
+    const actions: Action[] = [];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual([]);
+  });
+
+  test("handles direction switching within DAS sequence", () => {
+    // This shouldn't happen in normal gameplay, but tests edge case
+    const actions: Action[] = [
+      { type: "HoldStart", dir: -1, timestampMs: timestamp },
+      { type: "HoldMove", dir: -1, timestampMs: timestamp },
+      { type: "HoldStart", dir: 1, timestampMs: timestamp }, // Direction switch
+      { type: "HoldMove", dir: 1, timestampMs: timestamp },
+      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
+    expect(result).toEqual(["DASLeft", "DASRight"]);
+  });
+
+  test("maps long sequences of repeats individually (no coalescing)", () => {
+    const actions: Action[] = [
+      { type: "HoldStart", dir: -1, timestampMs: timestamp },
+      { type: "HoldMove", dir: -1, timestampMs: timestamp },
+      ...Array(10)
+        .fill(0)
+        .map(() => ({
+          type: "RepeatMove" as const,
+          dir: -1 as const,
+          timestampMs: timestamp,
+        })),
+    ];
+    const result = extractFinesseActions(actions);
+    // Should be 1 DASLeft action (only HoldMove counts, HoldStart and RepeatMove return undefined)
+    expect(result).toEqual(Array(1).fill("DASLeft"));
+  });
+
+  test("handles invalid direction TapMove (should be filtered out)", () => {
+    const actions: Action[] = [
+      { type: "TapMove", dir: -1, timestampMs: timestamp },
+      // No invalid direction test since TypeScript prevents it
+      { type: "TapMove", dir: 1, timestampMs: timestamp },
+    ];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["MoveLeft", "MoveRight"]);
   });
 });

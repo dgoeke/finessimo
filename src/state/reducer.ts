@@ -599,21 +599,35 @@ export const reducer: (
         ...state,
         active: rotatedPiece,
         physics: newPhysicsRotate,
+        processedInputLog: [...state.processedInputLog, action],
       };
     }
 
     case "HardDrop": {
+      console.log("🚀 HardDrop reducer called, current log:", state.processedInputLog.map(a => a.type));
       // Only process if we have an active piece
       if (!state.active) {
+        console.log("🚀 No active piece, returning state unchanged");
         return state;
       }
 
       const timestampMs = action.timestampMs;
       const droppedPiece = dropToBottom(state.board, state.active);
-      return {
-        ...lockCurrentPiece(state, droppedPiece, timestampMs),
+      
+      // Add HardDrop to log BEFORE calling lockCurrentPiece (which triggers finesse analysis)
+      const stateWithHardDrop = {
+        ...state,
+        processedInputLog: [...state.processedInputLog, action],
+      };
+      console.log("🚀 Added HardDrop to log before locking:", stateWithHardDrop.processedInputLog.map(a => a.type));
+      
+      const lockedState = lockCurrentPiece(stateWithHardDrop, droppedPiece, timestampMs);
+      const newState = {
+        ...lockedState,
         tick: state.tick + 1,
       };
+      console.log("🚀 HardDrop complete, final log:", newState.processedInputLog.map(a => a.type));
+      return newState;
     }
 
     case "SoftDrop": {

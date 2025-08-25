@@ -258,7 +258,7 @@ export class FinessimoApp {
     if (!currentMode) return;
 
     const finesseActions = finesseService.analyzePieceLock(
-      prevState,
+      this.gameState, // Use current state which has the processed input log
       prevState.active,
       currentMode,
       timestampMs,

@@ -31,55 +31,80 @@ export interface Fault {
   position?: number; // Index in the player sequence where fault occurs
 }
 
-// Convert Actions to FinesseActions for analysis
+// Convert Actions to FinesseActions for analysis (with DAS coalescing)
 export function extractFinesseActions(actions: Action[]): FinesseAction[] {
-  const finesseActions: FinesseAction[] = [];
-  let currentDASDirection: -1 | 1 | undefined;
-
-  for (const action of actions) {
-    switch (action.type) {
-      case "TapMove":
-        // Reset DAS state on tap
-        currentDASDirection = undefined;
-        if (action.dir === -1) {
-          finesseActions.push("MoveLeft");
-        } else if (action.dir === 1) {
-          finesseActions.push("MoveRight");
-        }
-        break;
-      case "HoldMove":
-      case "RepeatMove":
-        // Coalesce consecutive DAS pulses in same direction
-        if (currentDASDirection !== action.dir) {
-          // Direction changed or first DAS pulse
-          currentDASDirection = action.dir;
-          if (action.dir === -1) {
-            finesseActions.push("DASLeft");
-          } else if (action.dir === 1) {
-            finesseActions.push("DASRight");
-          }
-        }
-        // If same direction, do nothing (coalesce)
-        break;
-      case "Rotate":
-        // Reset DAS state on non-move input
-        currentDASDirection = undefined;
-        finesseActions.push(action.dir === "CW" ? "RotateCW" : "RotateCCW");
-        break;
-      case "HardDrop":
-        // Reset DAS state on non-move input
-        currentDASDirection = undefined;
-        finesseActions.push("HardDrop");
-        break;
-      // Other action types are not relevant for finesse analysis
-      default:
-        // Reset DAS state on any other action
-        currentDASDirection = undefined;
-        break;
-    }
+  // Helper for exhaustive type checking
+  function assertNever(value: never): never {
+    throw new Error(`Unexpected value: ${JSON.stringify(value)}`);
   }
 
-  return finesseActions;
+  // Helper to map direction to movement finesse actions
+  function mapDirToMove(dir: number): FinesseAction | undefined {
+    if (dir === -1) return "MoveLeft";
+    if (dir === 1) return "MoveRight";
+    // Debug log for invalid direction values
+    if (dir !== 0) {
+      console.debug(`mapDirToMove received invalid direction: ${dir}`);
+    }
+    return undefined;
+  }
+
+  // Helper to map direction to DAS finesse actions
+  function mapDirToDAS(dir: number): FinesseAction | undefined {
+    if (dir === -1) return "DASLeft";
+    if (dir === 1) return "DASRight";
+    // Debug log for invalid direction values
+    if (dir !== 0) {
+      console.debug(`mapDirToDAS received invalid direction: ${dir}`);
+    }
+    return undefined;
+  }
+
+  // Convert each action to its corresponding FinesseAction (or undefined if not relevant)
+  const convertToFinesseAction = (
+    action: Action,
+  ): FinesseAction | undefined => {
+    switch (action.type) {
+      case "TapMove":
+        return mapDirToMove(action.dir);
+      case "HoldMove":
+        return mapDirToDAS(action.dir);
+      case "HoldStart":
+      case "RepeatMove":
+        return undefined;
+      case "Rotate":
+        return action.dir === "CW" ? "RotateCW" : "RotateCCW";
+      case "HardDrop":
+        return "HardDrop";
+      case "Init":
+      case "Tick":
+      case "Spawn":
+      case "SoftDrop":
+      case "Hold":
+      case "Lock":
+      case "StartLockDelay":
+      case "CancelLockDelay":
+      case "StartLineClear":
+      case "CompleteLineClear":
+      case "ClearLines":
+      case "SetMode":
+      case "UpdateFinesseFeedback":
+      case "UpdateModePrompt":
+      case "UpdateTiming":
+      case "UpdateGameplay":
+      case "UpdateGuidance":
+      case "UpdateModeData":
+      case "RecordPieceLock":
+      case "ClearInputLog":
+        return undefined;
+      default:
+        return assertNever(action);
+    }
+  };
+
+  return actions
+    .map(convertToFinesseAction)
+    .filter((action): action is FinesseAction => action !== undefined);
 }
 
 // Finesse Calculator interface
