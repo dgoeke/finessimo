@@ -1,6 +1,14 @@
 # Finessimo Codebase Overview (TypeScript Files under src/)
 
-This file provides a quick, high-level map of all TypeScript files under src/ and what they do. It’s meant to help future AI assistants orient quickly before diving into code.
+This file provides a quick, high-level map of all TypeScript files under src/ and what they do. It's meant to help future AI assistants orient quickly before diving into code.
+
+## Documentation
+
+- DAS-Playbook.md: Comprehensive architecture guide for DAS state machine integration. Describes the problem with current input handling (tap vs hold classification), solution using Robot3 state machines, implementation phases, file structure, and migration strategy. Essential reading for understanding the state machine approach to input classification.
+
+## Dependencies
+
+- Added Robot3 (v1.1.1): Fast 1kB functional library for creating finite state machines. Used for DAS state machine implementation to provide proper input classification at the source.
 
 ## Root Application
 
@@ -22,6 +30,10 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/input/handler.ts: Centralized input processing engine. Contains InputProcessor class with pure functions for DAS/ARR timing, input normalization, ProcessedAction generation. All timing logic unified here. Also includes MockInputHandler for testing.
 - src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
 - src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
+
+### Input State Machines
+
+- src/input/machines/das.ts: DAS (Delayed Auto Shift) state machine implementation using Robot3. Provides DASMachineService for manual state management and createDASMachine for Robot3 integration. Handles tap vs hold input classification at source with states: idle → charging → repeating. Includes comprehensive context management, timing logic, and action emission for proper finesse analysis. Exports reducer functions and guard functions for testability.
 
 ## Core Mechanics
 

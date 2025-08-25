@@ -8,14 +8,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "jest",
+    "test": "CI=true jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "format": "prettier --write .",
+    "format": "prettier --write --log-level warn .",
     "format:check": "prettier --check .",
     "pre-commit": "npm-run-all clean typecheck test lint format"
   },
@@ -28,6 +28,9 @@
   ],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "robot3": "^1.1.1"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
