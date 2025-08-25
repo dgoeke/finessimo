@@ -1,5 +1,6 @@
 Library considerations:
 
+[ ] Make randomizer random. Seed it I assume.
 [X] Add Robot for game state
 [ ] Add tinykeys for input
 [ ] Add Lit for DOM rendering

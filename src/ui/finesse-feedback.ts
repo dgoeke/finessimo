@@ -23,6 +23,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     DASRight: "⇥",
     RotateCW: "↻",
     RotateCCW: "↺",
+    SoftDrop: "⇩",
     HardDrop: "⤓",
   };
 

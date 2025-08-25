@@ -76,10 +76,11 @@ export function extractFinesseActions(actions: Action[]): FinesseAction[] {
         return action.dir === "CW" ? "RotateCW" : "RotateCCW";
       case "HardDrop":
         return "HardDrop";
+      case "SoftDrop":
+        return action.on ? "SoftDrop" : undefined;
       case "Init":
       case "Tick":
       case "Spawn":
-      case "SoftDrop":
       case "Hold":
       case "Lock":
       case "StartLockDelay":
