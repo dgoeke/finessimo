@@ -20,15 +20,14 @@ export function createRng(seed = "default"): SevenBagRng {
   };
 }
 
-// Simple string hash function for seeding
+// Simple string hash (FNV-1a, 32-bit) for stable seeds
 function hashString(str: string): number {
-  let hash = 0;
+  let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
   }
-  return Math.abs(hash);
+  return h >>> 0; // unsigned 32-bit
 }
 
 // Simple PRNG (Linear Congruential Generator)
@@ -46,7 +45,8 @@ function shuffle<T>(
 
   for (let i = result.length - 1; i > 0; i--) {
     currentSeed = nextRandom(currentSeed);
-    const j = currentSeed % (i + 1);
+    // Use high bits mapped to [0, i] to reduce modulo bias
+    const j = Math.floor(((currentSeed >>> 0) / 4294967296) * (i + 1));
     const temp = result[i];
     const otherTemp = result[j];
     if (temp !== undefined && otherTemp !== undefined) {

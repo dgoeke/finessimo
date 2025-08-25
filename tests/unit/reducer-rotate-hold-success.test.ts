@@ -6,7 +6,7 @@ describe("Reducer success paths: Rotate and Hold", () => {
   let base: GameState;
 
   beforeEach(() => {
-    base = reducer(undefined, { type: "Init" });
+    base = reducer(undefined, { type: "Init", seed: "test" });
   });
 
   it("applies a successful Rotate and updates active piece", () => {

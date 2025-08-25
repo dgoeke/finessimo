@@ -7,7 +7,7 @@ import { PIECES } from "../../src/core/pieces";
 import { createTimestamp } from "../../src/types/timestamp";
 
 function baseState(): GameState {
-  return reducer(undefined, { type: "Init" });
+  return reducer(undefined, { type: "Init", seed: "test" });
 }
 
 describe("FinesseService", () => {

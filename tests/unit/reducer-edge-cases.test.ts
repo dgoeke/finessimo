@@ -9,7 +9,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
   let stateWithActivePiece: GameState;
 
   beforeEach(() => {
-    validState = reducer(undefined, { type: "Init" });
+    validState = reducer(undefined, { type: "Init", seed: "test" });
 
     // Create state with an active piece for testing actions that require one
     stateWithActivePiece = {

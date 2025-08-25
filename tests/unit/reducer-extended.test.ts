@@ -8,7 +8,7 @@ describe("Reducer - Extended Coverage", () => {
   let initialState: GameState;
 
   beforeEach(() => {
-    initialState = reducer(undefined, { type: "Init" });
+    initialState = reducer(undefined, { type: "Init", seed: "test" });
   });
 
   describe("Action type coverage", () => {
@@ -55,8 +55,8 @@ describe("Reducer - Extended Coverage", () => {
 
   describe("Init action comprehensive testing", () => {
     it("should create completely fresh state each time", () => {
-      const state1 = reducer(undefined, { type: "Init" });
-      const state2 = reducer(undefined, { type: "Init" });
+      const state1 = reducer(undefined, { type: "Init", seed: "test" });
+      const state2 = reducer(undefined, { type: "Init", seed: "test" });
 
       expect(state1).not.toBe(state2); // Different objects
       expect(state1.board.cells).not.toBe(state2.board.cells); // Different arrays
@@ -76,7 +76,7 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should create empty board with all zeros", () => {
-      const state = reducer(undefined, { type: "Init" });
+      const state = reducer(undefined, { type: "Init", seed: "test" });
 
       for (const cell of state.board.cells) {
         expect(cell).toBe(0);
@@ -85,7 +85,11 @@ describe("Reducer - Extended Coverage", () => {
 
     it("should merge partial timing config correctly", () => {
       const partialTiming = { dasMs: 100 };
-      const state = reducer(undefined, { type: "Init", timing: partialTiming });
+      const state = reducer(undefined, {
+        type: "Init",
+        seed: "test",
+        timing: partialTiming,
+      });
 
       expect(state.timing.dasMs).toBe(100); // Overridden
       expect(state.timing.arrMs).toBe(2); // Default
@@ -97,6 +101,7 @@ describe("Reducer - Extended Coverage", () => {
       const partialGameplay = { finesseCancelMs: 75 };
       const state = reducer(undefined, {
         type: "Init",
+        seed: "test",
         gameplay: partialGameplay,
       });
 
@@ -106,6 +111,7 @@ describe("Reducer - Extended Coverage", () => {
     it("should handle empty partial configs", () => {
       const state = reducer(undefined, {
         type: "Init",
+        seed: "test",
         timing: {},
         gameplay: {},
       });
@@ -117,13 +123,11 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should create valid RNG state", () => {
-      const state1 = reducer(undefined, { type: "Init" });
+      const state1 = reducer(undefined, { type: "Init", seed: "test" });
       const state2 = reducer(undefined, { type: "Init", seed: "custom" });
 
       // New system creates full RNG state, just check seed property
-      expect((state1.rng as SevenBagRng & { seed: string }).seed).toBe(
-        "default",
-      );
+      expect((state1.rng as SevenBagRng & { seed: string }).seed).toBe("test");
       expect((state2.rng as SevenBagRng & { seed: string }).seed).toBe(
         "custom",
       );

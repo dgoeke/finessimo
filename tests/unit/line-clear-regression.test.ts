@@ -14,6 +14,7 @@ import { shouldCompleteLineClear } from "../../src/app";
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
   let state = reducer(undefined, {
     type: "Init",
+    seed: "test",
     timing: { lineClearDelayMs },
   });
 
@@ -157,6 +158,7 @@ describe("Line Clearing Regression Tests", () => {
     it("should not complete line clear if not in lineClear status", () => {
       const state = reducer(undefined, {
         type: "Init",
+        seed: "test",
         timing: { lineClearDelayMs: 100 },
       });
 
@@ -183,6 +185,7 @@ describe("Line Clearing Regression Tests", () => {
     it("should handle multiple line clears with delay", () => {
       let state = reducer(undefined, {
         type: "Init",
+        seed: "test",
         timing: { lineClearDelayMs: 100 },
       });
 

@@ -117,13 +117,13 @@ function applyStatsBaseUpdate(
 
 // Initial game state
 function createInitialState(
-  seed?: string,
+  seed: string,
   timing?: Partial<TimingConfig>,
   gameplay?: Partial<GameplayConfig>,
   mode?: string,
   previousStats?: Stats,
 ): GameState {
-  const rng = createRng(seed ?? "default");
+  const rng = createRng(seed);
   const { pieces: initialQueue, newRng } = getNextPieces(rng, 5); // Generate 5-piece preview
 
   // Create default stats with all fields zeroed

@@ -42,8 +42,13 @@ export class FinessimoApp {
     }
   }
 
+  private randomSeed(): string {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
   private initializeState(): GameState {
-    return reducer(undefined, { type: "Init" });
+    console.log("seed: ", this.randomSeed());
+    return reducer(undefined, { type: "Init", seed: this.randomSeed() });
   }
 
   initialize(
@@ -197,6 +202,7 @@ export class FinessimoApp {
         timing,
         gameplay,
         mode: currentMode,
+        seed: this.randomSeed(),
         retainStats: true,
       });
       this.spawnNextPiece();
