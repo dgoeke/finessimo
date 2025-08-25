@@ -34,10 +34,10 @@ import {
   action,
   interpret,
 } from "robot3";
-import type { Action } from "../../state/types";
 import type { ProcessedAction } from "../handler";
+import { createTimestamp } from "../../types/timestamp";
 
-export type DASState = 'idle' | 'charging' | 'repeating';
+export type DASState = "idle" | "charging" | "repeating";
 
 // DAS state machine context - this is the immutable state that flows through the machine
 export interface DASContext {
@@ -46,6 +46,7 @@ export interface DASContext {
   arrLastTime: number | undefined; // Last time an ARR repeat fired
   dasMs: number; // DAS delay in milliseconds (how long to hold before repeating starts)
   arrMs: number; // ARR rate in milliseconds (how fast repeating happens)
+  repeats: number; // Number of catch-up repeats to emit (for catch-up logic)
 }
 
 // DAS state machine events - these trigger state transitions
@@ -54,6 +55,14 @@ export type DASEvent =
   | { type: "KEY_UP"; direction: -1 | 1; timestamp: number } // User released a movement key
   | { type: "TIMER_TICK"; timestamp: number } // Game loop timer tick
   | { type: "UPDATE_CONFIG"; dasMs: number; arrMs: number }; // Configuration update
+
+// Export interface for mapping DAS events
+export interface DASMachineEventMap {
+  KEY_DOWN: { direction: -1 | 1 };
+  KEY_UP: { direction: -1 | 1 };
+  TIMER_TICK: { deltaMs: number };
+  UPDATE_CONFIG: { dasMs: number; arrMs: number };
+}
 
 /*
  * ROBOT3 GUARDS - Functions that return true/false to determine if a transition should happen
@@ -147,6 +156,7 @@ export const updateContextKeyDown = (
       direction: event.direction, // Record which direction key was pressed
       dasStartTime: event.timestamp, // Start the DAS timer
       arrLastTime: undefined, // Reset ARR timer
+      repeats: 0, // Reset catch-up repeats
     };
   }
   return ctx; // No change if event doesn't match
@@ -163,6 +173,7 @@ export const updateContextKeyUp = (
     direction: undefined, // No key held
     dasStartTime: undefined, // Clear DAS timer
     arrLastTime: undefined, // Clear ARR timer
+    repeats: 0, // Clear catch-up repeats
   };
 };
 
@@ -180,12 +191,13 @@ export const updateContextHoldStart = (
       ...ctx,
       // Set arrLastTime to when the first repeat should happen (DAS start + DAS duration)
       arrLastTime: ctx.dasStartTime + ctx.dasMs,
+      repeats: 0, // Reset catch-up repeats when starting hold
     };
   }
   return ctx; // No change if conditions not met
 };
 
-// Reducer: Update ARR timer for next repeat
+// Reducer: Update ARR timer for next repeat with catch-up logic
 export const updateContextARR = (
   ctx: DASContext,
   event: DASEvent,
@@ -193,13 +205,21 @@ export const updateContextARR = (
   if (
     event.type === "TIMER_TICK" &&
     ctx.arrLastTime !== undefined &&
-    ctx.direction !== undefined
+    ctx.direction !== undefined &&
+    ctx.dasStartTime !== undefined
   ) {
     const safeArrMs = Math.max(1, ctx.arrMs); // Prevent divide by zero
+
+    // Compute catch-up repeats based on how much time has passed
+    const baseTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
+    const repeats = Math.floor((event.timestamp - baseTime) / safeArrMs);
+
     return {
       ...ctx,
-      // Update arrLastTime to when the next repeat should happen
-      arrLastTime: ctx.arrLastTime + safeArrMs,
+      // Update arrLastTime to the effective time after all catch-up repeats
+      arrLastTime: baseTime + repeats * safeArrMs,
+      // Store repeats count for emitRepeatMove action
+      repeats: Math.max(1, repeats), // At least 1 repeat when this reducer is called
     };
   }
   return ctx; // No change if conditions not met
@@ -237,26 +257,71 @@ export const createDASMachine = (
     if (event.type === "KEY_DOWN" && onAction) {
       onAction({
         action: {
-          type: "Move",
+          type: "TapMove",
           dir: event.direction, // Direction from the key press event
-          source: "tap", // Mark as tap source
-        } as Action,
+          timestampMs: createTimestamp(event.timestamp),
+        },
         timestamp: event.timestamp,
       });
     }
   };
 
-  // Action: Emit a DAS move (hold start or repeat move)
-  const emitDASAction = (ctx: DASContext, event: DASEvent) => {
+  // Action: Emit hold start analytics event when DAS timer expires
+  const emitHoldStart = (ctx: DASContext, event: DASEvent) => {
+    if (ctx.direction !== undefined && onAction && "timestamp" in event) {
+      // First emit HoldStart for analytics/logging
+      onAction({
+        action: {
+          type: "HoldStart",
+          dir: ctx.direction,
+          timestampMs: createTimestamp(event.timestamp),
+        },
+        timestamp: event.timestamp,
+      });
+    }
+  };
+
+  // Action: Emit a hold move (first move when DAS timer expires)
+  const emitHoldMove = (ctx: DASContext, event: DASEvent) => {
     if (ctx.direction !== undefined && onAction && "timestamp" in event) {
       onAction({
         action: {
-          type: "Move",
+          type: "HoldMove",
           dir: ctx.direction, // Direction from context (what key is held)
-          source: "das", // Mark as DAS source (hold/repeat)
-        } as Action,
+          timestampMs: createTimestamp(event.timestamp),
+        },
         timestamp: event.timestamp,
       });
+    }
+  };
+
+  // Action: Emit repeat moves (with catch-up support)
+  const emitRepeatMove = (ctx: DASContext, event: DASEvent) => {
+    if (
+      ctx.direction !== undefined &&
+      onAction &&
+      "timestamp" in event &&
+      ctx.dasStartTime !== undefined
+    ) {
+      const safeArrMs = Math.max(1, ctx.arrMs);
+      const baseTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
+      const repeats = ctx.repeats || 1;
+
+      // Emit multiple ProcessedActions for catch-up repeats
+      for (let i = 0; i < repeats; i++) {
+        const actionTimestamp = baseTime + i * safeArrMs;
+        // Only emit actions with timestamps <= event.timestamp
+        if (actionTimestamp <= event.timestamp) {
+          onAction({
+            action: {
+              type: "RepeatMove",
+              dir: ctx.direction, // Direction from context (what key is held)
+              timestampMs: createTimestamp(actionTimestamp),
+            },
+            timestamp: actionTimestamp,
+          });
+        }
+      }
     }
   };
 
@@ -303,7 +368,8 @@ export const createDASMachine = (
           "repeating", // Move to repeating state (hold detected)
           guard(isDASExpired), // Guard: DAS timer has expired
           reduce(updateContextHoldStart), // Reducer: Set up ARR timing
-          action(emitDASAction), // Action: Emit first hold move
+          action(emitHoldStart), // Action: Emit hold start for analytics
+          action(emitHoldMove), // Action: Emit first hold move
         ),
         transition(
           "KEY_DOWN", // Different key pressed (key switching)
@@ -333,7 +399,7 @@ export const createDASMachine = (
           "repeating", // Stay in repeating state
           guard(shouldEmitARR), // Guard: Time for next ARR repeat
           reduce(updateContextARR), // Reducer: Update ARR timing
-          action(emitDASAction), // Action: Emit repeat move
+          action(emitRepeatMove), // Action: Emit repeat move
         ),
         transition(
           "KEY_DOWN", // Different key pressed (key switching)
@@ -364,6 +430,7 @@ export const createDefaultDASContext = (
   arrLastTime: undefined, // No ARR timer active
   dasMs: Math.max(0, dasMs), // Clamp DAS to >= 0ms
   arrMs: Math.max(1, arrMs), // Clamp ARR to >= 1ms (prevent divide by zero)
+  repeats: 0, // No catch-up repeats initially
 });
 
 /*
@@ -431,7 +498,7 @@ export class DASMachineService {
    */
   getState() {
     return {
-      state: this.currentStateName as DASState, // Current state name from stored value
+      state: this.currentStateName, // Current state name from stored value
       context: { ...this.service.context }, // Copy of current context
     };
   }

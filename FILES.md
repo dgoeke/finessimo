@@ -18,7 +18,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## State
 
-- src/state/types.ts: Core types and interfaces. GameState, Action union, Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions.
+- src/state/types.ts: Core types and interfaces. GameState, Action union (including new TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions.
 - src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Comprehensive statistics tracking with derived metrics calculation.
 
 ## Types
@@ -30,10 +30,11 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/input/handler.ts: Centralized input processing engine. Contains InputProcessor class with pure functions for DAS/ARR timing, input normalization, ProcessedAction generation. All timing logic unified here. Also includes MockInputHandler for testing.
 - src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
 - src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
+- src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
 
 ### Input State Machines
 
-- src/input/machines/das.ts: DAS (Delayed Auto Shift) state machine implementation using Robot3. Provides DASMachineService for manual state management and createDASMachine for Robot3 integration. Handles tap vs hold input classification at source with states: idle → charging → repeating. Includes comprehensive context management, timing logic, and action emission for proper finesse analysis. Exports reducer functions and guard functions for testability.
+- src/input/machines/das.ts: DAS (Delayed Auto Shift) state machine implementation using Robot3. Provides DASMachineService for manual state management and createDASMachine for Robot3 integration. Handles tap vs hold input classification at source with states: idle → charging → repeating. Updated to emit granular action types (TapMove, HoldMove, RepeatMove, HoldStart) instead of generic Move actions. Includes comprehensive context management, timing logic, and precise action emission for enhanced finesse analysis. Exports reducer functions and guard functions for testability.
 
 ## Core Mechanics
 
