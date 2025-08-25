@@ -322,4 +322,61 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       ),
     ).toBe(true);
   });
+
+  test("finesse calculator bypasses feedback when soft drop is detected", () => {
+    const piece = spawnPiece("T");
+    const targetX = 4;
+    const targetRot: Rot = "two";
+
+    // Player sequence with soft drop - should bypass finesse analysis
+    const playerInputsWithSoftDrop: FinesseAction[] = [
+      "MoveRight",
+      "RotateCCW",
+      "SoftDrop",
+      "RotateCCW",
+      "HardDrop",
+    ];
+
+    const result = finesseCalculator.analyze(
+      piece,
+      targetX,
+      targetRot,
+      playerInputsWithSoftDrop,
+      cfg,
+    );
+
+    // Should bypass analysis and return neutral feedback
+    expect(result.isOptimal).toBe(true);
+    expect(result.faults).toEqual([]);
+    expect(result.optimalSequences).toEqual([]);
+    expect(result.playerSequence).toEqual(playerInputsWithSoftDrop);
+  });
+
+  test("finesse calculator still provides feedback for sequences without soft drop", () => {
+    const piece = spawnPiece("T");
+    const targetX = 4;
+    const targetRot: Rot = "two";
+
+    // Player sequence without soft drop - should get normal finesse analysis
+    const playerInputsWithoutSoftDrop: FinesseAction[] = [
+      "MoveRight",
+      "RotateCW",
+      "RotateCW",
+      "RotateCW", // Extra rotation - suboptimal
+      "HardDrop",
+    ];
+
+    const result = finesseCalculator.analyze(
+      piece,
+      targetX,
+      targetRot,
+      playerInputsWithoutSoftDrop,
+      cfg,
+    );
+
+    // Should provide normal analysis with faults for suboptimal play
+    expect(result.isOptimal).toBe(false);
+    expect(result.faults.length).toBeGreaterThan(0);
+    expect(result.optimalSequences.length).toBeGreaterThan(0);
+  });
 });
