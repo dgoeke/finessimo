@@ -200,31 +200,39 @@ describe("hold system", () => {
       let state = createStateWithPiece();
       const pieceCounts = new Map<string, number>();
 
-      // Track all pieces from active pieces and queue for multiple holds
+      // Track pieces while ensuring the queue advances each iteration
       for (let i = 0; i < 20; i++) {
-        // More iterations to ensure coverage
+        // Count current active and all pieces in the preview queue
         if (state.active) {
           const piece = state.active.id;
           pieceCounts.set(piece, (pieceCounts.get(piece) ?? 0) + 1);
         }
 
-        // Also count pieces in queue
         for (const queuePiece of state.nextQueue) {
           pieceCounts.set(queuePiece, (pieceCounts.get(queuePiece) ?? 0) + 1);
         }
 
+        // Use hold to exercise hold path
         state = reducer(state, { type: "Hold" });
+        // Re-enable hold for the next loop iteration
         state = { ...state, canHold: true };
+
+        // Progress the bag/queue deterministically by locking and spawning
+        state = reducer(state, {
+          type: "HardDrop",
+          timestampMs: createTimestamp(1000 + i),
+        });
+        state = reducer(state, { type: "Spawn" });
       }
 
-      // With 20 iterations and queue tracking, all pieces should appear
+      // With queue progression, all seven piece types should appear
       const pieceTypes = ["I", "O", "T", "S", "Z", "J", "L"];
       for (const piece of pieceTypes) {
         expect(pieceCounts.get(piece) ?? 0).toBeGreaterThanOrEqual(1);
       }
 
-      // Total pieces should be reasonable (not all the same piece)
-      expect(pieceCounts.size).toBeGreaterThanOrEqual(7);
+      // We should have counts for all seven unique types
+      expect(pieceCounts.size).toBe(7);
     });
   });
 });

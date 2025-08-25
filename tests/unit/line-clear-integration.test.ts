@@ -11,6 +11,7 @@ describe("Line Clear Integration", () => {
     // Initialize game state with 300ms delay (like real gameplay)
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 300 },
     });
 
@@ -63,7 +64,7 @@ describe("Line Clear Integration", () => {
 
   it("should handle the default UI settings scenario", () => {
     // This simulates what happens when the app starts with UI settings
-    let state = reducer(undefined, { type: "Init" }); // Default 0ms delay
+    let state = reducer(undefined, { type: "Init", seed: "test" }); // Default 0ms delay
 
     // Apply settings change to 300ms (like UI default)
     state = reducer(state, {
@@ -99,6 +100,7 @@ describe("Line Clear Integration", () => {
   it("should prevent piece spawning during line clear delay", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 200 },
     });
 

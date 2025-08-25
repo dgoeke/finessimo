@@ -13,12 +13,12 @@ describe("Reducer", () => {
   let initialState: GameState;
 
   beforeEach(() => {
-    initialState = reducer(undefined, { type: "Init" });
+    initialState = reducer(undefined, { type: "Init", seed: "test" });
   });
 
   describe("Init action", () => {
     it("should create initial state with default values", () => {
-      const state = reducer(undefined, { type: "Init" });
+      const state = reducer(undefined, { type: "Init", seed: "test" });
 
       expect(state.board).toBeDefined();
       expect(state.board.width).toBe(10);
@@ -50,7 +50,11 @@ describe("Reducer", () => {
         dasMs: 200,
         arrMs: 5,
       };
-      const state = reducer(undefined, { type: "Init", timing: customTiming });
+      const state = reducer(undefined, {
+        type: "Init",
+        seed: "test",
+        timing: customTiming,
+      });
 
       expect(state.timing.dasMs).toBe(200);
       expect(state.timing.arrMs).toBe(5);
@@ -63,6 +67,7 @@ describe("Reducer", () => {
       };
       const state = reducer(undefined, {
         type: "Init",
+        seed: "test",
         gameplay: customGameplay,
       });
 

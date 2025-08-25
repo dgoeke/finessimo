@@ -2,7 +2,7 @@ import { reducer } from "../../src/state/reducer";
 
 describe("Reducer - new action branches", () => {
   it("handles SetMode", () => {
-    const init = reducer(undefined, { type: "Init" });
+    const init = reducer(undefined, { type: "Init", seed: "test" });
     const state = reducer(init, { type: "SetMode", mode: "guided" });
     expect(state.currentMode).toBe("guided");
     expect(state.finesseFeedback).toBeNull();
@@ -10,7 +10,7 @@ describe("Reducer - new action branches", () => {
   });
 
   it("handles UpdateFinesseFeedback", () => {
-    const init = reducer(undefined, { type: "Init" });
+    const init = reducer(undefined, { type: "Init", seed: "test" });
     const fb = { message: "ok", isOptimal: true, timestamp: performance.now() };
     const state = reducer(init, {
       type: "UpdateFinesseFeedback",
@@ -20,7 +20,7 @@ describe("Reducer - new action branches", () => {
   });
 
   it("handles UpdateModePrompt", () => {
-    const init = reducer(undefined, { type: "Init" });
+    const init = reducer(undefined, { type: "Init", seed: "test" });
     const state = reducer(init, {
       type: "UpdateModePrompt",
       prompt: "Do this",

@@ -10,6 +10,7 @@ describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 300 },
     });
 
@@ -61,6 +62,7 @@ describe("Line Clear Edge Cases", () => {
   it("should handle line clear when next piece spawning is attempted", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 250 },
     });
 
@@ -98,6 +100,7 @@ describe("Line Clear Edge Cases", () => {
   it("should handle piece movement attempts during line clear", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 200 },
     });
 
@@ -133,6 +136,7 @@ describe("Line Clear Edge Cases", () => {
   it("should handle line clear completion timing edge case", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 100 },
     });
 
@@ -169,6 +173,7 @@ describe("Line Clear Edge Cases", () => {
   it("should handle multiple successive line clears", () => {
     let state = reducer(undefined, {
       type: "Init",
+      seed: "test",
       timing: { lineClearDelayMs: 150 },
     });
 

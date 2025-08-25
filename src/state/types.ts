@@ -187,7 +187,7 @@ export interface GameState {
 export type Action =
   | {
       type: "Init";
-      seed?: string;
+      seed: string;
       timing?: Partial<TimingConfig>;
       gameplay?: Partial<GameplayConfig>;
       mode?: string;
