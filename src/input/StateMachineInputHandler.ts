@@ -367,18 +367,21 @@ export class StateMachineInputHandler implements InputHandler {
       
       if (isStateful) {
         if (this.keyStates.get(event.code)) return;
-        this.keyStates.set(event.code, true);
       }
 
       // Handle different key types
       switch (binding) {
         case "MoveLeft": {
           this.handleMovementDown(binding, timestamp);
+          // Set keyStates AFTER calling handleMovementDown to avoid self-blocking
+          this.keyStates.set(event.code, true);
           break;
         }
 
         case "MoveRight": {
           this.handleMovementDown(binding, timestamp);
+          // Set keyStates AFTER calling handleMovementDown to avoid self-blocking
+          this.keyStates.set(event.code, true);
           break;
         }
 
@@ -405,6 +408,8 @@ export class StateMachineInputHandler implements InputHandler {
           this.dispatch({ type: "SoftDrop", on: true });
           this.isSoftDropDown = true;
           this.softDropLastTime = timestamp;
+          // Set keyStates AFTER handling the action
+          this.keyStates.set(event.code, true);
           break;
       }
     } else {
