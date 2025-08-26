@@ -1,11 +1,11 @@
-import { PieceId } from "../state/types";
 import { PIECES } from "../core/pieces";
+import { type PieceId } from "../state/types";
 
-export interface HoldRenderer {
+export type HoldRenderer = {
   initialize(container: HTMLElement): void;
   render(holdPiece: PieceId | undefined, canHold: boolean): void;
   destroy(): void;
-}
+};
 
 export class BasicHoldRenderer implements HoldRenderer {
   private container: HTMLElement | undefined;
@@ -34,7 +34,7 @@ export class BasicHoldRenderer implements HoldRenderer {
     }
 
     // Render hold piece if it exists
-    if (holdPiece) {
+    if (holdPiece !== undefined) {
       this.renderHoldPiece(holdPiece, canHold);
     }
   }
@@ -71,7 +71,6 @@ export class BasicHoldRenderer implements HoldRenderer {
     if (!this.ctx || !this.canvas) return;
 
     const piece = PIECES[pieceId];
-    if (!piece) return;
 
     // Always use spawn rotation for hold display
     const cells = piece.cells.spawn;
@@ -135,7 +134,7 @@ export class BasicHoldRenderer implements HoldRenderer {
       const r = parseInt(color.slice(1, 3), 16);
       const g = parseInt(color.slice(3, 5), 16);
       const b = parseInt(color.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return `rgba(${String(r)}, ${String(g)}, ${String(b)}, ${String(alpha)})`;
     }
     return color; // fallback for non-hex colors
   }

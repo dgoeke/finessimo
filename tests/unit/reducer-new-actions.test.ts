@@ -2,28 +2,28 @@ import { reducer } from "../../src/state/reducer";
 
 describe("Reducer - new action branches", () => {
   it("handles SetMode", () => {
-    const init = reducer(undefined, { type: "Init", seed: "test" });
-    const state = reducer(init, { type: "SetMode", mode: "guided" });
+    const init = reducer(undefined, { seed: "test", type: "Init" });
+    const state = reducer(init, { mode: "guided", type: "SetMode" });
     expect(state.currentMode).toBe("guided");
     expect(state.finesseFeedback).toBeNull();
     expect(state.modePrompt).toBeNull();
   });
 
   it("handles UpdateFinesseFeedback", () => {
-    const init = reducer(undefined, { type: "Init", seed: "test" });
-    const fb = { message: "ok", isOptimal: true, timestamp: performance.now() };
+    const init = reducer(undefined, { seed: "test", type: "Init" });
+    const fb = { isOptimal: true, message: "ok", timestamp: performance.now() };
     const state = reducer(init, {
-      type: "UpdateFinesseFeedback",
       feedback: fb,
+      type: "UpdateFinesseFeedback",
     });
     expect(state.finesseFeedback).toEqual(fb);
   });
 
   it("handles UpdateModePrompt", () => {
-    const init = reducer(undefined, { type: "Init", seed: "test" });
+    const init = reducer(undefined, { seed: "test", type: "Init" });
     const state = reducer(init, {
-      type: "UpdateModePrompt",
       prompt: "Do this",
+      type: "UpdateModePrompt",
     });
     expect(state.modePrompt).toBe("Do this");
   });

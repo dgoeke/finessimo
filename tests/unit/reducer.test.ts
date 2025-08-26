@@ -1,24 +1,24 @@
+import { type SevenBagRng } from "../../src/core/rng";
 import { reducer } from "../../src/state/reducer";
 import {
-  GameState,
-  TimingConfig,
-  GameplayConfig,
-  Action,
+  type GameState,
+  type TimingConfig,
+  type GameplayConfig,
+  type Action,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
-import { SevenBagRng } from "../../src/core/rng";
 import { assertActivePiece } from "../test-helpers";
 
 describe("Reducer", () => {
   let initialState: GameState;
 
   beforeEach(() => {
-    initialState = reducer(undefined, { type: "Init", seed: "test" });
+    initialState = reducer(undefined, { seed: "test", type: "Init" });
   });
 
   describe("Init action", () => {
     it("should create initial state with default values", () => {
-      const state = reducer(undefined, { type: "Init", seed: "test" });
+      const state = reducer(undefined, { seed: "test", type: "Init" });
 
       expect(state.board).toBeDefined();
       expect(state.board.width).toBe(10);
@@ -36,7 +36,7 @@ describe("Reducer", () => {
 
     it("should accept custom seed", () => {
       const customSeed = "test-seed-123";
-      const state = reducer(undefined, { type: "Init", seed: customSeed });
+      const state = reducer(undefined, { seed: customSeed, type: "Init" });
 
       // New system has full RNG state, just check seed property
       expect((state.rng as SevenBagRng & { seed: string }).seed).toBe(
@@ -47,13 +47,13 @@ describe("Reducer", () => {
 
     it("should accept custom timing config", () => {
       const customTiming: Partial<TimingConfig> = {
-        dasMs: 200,
         arrMs: 5,
+        dasMs: 200,
       };
       const state = reducer(undefined, {
-        type: "Init",
         seed: "test",
         timing: customTiming,
+        type: "Init",
       });
 
       expect(state.timing.dasMs).toBe(200);
@@ -66,9 +66,9 @@ describe("Reducer", () => {
         finesseCancelMs: 100,
       };
       const state = reducer(undefined, {
-        type: "Init",
-        seed: "test",
         gameplay: customGameplay,
+        seed: "test",
+        type: "Init",
       });
 
       expect(state.gameplay.finesseCancelMs).toBe(100);
@@ -83,14 +83,14 @@ describe("Reducer", () => {
         active: { id: "T", rot: "spawn", x: 4, y: 0 },
         canHold: false,
         processedInputLog: [
-          { type: "Rotate", dir: "CW" },
-          { type: "HardDrop", timestampMs: createTimestamp(1100) },
+          { dir: "CW", type: "Rotate" },
+          { timestampMs: createTimestamp(1100), type: "HardDrop" },
         ],
       };
 
       const newState = reducer(stateWithActivePiece, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
 
       expect(newState.active).toBeUndefined();
@@ -104,12 +104,12 @@ describe("Reducer", () => {
     it("should not mutate the original state", () => {
       const originalState = {
         ...initialState,
-        tick: 5,
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        tick: 5,
       };
       const newState = reducer(originalState, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
 
       expect(originalState.tick).toBe(5);
@@ -126,8 +126,8 @@ describe("Reducer", () => {
       };
 
       const newState = reducer(stateWithData, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
 
       expect(newState.hold).toBe("I");
@@ -139,14 +139,14 @@ describe("Reducer", () => {
   describe("Tick action", () => {
     it("should increment tick counter", () => {
       const state1 = reducer(initialState, {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       });
       expect(state1.tick).toBe(1);
 
       const state2 = reducer(state1, {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       });
       expect(state2.tick).toBe(2);
     });
@@ -154,8 +154,8 @@ describe("Reducer", () => {
     it("should not mutate original state", () => {
       const originalTick = initialState.tick;
       const newState = reducer(initialState, {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       });
 
       expect(initialState.tick).toBe(originalTick);
@@ -167,13 +167,13 @@ describe("Reducer", () => {
       const stateWithData: GameState = {
         ...initialState,
         active: { id: "T", rot: "spawn", x: 4, y: 0 },
-        hold: "I",
         canHold: false,
+        hold: "I",
       };
 
       const newState = reducer(stateWithData, {
-        type: "Tick",
         timestampMs: createTimestamp(performance.now()),
+        type: "Tick",
       });
 
       // Active piece may move due to gravity, but other properties should be preserved
@@ -188,18 +188,13 @@ describe("Reducer", () => {
     });
   });
 
-  describe("Default case (unknown actions)", () => {
-    it("should return state unchanged for unknown action", () => {
+  describe("Default case (invalid actions)", () => {
+    it("should throw for unknown action type due to compile-time exhaustiveness", () => {
       const unknownAction = { type: "UnknownAction" } as unknown as Action;
-      const newState = reducer(initialState, unknownAction);
 
-      expect(newState).toBe(initialState); // Should return exact same reference
-    });
-
-    it("should handle undefined action gracefully", () => {
-      const newState = reducer(initialState, undefined as unknown as Action);
-
-      expect(newState).toBe(initialState);
+      // With the new functional pattern, unknown actions are caught at compile-time
+      // and should throw at runtime if they somehow get through
+      expect(() => reducer(initialState, unknownAction)).toThrow();
     });
   });
 
@@ -213,16 +208,16 @@ describe("Reducer", () => {
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
       reducer(stateWithActive, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
       reducer(initialState, {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       });
       reducer(initialState, {
-        type: "TapMove",
         dir: 1,
+        type: "TapMove",
       });
 
       expect(initialState.board.cells).toEqual(originalCells);
@@ -230,16 +225,16 @@ describe("Reducer", () => {
 
     it("should create new state objects for state changes", () => {
       const newState1 = reducer(initialState, {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       });
       const stateWithActive = {
         ...newState1,
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
       const newState2 = reducer(stateWithActive, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
 
       expect(newState1).not.toBe(initialState);
@@ -263,44 +258,44 @@ describe("Reducer", () => {
 
       // Dispatch TapMove action
       const stateAfterTap = reducer(stateWithPiece, {
-        type: "TapMove",
         dir: -1,
         timestampMs: timestamp,
+        type: "TapMove",
       });
 
       expect(stateAfterTap.processedInputLog).toHaveLength(1);
       expect(stateAfterTap.processedInputLog[0]).toEqual({
-        type: "TapMove",
         dir: -1,
         timestampMs: timestamp,
+        type: "TapMove",
       });
 
       // Dispatch RepeatMove action
       const stateAfterRepeat = reducer(stateAfterTap, {
-        type: "RepeatMove",
         dir: 1,
         timestampMs: timestamp,
+        type: "RepeatMove",
       });
 
       expect(stateAfterRepeat.processedInputLog).toHaveLength(2);
       expect(stateAfterRepeat.processedInputLog[1]).toEqual({
-        type: "RepeatMove",
         dir: 1,
         timestampMs: timestamp,
+        type: "RepeatMove",
       });
 
       // Dispatch HoldMove action
       const stateAfterHold = reducer(stateAfterRepeat, {
-        type: "HoldMove",
         dir: -1,
         timestampMs: timestamp,
+        type: "HoldMove",
       });
 
       expect(stateAfterHold.processedInputLog).toHaveLength(3);
       expect(stateAfterHold.processedInputLog[2]).toEqual({
-        type: "HoldMove",
         dir: -1,
         timestampMs: timestamp,
+        type: "HoldMove",
       });
     });
 
@@ -316,15 +311,15 @@ describe("Reducer", () => {
 
       // Dispatch actions with different timestamps
       state = reducer(state, {
-        type: "TapMove",
         dir: -1,
         timestampMs: timestamp1,
+        type: "TapMove",
       });
 
       state = reducer(state, {
-        type: "RepeatMove",
         dir: 1,
         timestampMs: timestamp2,
+        type: "RepeatMove",
       });
 
       expect(state.processedInputLog).toHaveLength(2);

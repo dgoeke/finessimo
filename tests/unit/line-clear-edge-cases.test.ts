@@ -2,16 +2,16 @@
  * Edge case tests for line clearing that might occur in real gameplay
  */
 
-import { reducer } from "../../src/state/reducer";
 import { shouldCompleteLineClear } from "../../src/app";
+import { reducer } from "../../src/state/reducer";
 import { createTimestamp } from "../../src/types/timestamp";
 
 describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 300 },
+      type: "Init",
     });
 
     // Set up line clear
@@ -19,13 +19,13 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(1000),
+      type: "HardDrop",
     });
 
     const startTime = 1000;
@@ -33,20 +33,20 @@ describe("Line Clear Edge Cases", () => {
 
     // Simulate multiple tick updates during the delay
     state = reducer(state, {
-      type: "Tick",
       timestampMs: createTimestamp(startTime + 50),
+      type: "Tick",
     });
     expect(state.status).toBe("lineClear");
 
     state = reducer(state, {
-      type: "Tick",
       timestampMs: createTimestamp(startTime + 100),
+      type: "Tick",
     });
     expect(state.status).toBe("lineClear");
 
     state = reducer(state, {
-      type: "Tick",
       timestampMs: createTimestamp(startTime + 200),
+      type: "Tick",
     });
     expect(state.status).toBe("lineClear");
 
@@ -61,9 +61,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle line clear when next piece spawning is attempted", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 250 },
+      type: "Init",
     });
 
     // Set up line clear
@@ -71,13 +71,13 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(2000),
+      type: "HardDrop",
     });
 
     expect(state.status).toBe("lineClear");
@@ -99,9 +99,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle piece movement attempts during line clear", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 200 },
+      type: "Init",
     });
 
     // Set up line clear
@@ -109,20 +109,20 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(3000),
+      type: "HardDrop",
     });
 
     expect(state.status).toBe("lineClear");
     expect(state.active).toBeUndefined();
 
     // Try to move non-existent piece
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { dir: 1, type: "TapMove" });
 
     // Should be unchanged
     expect(state.status).toBe("lineClear");
@@ -135,9 +135,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle line clear completion timing edge case", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 100 },
+      type: "Init",
     });
 
     // Create line clear scenario
@@ -145,15 +145,15 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
 
     const lockTime = 5000;
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(lockTime),
+      type: "HardDrop",
     });
 
     expect(state.status).toBe("lineClear");
@@ -172,9 +172,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle multiple successive line clears", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 150 },
+      type: "Init",
     });
 
     // Fill multiple rows for successive clears
@@ -185,13 +185,13 @@ describe("Line Clear Edge Cases", () => {
     }
 
     // First line clear
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(4000),
+      type: "HardDrop",
     });
 
     expect(state.status).toBe("lineClear");

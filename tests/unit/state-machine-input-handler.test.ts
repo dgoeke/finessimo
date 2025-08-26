@@ -1,4 +1,7 @@
+import { defaultKeyBindings } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
+
+import type { SevenBagRng } from "../../src/core/rng";
 import type {
   Action,
   GameState,
@@ -9,16 +12,15 @@ import type {
   Stats,
   PhysicsState,
 } from "../../src/state/types";
-import type { SevenBagRng } from "../../src/core/rng";
-import { defaultKeyBindings } from "../../src/input/keyboard";
+
 // Use the active TinyKeys mock via Jest to share state with the module under test
 jest.mock("tinykeys");
 
 // Mock localStorage
 const mockLocalStorage = {
-  getItem: jest.fn<string | null, [string]>(),
-  setItem: jest.fn<void, [string, string]>(),
-  clear: jest.fn<void, []>(),
+  clear: jest.fn(),
+  getItem: jest.fn(),
+  setItem: jest.fn(),
 };
 
 Object.defineProperty(window, "localStorage", {
@@ -35,27 +37,27 @@ describe("StateMachineInputHandler", () => {
 
   const createGameState = (overrides: Partial<GameState> = {}): GameState => {
     const board: Board = {
-      width: 10,
-      height: 20,
       cells: new Uint8Array(200),
+      height: 20,
+      width: 10,
     };
 
     const active: ActivePiece = {
       id: "T",
+      rot: "spawn",
       x: 4,
       y: 0,
-      rot: "spawn",
     };
 
     const timing: TimingConfig = {
-      tickHz: 60,
-      dasMs: 133,
       arrMs: 2,
-      softDrop: 10,
-      lockDelayMs: 500,
-      lineClearDelayMs: 400,
+      dasMs: 133,
       gravityEnabled: true,
       gravityMs: 1000,
+      lineClearDelayMs: 400,
+      lockDelayMs: 500,
+      softDrop: 10,
+      tickHz: 60,
     };
 
     const gameplay: GameplayConfig = {
@@ -65,74 +67,74 @@ describe("StateMachineInputHandler", () => {
     };
 
     const stats: Stats = {
-      piecesPlaced: 0,
-      linesCleared: 0,
-      optimalPlacements: 0,
-      incorrectPlacements: 0,
-      attempts: 0,
-      startedAtMs: 0,
-      timePlayedMs: 0,
-      sessionPiecesPlaced: 0,
-      sessionLinesCleared: 0,
       accuracyPercentage: 0,
-      finesseAccuracy: 0,
+      attempts: 0,
       averageInputsPerPiece: 0,
-      sessionStartMs: 0,
-      totalSessions: 0,
-      longestSessionMs: 0,
-      piecesPerMinute: 0,
-      linesPerMinute: 0,
-      totalInputs: 0,
-      optimalInputs: 0,
-      totalFaults: 0,
-      faultsByType: {},
-      singleLines: 0,
       doubleLines: 0,
-      tripleLines: 0,
+      faultsByType: {},
+      finesseAccuracy: 0,
+      incorrectPlacements: 0,
+      linesCleared: 0,
+      linesPerMinute: 0,
+      longestSessionMs: 0,
+      optimalInputs: 0,
+      optimalPlacements: 0,
+      piecesPerMinute: 0,
+      piecesPlaced: 0,
+      sessionLinesCleared: 0,
+      sessionPiecesPlaced: 0,
+      sessionStartMs: 0,
+      singleLines: 0,
+      startedAtMs: 0,
       tetrisLines: 0,
+      timePlayedMs: 0,
+      totalFaults: 0,
+      totalInputs: 0,
+      totalSessions: 0,
+      tripleLines: 0,
     };
 
     const physics: PhysicsState = {
-      lastGravityTime: 0,
-      lockDelayStartTime: null,
       isSoftDropping: false,
-      lineClearStartTime: null,
+      lastGravityTime: 0,
       lineClearLines: [],
+      lineClearStartTime: null,
+      lockDelayStartTime: null,
     };
 
     const rng: SevenBagRng = {
-      seed: "42",
-      currentBag: ["T", "I", "O"],
       bagIndex: 0,
+      currentBag: ["T", "I", "O"],
       internalSeed: 42,
+      seed: "42",
     };
 
     return {
-      board,
       active,
-      hold: undefined,
+      board,
       canHold: true,
-      nextQueue: ["I", "O", "S"],
-      rng,
-      timing,
+      currentMode: "freePlay",
+      finesseFeedback: null,
       gameplay,
-      tick: 0,
-      status: "playing",
-      stats,
+      guidance: null,
+      hold: undefined,
+      modeData: null,
+      modePrompt: null,
+      nextQueue: ["I", "O", "S"],
       physics,
       processedInputLog: [],
-      currentMode: "freePlay",
-      modeData: null,
-      finesseFeedback: null,
-      modePrompt: null,
-      guidance: null,
+      rng,
+      stats,
+      status: "playing",
+      tick: 0,
+      timing,
       ...overrides,
     };
   };
 
   beforeEach(() => {
     handler = new StateMachineInputHandler(133, 2);
-    dispatchMock = jest.fn<void, [Action]>();
+    dispatchMock = jest.fn();
     gameState = createGameState();
 
     // Reset DOM state
@@ -203,9 +205,9 @@ describe("StateMachineInputHandler", () => {
       handler.handleMovement("LeftUp", 1050);
 
       expect(dispatchMock).toHaveBeenCalledWith({
-        type: "TapMove",
         dir: -1,
         timestampMs: expect.any(Number) as number,
+        type: "TapMove",
       });
     });
 
@@ -243,14 +245,14 @@ describe("StateMachineInputHandler", () => {
       handler.setSoftDrop(true, 1000);
 
       expect(handler.getState().isSoftDropDown).toBe(true);
-      expect(dispatchMock).toHaveBeenCalledWith({ type: "SoftDrop", on: true });
+      expect(dispatchMock).toHaveBeenCalledWith({ on: true, type: "SoftDrop" });
 
       handler.setSoftDrop(false, 1100);
 
       expect(handler.getState().isSoftDropDown).toBe(false);
       expect(dispatchMock).toHaveBeenCalledWith({
-        type: "SoftDrop",
         on: false,
+        type: "SoftDrop",
       });
     });
   });
@@ -295,7 +297,7 @@ describe("StateMachineInputHandler", () => {
     });
 
     test("applyTiming with timing object", () => {
-      handler.applyTiming({ dasMs: 150, arrMs: 4 });
+      handler.applyTiming({ arrMs: 4, dasMs: 150 });
 
       // Test by observing behavior rather than internal state
       handler.init(dispatchMock);
@@ -323,14 +325,14 @@ describe("StateMachineInputHandler", () => {
     test("update applies timing from game state", () => {
       const stateWithCustomTiming = createGameState({
         timing: {
-          tickHz: 60,
-          dasMs: 200,
           arrMs: 5,
-          softDrop: 10,
-          lockDelayMs: 500,
-          lineClearDelayMs: 400,
+          dasMs: 200,
           gravityEnabled: true,
           gravityMs: 1000,
+          lineClearDelayMs: 400,
+          lockDelayMs: 500,
+          softDrop: 10,
+          tickHz: 60,
         },
       });
 
@@ -343,12 +345,12 @@ describe("StateMachineInputHandler", () => {
       const state = handler.getState();
 
       expect(state).toEqual({
+        arrLastTime: undefined,
+        currentDirection: undefined,
+        dasStartTime: undefined,
         isLeftKeyDown: false,
         isRightKeyDown: false,
         isSoftDropDown: false,
-        dasStartTime: undefined,
-        arrLastTime: undefined,
-        currentDirection: undefined,
         softDropLastTime: undefined,
       });
     });
@@ -422,8 +424,8 @@ describe("StateMachineInputHandler", () => {
         ...defaultKeyBindings(),
         MoveLeft: ["ShiftLeft"],
         MoveRight: ["ControlRight"],
-        RotateCW: ["AltLeft"],
         RotateCCW: ["MetaRight"],
+        RotateCW: ["AltLeft"],
       };
 
       // This should not throw an error and should work correctly
@@ -497,8 +499,8 @@ describe("StateMachineInputHandler", () => {
         ...defaultKeyBindings(),
         MoveLeft: ["ShiftLeft"], // Modifier key
         MoveRight: ["ControlLeft"], // Modifier key
-        RotateCW: ["KeyZ"], // Non-modifier key
         RotateCCW: ["Control+KeyX"], // Combo pattern
+        RotateCW: ["KeyZ"], // Non-modifier key
       };
 
       expect(() => {

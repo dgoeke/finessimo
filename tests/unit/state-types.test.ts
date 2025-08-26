@@ -1,4 +1,4 @@
-import { idx, isCellBlocked, Board } from "../../src/state/types";
+import { idx, isCellBlocked, type Board } from "../../src/state/types";
 
 describe("State Types Utilities", () => {
   describe("idx function", () => {
@@ -39,16 +39,16 @@ describe("State Types Utilities", () => {
     beforeEach(() => {
       // Create empty board
       emptyBoard = {
-        width: 10,
-        height: 20,
         cells: new Uint8Array(200),
+        height: 20,
+        width: 10,
       };
 
       // Create board with some blocks
       boardWithBlocks = {
-        width: 10,
-        height: 20,
         cells: new Uint8Array(200),
+        height: 20,
+        width: 10,
       };
       // Add some blocks
       boardWithBlocks.cells[idx(5, 10)] = 1; // Block at (5, 10)
@@ -133,9 +133,9 @@ describe("State Types Utilities", () => {
     describe("different cell values", () => {
       it("should block any non-zero cell value", () => {
         const board: Board = {
-          width: 10,
-          height: 20,
           cells: new Uint8Array(200),
+          height: 20,
+          width: 10,
         };
 
         // Test different piece types (1-7)
@@ -147,9 +147,9 @@ describe("State Types Utilities", () => {
 
       it("should not block zero (empty) cell value", () => {
         const board: Board = {
-          width: 10,
-          height: 20,
           cells: new Uint8Array(200),
+          height: 20,
+          width: 10,
         };
 
         board.cells[idx(5, 5)] = 0;
@@ -175,9 +175,9 @@ describe("State Types Utilities", () => {
   describe("Board interface constraints", () => {
     it("should enforce readonly properties", () => {
       const board: Board = {
-        width: 10,
-        height: 20,
         cells: new Uint8Array(200),
+        height: 20,
+        width: 10,
       };
 
       // These should be readonly - TypeScript will catch attempts to modify
@@ -188,9 +188,9 @@ describe("State Types Utilities", () => {
 
     it("should use Uint8Array for cells with correct length", () => {
       const board: Board = {
-        width: 10,
-        height: 20,
         cells: new Uint8Array(200),
+        height: 20,
+        width: 10,
       };
 
       expect(board.cells).toBeInstanceOf(Uint8Array);
@@ -199,9 +199,9 @@ describe("State Types Utilities", () => {
 
     it("should support cell values 0-7", () => {
       const board: Board = {
-        width: 10,
-        height: 20,
         cells: new Uint8Array(200),
+        height: 20,
+        width: 10,
       };
 
       // Test that we can set all valid values

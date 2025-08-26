@@ -1,12 +1,12 @@
 import { reducer } from "../../src/state/reducer";
-import { GameState } from "../../src/state/types";
+import { type GameState } from "../../src/state/types";
 import { assertActivePiece } from "../test-helpers";
 
 describe("Reducer success paths: Rotate and Hold", () => {
   let base: GameState;
 
   beforeEach(() => {
-    base = reducer(undefined, { type: "Init", seed: "test" });
+    base = reducer(undefined, { seed: "test", type: "Init" });
   });
 
   it("applies a successful Rotate and updates active piece", () => {
@@ -15,7 +15,7 @@ describe("Reducer success paths: Rotate and Hold", () => {
       active: { id: "T", rot: "spawn", x: 4, y: 2 },
     };
 
-    const rotated = reducer(withPiece, { type: "Rotate", dir: "CW" });
+    const rotated = reducer(withPiece, { dir: "CW", type: "Rotate" });
     expect(rotated).not.toBe(withPiece);
     expect(rotated.active).toBeDefined();
     assertActivePiece(rotated);

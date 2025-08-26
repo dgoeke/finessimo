@@ -1,68 +1,69 @@
 import { describe, test, expect } from "@jest/globals";
+
+import { createRng } from "../../src/core/rng";
+import { type FinesseResult } from "../../src/finesse/calculator";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
-import { GameState, ActivePiece } from "../../src/state/types";
-import { createRng } from "../../src/core/rng";
-import { FinesseResult } from "../../src/finesse/calculator";
+import { type GameState, type ActivePiece } from "../../src/state/types";
 
 const mockGameState: GameState = {
-  board: { width: 10, height: 20, cells: new Uint8Array(200) },
   active: undefined,
-  hold: undefined,
+  board: { cells: new Uint8Array(200), height: 20, width: 10 },
   canHold: true,
-  nextQueue: [],
-  rng: createRng("test"),
-  timing: {
-    tickHz: 60,
-    dasMs: 133,
-    arrMs: 2,
-    softDrop: 10,
-    lockDelayMs: 500,
-    lineClearDelayMs: 0,
-    gravityEnabled: false,
-    gravityMs: 1000,
-  },
-  gameplay: { finesseCancelMs: 50 },
-  tick: 0,
-  status: "playing",
-  stats: {
-    piecesPlaced: 0,
-    linesCleared: 0,
-    optimalPlacements: 0,
-    incorrectPlacements: 0,
-    attempts: 0,
-    startedAtMs: 0,
-    timePlayedMs: 0,
-    sessionPiecesPlaced: 0,
-    sessionLinesCleared: 0,
-    accuracyPercentage: 0,
-    finesseAccuracy: 0,
-    averageInputsPerPiece: 0,
-    sessionStartMs: 0,
-    totalSessions: 1,
-    longestSessionMs: 0,
-    piecesPerMinute: 0,
-    linesPerMinute: 0,
-    totalInputs: 0,
-    optimalInputs: 0,
-    totalFaults: 0,
-    faultsByType: {},
-    singleLines: 0,
-    doubleLines: 0,
-    tripleLines: 0,
-    tetrisLines: 0,
-  },
-  physics: {
-    lastGravityTime: 0,
-    lockDelayStartTime: null,
-    isSoftDropping: false,
-    lineClearStartTime: null,
-    lineClearLines: [],
-  },
-  processedInputLog: [],
   currentMode: "freePlay",
   finesseFeedback: null,
+  gameplay: { finesseCancelMs: 50 },
+  hold: undefined,
   modePrompt: null,
+  nextQueue: [],
+  physics: {
+    isSoftDropping: false,
+    lastGravityTime: 0,
+    lineClearLines: [],
+    lineClearStartTime: null,
+    lockDelayStartTime: null,
+  },
+  processedInputLog: [],
+  rng: createRng("test"),
+  stats: {
+    accuracyPercentage: 0,
+    attempts: 0,
+    averageInputsPerPiece: 0,
+    doubleLines: 0,
+    faultsByType: {},
+    finesseAccuracy: 0,
+    incorrectPlacements: 0,
+    linesCleared: 0,
+    linesPerMinute: 0,
+    longestSessionMs: 0,
+    optimalInputs: 0,
+    optimalPlacements: 0,
+    piecesPerMinute: 0,
+    piecesPlaced: 0,
+    sessionLinesCleared: 0,
+    sessionPiecesPlaced: 0,
+    sessionStartMs: 0,
+    singleLines: 0,
+    startedAtMs: 0,
+    tetrisLines: 0,
+    timePlayedMs: 0,
+    totalFaults: 0,
+    totalInputs: 0,
+    totalSessions: 1,
+    tripleLines: 0,
+  },
+  status: "playing",
+  tick: 0,
+  timing: {
+    arrMs: 2,
+    dasMs: 133,
+    gravityEnabled: false,
+    gravityMs: 1000,
+    lineClearDelayMs: 0,
+    lockDelayMs: 500,
+    softDrop: 10,
+    tickHz: 60,
+  },
 };
 
 const mockPiece: ActivePiece = {
@@ -73,13 +74,21 @@ const mockPiece: ActivePiece = {
 };
 
 const mockOptimalResult: FinesseResult = {
+  faults: [],
+  isOptimal: true,
   optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
   playerSequence: ["MoveLeft", "MoveLeft", "HardDrop"],
-  isOptimal: true,
-  faults: [],
 };
 
 const mockSuboptimalResult: FinesseResult = {
+  faults: [
+    {
+      description: "Used 6 inputs instead of optimal 3",
+      position: 3,
+      type: "extra_input",
+    },
+  ],
+  isOptimal: false,
   optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
   playerSequence: [
     "MoveLeft",
@@ -88,14 +97,6 @@ const mockSuboptimalResult: FinesseResult = {
     "MoveLeft",
     "MoveLeft",
     "HardDrop",
-  ],
-  isOptimal: false,
-  faults: [
-    {
-      type: "extra_input",
-      description: "Used 6 inputs instead of optimal 3",
-      position: 3,
-    },
   ],
 };
 
@@ -145,7 +146,7 @@ describe("GuidedMode", () => {
     state = {
       ...mockGameState,
       currentMode: "guided",
-      modeData: mode.initModeData?.(),
+      modeData: mode.initModeData(),
     };
   });
 
@@ -228,7 +229,7 @@ describe("GuidedMode", () => {
       expect(guidance?.target).toBeDefined();
       const expected = mode.getExpectedPiece(state);
       expect(expected).toBeDefined();
-      if (!guidance?.target || !expected) return;
+      if (guidance?.target === undefined || expected === undefined) return;
       const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
       const finalPos: ActivePiece = {
         id: locked.id,
@@ -263,7 +264,7 @@ describe("GuidedMode", () => {
       expect(guidance?.target).toBeDefined();
       const expected = mode.getExpectedPiece(state);
       expect(expected).toBeDefined();
-      if (!guidance?.target || !expected) return;
+      if (guidance?.target === undefined || expected === undefined) return;
       const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
       const finalPos: ActivePiece = {
         id: locked.id,
@@ -293,7 +294,7 @@ describe("GuidedMode", () => {
       const expected = mode.getExpectedPiece(state);
       expect(guidance?.target).toBeDefined();
       expect(expected).toBeDefined();
-      if (!guidance?.target || !expected) return;
+      if (guidance?.target === undefined || expected === undefined) return;
       const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
       const finalPos: ActivePiece = {
         id: locked.id,
@@ -315,7 +316,7 @@ describe("GuidedMode", () => {
       const expected = mode.getExpectedPiece(state);
       expect(guidance?.target).toBeDefined();
       expect(expected).toBeDefined();
-      if (!guidance?.target || !expected) return;
+      if (guidance?.target === undefined || expected === undefined) return;
       const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
       const finalPos: ActivePiece = {
         id: locked.id,
@@ -341,7 +342,7 @@ describe("GuidedMode", () => {
     mode.reset();
 
     // After reset, consumer should re-init modeData using initModeData
-    state = { ...state, modeData: mode.initModeData?.() };
+    state = { ...state, modeData: mode.initModeData() };
     expect(
       (state.modeData as { currentDrillIndex: number } | undefined)
         ?.currentDrillIndex ?? 0,

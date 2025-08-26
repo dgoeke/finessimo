@@ -1,14 +1,17 @@
-import type { Action, GameState } from "../state/types";
-import type { InputHandler, InputHandlerState } from "./handler";
-import type { KeyBindings, BindableAction } from "./keyboard";
+import tinykeys from "tinykeys";
+
+import { fromNow, createTimestamp } from "../types/timestamp";
+
 import {
   defaultKeyBindings,
   loadBindingsFromStorage,
   saveBindingsToStorage,
 } from "./keyboard";
 import { DASMachineService } from "./machines/das";
-import { fromNow, createTimestamp } from "../types/timestamp";
-import tinykeys from "tinykeys";
+
+import type { InputHandler, InputHandlerState } from "./handler";
+import type { KeyBindings, BindableAction } from "./keyboard";
+import type { Action, GameState } from "../state/types";
 
 export class StateMachineInputHandler implements InputHandler {
   private dispatch: ((action: Action) => void) | null = null;
@@ -22,20 +25,20 @@ export class StateMachineInputHandler implements InputHandler {
   private lastArrMs?: number;
 
   // TinyKeys unsubscribe functions
-  private tinyKeysUnsubDown?: () => void;
-  private tinyKeysUnsubUp?: () => void;
+  private tinyKeysUnsubDown?: (() => void) | undefined;
+  private tinyKeysUnsubUp?: (() => void) | undefined;
 
   // Bound event handlers for cleanup
-  private resetAllInputsBound = () => this.resetAllInputs();
-  private onVisibilityChangeBound = () => this.onVisibilityChange();
+  private resetAllInputsBound = (): void => this.resetAllInputs();
+  private onVisibilityChangeBound = (): void => this.onVisibilityChange();
 
   constructor(dasMs = 133, arrMs = 2) {
     this.dasService = new DASMachineService({
-      direction: undefined,
-      dasStartTime: undefined,
       arrLastTime: undefined,
-      dasMs,
       arrMs,
+      dasMs,
+      dasStartTime: undefined,
+      direction: undefined,
       repeats: 0,
     });
   }
@@ -88,30 +91,28 @@ export class StateMachineInputHandler implements InputHandler {
     }
 
     // Update DAS timing from game state - only when it changes
-    if (gameState.timing) {
-      const { dasMs, arrMs } = gameState.timing;
-      if (this.lastDasMs !== dasMs || this.lastArrMs !== arrMs) {
-        this.dasService.updateConfig(dasMs, arrMs);
-        this.lastDasMs = dasMs;
-        this.lastArrMs = arrMs;
-      }
+    const { arrMs, dasMs } = gameState.timing;
+    if (this.lastDasMs !== dasMs || this.lastArrMs !== arrMs) {
+      this.dasService.updateConfig(dasMs, arrMs);
+      this.lastDasMs = dasMs;
+      this.lastArrMs = arrMs;
     }
 
     // Send timer tick to DAS machine if a direction is active
     if (this.dasService.getState().context.direction !== undefined) {
       const actions = this.dasService.send({
-        type: "TIMER_TICK",
         timestamp: nowMs,
+        type: "TIMER_TICK",
       });
 
       this.processActions(actions);
     }
 
     // Handle soft drop repeat pulses
-    if (this.isSoftDropDown && gameState.timing?.softDrop !== "infinite") {
-      const gravityMs = gameState.timing?.gravityMs || 1000;
+    if (this.isSoftDropDown && gameState.timing.softDrop !== "infinite") {
+      const gravityMs = gameState.timing.gravityMs;
       const softDropMultiplier =
-        typeof gameState.timing?.softDrop === "number"
+        typeof gameState.timing.softDrop === "number"
           ? gameState.timing.softDrop
           : 1;
 
@@ -129,7 +130,7 @@ export class StateMachineInputHandler implements InputHandler {
       const MAX_PULSES_PER_UPDATE = 200;
 
       while (nextTime <= nowMs && pulses < MAX_PULSES_PER_UPDATE) {
-        this.dispatch({ type: "SoftDrop", on: true });
+        this.dispatch({ on: true, type: "SoftDrop" });
 
         this.softDropLastTime = nextTime;
         nextTime += interval;
@@ -143,13 +144,15 @@ export class StateMachineInputHandler implements InputHandler {
     const state = dasState.context;
 
     return {
+      arrLastTime: state.arrLastTime,
+      currentDirection: state.direction,
+      dasStartTime: state.dasStartTime,
       isLeftKeyDown: state.direction === -1,
       isRightKeyDown: state.direction === 1,
       isSoftDropDown: this.isSoftDropDown,
-      dasStartTime: state.dasStartTime,
-      arrLastTime: state.arrLastTime,
-      currentDirection: state.direction,
-      softDropLastTime: this.softDropLastTime,
+      ...(this.softDropLastTime !== undefined
+        ? { softDropLastTime: this.softDropLastTime }
+        : {}),
     };
   }
 
@@ -157,10 +160,10 @@ export class StateMachineInputHandler implements InputHandler {
     // Check for duplicate key codes across actions
     const usedKeyCodes = new Set<string>();
     const usedPatterns = new Set<string>();
-    const duplicates: string[] = [];
-    const patternCollisions: string[] = [];
+    const duplicates: Array<string> = [];
+    const patternCollisions: Array<string> = [];
 
-    for (const action of Object.keys(bindings) as BindableAction[]) {
+    for (const action of Object.keys(bindings) as Array<BindableAction>) {
       const keyCodes = bindings[action];
       for (const keyCode of keyCodes) {
         // Check raw key code duplicates
@@ -231,9 +234,9 @@ export class StateMachineInputHandler implements InputHandler {
     this.isSoftDropDown = isDown;
     if (isDown) {
       this.softDropLastTime = tMs;
-      this.dispatch({ type: "SoftDrop", on: true });
+      this.dispatch({ on: true, type: "SoftDrop" });
     } else {
-      this.dispatch({ type: "SoftDrop", on: false });
+      this.dispatch({ on: false, type: "SoftDrop" });
     }
   }
 
@@ -271,7 +274,7 @@ export class StateMachineInputHandler implements InputHandler {
 
     // For keyboard events, check for multiple keys bound to same action
     const codes = this.bindings[keyBinding];
-    const anotherDown = codes.some((c) => this.keyStates.get(c));
+    const anotherDown = codes.some((c) => this.keyStates.get(c) === true);
 
     // Guard against repeated KEY_DOWN for same direction or multiple keys for same action
     if (
@@ -321,13 +324,12 @@ export class StateMachineInputHandler implements InputHandler {
   private buildDownBindings(): Record<string, (event: KeyboardEvent) => void> {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
 
-    for (const [action, keyCodes] of Object.entries(this.bindings) as [
-      BindableAction,
-      string[],
-    ][]) {
+    for (const [action, keyCodes] of Object.entries(this.bindings) as Array<
+      [BindableAction, Array<string>]
+    >) {
       for (const keyCode of keyCodes) {
         const pattern = this.toTinyKeysPattern(keyCode);
-        bindings[pattern] = (event: KeyboardEvent) => {
+        bindings[pattern] = (event: KeyboardEvent): void => {
           this.handleKeyEvent(action, "down", event);
         };
       }
@@ -340,16 +342,19 @@ export class StateMachineInputHandler implements InputHandler {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
 
     // Only bind keyup for actions that need release handling
-    const upActions: BindableAction[] = ["MoveLeft", "MoveRight", "SoftDrop"];
+    const upActions: Array<BindableAction> = [
+      "MoveLeft",
+      "MoveRight",
+      "SoftDrop",
+    ];
 
-    for (const [action, keyCodes] of Object.entries(this.bindings) as [
-      BindableAction,
-      string[],
-    ][]) {
+    for (const [action, keyCodes] of Object.entries(this.bindings) as Array<
+      [BindableAction, Array<string>]
+    >) {
       if (upActions.includes(action)) {
         for (const keyCode of keyCodes) {
           const pattern = this.toTinyKeysPattern(keyCode);
-          bindings[pattern] = (event: KeyboardEvent) => {
+          bindings[pattern] = (event: KeyboardEvent): void => {
             this.handleKeyEvent(action, "up", event);
           };
         }
@@ -363,12 +368,12 @@ export class StateMachineInputHandler implements InputHandler {
     // Release DAS direction if any
     const dir = this.dasService.getState().context.direction;
     if (dir !== undefined) {
-      this.dasService.send({ type: "KEY_UP", direction: dir, timestamp: t });
+      this.dasService.send({ direction: dir, timestamp: t, type: "KEY_UP" });
     }
 
     // Clear soft drop
     if (this.isSoftDropDown) {
-      this.dispatch?.({ type: "SoftDrop", on: false });
+      this.dispatch?.({ on: false, type: "SoftDrop" });
       this.isSoftDropDown = false;
     }
     this.softDropLastTime = undefined;
@@ -383,6 +388,115 @@ export class StateMachineInputHandler implements InputHandler {
     }
   }
 
+  private isGameplayBlocked(): boolean {
+    return (
+      document.body.classList.contains("settings-open") ||
+      (this.currentGameState !== undefined &&
+        this.currentGameState.status !== "playing")
+    );
+  }
+
+  private isStatefulAction(binding: BindableAction): boolean {
+    return (
+      binding === "MoveLeft" ||
+      binding === "MoveRight" ||
+      binding === "SoftDrop"
+    );
+  }
+
+  private handleBlockedKeyRelease(
+    binding: BindableAction,
+    event: KeyboardEvent,
+  ): void {
+    if (this.isStatefulAction(binding)) {
+      this.keyStates.delete(event.code);
+    }
+    const timestamp = fromNow() as number;
+    if (binding === "MoveLeft" || binding === "MoveRight") {
+      this.handleMovementUp(binding, timestamp);
+    }
+    if (binding === "SoftDrop" && this.dispatch) {
+      this.dispatch({ on: false, type: "SoftDrop" });
+      this.isSoftDropDown = false;
+    }
+  }
+
+  private handleKeyDownAction(
+    binding: BindableAction,
+    event: KeyboardEvent,
+    timestamp: number,
+  ): void {
+    if (!this.dispatch) return;
+
+    switch (binding) {
+      case "MoveLeft": {
+        this.handleMovementDown(binding, timestamp);
+        this.keyStates.set(event.code, true);
+        break;
+      }
+      case "MoveRight": {
+        this.handleMovementDown(binding, timestamp);
+        this.keyStates.set(event.code, true);
+        break;
+      }
+      case "RotateCW":
+        this.dispatch({ dir: "CW", type: "Rotate" });
+        break;
+      case "RotateCCW":
+        this.dispatch({ dir: "CCW", type: "Rotate" });
+        break;
+      case "HardDrop":
+        this.dispatch({
+          timestampMs: createTimestamp(timestamp),
+          type: "HardDrop",
+        });
+        break;
+      case "Hold":
+        this.dispatch({ type: "Hold" });
+        break;
+      case "SoftDrop":
+        this.dispatch({ on: true, type: "SoftDrop" });
+        this.isSoftDropDown = true;
+        this.softDropLastTime = timestamp;
+        this.keyStates.set(event.code, true);
+        break;
+
+      default: {
+        const _exhaustiveCheck: never = binding;
+        return _exhaustiveCheck;
+      }
+    }
+  }
+
+  private handleKeyUpAction(binding: BindableAction, timestamp: number): void {
+    switch (binding) {
+      case "MoveLeft":
+        this.handleMovementUp(binding, timestamp);
+        break;
+      case "MoveRight":
+        this.handleMovementUp(binding, timestamp);
+        break;
+      case "SoftDrop":
+        if (this.dispatch) {
+          this.dispatch({ on: false, type: "SoftDrop" });
+          this.isSoftDropDown = false;
+        }
+        break;
+
+      case "RotateCW":
+      case "RotateCCW":
+      case "HardDrop":
+      case "Hold":
+        // These actions don't need key-up handling
+        break;
+
+      default: {
+        const _exhaustiveCheck: never = binding;
+        return _exhaustiveCheck;
+      }
+    }
+  }
+
   private handleKeyEvent(
     binding: BindableAction,
     phase: "down" | "up",
@@ -390,119 +504,32 @@ export class StateMachineInputHandler implements InputHandler {
   ): void {
     if (!this.dispatch) return;
 
-    // Check if gameplay is blocked
-    const blocked =
-      document.body.classList.contains("settings-open") ||
-      (this.currentGameState && this.currentGameState.status !== "playing");
+    const blocked = this.isGameplayBlocked();
 
     if (blocked) {
-      // Always process releases even when blocked to prevent stuck inputs
       if (phase === "up") {
-        // Only clear keyStates for stateful actions
-        if (
-          binding === "MoveLeft" ||
-          binding === "MoveRight" ||
-          binding === "SoftDrop"
-        ) {
-          this.keyStates.delete(event.code);
-        }
-        const t = fromNow() as number;
-        if (binding === "MoveLeft" || binding === "MoveRight") {
-          this.handleMovementUp(binding, t);
-        }
-        if (binding === "SoftDrop") {
-          this.dispatch?.({ type: "SoftDrop", on: false });
-          this.isSoftDropDown = false;
-        }
+        this.handleBlockedKeyRelease(binding, event);
       }
       return;
     }
 
     event.preventDefault();
-
     const timestamp = fromNow() as number;
 
     if (phase === "down") {
-      // Ignore repeats for all actions
       if (event.repeat) return;
 
-      // Only track keyStates for stateful actions (those that need release handling)
-      const isStateful =
-        binding === "MoveLeft" ||
-        binding === "MoveRight" ||
-        binding === "SoftDrop";
-
-      if (isStateful) {
-        if (this.keyStates.get(event.code)) return;
+      const isStateful = this.isStatefulAction(binding);
+      if (isStateful && this.keyStates.get(event.code) === true) {
+        return;
       }
 
-      // Handle different key types
-      switch (binding) {
-        case "MoveLeft": {
-          this.handleMovementDown(binding, timestamp);
-          // Set keyStates AFTER calling handleMovementDown to avoid self-blocking
-          this.keyStates.set(event.code, true);
-          break;
-        }
-
-        case "MoveRight": {
-          this.handleMovementDown(binding, timestamp);
-          // Set keyStates AFTER calling handleMovementDown to avoid self-blocking
-          this.keyStates.set(event.code, true);
-          break;
-        }
-
-        case "RotateCW":
-          this.dispatch({ type: "Rotate", dir: "CW" });
-          break;
-
-        case "RotateCCW":
-          this.dispatch({ type: "Rotate", dir: "CCW" });
-          break;
-
-        case "HardDrop":
-          this.dispatch({
-            type: "HardDrop",
-            timestampMs: createTimestamp(timestamp),
-          });
-          break;
-
-        case "Hold":
-          this.dispatch({ type: "Hold" });
-          break;
-
-        case "SoftDrop":
-          this.dispatch({ type: "SoftDrop", on: true });
-          this.isSoftDropDown = true;
-          this.softDropLastTime = timestamp;
-          // Set keyStates AFTER handling the action
-          this.keyStates.set(event.code, true);
-          break;
-      }
+      this.handleKeyDownAction(binding, event, timestamp);
     } else {
-      // Handle key releases - only for stateful actions
-      if (
-        binding === "MoveLeft" ||
-        binding === "MoveRight" ||
-        binding === "SoftDrop"
-      ) {
+      if (this.isStatefulAction(binding)) {
         this.keyStates.delete(event.code);
       }
-
-      switch (binding) {
-        case "MoveLeft":
-          this.handleMovementUp(binding, timestamp);
-          break;
-
-        case "MoveRight":
-          this.handleMovementUp(binding, timestamp);
-          break;
-
-        case "SoftDrop":
-          this.dispatch({ type: "SoftDrop", on: false });
-          this.isSoftDropDown = false;
-          break;
-      }
+      this.handleKeyUpAction(binding, timestamp);
     }
   }
 
@@ -513,18 +540,18 @@ export class StateMachineInputHandler implements InputHandler {
     // If opposite direction is held, stop current direction
     if (currentDirection !== undefined && currentDirection !== dir) {
       const actions = this.dasService.send({
-        type: "KEY_UP",
         direction: currentDirection,
         timestamp: tMs,
+        type: "KEY_UP",
       });
       this.processActions(actions);
     }
 
     // Start new direction
     const actions = this.dasService.send({
-      type: "KEY_DOWN",
       direction: dir,
       timestamp: tMs,
+      type: "KEY_DOWN",
     });
     this.processActions(actions);
   }
@@ -537,41 +564,45 @@ export class StateMachineInputHandler implements InputHandler {
       // Check if any codes for the same binding remain pressed
       const currentBinding: BindableAction =
         dir === -1 ? "MoveLeft" : "MoveRight";
-      const remainingPressed = this.bindings[currentBinding].some((code) =>
-        this.keyStates.get(code),
+      const remainingPressed = this.bindings[currentBinding].some(
+        (code) => this.keyStates.get(code) === true,
       );
 
       // Only send KEY_UP if all codes for this direction are released
       if (!remainingPressed) {
         const actions = this.dasService.send({
-          type: "KEY_UP",
           direction: dir,
           timestamp: tMs,
+          type: "KEY_UP",
         });
         this.processActions(actions);
 
-        // Check if opposite key is still held
-        const oppositeDir: -1 | 1 = dir === -1 ? 1 : -1;
-        const oppositeBinding: BindableAction =
-          oppositeDir === -1 ? "MoveLeft" : "MoveRight";
-
-        // Check all codes for the opposite binding
-        for (const code of this.bindings[oppositeBinding]) {
-          if (this.keyStates.get(code)) {
-            const newActions = this.dasService.send({
-              type: "KEY_DOWN",
-              direction: oppositeDir,
-              timestamp: tMs,
-            });
-            this.processActions(newActions);
-            break;
-          }
-        }
+        // Check if opposite key is still held and handle it
+        this.checkAndHandleOppositeKey(dir, tMs);
       }
     }
   }
 
-  private processActions(actions: Action[]): void {
+  private checkAndHandleOppositeKey(dir: -1 | 1, tMs: number): void {
+    const oppositeDir: -1 | 1 = dir === -1 ? 1 : -1;
+    const oppositeBinding: BindableAction =
+      oppositeDir === -1 ? "MoveLeft" : "MoveRight";
+
+    // Check all codes for the opposite binding
+    for (const code of this.bindings[oppositeBinding]) {
+      if (this.keyStates.get(code) === true) {
+        const newActions = this.dasService.send({
+          direction: oppositeDir,
+          timestamp: tMs,
+          type: "KEY_DOWN",
+        });
+        this.processActions(newActions);
+        break;
+      }
+    }
+  }
+
+  private processActions(actions: Array<Action>): void {
     if (!this.dispatch) return;
 
     for (const action of actions) {

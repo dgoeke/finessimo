@@ -1,20 +1,20 @@
-import { GameState } from "../state/types";
+import { type GameState, type Stats } from "../state/types";
 
-export interface StatisticsRenderer {
+export type StatisticsRenderer = {
   initialize(container: HTMLElement): void;
   render(gameState: GameState): void;
   destroy(): void;
-}
+};
 
 export class BasicStatisticsRenderer implements StatisticsRenderer {
   private container: HTMLElement | undefined;
   private elements: {
-    performance?: HTMLElement;
-    accuracy?: HTMLElement;
-    session?: HTMLElement;
-    placement?: HTMLElement;
-    lineClears?: HTMLElement;
-    faults?: HTMLElement;
+    performance?: HTMLElement | undefined;
+    accuracy?: HTMLElement | undefined;
+    session?: HTMLElement | undefined;
+    placement?: HTMLElement | undefined;
+    lineClears?: HTMLElement | undefined;
+    faults?: HTMLElement | undefined;
   } = {};
 
   initialize(container: HTMLElement): void {
@@ -30,91 +30,104 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
 
     const { stats } = gameState;
 
-    // Update performance metrics
+    this.updatePerformanceMetrics(stats);
+    this.updateAccuracyData(stats);
+    this.updateSessionInformation(stats);
+    this.updatePlacementStatistics(stats);
+    this.updateLineClearBreakdown(stats);
+    this.updateFaultAnalysis(stats);
+  }
+
+  private updatePerformanceMetrics(stats: Stats): void {
     const performanceEl = this.elements.performance;
-    if (performanceEl) {
-      const ppmEl = performanceEl.querySelector(".ppm-value");
-      const lpmEl = performanceEl.querySelector(".lpm-value");
-      const aipEl = performanceEl.querySelector(".aip-value");
+    if (!performanceEl) return;
 
-      if (ppmEl) ppmEl.textContent = this.formatRate(stats.piecesPerMinute);
-      if (lpmEl) lpmEl.textContent = this.formatRate(stats.linesPerMinute);
-      if (aipEl)
-        aipEl.textContent = this.formatDecimal(stats.averageInputsPerPiece);
-    }
+    const ppmEl = performanceEl.querySelector(".ppm-value");
+    const lpmEl = performanceEl.querySelector(".lpm-value");
+    const aipEl = performanceEl.querySelector(".aip-value");
 
-    // Update accuracy data
+    if (ppmEl) ppmEl.textContent = this.formatRate(stats.piecesPerMinute);
+    if (lpmEl) lpmEl.textContent = this.formatRate(stats.linesPerMinute);
+    if (aipEl)
+      aipEl.textContent = this.formatDecimal(stats.averageInputsPerPiece);
+  }
+
+  private updateAccuracyData(stats: Stats): void {
     const accuracyEl = this.elements.accuracy;
-    if (accuracyEl) {
-      const accEl = accuracyEl.querySelector(".accuracy-value");
-      const finesseEl = accuracyEl.querySelector(".finesse-value");
+    if (!accuracyEl) return;
 
-      if (accEl) {
-        accEl.textContent = this.formatPercentage(stats.accuracyPercentage);
-        const accClass = this.getAccuracyClass(stats.accuracyPercentage);
-        accEl.classList.remove("excellent", "good", "average", "poor");
-        accEl.classList.add("stat-value", "accuracy-value", accClass);
-      }
-      if (finesseEl) {
-        finesseEl.textContent = this.formatPercentage(stats.finesseAccuracy);
-        const finesseClass = this.getAccuracyClass(stats.finesseAccuracy);
-        finesseEl.classList.remove("excellent", "good", "average", "poor");
-        finesseEl.classList.add("stat-value", "finesse-value", finesseClass);
-      }
+    const accEl = accuracyEl.querySelector(".accuracy-value");
+    const finesseEl = accuracyEl.querySelector(".finesse-value");
+
+    if (accEl) {
+      accEl.textContent = this.formatPercentage(stats.accuracyPercentage);
+      const accClass = this.getAccuracyClass(stats.accuracyPercentage);
+      accEl.classList.remove("excellent", "good", "average", "poor");
+      accEl.classList.add("stat-value", "accuracy-value", accClass);
     }
+    if (finesseEl) {
+      finesseEl.textContent = this.formatPercentage(stats.finesseAccuracy);
+      const finesseClass = this.getAccuracyClass(stats.finesseAccuracy);
+      finesseEl.classList.remove("excellent", "good", "average", "poor");
+      finesseEl.classList.add("stat-value", "finesse-value", finesseClass);
+    }
+  }
 
-    // Update session information
+  private updateSessionInformation(stats: Stats): void {
     const sessionEl = this.elements.session;
-    if (sessionEl) {
-      const timeEl = sessionEl.querySelector(".time-value");
-      const sessionsEl = sessionEl.querySelector(".sessions-value");
-      const longestEl = sessionEl.querySelector(".longest-value");
+    if (!sessionEl) return;
 
-      if (timeEl) timeEl.textContent = this.formatDuration(stats.timePlayedMs);
-      if (sessionsEl) sessionsEl.textContent = stats.totalSessions.toString();
-      if (longestEl)
-        longestEl.textContent = this.formatDuration(stats.longestSessionMs);
-    }
+    const timeEl = sessionEl.querySelector(".time-value");
+    const sessionsEl = sessionEl.querySelector(".sessions-value");
+    const longestEl = sessionEl.querySelector(".longest-value");
 
-    // Update placement statistics
+    if (timeEl) timeEl.textContent = this.formatDuration(stats.timePlayedMs);
+    if (sessionsEl) sessionsEl.textContent = stats.totalSessions.toString();
+    if (longestEl)
+      longestEl.textContent = this.formatDuration(stats.longestSessionMs);
+  }
+
+  private updatePlacementStatistics(stats: Stats): void {
     const placementEl = this.elements.placement;
-    if (placementEl) {
-      const placedEl = placementEl.querySelector(".placed-value");
-      const clearedEl = placementEl.querySelector(".cleared-value");
-      const optimalEl = placementEl.querySelector(".optimal-value");
-      const incorrectEl = placementEl.querySelector(".incorrect-value");
+    if (!placementEl) return;
 
-      if (placedEl) placedEl.textContent = stats.piecesPlaced.toString();
-      if (clearedEl) clearedEl.textContent = stats.linesCleared.toString();
-      if (optimalEl) optimalEl.textContent = stats.optimalPlacements.toString();
-      if (incorrectEl)
-        incorrectEl.textContent = stats.incorrectPlacements.toString();
-    }
+    const placedEl = placementEl.querySelector(".placed-value");
+    const clearedEl = placementEl.querySelector(".cleared-value");
+    const optimalEl = placementEl.querySelector(".optimal-value");
+    const incorrectEl = placementEl.querySelector(".incorrect-value");
 
-    // Update line clear breakdown
+    if (placedEl) placedEl.textContent = stats.piecesPlaced.toString();
+    if (clearedEl) clearedEl.textContent = stats.linesCleared.toString();
+    if (optimalEl) optimalEl.textContent = stats.optimalPlacements.toString();
+    if (incorrectEl)
+      incorrectEl.textContent = stats.incorrectPlacements.toString();
+  }
+
+  private updateLineClearBreakdown(stats: Stats): void {
     const lineClearsEl = this.elements.lineClears;
-    if (lineClearsEl) {
-      const singleEl = lineClearsEl.querySelector(".single-value");
-      const doubleEl = lineClearsEl.querySelector(".double-value");
-      const tripleEl = lineClearsEl.querySelector(".triple-value");
-      const tetrisEl = lineClearsEl.querySelector(".tetris-value");
+    if (!lineClearsEl) return;
 
-      if (singleEl) singleEl.textContent = stats.singleLines.toString();
-      if (doubleEl) doubleEl.textContent = stats.doubleLines.toString();
-      if (tripleEl) tripleEl.textContent = stats.tripleLines.toString();
-      if (tetrisEl) tetrisEl.textContent = stats.tetrisLines.toString();
-    }
+    const singleEl = lineClearsEl.querySelector(".single-value");
+    const doubleEl = lineClearsEl.querySelector(".double-value");
+    const tripleEl = lineClearsEl.querySelector(".triple-value");
+    const tetrisEl = lineClearsEl.querySelector(".tetris-value");
 
-    // Update fault analysis
+    if (singleEl) singleEl.textContent = stats.singleLines.toString();
+    if (doubleEl) doubleEl.textContent = stats.doubleLines.toString();
+    if (tripleEl) tripleEl.textContent = stats.tripleLines.toString();
+    if (tetrisEl) tetrisEl.textContent = stats.tetrisLines.toString();
+  }
+
+  private updateFaultAnalysis(stats: Stats): void {
     const faultsEl = this.elements.faults;
-    if (faultsEl) {
-      const totalEl = faultsEl.querySelector(".total-faults");
-      const breakdownEl = faultsEl.querySelector(".fault-breakdown");
+    if (!faultsEl) return;
 
-      if (totalEl) totalEl.textContent = stats.totalFaults.toString();
-      if (breakdownEl) {
-        breakdownEl.innerHTML = this.formatFaultBreakdown(stats.faultsByType);
-      }
+    const totalEl = faultsEl.querySelector(".total-faults");
+    const breakdownEl = faultsEl.querySelector(".fault-breakdown");
+
+    if (totalEl) totalEl.textContent = stats.totalFaults.toString();
+    if (breakdownEl) {
+      breakdownEl.innerHTML = this.formatFaultBreakdown(stats.faultsByType);
     }
   }
 
@@ -218,16 +231,17 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
 
     // Store references to elements
     this.elements.performance =
-      this.container.querySelector("#performance") ?? undefined;
+      this.container.querySelector<HTMLElement>("#performance") ?? undefined;
     this.elements.accuracy =
-      this.container.querySelector("#accuracy") ?? undefined;
+      this.container.querySelector<HTMLElement>("#accuracy") ?? undefined;
     this.elements.session =
-      this.container.querySelector("#session") ?? undefined;
+      this.container.querySelector<HTMLElement>("#session") ?? undefined;
     this.elements.placement =
-      this.container.querySelector("#placement") ?? undefined;
+      this.container.querySelector<HTMLElement>("#placement") ?? undefined;
     this.elements.lineClears =
-      this.container.querySelector("#lineClears") ?? undefined;
-    this.elements.faults = this.container.querySelector("#faults") ?? undefined;
+      this.container.querySelector<HTMLElement>("#lineClears") ?? undefined;
+    this.elements.faults =
+      this.container.querySelector<HTMLElement>("#faults") ?? undefined;
   }
 
   destroy(): void {
@@ -245,13 +259,13 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
     const hours = Math.floor(minutes / 60);
 
     if (hours > 0) {
-      return `${hours}:${(minutes % 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
+      return `${String(hours)}:${String(minutes % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
     }
-    return `${minutes}:${(seconds % 60).toString().padStart(2, "0")}`;
+    return `${String(minutes)}:${String(seconds % 60).padStart(2, "0")}`;
   }
 
   private formatPercentage(value: number): string {
-    return `${Math.round(value)}%`;
+    return `${String(Math.round(value))}%`;
   }
 
   private formatRate(value: number): string {
@@ -282,7 +296,7 @@ export class BasicStatisticsRenderer implements StatisticsRenderer {
         ([type, count]) =>
           `<div class="stat-row">
           <span class="stat-label">${type}:</span>
-          <span class="stat-value">${count}</span>
+          <span class="stat-value">${String(count)}</span>
         </div>`,
       )
       .join("");

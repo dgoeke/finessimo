@@ -1,12 +1,13 @@
+import { type FinesseResult } from "../finesse/calculator";
 import {
-  GameState,
-  ActivePiece,
-  Rot,
-  PieceId,
-  ModeGuidance,
+  type GameState,
+  type ActivePiece,
+  type Rot,
+  type PieceId,
+  type ModeGuidance,
 } from "../state/types";
-import { FinesseResult } from "../finesse/calculator";
-import { GameMode, GameModeResult } from "./index";
+
+import { type GameMode, type GameModeResult } from "./index";
 
 export class FreePlayMode implements GameMode {
   readonly name = "freePlay";
@@ -29,22 +30,22 @@ export class FreePlayMode implements GameMode {
   ): GameModeResult {
     void _lockedPiece;
     void _finalPosition;
-    const { isOptimal, playerSequence, optimalSequences, faults } =
+    const { faults, isOptimal, optimalSequences, playerSequence } =
       finesseResult;
 
     if (isOptimal) {
       return {
-        feedback: `✓ Optimal finesse! Used ${playerSequence.length} inputs.`,
+        feedback: `✓ Optimal finesse! Used ${String(playerSequence.length)} inputs.`,
       };
     }
 
     const optimalLength = optimalSequences[0]?.length ?? 0;
     const extraInputs = playerSequence.length - optimalLength;
 
-    let feedback = `✗ Non-optimal finesse. Used ${playerSequence.length} inputs, optimal was ${optimalLength}.`;
+    let feedback = `✗ Non-optimal finesse. Used ${String(playerSequence.length)} inputs, optimal was ${String(optimalLength)}.`;
 
     if (extraInputs > 0) {
-      feedback += ` ${extraInputs} extra input${extraInputs > 1 ? "s" : ""}.`;
+      feedback += ` ${String(extraInputs)} extra input${extraInputs > 1 ? "s" : ""}.`;
     }
 
     if (faults.length > 0) {

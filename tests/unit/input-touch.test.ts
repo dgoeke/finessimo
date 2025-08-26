@@ -1,5 +1,9 @@
 import { TouchInputHandler } from "../../src/input/touch";
-import { Action, KeyAction, GameState } from "../../src/state/types";
+import {
+  type Action,
+  type KeyAction,
+  type GameState,
+} from "../../src/state/types";
 
 // Mock DOM APIs for touch support
 Object.defineProperty(window, "ontouchstart", {
@@ -8,9 +12,9 @@ Object.defineProperty(window, "ontouchstart", {
 });
 
 // Interface for accessing private methods in tests
-interface TouchInputHandlerTestable {
+type TouchInputHandlerTestable = {
   triggerAction(action: KeyAction, phase: "down" | "up"): void;
-}
+};
 
 describe("TouchInputHandler", () => {
   let handler: TouchInputHandler;
@@ -21,7 +25,7 @@ describe("TouchInputHandler", () => {
     document.body.innerHTML = '<div class="board-frame"></div>';
 
     handler = new TouchInputHandler();
-    mockDispatch = jest.fn<void, [Action]>();
+    mockDispatch = jest.fn<undefined, [Action]>();
     handler.init(mockDispatch);
 
     // TouchInputHandler update method now requires gameState and timestamp
@@ -109,8 +113,8 @@ describe("TouchInputHandler", () => {
 
       // Should dispatch Rotate action for non-movement actions
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "Rotate",
         dir: "CW",
+        type: "Rotate",
       });
     });
 
@@ -133,8 +137,8 @@ describe("TouchInputHandler", () => {
 
       // Should dispatch SoftDrop action with on: false
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "SoftDrop",
         on: false,
+        type: "SoftDrop",
       });
     });
   });
@@ -149,13 +153,13 @@ describe("TouchInputHandler", () => {
 
     test("setKeyBindings should update state machine handler bindings", () => {
       const customBindings = {
+        HardDrop: ["Space"],
+        Hold: ["KeyC"],
         MoveLeft: ["KeyA"],
         MoveRight: ["KeyD"],
-        SoftDrop: ["KeyS"],
-        HardDrop: ["Space"],
-        RotateCW: ["KeyX"],
         RotateCCW: ["KeyZ"],
-        Hold: ["KeyC"],
+        RotateCW: ["KeyX"],
+        SoftDrop: ["KeyS"],
       };
 
       handler.setKeyBindings(customBindings);

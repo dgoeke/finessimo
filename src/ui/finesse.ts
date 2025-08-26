@@ -1,6 +1,3 @@
-import { GameState, ActivePiece, PieceId, Rot } from "../state/types";
-import { PIECES } from "../core/pieces";
-import { finesseCalculator } from "../finesse/calculator";
 // mode registry no longer needed here; use state.guidance
 import {
   calculateGhostPosition,
@@ -8,22 +5,33 @@ import {
   tryMove,
   moveToWall,
 } from "../core/board";
+import { PIECES } from "../core/pieces";
 import { tryRotate, getNextRotation } from "../core/srs";
+import { finesseCalculator } from "../finesse/calculator";
+import {
+  type GameState,
+  type ActivePiece,
+  type PieceId,
+  type Rot,
+  type Board,
+  type ModeGuidance,
+  type FinesseAction,
+} from "../state/types";
 
-export interface FinesseVisualization {
+export type FinesseVisualization = {
   targetPosition?: ActivePiece;
-  optimalSequence?: string[];
+  optimalSequence?: Array<string>;
   currentStep?: number;
-  pathTrace?: { piece: ActivePiece; stepNumber: number; action: string }[];
+  pathTrace?: Array<{ piece: ActivePiece; stepNumber: number; action: string }>;
   isOptimal?: boolean;
   faultCount?: number;
-}
+};
 
-export interface FinesseRenderer {
+export type FinesseRenderer = {
   initialize(canvas: HTMLCanvasElement): void;
   render(gameState: GameState, visualization: FinesseVisualization): void;
   destroy(): void;
-}
+};
 
 export class BasicFinesseRenderer implements FinesseRenderer {
   private canvas: HTMLCanvasElement | undefined;
@@ -53,10 +61,17 @@ export class BasicFinesseRenderer implements FinesseRenderer {
       return;
     }
 
+    this.renderVisualizationElements(guidance, visualization);
+  }
+
+  private renderVisualizationElements(
+    guidance: ModeGuidance,
+    visualization: FinesseVisualization,
+  ): void {
     // Render target position if available
     if (
-      visualization.targetPosition &&
-      guidance?.visual?.highlightTarget !== false
+      this.shouldRenderTarget(visualization, guidance) &&
+      visualization.targetPosition
     ) {
       this.renderTargetPosition(visualization.targetPosition);
     }
@@ -68,8 +83,8 @@ export class BasicFinesseRenderer implements FinesseRenderer {
 
     // Show optimal sequence text overlay
     if (
-      visualization.optimalSequence &&
-      (guidance?.visual?.showPath ?? false)
+      this.shouldRenderSequence(visualization, guidance) &&
+      visualization.optimalSequence
     ) {
       this.renderSequenceOverlay(
         visualization.optimalSequence,
@@ -78,11 +93,30 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     }
   }
 
+  private shouldRenderTarget(
+    visualization: FinesseVisualization,
+    guidance: ModeGuidance,
+  ): boolean {
+    return (
+      visualization.targetPosition !== undefined &&
+      guidance.visual?.highlightTarget !== false
+    );
+  }
+
+  private shouldRenderSequence(
+    visualization: FinesseVisualization,
+    guidance: ModeGuidance,
+  ): boolean {
+    return (
+      visualization.optimalSequence !== undefined &&
+      (guidance.visual?.showPath ?? false)
+    );
+  }
+
   private renderTargetPosition(target: ActivePiece): void {
     if (!this.ctx) return;
 
     const piece = PIECES[target.id];
-    if (!piece) return;
 
     const cells = piece.cells[target.rot];
 
@@ -102,7 +136,11 @@ export class BasicFinesseRenderer implements FinesseRenderer {
   }
 
   private renderPathTrace(
-    pathTrace: { piece: ActivePiece; stepNumber: number; action: string }[],
+    pathTrace: Array<{
+      piece: ActivePiece;
+      stepNumber: number;
+      action: string;
+    }>,
   ): void {
     if (!this.ctx) return;
 
@@ -112,7 +150,10 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     }
   }
 
-  private renderSequenceOverlay(sequence: string[], currentStep: number): void {
+  private renderSequenceOverlay(
+    sequence: Array<string>,
+    currentStep: number,
+  ): void {
     if (!this.ctx || !this.canvas) return;
 
     // Draw sequence text at bottom of canvas
@@ -131,7 +172,7 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     this.ctx.fillText(text, x, y - 15);
 
     // Show progress
-    const progress = `Step ${currentStep + 1}/${sequence.length}`;
+    const progress = `Step ${String(currentStep + 1)}/${String(sequence.length)}`;
     this.ctx.font = "12px monospace";
     this.ctx.fillStyle = "#aaa";
     this.ctx.fillText(progress, x, y - 2);
@@ -149,7 +190,6 @@ export class BasicFinesseRenderer implements FinesseRenderer {
 
     // Get piece shape
     const pieceData = PIECES[piece.id];
-    if (!pieceData) return;
 
     const cells = pieceData.cells[piece.rot];
 
@@ -221,11 +261,11 @@ export class BasicFinesseRenderer implements FinesseRenderer {
     const centerY = pixelY + this.cellSize / 2;
 
     // Draw semi-transparent piece position
-    this.ctx.fillStyle = color + "40"; // Add alpha for transparency
+    this.ctx.fillStyle = `${color}40`; // Add alpha for transparency
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
     // Draw border
-    this.ctx.strokeStyle = color + "AA";
+    this.ctx.strokeStyle = `${color}AA`;
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([3, 3]);
     this.ctx.strokeRect(
@@ -376,8 +416,8 @@ export function createFinesseVisualization(
     const guidance = gameState.guidance ?? null;
     if (gameState.active && guidance?.target) {
       const targetInfo = {
-        targetX: guidance.target.x,
         targetRot: guidance.target.rot,
+        targetX: guidance.target.x,
       } as const;
       // Calculate target Y position against current board
       const targetY = calculateDropPosition(
@@ -389,9 +429,9 @@ export function createFinesseVisualization(
 
       visualization.targetPosition = {
         id: gameState.active.id,
+        rot: targetInfo.targetRot,
         x: targetInfo.targetX,
         y: targetY,
-        rot: targetInfo.targetRot,
       };
 
       // Calculate optimal sequence using finesse calculator
@@ -406,19 +446,11 @@ export function createFinesseVisualization(
 
         if (optimalSequences.length > 0) {
           const optimalSequence = optimalSequences[0]; // Use first optimal sequence
-          if (optimalSequence) {
-            visualization.optimalSequence = optimalSequence;
-
-            // Generate path trace starting from spawn using core movement/rotation on empty board
-            visualization.pathTrace = generatePathTrace(
-              spawnFromActive(gameState.active),
-              optimalSequence,
-            );
-            visualization.currentStep = calculateCurrentStep(
-              gameState,
-              optimalSequence,
-            );
-          }
+          applyOptimalSequenceToVisualization(
+            visualization,
+            gameState,
+            optimalSequence,
+          );
         }
       } catch (error) {
         console.warn("Failed to calculate finesse path:", error);
@@ -442,6 +474,23 @@ function calculateDropPosition(
   return ghost.y;
 }
 
+function applyOptimalSequenceToVisualization(
+  visualization: FinesseVisualization,
+  gameState: GameState,
+  optimalSequence: Array<FinesseAction> | undefined,
+): void {
+  if (!optimalSequence || !gameState.active) return;
+
+  visualization.optimalSequence = optimalSequence;
+
+  // Generate path trace starting from spawn using core movement/rotation on empty board
+  visualization.pathTrace = generatePathTrace(
+    spawnFromActive(gameState.active),
+    optimalSequence,
+  );
+  visualization.currentStep = calculateCurrentStep(gameState, optimalSequence);
+}
+
 function spawnFromActive(active: ActivePiece): ActivePiece {
   const topLeft = PIECES[active.id].spawnTopLeft;
   return { id: active.id, rot: "spawn", x: topLeft[0], y: topLeft[1] };
@@ -450,49 +499,64 @@ function spawnFromActive(active: ActivePiece): ActivePiece {
 // Generate a trace of piece positions for each step in the optimal sequence
 function generatePathTrace(
   startPiece: ActivePiece,
-  sequence: string[],
-): { piece: ActivePiece; stepNumber: number; action: string }[] {
-  const trace: { piece: ActivePiece; stepNumber: number; action: string }[] =
-    [];
+  sequence: Array<string>,
+): Array<{ piece: ActivePiece; stepNumber: number; action: string }> {
+  const trace: Array<{
+    piece: ActivePiece;
+    stepNumber: number;
+    action: string;
+  }> = [];
   const emptyBoard = createEmptyBoard();
   let currentPiece = { ...startPiece };
 
   // Add starting position
-  trace.push({ piece: { ...currentPiece }, stepNumber: 0, action: "Start" });
+  trace.push({ action: "Start", piece: { ...currentPiece }, stepNumber: 0 });
 
   for (let i = 0; i < sequence.length; i++) {
     const action = sequence[i];
-    if (!action) continue;
+    if (action === "" || action === undefined) continue;
 
-    // Map FinesseAction values to movement/rotation
-    if (action === "MoveLeft") {
-      const moved = tryMove(emptyBoard, currentPiece, -1, 0);
-      currentPiece = moved ?? currentPiece;
-    } else if (action === "MoveRight") {
-      const moved = tryMove(emptyBoard, currentPiece, 1, 0);
-      currentPiece = moved ?? currentPiece;
-    } else if (action === "DASLeft") {
-      const walled = moveToWall(emptyBoard, currentPiece, -1);
-      currentPiece = walled;
-    } else if (action === "DASRight") {
-      const walled = moveToWall(emptyBoard, currentPiece, 1);
-      currentPiece = walled;
-    } else if (action === "RotateCW") {
-      const rot = getNextRotation(currentPiece.rot, "CW");
-      const rotated = tryRotate(currentPiece, rot, emptyBoard);
-      currentPiece = rotated ?? currentPiece;
-    } else if (action === "RotateCCW") {
-      const rot = getNextRotation(currentPiece.rot, "CCW");
-      const rotated = tryRotate(currentPiece, rot, emptyBoard);
-      currentPiece = rotated ?? currentPiece;
-    } else if (action === "HardDrop") {
-      // Do not change position here; final drop is visualized by target overlay
-    }
-
-    trace.push({ piece: { ...currentPiece }, stepNumber: i + 1, action });
+    currentPiece = executeTraceAction(emptyBoard, currentPiece, action);
+    trace.push({ action, piece: { ...currentPiece }, stepNumber: i + 1 });
   }
 
   return trace;
+}
+
+function executeTraceAction(
+  board: Board,
+  piece: ActivePiece,
+  action: string,
+): ActivePiece {
+  switch (action) {
+    case "MoveLeft": {
+      const moved = tryMove(board, piece, -1, 0);
+      return moved ?? piece;
+    }
+    case "MoveRight": {
+      const moved = tryMove(board, piece, 1, 0);
+      return moved ?? piece;
+    }
+    case "DASLeft":
+      return moveToWall(board, piece, -1);
+    case "DASRight":
+      return moveToWall(board, piece, 1);
+    case "RotateCW": {
+      const rot = getNextRotation(piece.rot, "CW");
+      const rotated = tryRotate(piece, rot, board);
+      return rotated ?? piece;
+    }
+    case "RotateCCW": {
+      const rot = getNextRotation(piece.rot, "CCW");
+      const rotated = tryRotate(piece, rot, board);
+      return rotated ?? piece;
+    }
+    case "HardDrop":
+      // Do not change position here; final drop is visualized by target overlay
+      return piece;
+    default:
+      return piece;
+  }
 }
 
 // Simple move simulation (this could be enhanced with actual game logic)
@@ -501,48 +565,72 @@ function generatePathTrace(
 // Calculate which step the player is currently on
 function calculateCurrentStep(
   gameState: GameState,
-  optimalSequence: string[],
+  optimalSequence: Array<string>,
 ): number {
   const player = extractPlayerFinesseActionsForProgress(gameState);
   return Math.min(player.length, optimalSequence.length);
 }
 
 // Build player finesse actions mirroring the service’s extraction logic
-function extractPlayerFinesseActionsForProgress(state: GameState): string[] {
-  const finesseActions: string[] = [];
+function extractPlayerFinesseActionsForProgress(
+  state: GameState,
+): Array<string> {
+  const finesseActions: Array<string> = [];
   let currentDASDirection: -1 | 1 | undefined;
 
-  // Movement from processedInputLog
-  for (const a of state.processedInputLog) {
-    if (a.type === "TapMove") {
-      currentDASDirection = undefined;
-      finesseActions.push(a.dir === -1 ? "MoveLeft" : "MoveRight");
-    } else if (a.type === "HoldMove" || a.type === "RepeatMove") {
-      if (currentDASDirection !== a.dir) {
-        currentDASDirection = a.dir;
-        finesseActions.push(a.dir === -1 ? "DASLeft" : "DASRight");
-      }
-      // else coalesce consecutive repeats in same direction
-    }
-  }
-
-  // Non-movement actions from processedInputLog
   for (const action of state.processedInputLog) {
-    switch (action.type) {
-      case "Rotate":
-        currentDASDirection = undefined;
-        if (action.dir === "CW") {
-          finesseActions.push("RotateCW");
-        } else {
-          finesseActions.push("RotateCCW");
-        }
-        break;
-      case "HardDrop":
-        currentDASDirection = undefined;
-        finesseActions.push("HardDrop");
-        break;
+    const actionResult = processInputAction(action, currentDASDirection);
+    if (
+      actionResult.finesseAction !== undefined &&
+      actionResult.finesseAction !== ""
+    ) {
+      finesseActions.push(actionResult.finesseAction);
     }
+    currentDASDirection = actionResult.newDASDirection;
   }
 
   return finesseActions;
+}
+
+type ActionResult = {
+  finesseAction?: string;
+  newDASDirection: -1 | 1 | undefined;
+};
+
+function processInputAction(
+  action: { type: string; dir?: number | "CW" | "CCW" },
+  currentDASDirection: -1 | 1 | undefined,
+): ActionResult {
+  switch (action.type) {
+    case "TapMove":
+      return {
+        finesseAction: action.dir === -1 ? "MoveLeft" : "MoveRight",
+        newDASDirection: undefined,
+      };
+
+    case "HoldMove":
+    case "RepeatMove":
+      if (currentDASDirection !== action.dir) {
+        return {
+          finesseAction: action.dir === -1 ? "DASLeft" : "DASRight",
+          newDASDirection: action.dir as -1 | 1,
+        };
+      }
+      return { newDASDirection: currentDASDirection };
+
+    case "Rotate":
+      return {
+        finesseAction: action.dir === "CW" ? "RotateCW" : "RotateCCW",
+        newDASDirection: undefined,
+      };
+
+    case "HardDrop":
+      return {
+        finesseAction: "HardDrop",
+        newDASDirection: undefined,
+      };
+
+    default:
+      return { newDASDirection: currentDASDirection };
+  }
 }

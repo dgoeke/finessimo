@@ -1,82 +1,86 @@
+import { type FinesseResult } from "../finesse/calculator";
 import {
-  GameState,
-  PieceId,
-  Rot,
-  ActivePiece,
-  ModeGuidance,
+  type GameState,
+  type PieceId,
+  type Rot,
+  type ActivePiece,
+  type ModeGuidance,
 } from "../state/types";
-import { FinesseResult } from "../finesse/calculator";
-import { GameMode, GameModeResult } from "./index";
 
-interface GuidedDrill {
+import { type GameMode, type GameModeResult } from "./index";
+
+type GuidedDrill = {
   piece: PieceId;
   targetX: number;
   targetRot: Rot;
   description: string;
-}
+};
 
-interface GuidedData {
+type GuidedData = {
   currentDrillIndex: number;
   attemptsOnCurrentDrill: number;
-}
+};
 
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
-  private drills: GuidedDrill[] = [
+  private drills: Array<GuidedDrill> = [
     {
-      piece: "T",
-      targetX: 0,
-      targetRot: "spawn",
       description: "Place T-piece at left edge (spawn rotation)",
+      piece: "T",
+      targetRot: "spawn",
+      targetX: 0,
     },
     {
-      piece: "T",
-      targetX: 7,
-      targetRot: "spawn",
       description: "Place T-piece at right edge (spawn rotation)",
-    },
-    {
       piece: "T",
-      targetX: 4,
-      targetRot: "right",
-      description: "Place T-piece at center (right rotation)",
-    },
-    {
-      piece: "I",
-      targetX: 0,
       targetRot: "spawn",
-      description: "Place I-piece at left edge (spawn rotation)",
-    },
-    {
-      piece: "I",
-      targetX: 6,
-      targetRot: "spawn",
-      description: "Place I-piece at right edge (spawn rotation)",
-    },
-    {
-      piece: "L",
-      targetX: 0,
-      targetRot: "spawn",
-      description: "Place L-piece at left edge (spawn rotation)",
-    },
-    {
-      piece: "J",
       targetX: 7,
+    },
+    {
+      description: "Place T-piece at center (right rotation)",
+      piece: "T",
+      targetRot: "right",
+      targetX: 4,
+    },
+    {
+      description: "Place I-piece at left edge (spawn rotation)",
+      piece: "I",
       targetRot: "spawn",
+      targetX: 0,
+    },
+    {
+      description: "Place I-piece at right edge (spawn rotation)",
+      piece: "I",
+      targetRot: "spawn",
+      targetX: 6,
+    },
+    {
+      description: "Place L-piece at left edge (spawn rotation)",
+      piece: "L",
+      targetRot: "spawn",
+      targetX: 0,
+    },
+    {
       description: "Place J-piece at right edge (spawn rotation)",
+      piece: "J",
+      targetRot: "spawn",
+      targetX: 7,
     },
   ];
 
   initModeData(): GuidedData {
-    return { currentDrillIndex: 0, attemptsOnCurrentDrill: 0 };
+    return { attemptsOnCurrentDrill: 0, currentDrillIndex: 0 };
   }
 
   private getData(state: GameState): GuidedData {
-    const data = (state.modeData as GuidedData) ?? this.initModeData();
+    const data = state.modeData as GuidedData | undefined;
+    if (!data) {
+      return this.initModeData();
+    }
     return {
-      currentDrillIndex: data.currentDrillIndex ?? 0,
-      attemptsOnCurrentDrill: data.attemptsOnCurrentDrill ?? 0,
+      attemptsOnCurrentDrill: data.attemptsOnCurrentDrill,
+      currentDrillIndex: data.currentDrillIndex,
     };
   }
 
@@ -93,8 +97,8 @@ export class GuidedMode implements GameMode {
     const drill = this.drills[data.currentDrillIndex];
     if (!drill) return null;
     return {
-      target: { x: drill.targetX, rot: drill.targetRot },
-      label: `Drill ${data.currentDrillIndex + 1}/${this.drills.length}: ${drill.description}`,
+      label: `Drill ${String(data.currentDrillIndex + 1)}/${String(this.drills.length)}: ${drill.description}`,
+      target: { rot: drill.targetRot, x: drill.targetX },
       visual: { highlightTarget: true, showPath: true },
     };
   }
@@ -107,86 +111,105 @@ export class GuidedMode implements GameMode {
   ): GameModeResult {
     const data = this.getData(_gameState);
     const currentDrill = this.drills[data.currentDrillIndex];
+
     if (!currentDrill) {
+      return { feedback: "All drills completed! Well done!", isComplete: true };
+    }
+
+    const validationResult = this.validatePieceAndTarget(
+      lockedPiece,
+      finalPosition,
+      currentDrill,
+    );
+    if (validationResult) {
+      return validationResult;
+    }
+
+    const { isOptimal } = finesseResult;
+    if (isOptimal) {
+      return this.handleOptimalSolution(data, finesseResult.playerSequence);
+    }
+
+    return this.handleSuboptimalSolution(data, finesseResult);
+  }
+
+  private validatePieceAndTarget(
+    lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+    expected: GuidedDrill,
+  ): GameModeResult | null {
+    if (lockedPiece.id !== expected.piece) {
+      return { feedback: `✗ Wrong piece. Expected ${expected.piece}.` };
+    }
+    if (
+      !(
+        finalPosition.x === expected.targetX &&
+        finalPosition.rot === expected.targetRot
+      )
+    ) {
       return {
-        feedback: "All drills completed! Well done!",
-        isComplete: true,
+        feedback: `✗ Wrong target. Place at x=${String(expected.targetX)}, rot=${expected.targetRot}.`,
       };
     }
+    return null;
+  }
 
-    const { isOptimal, playerSequence, optimalSequences, faults } =
-      finesseResult;
+  private handleOptimalSolution(
+    data: GuidedData,
+    playerSequence: Array<string>,
+  ): GameModeResult {
+    const nextIndex = data.currentDrillIndex + 1;
+    const nextDrill = this.drills[nextIndex];
+    const feedback = `✓ Perfect! Completed drill in ${String(playerSequence.length)} inputs (optimal).`;
 
-    // Enforce piece identity and target match for the current drill
-    const expected = currentDrill;
-    if (expected) {
-      if (lockedPiece.id !== expected.piece) {
-        return { feedback: `✗ Wrong piece. Expected ${expected.piece}.` };
-      }
-      if (
-        !(
-          finalPosition.x === expected.targetX &&
-          finalPosition.rot === expected.targetRot
-        )
-      ) {
-        return {
-          feedback: `✗ Wrong target. Place at x=${expected.targetX}, rot=${expected.targetRot}.`,
-        };
-      }
+    if (nextDrill) {
+      return {
+        feedback: `${feedback} Moving to next drill.`,
+        modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
+        nextPrompt: nextDrill.description,
+      };
+    } else {
+      return {
+        feedback: `${feedback} All drills completed! Excellent work!`,
+        isComplete: true,
+        modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
+      };
     }
+  }
 
-    if (isOptimal) {
-      const nextIndex = data.currentDrillIndex + 1;
-      const nextDrill = this.drills[nextIndex];
-
-      let feedback = `✓ Perfect! Completed drill in ${playerSequence.length} inputs (optimal).`;
-
-      if (nextDrill) {
-        feedback += ` Moving to next drill.`;
-        return {
-          feedback,
-          nextPrompt: nextDrill.description,
-          modeData: { currentDrillIndex: nextIndex, attemptsOnCurrentDrill: 0 },
-        };
-      } else {
-        return {
-          feedback: `${feedback} All drills completed! Excellent work!`,
-          isComplete: true,
-          modeData: { currentDrillIndex: nextIndex, attemptsOnCurrentDrill: 0 },
-        };
-      }
-    }
-
+  private handleSuboptimalSolution(
+    data: GuidedData,
+    finesseResult: FinesseResult,
+  ): GameModeResult {
+    const { faults, optimalSequences, playerSequence } = finesseResult;
     const optimalLength = optimalSequences[0]?.length ?? 0;
     const extraInputs = playerSequence.length - optimalLength;
 
-    let feedback = `✗ Try again! Used ${playerSequence.length} inputs, optimal is ${optimalLength}.`;
+    let feedback = `✗ Try again! Used ${String(playerSequence.length)} inputs, optimal is ${String(optimalLength)}.`;
 
     if (extraInputs > 0) {
-      feedback += ` You used ${extraInputs} extra input${extraInputs > 1 ? "s" : ""}.`;
+      feedback += ` You used ${String(extraInputs)} extra input${extraInputs > 1 ? "s" : ""}.`;
     }
 
-    if (faults.length > 0) {
-      const primaryFault = faults[0];
-      if (primaryFault) {
-        feedback += ` Hint: ${primaryFault.description}`;
-      }
+    if (faults.length > 0 && faults[0]) {
+      feedback += ` Hint: ${faults[0].description}`;
     }
 
-    const baseAttempts = data.attemptsOnCurrentDrill ?? 0;
-    const nextAttempts = baseAttempts + 1;
-    if (nextAttempts > 2 && optimalSequences.length > 0) {
-      const optimalSequence = optimalSequences[0];
-      if (optimalSequence) {
-        const optimalStr = optimalSequence.join(" → ");
-        feedback += ` Optimal sequence: ${optimalStr}`;
-      }
+    const nextAttempts = data.attemptsOnCurrentDrill + 1;
+    if (
+      nextAttempts > 2 &&
+      optimalSequences.length > 0 &&
+      optimalSequences[0]
+    ) {
+      const optimalStr = optimalSequences[0].join(" → ");
+      feedback += ` Optimal sequence: ${optimalStr}`;
     }
+
     return {
       feedback,
       modeData: {
-        currentDrillIndex: data.currentDrillIndex,
         attemptsOnCurrentDrill: nextAttempts,
+        currentDrillIndex: data.currentDrillIndex,
       },
     };
   }
@@ -205,7 +228,7 @@ export class GuidedMode implements GameMode {
     const data = this.getData(_gameState);
     const currentDrill = this.drills[data.currentDrillIndex];
     if (currentDrill) {
-      return `Drill ${data.currentDrillIndex + 1}/${this.drills.length}: ${currentDrill.description}`;
+      return `Drill ${String(data.currentDrillIndex + 1)}/${String(this.drills.length)}: ${currentDrill.description}`;
     }
     return null;
   }
@@ -219,7 +242,7 @@ export class GuidedMode implements GameMode {
     const data = this.getData(_gameState);
     const currentDrill = this.drills[data.currentDrillIndex];
     if (!currentDrill) return null;
-    return { targetX: currentDrill.targetX, targetRot: currentDrill.targetRot };
+    return { targetRot: currentDrill.targetRot, targetX: currentDrill.targetX };
   }
 
   getExpectedPiece(_gameState: GameState): PieceId | undefined {

@@ -1,20 +1,20 @@
+import { createEmptyBoard, moveToWall } from "../../src/core/board";
+import { PIECES } from "../../src/core/pieces";
+import { getNextRotation, tryRotate } from "../../src/core/srs";
 import {
   finesseCalculator,
-  Fault,
+  type Fault,
   extractFinesseActions,
 } from "../../src/finesse/calculator";
-import { FinesseAction } from "../../src/state/types";
-import { PIECES } from "../../src/core/pieces";
-import { createEmptyBoard, moveToWall } from "../../src/core/board";
-import { getNextRotation, tryRotate } from "../../src/core/srs";
-import type {
-  ActivePiece,
-  GameplayConfig,
-  Rot,
-  Action,
+import {
+  type FinesseAction,
+  type ActivePiece,
+  type GameplayConfig,
+  type Rot,
+  type Action,
 } from "../../src/state/types";
-import { assertDefined } from "../test-helpers";
 import { createTimestamp } from "../../src/types/timestamp";
+import { assertDefined } from "../test-helpers";
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
 
@@ -168,7 +168,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const piece = spawnPiece("T");
     const targetX = 0;
     const targetRot: Rot = "spawn";
-    const player: FinesseAction[] = ["DASLeft", "HardDrop"];
+    const player: Array<FinesseAction> = ["DASLeft", "HardDrop"];
     const res = finesseCalculator.analyze(
       piece,
       targetX,
@@ -186,7 +186,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const targetX = 0;
     const targetRot: Rot = "spawn";
     // Extra unnecessary rotation
-    const player: FinesseAction[] = ["RotateCW", "DASLeft", "HardDrop"];
+    const player: Array<FinesseAction> = ["RotateCW", "DASLeft", "HardDrop"];
     const res = finesseCalculator.analyze(
       piece,
       targetX,
@@ -203,7 +203,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const targetX = 0;
     const targetRot: Rot = "spawn";
     // Missing hard drop
-    const player: FinesseAction[] = ["DASLeft"];
+    const player: Array<FinesseAction> = ["DASLeft"];
     const res = finesseCalculator.analyze(
       piece,
       targetX,
@@ -221,7 +221,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const piece = spawnPiece("T");
     const targetX = 0;
     const targetRot: Rot = "spawn";
-    const player: FinesseAction[] = ["DASLeft", "HardDrop"];
+    const player: Array<FinesseAction> = ["DASLeft", "HardDrop"];
     const res = finesseCalculator.analyze(
       piece,
       targetX,
@@ -248,7 +248,15 @@ describe("Finesse Calculator (BFS minimality)", () => {
     expect(one).toEqual(["DASRight", "HardDrop"]);
   });
 
-  const pieces: (keyof typeof PIECES)[] = ["I", "J", "L", "S", "Z", "T", "O"];
+  const pieces: Array<keyof typeof PIECES> = [
+    "I",
+    "J",
+    "L",
+    "S",
+    "Z",
+    "T",
+    "O",
+  ];
   for (const pid of pieces) {
     test(`Hold-left to wall minimal for ${pid}`, () => {
       const piece = spawnPiece(pid);
@@ -313,36 +321,38 @@ describe("extractFinesseActions", () => {
   const timestamp = createTimestamp(1000);
 
   test("converts TapMove actions correctly", () => {
-    const actions: Action[] = [
-      { type: "TapMove", dir: -1, timestampMs: timestamp },
-      { type: "TapMove", dir: 1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: 1, timestampMs: timestamp, type: "TapMove" },
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "MoveRight"]);
   });
 
   test("converts Rotate actions correctly", () => {
-    const actions: Action[] = [
-      { type: "Rotate", dir: "CW" },
-      { type: "Rotate", dir: "CCW" },
+    const actions: Array<Action> = [
+      { dir: "CW", type: "Rotate" },
+      { dir: "CCW", type: "Rotate" },
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["RotateCW", "RotateCCW"]);
   });
 
   test("converts HardDrop actions correctly", () => {
-    const actions: Action[] = [{ type: "HardDrop", timestampMs: timestamp }];
+    const actions: Array<Action> = [
+      { timestampMs: timestamp, type: "HardDrop" },
+    ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["HardDrop"]);
   });
 
   test("maps each hold-run action to DAS action (no coalescing)", () => {
     // Simulate a typical hold-run: HoldStart → HoldMove → RepeatMove → RepeatMove
-    const actions: Action[] = [
-      { type: "HoldStart", dir: -1, timestampMs: timestamp },
-      { type: "HoldMove", dir: -1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: -1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: -1, timestampMs: timestamp, type: "RepeatMove" },
+      { dir: -1, timestampMs: timestamp, type: "RepeatMove" },
     ];
     const result = extractFinesseActions(actions);
     // Only HoldMove maps to DASLeft, HoldStart and RepeatMove return undefined
@@ -350,10 +360,10 @@ describe("extractFinesseActions", () => {
   });
 
   test("maps each right DAS action individually (no coalescing)", () => {
-    const actions: Action[] = [
-      { type: "HoldStart", dir: 1, timestampMs: timestamp },
-      { type: "HoldMove", dir: 1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: 1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: 1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
     ];
     const result = extractFinesseActions(actions);
     // Only HoldMove maps to DASRight, HoldStart and RepeatMove return undefined
@@ -361,18 +371,18 @@ describe("extractFinesseActions", () => {
   });
 
   test("maps all hold-run actions individually with rotation", () => {
-    const actions: Action[] = [
+    const actions: Array<Action> = [
       // First hold-run left
-      { type: "HoldStart", dir: -1, timestampMs: timestamp },
-      { type: "HoldMove", dir: -1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: -1, timestampMs: timestamp },
+      { dir: -1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: -1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: -1, timestampMs: timestamp, type: "RepeatMove" },
       // Rotation in between
-      { type: "Rotate", dir: "CW" },
+      { dir: "CW", type: "Rotate" },
       // Second hold-run right
-      { type: "HoldStart", dir: 1, timestampMs: timestamp },
-      { type: "HoldMove", dir: 1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+      { dir: 1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: 1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
+      { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
     ];
     const result = extractFinesseActions(actions);
     // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
@@ -380,14 +390,14 @@ describe("extractFinesseActions", () => {
   });
 
   test("handles mixed sequence with taps and holds", () => {
-    const actions: Action[] = [
-      { type: "TapMove", dir: -1, timestampMs: timestamp },
-      { type: "TapMove", dir: -1, timestampMs: timestamp },
-      { type: "Rotate", dir: "CW" },
-      { type: "HoldStart", dir: 1, timestampMs: timestamp },
-      { type: "HoldMove", dir: 1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
-      { type: "HardDrop", timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: "CW", type: "Rotate" },
+      { dir: 1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: 1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
+      { timestampMs: timestamp, type: "HardDrop" },
     ];
     const result = extractFinesseActions(actions);
     // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
@@ -401,30 +411,30 @@ describe("extractFinesseActions", () => {
   });
 
   test("ignores irrelevant action types", () => {
-    const actions: Action[] = [
-      { type: "TapMove", dir: -1, timestampMs: timestamp },
-      { type: "Tick", timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { timestampMs: timestamp, type: "Tick" },
       { type: "Spawn" },
-      { type: "Rotate", dir: "CW" },
+      { dir: "CW", type: "Rotate" },
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "RotateCW"]);
   });
 
   test("handles empty action list", () => {
-    const actions: Action[] = [];
+    const actions: Array<Action> = [];
     const result = extractFinesseActions(actions);
     expect(result).toEqual([]);
   });
 
   test("handles direction switching within DAS sequence", () => {
     // This shouldn't happen in normal gameplay, but tests edge case
-    const actions: Action[] = [
-      { type: "HoldStart", dir: -1, timestampMs: timestamp },
-      { type: "HoldMove", dir: -1, timestampMs: timestamp },
-      { type: "HoldStart", dir: 1, timestampMs: timestamp }, // Direction switch
-      { type: "HoldMove", dir: 1, timestampMs: timestamp },
-      { type: "RepeatMove", dir: 1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: -1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: 1, timestampMs: timestamp, type: "HoldStart" }, // Direction switch
+      { dir: 1, timestampMs: timestamp, type: "HoldMove" },
+      { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
     ];
     const result = extractFinesseActions(actions);
     // Only HoldMove maps to DAS, HoldStart and RepeatMove return undefined
@@ -432,15 +442,15 @@ describe("extractFinesseActions", () => {
   });
 
   test("maps long sequences of repeats individually (no coalescing)", () => {
-    const actions: Action[] = [
-      { type: "HoldStart", dir: -1, timestampMs: timestamp },
-      { type: "HoldMove", dir: -1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "HoldStart" },
+      { dir: -1, timestampMs: timestamp, type: "HoldMove" },
       ...Array(10)
         .fill(0)
         .map(() => ({
-          type: "RepeatMove" as const,
           dir: -1 as const,
           timestampMs: timestamp,
+          type: "RepeatMove" as const,
         })),
     ];
     const result = extractFinesseActions(actions);
@@ -449,10 +459,10 @@ describe("extractFinesseActions", () => {
   });
 
   test("handles invalid direction TapMove (should be filtered out)", () => {
-    const actions: Action[] = [
-      { type: "TapMove", dir: -1, timestampMs: timestamp },
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "TapMove" },
       // No invalid direction test since TypeScript prevents it
-      { type: "TapMove", dir: 1, timestampMs: timestamp },
+      { dir: 1, timestampMs: timestamp, type: "TapMove" },
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "MoveRight"]);

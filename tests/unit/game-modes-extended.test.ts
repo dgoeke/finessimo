@@ -1,68 +1,70 @@
 import { describe, test, expect, beforeEach } from "@jest/globals";
+
+import { createRng } from "../../src/core/rng";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
-import type { GameState, ActivePiece, Rot } from "../../src/state/types";
-import { createRng } from "../../src/core/rng";
+
 import type { FinesseResult } from "../../src/finesse/calculator";
+import type { GameState, ActivePiece, Rot } from "../../src/state/types";
 
 const mockState = (): GameState => ({
-  board: { width: 10, height: 20, cells: new Uint8Array(200) },
   active: undefined,
-  hold: undefined,
+  board: { cells: new Uint8Array(200), height: 20, width: 10 },
   canHold: true,
-  nextQueue: [],
-  rng: createRng("t"),
-  timing: {
-    tickHz: 60,
-    dasMs: 133,
-    arrMs: 2,
-    softDrop: 10,
-    lockDelayMs: 500,
-    lineClearDelayMs: 0,
-    gravityEnabled: false,
-    gravityMs: 1000,
-  },
-  gameplay: { finesseCancelMs: 50 },
-  tick: 0,
-  status: "playing",
-  stats: {
-    piecesPlaced: 0,
-    linesCleared: 0,
-    optimalPlacements: 0,
-    incorrectPlacements: 0,
-    attempts: 0,
-    startedAtMs: 0,
-    timePlayedMs: 0,
-    sessionPiecesPlaced: 0,
-    sessionLinesCleared: 0,
-    accuracyPercentage: 0,
-    finesseAccuracy: 0,
-    averageInputsPerPiece: 0,
-    sessionStartMs: 0,
-    totalSessions: 1,
-    longestSessionMs: 0,
-    piecesPerMinute: 0,
-    linesPerMinute: 0,
-    totalInputs: 0,
-    optimalInputs: 0,
-    totalFaults: 0,
-    faultsByType: {},
-    singleLines: 0,
-    doubleLines: 0,
-    tripleLines: 0,
-    tetrisLines: 0,
-  },
-  physics: {
-    lastGravityTime: 0,
-    lockDelayStartTime: null,
-    isSoftDropping: false,
-    lineClearStartTime: null,
-    lineClearLines: [],
-  },
-  processedInputLog: [],
   currentMode: "freePlay",
   finesseFeedback: null,
+  gameplay: { finesseCancelMs: 50 },
+  hold: undefined,
   modePrompt: null,
+  nextQueue: [],
+  physics: {
+    isSoftDropping: false,
+    lastGravityTime: 0,
+    lineClearLines: [],
+    lineClearStartTime: null,
+    lockDelayStartTime: null,
+  },
+  processedInputLog: [],
+  rng: createRng("t"),
+  stats: {
+    accuracyPercentage: 0,
+    attempts: 0,
+    averageInputsPerPiece: 0,
+    doubleLines: 0,
+    faultsByType: {},
+    finesseAccuracy: 0,
+    incorrectPlacements: 0,
+    linesCleared: 0,
+    linesPerMinute: 0,
+    longestSessionMs: 0,
+    optimalInputs: 0,
+    optimalPlacements: 0,
+    piecesPerMinute: 0,
+    piecesPlaced: 0,
+    sessionLinesCleared: 0,
+    sessionPiecesPlaced: 0,
+    sessionStartMs: 0,
+    singleLines: 0,
+    startedAtMs: 0,
+    tetrisLines: 0,
+    timePlayedMs: 0,
+    totalFaults: 0,
+    totalInputs: 0,
+    totalSessions: 1,
+    tripleLines: 0,
+  },
+  status: "playing",
+  tick: 0,
+  timing: {
+    arrMs: 2,
+    dasMs: 133,
+    gravityEnabled: false,
+    gravityMs: 1000,
+    lineClearDelayMs: 0,
+    lockDelayMs: 500,
+    softDrop: 10,
+    tickHz: 60,
+  },
 });
 
 describe("FreePlayMode - extended", () => {
@@ -71,16 +73,16 @@ describe("FreePlayMode - extended", () => {
     const state = mockState();
 
     const res: FinesseResult = {
-      optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
-      playerSequence: ["MoveLeft"], // shorter
-      isOptimal: false,
       faults: [
         {
-          type: "suboptimal_path",
           description: "Sequence incomplete",
           position: 1,
+          type: "suboptimal_path",
         },
       ],
+      isOptimal: false,
+      optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
+      playerSequence: ["MoveLeft"], // shorter
     };
 
     const out = mode.onPieceLocked(
@@ -116,7 +118,7 @@ describe("GuidedMode - extended", () => {
     state = {
       ...mockState(),
       currentMode: "guided",
-      modeData: mode.initModeData?.(),
+      modeData: mode.initModeData(),
     };
   });
 
@@ -134,10 +136,10 @@ describe("GuidedMode - extended", () => {
     const result = mode.onPieceLocked(
       state,
       {
+        faults: [],
+        isOptimal: true,
         optimalSequences: [["HardDrop"]],
         playerSequence: ["HardDrop"],
-        isOptimal: true,
-        faults: [],
       },
       wrongPiece,
       finalPos,
@@ -155,7 +157,7 @@ describe("GuidedMode - extended", () => {
     const expected = mode.getExpectedPiece(state);
     expect(guidance?.target).toBeDefined();
     expect(expected).toBeDefined();
-    if (!guidance?.target || !expected) return;
+    if (guidance?.target === undefined || expected === undefined) return;
     const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
     // send a different target x/rot
     const badX = guidance.target.x === 0 ? 1 : 0;
@@ -164,10 +166,10 @@ describe("GuidedMode - extended", () => {
     const result = mode.onPieceLocked(
       state,
       {
+        faults: [],
+        isOptimal: true,
         optimalSequences: [["HardDrop"]],
         playerSequence: ["HardDrop"],
-        isOptimal: true,
-        faults: [],
       },
       locked,
       finalPos,
@@ -183,7 +185,7 @@ describe("GuidedMode - extended", () => {
   test("getTargetFor/getExpectedPiece reflect current drill", () => {
     const guidance = mode.getGuidance(state);
     const exp = mode.getExpectedPiece(state);
-    expect(guidance?.target).toEqual({ x: 0, rot: "spawn" });
+    expect(guidance?.target).toEqual({ rot: "spawn", x: 0 });
     expect(exp).toBe("T");
   });
 

@@ -1,28 +1,34 @@
-import { Action, KeyAction, InputEvent, GameState } from "../state/types";
-import { InputHandler, InputHandlerState } from "./handler";
-import { KeyBindings, defaultKeyBindings } from "./keyboard";
+import {
+  type Action,
+  type KeyAction,
+  type InputEvent,
+  type GameState,
+} from "../state/types";
 import { fromNow, createTimestamp } from "../types/timestamp";
-import { StateMachineInputHandler } from "./StateMachineInputHandler";
 
-interface TouchZone {
+import { type InputHandler, type InputHandlerState } from "./handler";
+import { type KeyBindings, defaultKeyBindings } from "./keyboard";
+import { type StateMachineInputHandler } from "./StateMachineInputHandler";
+
+type TouchZone = {
   element: HTMLElement;
   action: KeyAction;
   type: "tap" | "hold" | "swipe";
-}
+};
 
 export class TouchInputHandler implements InputHandler {
   private dispatch?: (action: Action) => void;
   private frameCounter = 0;
-  private touchZones: TouchZone[] = [];
-  private container?: HTMLElement;
+  private touchZones: Array<TouchZone> = [];
+  private container?: HTMLElement | undefined;
   private started = false;
   private keyBindings: KeyBindings = defaultKeyBindings();
   private stateMachineInputHandler?: StateMachineInputHandler;
 
   // Pre-bound DOM handlers to ensure removeEventListener works reliably
-  private onTouchStart = (e: TouchEvent) => this.handleTouchStart(e);
-  private onTouchMove = (e: TouchEvent) => this.handleTouchMove(e);
-  private onTouchEnd = (e: TouchEvent) => this.handleTouchEnd(e);
+  private onTouchStart = (e: TouchEvent): void => this.handleTouchStart(e);
+  private onTouchMove = (e: TouchEvent): void => this.handleTouchMove(e);
+  private onTouchEnd = (e: TouchEvent): void => this.handleTouchEnd(e);
 
   // Touch gesture detection
   private activeTouches = new Map<
@@ -41,10 +47,6 @@ export class TouchInputHandler implements InputHandler {
   private readonly quickSwipeTimeMs = 300; // ms threshold for hard drop swipe
   private readonly quickSwipeDistance = 50; // px for hard drop swipe
   private readonly maxTapTime = 200; // ms
-
-  constructor() {
-    // Empty constructor - no initialization needed
-  }
 
   init(dispatch: (action: Action) => void): void {
     this.dispatch = dispatch;
@@ -82,7 +84,10 @@ export class TouchInputHandler implements InputHandler {
 
   getState(): InputHandlerState {
     // Always delegate to state machine handler (required to be present)
-    return this.stateMachineInputHandler!.getState();
+    if (!this.stateMachineInputHandler) {
+      throw new Error("StateMachineInputHandler is required but not set");
+    }
+    return this.stateMachineInputHandler.getState();
   }
 
   setKeyBindings(bindings: KeyBindings): void {
@@ -173,8 +178,8 @@ export class TouchInputHandler implements InputHandler {
           : ("tap" as const);
 
       this.touchZones.push({
-        element: element as HTMLElement,
         action,
+        element: element as HTMLElement,
         type,
       });
     });
@@ -227,9 +232,9 @@ export class TouchInputHandler implements InputHandler {
       const zone = this.findTouchZone(element);
 
       this.activeTouches.set(touch.identifier, {
+        startTime: Date.now(),
         startX: touch.clientX,
         startY: touch.clientY,
-        startTime: Date.now(),
         zone,
       });
 
@@ -251,43 +256,76 @@ export class TouchInputHandler implements InputHandler {
 
     for (const touch of Array.from(event.changedTouches)) {
       const touchData = this.activeTouches.get(touch.identifier);
-
       if (touchData) {
-        const deltaX = touch.clientX - touchData.startX;
-        const deltaY = touch.clientY - touchData.startY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        // Check for swipe gestures
-        if (distance > this.minSwipeDistance) {
-          // Treat vertical swipes anywhere on overlay
-          if (Math.abs(deltaY) > Math.abs(deltaX)) {
-            if (deltaY > 0) {
-              const elapsed = Date.now() - touchData.startTime;
-              const isQuickSwipe =
-                elapsed < this.quickSwipeTimeMs &&
-                deltaY > this.quickSwipeDistance;
-              if (isQuickSwipe && !touchData.hasTriggeredHardDrop) {
-                // Quick downward swipe → Hard Drop (once)
-                this.triggerAction("HardDrop", "down");
-                touchData.hasTriggeredHardDrop = true;
-              } else if (
-                !touchData.softDropEngaged &&
-                !touchData.hasTriggeredHardDrop
-              ) {
-                // Sustained downward movement → engage Soft Drop
-                if (this.stateMachineInputHandler && this.dispatch) {
-                  const timestamp = fromNow() as number;
-                  this.stateMachineInputHandler.setSoftDrop(true, timestamp);
-                } else {
-                  this.triggerAction("SoftDropDown", "down");
-                }
-                touchData.softDropEngaged = true;
-              }
-            }
-          }
-        }
+        this.processSwipeGesture(touch, touchData);
       }
     }
+  }
+
+  private processSwipeGesture(
+    touch: Touch,
+    touchData: {
+      startX: number;
+      startY: number;
+      startTime: number;
+      zone: TouchZone | null;
+      hasTriggeredHardDrop?: boolean;
+      softDropEngaged?: boolean;
+    },
+  ): void {
+    const deltaX = touch.clientX - touchData.startX;
+    const deltaY = touch.clientY - touchData.startY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    if (distance <= this.minSwipeDistance) return;
+    if (Math.abs(deltaY) <= Math.abs(deltaX)) return;
+    if (deltaY <= 0) return;
+
+    const elapsed = Date.now() - touchData.startTime;
+    this.handleVerticalSwipe(deltaY, elapsed, touchData);
+  }
+
+  private handleVerticalSwipe(
+    deltaY: number,
+    elapsed: number,
+    touchData: {
+      startX: number;
+      startY: number;
+      startTime: number;
+      zone: TouchZone | null;
+      hasTriggeredHardDrop?: boolean;
+      softDropEngaged?: boolean;
+    },
+  ): void {
+    const isQuickSwipe =
+      elapsed < this.quickSwipeTimeMs && deltaY > this.quickSwipeDistance;
+
+    if (isQuickSwipe && touchData.hasTriggeredHardDrop !== true) {
+      this.triggerAction("HardDrop", "down");
+      touchData.hasTriggeredHardDrop = true;
+    } else if (
+      touchData.softDropEngaged !== true &&
+      touchData.hasTriggeredHardDrop !== true
+    ) {
+      this.engageSoftDrop(touchData);
+    }
+  }
+
+  private engageSoftDrop(touchData: {
+    startX: number;
+    startY: number;
+    startTime: number;
+    zone: TouchZone | null;
+    hasTriggeredHardDrop?: boolean;
+    softDropEngaged?: boolean;
+  }): void {
+    if (this.stateMachineInputHandler && this.dispatch) {
+      const timestamp = fromNow() as number;
+      this.stateMachineInputHandler.setSoftDrop(true, timestamp);
+    } else {
+      this.triggerAction("SoftDropDown", "down");
+    }
+    touchData.softDropEngaged = true;
   }
 
   private handleTouchEnd(event: TouchEvent): void {
@@ -319,7 +357,7 @@ export class TouchInputHandler implements InputHandler {
         }
 
         // If soft drop was engaged via swipe, turn it off on touch end
-        if (touchData.softDropEngaged) {
+        if (touchData.softDropEngaged === true) {
           if (this.stateMachineInputHandler && this.dispatch) {
             const timestamp = fromNow() as number;
             this.stateMachineInputHandler.setSoftDrop(false, timestamp);
@@ -349,77 +387,107 @@ export class TouchInputHandler implements InputHandler {
 
   private triggerAction(action: KeyAction, phase: "down" | "up"): void {
     if (!this.dispatch) return;
-
-    // Ignore inputs when settings overlay is open
     if (document.body.classList.contains("settings-open")) return;
 
-    // Determine the logical input to record
-    let eventAction: KeyAction = action;
+    const eventAction = this.mapToEventAction(action, phase);
 
-    if (phase === "up") {
-      // Map held inputs to their corresponding release actions
-      if (action === "LeftDown") {
-        eventAction = "LeftUp";
-      } else if (action === "RightDown") {
-        eventAction = "RightUp";
-      } else if (action === "SoftDropDown") {
-        eventAction = "SoftDropUp";
-      }
-    }
-
-    // Handle movement actions through state machine
-    if (
-      eventAction === "LeftDown" ||
-      eventAction === "LeftUp" ||
-      eventAction === "RightDown" ||
-      eventAction === "RightUp"
-    ) {
-      // For movement actions, call StateMachineInputHandler directly with proper timestamp
-      // Handled by state machine action logging
-      if (this.stateMachineInputHandler) {
-        const timestamp = fromNow() as number;
-        this.stateMachineInputHandler.handleMovement(eventAction, timestamp);
-      }
+    if (this.isMovementAction(eventAction)) {
+      this.handleMovementAction(eventAction);
       return;
     }
 
+    this.handleNonMovementAction(eventAction);
+  }
+
+  private mapToEventAction(action: KeyAction, phase: "down" | "up"): KeyAction {
+    if (phase === "down") return action;
+
+    // Map held inputs to their corresponding release actions
+    const upMapping: Record<string, KeyAction> = {
+      LeftDown: "LeftUp",
+      RightDown: "RightUp",
+      SoftDropDown: "SoftDropUp",
+    };
+    return upMapping[action] ?? action;
+  }
+
+  private isMovementAction(action: KeyAction): boolean {
+    return ["LeftDown", "LeftUp", "RightDown", "RightUp"].includes(action);
+  }
+
+  private handleMovementAction(eventAction: KeyAction): void {
+    if (this.stateMachineInputHandler) {
+      const timestamp = fromNow() as number;
+      // Only call handleMovement for actual movement actions
+      if (
+        eventAction === "LeftDown" ||
+        eventAction === "LeftUp" ||
+        eventAction === "RightDown" ||
+        eventAction === "RightUp"
+      ) {
+        this.stateMachineInputHandler.handleMovement(eventAction, timestamp);
+      }
+    }
+  }
+
+  private handleNonMovementAction(eventAction: KeyAction): void {
     const inputEvent: InputEvent = {
-      tMs: fromNow() as number,
-      frame: this.frameCounter,
       action: eventAction,
+      frame: this.frameCounter,
+      tMs: fromNow() as number,
     };
 
-    // Dispatch corresponding gameplay actions for non-movement actions
+    this.dispatchGameplayAction(eventAction, inputEvent);
+  }
+
+  private dispatchGameplayAction(
+    eventAction: KeyAction,
+    inputEvent: InputEvent,
+  ): void {
+    if (!this.dispatch) return;
+
     switch (eventAction) {
       case "RotateCW":
-        this.dispatch({ type: "Rotate", dir: "CW" });
+        this.dispatch({ dir: "CW", type: "Rotate" });
         break;
       case "RotateCCW":
-        this.dispatch({ type: "Rotate", dir: "CCW" });
+        this.dispatch({ dir: "CCW", type: "Rotate" });
         break;
       case "HardDrop":
         this.dispatch({
-          type: "HardDrop",
           timestampMs: createTimestamp(inputEvent.tMs),
+          type: "HardDrop",
         });
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
         break;
       case "SoftDropDown":
-        if (this.stateMachineInputHandler) {
-          this.stateMachineInputHandler.setSoftDrop(true, inputEvent.tMs);
-        } else {
-          this.dispatch({ type: "SoftDrop", on: true });
-        }
+        this.handleSoftDropAction(true, inputEvent.tMs);
         break;
       case "SoftDropUp":
-        if (this.stateMachineInputHandler) {
-          this.stateMachineInputHandler.setSoftDrop(false, inputEvent.tMs);
-        } else {
-          this.dispatch({ type: "SoftDrop", on: false });
-        }
+        this.handleSoftDropAction(false, inputEvent.tMs);
         break;
+
+      case "LeftDown":
+      case "LeftUp":
+      case "RightDown":
+      case "RightUp":
+        // Movement actions are handled by handleMovementAction, not here
+        break;
+
+      default: {
+        const _exhaustiveCheck: never = eventAction;
+        return _exhaustiveCheck;
+      }
+    }
+  }
+
+  private handleSoftDropAction(on: boolean, timestamp: number): void {
+    if (this.stateMachineInputHandler) {
+      this.stateMachineInputHandler.setSoftDrop(on, timestamp);
+    } else if (this.dispatch) {
+      this.dispatch({ on, type: "SoftDrop" });
     }
   }
 }

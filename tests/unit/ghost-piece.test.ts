@@ -1,13 +1,14 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { calculateGhostPosition } from "../../src/core/board";
-import { Board, ActivePiece } from "../../src/state/types";
+import { type Board, type ActivePiece } from "../../src/state/types";
 
 // Helper to create a test board
 function createTestBoard(): Board {
   return {
-    width: 10,
-    height: 20,
     cells: new Uint8Array(200),
+    height: 20,
+    width: 10,
   };
 }
 

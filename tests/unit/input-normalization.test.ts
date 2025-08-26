@@ -1,16 +1,16 @@
 import { normalizeInputSequence } from "../../src/input/handler";
-import { InputEvent, KeyAction } from "../../src/state/types";
+import { type InputEvent, type KeyAction } from "../../src/state/types";
 
 describe("Input Normalization", () => {
   const createInputEvent = (action: KeyAction, tMs: number): InputEvent => ({
-    tMs,
-    frame: Math.floor(tMs / 16.67), // Approximate frame based on timestamp
     action,
+    frame: Math.floor(tMs / 16.67), // Approximate frame based on timestamp
+    tMs,
   });
 
   describe("normalizeInputSequence", () => {
     it("should keep all clean finesse actions", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("SoftDropDown", 200),
         createInputEvent("HardDrop", 250),
@@ -21,7 +21,7 @@ describe("Input Normalization", () => {
     });
 
     it("should keep relevant events in order", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("HardDrop", 300),
         createInputEvent("RotateCW", 100),
         createInputEvent("LeftDown", 200),
@@ -32,7 +32,7 @@ describe("Input Normalization", () => {
     });
 
     it("should cancel opposite directional inputs within window", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RightDown", 130), // Within 50ms window
         createInputEvent("RotateCW", 200),
@@ -43,7 +43,7 @@ describe("Input Normalization", () => {
     });
 
     it("should not cancel opposite inputs outside window", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RightDown", 200), // Outside 50ms window
         createInputEvent("RotateCW", 300),
@@ -54,7 +54,7 @@ describe("Input Normalization", () => {
     });
 
     it("should cancel RightTap -> LeftTap pairs", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("RightDown", 100),
         createInputEvent("LeftDown", 120), // Within window
         createInputEvent("RotateCW", 200),
@@ -65,7 +65,7 @@ describe("Input Normalization", () => {
     });
 
     it("should handle multiple cancellation pairs", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RightDown", 120), // Pair 1
         createInputEvent("RightDown", 200),
@@ -78,7 +78,7 @@ describe("Input Normalization", () => {
     });
 
     it("should not cancel non-directional inputs", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("RotateCW", 100),
         createInputEvent("RotateCCW", 120),
         createInputEvent("Hold", 160),
@@ -89,7 +89,7 @@ describe("Input Normalization", () => {
     });
 
     it("should handle edge case with same timestamp", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RightDown", 100), // Same timestamp
         createInputEvent("HardDrop", 200),
@@ -100,7 +100,7 @@ describe("Input Normalization", () => {
     });
 
     it("should handle complex scenario with partial cancellations", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RotateCW", 120),
         createInputEvent("RightDown", 140), // This should cancel with LeftTap
@@ -113,7 +113,7 @@ describe("Input Normalization", () => {
     });
 
     it("should work with different cancellation window sizes", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("LeftDown", 100),
         createInputEvent("RightDown", 175), // 75ms apart
       ];
@@ -133,13 +133,13 @@ describe("Input Normalization", () => {
     });
 
     it("should handle single input", () => {
-      const events: InputEvent[] = [createInputEvent("LeftDown", 100)];
+      const events: Array<InputEvent> = [createInputEvent("LeftDown", 100)];
       const result = normalizeInputSequence(events, 50);
       expect(result).toEqual(["LeftDown"]);
     });
 
     it("should preserve all hold and rotation inputs", () => {
-      const events: InputEvent[] = [
+      const events: Array<InputEvent> = [
         createInputEvent("Hold", 100),
         createInputEvent("RotateCW", 150),
         createInputEvent("RotateCCW", 200),

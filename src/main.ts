@@ -17,8 +17,8 @@ function main(): void {
 
 function initializeApp(app: FinessimoApp): void {
   // Get canvas element
-  const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
-  if (!canvas) {
+  const canvas = document.getElementById("game-canvas");
+  if (canvas === null || !(canvas instanceof HTMLCanvasElement)) {
     console.error('Canvas element with id "game-canvas" not found');
     return;
   }
@@ -26,8 +26,8 @@ function initializeApp(app: FinessimoApp): void {
   // Get finesse feedback panel element
   const finesseFeedbackPanel = document.getElementById(
     "finesse-feedback-panel",
-  )!;
-  if (!finesseFeedbackPanel) {
+  );
+  if (finesseFeedbackPanel === null) {
     console.error(
       'Finesse feedback panel element with id "finesse-feedback-panel" not found',
     );

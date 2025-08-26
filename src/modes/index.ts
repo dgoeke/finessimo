@@ -1,23 +1,26 @@
+import { type FinesseResult } from "../finesse/calculator";
 import {
-  GameState,
-  ActivePiece,
-  Rot,
-  PieceId,
-  ModeGuidance,
-  TimingConfig,
-  GameplayConfig,
+  type GameState,
+  type ActivePiece,
+  type Rot,
+  type PieceId,
+  type ModeGuidance,
+  type TimingConfig,
+  type GameplayConfig,
 } from "../state/types";
-import { FinesseResult } from "../finesse/calculator";
 
-export interface GameModeResult {
+import { FreePlayMode } from "./freePlay";
+import { GuidedMode } from "./guided";
+
+export type GameModeResult = {
   feedback: string;
   isComplete?: boolean;
   nextPrompt?: string;
   // Optional: supply a new opaque mode data object to store in GameState
   modeData?: unknown;
-}
+};
 
-export interface GameMode {
+export type GameMode = {
   readonly name: string;
 
   // Optional initial configuration tweaks applied on activation
@@ -54,13 +57,13 @@ export interface GameMode {
   getExpectedPiece?(gameState: GameState): PieceId | undefined;
 
   reset(): void;
-}
+};
 
-export interface GameModeRegistry {
+export type GameModeRegistry = {
   register(mode: GameMode): void;
   get(name: string): GameMode | undefined;
-  list(): string[];
-}
+  list(): Array<string>;
+};
 
 class DefaultGameModeRegistry implements GameModeRegistry {
   private modes = new Map<string, GameMode>();
@@ -73,15 +76,12 @@ class DefaultGameModeRegistry implements GameModeRegistry {
     return this.modes.get(name);
   }
 
-  list(): string[] {
+  list(): Array<string> {
     return Array.from(this.modes.keys());
   }
 }
 
 export const gameModeRegistry = new DefaultGameModeRegistry();
-
-import { FreePlayMode } from "./freePlay";
-import { GuidedMode } from "./guided";
 
 gameModeRegistry.register(new FreePlayMode());
 gameModeRegistry.register(new GuidedMode());

@@ -1,6 +1,7 @@
-import { Board, ActivePiece, PieceId } from "../state/types";
-import { PIECES } from "./pieces";
+import { type Board, type ActivePiece, type PieceId } from "../state/types";
+
 import { canPlacePiece } from "./board";
+import { PIECES } from "./pieces";
 
 /**
  * Create a new active piece at spawn position
@@ -42,7 +43,7 @@ export function spawnWithHold(
   currentHold?: PieceId,
 ): [ActivePiece, PieceId | undefined] | null {
   // If no hold piece, just spawn the next piece
-  if (!currentHold) {
+  if (currentHold === undefined) {
     const piece = createActivePiece(nextPiece);
     if (!canPlacePiece(board, piece)) {
       return null; // Top out

@@ -1,15 +1,15 @@
 import { reducer } from "../../src/state/reducer";
-import { GameState, Action } from "../../src/state/types";
+import { type GameState, type Action } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
-import { InvalidGameState } from "../test-types";
+import { type InvalidGameState } from "../test-types";
 
 describe("Reducer Edge Cases and Error Conditions", () => {
   let validState: GameState;
   let stateWithActivePiece: GameState;
 
   beforeEach(() => {
-    validState = reducer(undefined, { type: "Init", seed: "test" });
+    validState = reducer(undefined, { seed: "test", type: "Init" });
 
     // Create state with an active piece for testing actions that require one
     stateWithActivePiece = {
@@ -25,29 +25,29 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Actions without active piece", () => {
     it("should return unchanged state for Move action without active piece", () => {
-      const action: Action = { type: "TapMove", dir: -1 };
+      const action: Action = { dir: -1, type: "TapMove" };
       const result = reducer(validState, action);
       expect(result).toBe(validState); // Same reference
     });
 
     it("should return unchanged state for Rotate action without active piece", () => {
-      const action: Action = { type: "Rotate", dir: "CW" };
+      const action: Action = { dir: "CW", type: "Rotate" };
       const result = reducer(validState, action);
       expect(result).toBe(validState);
     });
 
     it("should return unchanged state for HardDrop action without active piece", () => {
       const action: Action = {
-        type: "HardDrop",
         timestampMs: createTimestamp(1000),
+        type: "HardDrop",
       };
       const result = reducer(validState, action);
       expect(result).toBe(validState);
     });
 
     it("should return unchanged state for SoftDrop action without active piece", () => {
-      const softDropOnAction: Action = { type: "SoftDrop", on: true };
-      const softDropOffAction: Action = { type: "SoftDrop", on: false };
+      const softDropOnAction: Action = { on: true, type: "SoftDrop" };
+      const softDropOffAction: Action = { on: false, type: "SoftDrop" };
 
       expect(reducer(validState, softDropOnAction)).toBe(validState);
       expect(reducer(validState, softDropOffAction)).toBe(validState);
@@ -75,7 +75,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Move action edge cases", () => {
     it("should handle DAS movement source", () => {
-      const action: Action = { type: "HoldMove", dir: -1 };
+      const action: Action = { dir: -1, type: "HoldMove" };
       const result = reducer(stateWithActivePiece, action);
 
       expect(result).not.toBe(stateWithActivePiece);
@@ -95,7 +95,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { type: "TapMove", dir: -1 };
+      const action: Action = { dir: -1, type: "TapMove" };
       const result = reducer(edgeState, action);
       expect(result).toBe(edgeState); // No movement possible
     });
@@ -125,7 +125,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         board: blockedBoard,
       };
 
-      const action: Action = { type: "Rotate", dir: "CW" };
+      const action: Action = { dir: "CW", type: "Rotate" };
       const result = reducer(blockedState, action);
       expect(result).toBe(blockedState); // Rotation blocked
     });
@@ -144,7 +144,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { type: "SoftDrop", on: true };
+      const action: Action = { on: true, type: "SoftDrop" };
       const result = reducer(bottomState, action);
 
       // Should return new state even if piece can't move
@@ -152,7 +152,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should handle soft drop off", () => {
-      const action: Action = { type: "SoftDrop", on: false };
+      const action: Action = { on: false, type: "SoftDrop" };
       const result = reducer(stateWithActivePiece, action);
 
       // New physics system updates soft drop state
@@ -178,18 +178,18 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
       const almostCompleteState = {
         ...stateWithActivePiece,
-        board: boardWithAlmostCompleteLine,
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: 4,
           y: 0, // High up so it drops
         },
+        board: boardWithAlmostCompleteLine,
       };
 
       const action: Action = {
-        type: "HardDrop",
         timestampMs: createTimestamp(1000),
+        type: "HardDrop",
       };
       const result = reducer(almostCompleteState, action);
 
@@ -202,12 +202,13 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     it("should handle Lock action with invalid state structure", () => {
       const invalidState: InvalidGameState = {
         ...validState,
-        tick: undefined, // Invalid tick
       };
+      // Remove the tick property to make it invalid
+      delete invalidState.tick;
 
       const action: Action = {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
@@ -220,8 +221,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
       };
 
       const action: Action = {
-        type: "Tick",
         timestampMs: createTimestamp(1),
+        type: "Tick",
       };
       const result = reducer(invalidState as GameState, action);
       expect(result).toBe(invalidState); // Should return unchanged
@@ -245,7 +246,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         board: boardWithContent,
       };
 
-      const action: Action = { type: "ClearLines", lines: [19] };
+      const action: Action = { lines: [19], type: "ClearLines" };
       const result = reducer(stateWithContent, action);
 
       expect(result.board).not.toBe(stateWithContent.board);
@@ -253,7 +254,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should handle empty lines array", () => {
-      const action: Action = { type: "ClearLines", lines: [] };
+      const action: Action = { lines: [], type: "ClearLines" };
       const result = reducer(validState, action);
       expect(result.board).toBe(validState.board); // Same reference when no lines
     });

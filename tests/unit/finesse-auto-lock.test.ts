@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { reducer } from "../../src/state/reducer";
-import { GameState } from "../../src/state/types";
+import { type GameState } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 
 describe("finesse analysis trigger logic", () => {
@@ -10,13 +11,13 @@ describe("finesse analysis trigger logic", () => {
 
     function createTestState(): GameState {
       return reducer(undefined, {
-        type: "Init",
         seed: "test",
         timing: {
           gravityEnabled: true,
           gravityMs: 1000,
           lockDelayMs: 500,
         },
+        type: "Init",
       });
     }
 
@@ -27,21 +28,21 @@ describe("finesse analysis trigger logic", () => {
       ...state,
       active: {
         id: "T",
+        rot: "spawn",
         x: 4,
         y: 18,
-        rot: "spawn",
       },
       physics: {
         ...state.physics,
-        lockDelayStartTime: 1000,
         lastGravityTime: 0,
+        lockDelayStartTime: 1000,
       },
     };
 
     // Trigger auto-lock by advancing time past lock delay
     const stateAfterAutoLock = reducer(stateWithActive, {
-      type: "Tick",
       timestampMs: createTimestamp(1500 + 500), // Past lock delay
+      type: "Tick",
     });
 
     // Verify that this scenario would trigger finesse analysis
@@ -56,13 +57,13 @@ describe("finesse analysis trigger logic", () => {
   it("should detect piece lock on HardDrop", () => {
     function createTestState(): GameState {
       return reducer(undefined, {
-        type: "Init",
         seed: "test",
         timing: {
           gravityEnabled: true,
           gravityMs: 1000,
           lockDelayMs: 500,
         },
+        type: "Init",
       });
     }
 
@@ -72,16 +73,16 @@ describe("finesse analysis trigger logic", () => {
       ...state,
       active: {
         id: "T",
+        rot: "spawn",
         x: 4,
         y: 10, // High up
-        rot: "spawn",
       },
     };
 
     // HardDrop should lock the piece
     const stateAfterHardDrop = reducer(stateWithActive, {
-      type: "HardDrop",
       timestampMs: createTimestamp(1000),
+      type: "HardDrop",
     });
 
     // Verify piece lock detection for HardDrop

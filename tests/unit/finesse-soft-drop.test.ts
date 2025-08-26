@@ -1,19 +1,20 @@
+import { createEmptyBoard } from "../../src/core/board";
+import { PIECES } from "../../src/core/pieces";
+import { createRng } from "../../src/core/rng";
 import {
   finesseCalculator,
   extractFinesseActions,
 } from "../../src/finesse/calculator";
-import { FinesseAction, idx } from "../../src/state/types";
-import { PIECES } from "../../src/core/pieces";
-import { createEmptyBoard } from "../../src/core/board";
 import { reducer } from "../../src/state/reducer";
-import { createRng } from "../../src/core/rng";
-import type {
-  ActivePiece,
-  GameplayConfig,
-  GameState,
-  Rot,
-  Board,
-  Action,
+import {
+  type FinesseAction,
+  idx,
+  type ActivePiece,
+  type GameplayConfig,
+  type GameState,
+  type Rot,
+  type Board,
+  type Action,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 
@@ -25,7 +26,7 @@ function spawnPiece(id: keyof typeof PIECES): ActivePiece {
 }
 
 // Helper to create a board with specific cells filled
-function createBoardWithCells(filledCells: [number, number][]): Board {
+function createBoardWithCells(filledCells: Array<[number, number]>): Board {
   const board = createEmptyBoard();
   const newCells = new Uint8Array(board.cells);
 
@@ -52,7 +53,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     // Simulate user input: Move Right → CCW → Soft Drop → CCW → Hard Drop
     // Expected: T-spin double line clear (rows 18 and 19)
 
-    const filledCells: [number, number][] = [
+    const filledCells: Array<[number, number]> = [
       [6, 17],
       [7, 17],
       [8, 17],
@@ -79,64 +80,64 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
 
     // Create initial game state with our board and T piece
     const initialState: GameState = {
-      board,
       active: spawnPiece("T"),
-      status: "playing" as const,
-      tick: 0,
-      processedInputLog: [],
-      rng: createRng("12345"),
-      hold: undefined,
+      board,
       canHold: true,
-      nextQueue: ["I", "O", "S"],
-      timing: {
-        gravityEnabled: true,
-        gravityMs: 1000,
-        lockDelayMs: 500,
-        lineClearDelayMs: 0,
-        softDrop: 20 as const,
-        tickHz: 60,
-        dasMs: 100,
-        arrMs: 50,
-      },
-      gameplay: { finesseCancelMs: 50 },
-      stats: {
-        piecesPlaced: 0,
-        sessionPiecesPlaced: 0,
-        linesCleared: 0,
-        sessionLinesCleared: 0,
-        optimalPlacements: 0,
-        incorrectPlacements: 0,
-        attempts: 0,
-        startedAtMs: 0,
-        timePlayedMs: 0,
-        accuracyPercentage: 0,
-        finesseAccuracy: 0,
-        averageInputsPerPiece: 0,
-        sessionStartMs: 0,
-        totalSessions: 0,
-        longestSessionMs: 0,
-        piecesPerMinute: 0,
-        linesPerMinute: 0,
-        totalInputs: 0,
-        optimalInputs: 0,
-        totalFaults: 0,
-        faultsByType: {},
-        singleLines: 0,
-        doubleLines: 0,
-        tripleLines: 0,
-        tetrisLines: 0,
-      },
-      physics: {
-        lastGravityTime: 0,
-        isSoftDropping: false,
-        lockDelayStartTime: null,
-        lineClearStartTime: null,
-        lineClearLines: [],
-      },
       currentMode: "freePlay",
       finesseFeedback: null,
-      modePrompt: null,
+      gameplay: { finesseCancelMs: 50 },
+      hold: undefined,
       modeData: null,
+      modePrompt: null,
+      nextQueue: ["I", "O", "S"],
+      physics: {
+        isSoftDropping: false,
+        lastGravityTime: 0,
+        lineClearLines: [],
+        lineClearStartTime: null,
+        lockDelayStartTime: null,
+      },
+      processedInputLog: [],
+      rng: createRng("12345"),
+      stats: {
+        accuracyPercentage: 0,
+        attempts: 0,
+        averageInputsPerPiece: 0,
+        doubleLines: 0,
+        faultsByType: {},
+        finesseAccuracy: 0,
+        incorrectPlacements: 0,
+        linesCleared: 0,
+        linesPerMinute: 0,
+        longestSessionMs: 0,
+        optimalInputs: 0,
+        optimalPlacements: 0,
+        piecesPerMinute: 0,
+        piecesPlaced: 0,
+        sessionLinesCleared: 0,
+        sessionPiecesPlaced: 0,
+        sessionStartMs: 0,
+        singleLines: 0,
+        startedAtMs: 0,
+        tetrisLines: 0,
+        timePlayedMs: 0,
+        totalFaults: 0,
+        totalInputs: 0,
+        totalSessions: 0,
+        tripleLines: 0,
+      },
+      status: "playing" as const,
+      tick: 0,
+      timing: {
+        arrMs: 50,
+        dasMs: 100,
+        gravityEnabled: true,
+        gravityMs: 1000,
+        lineClearDelayMs: 0,
+        lockDelayMs: 500,
+        softDrop: 20 as const,
+        tickHz: 60,
+      },
     };
 
     // Verify initial state setup
@@ -151,18 +152,18 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
 
     // Step 1: Move right to x=4 (T-spin position)
     currentState = reducer(currentState, {
-      type: "TapMove",
       dir: 1,
       timestampMs: createTimestamp(1000),
+      type: "TapMove",
     });
     expect(currentState.active?.x).toBe(4);
 
     // Step 2: Rotate CCW (spawn → left)
-    currentState = reducer(currentState, { type: "Rotate", dir: "CCW" });
+    currentState = reducer(currentState, { dir: "CCW", type: "Rotate" });
     expect(currentState.active?.rot).toBe("left");
 
     // Step 3: Start soft drop to get piece down to the right level
-    currentState = reducer(currentState, { type: "SoftDrop", on: true });
+    currentState = reducer(currentState, { on: true, type: "SoftDrop" });
     expect(currentState.physics.isSoftDropping).toBe(true);
 
     // Simulate several ticks to let the piece fall with soft drop
@@ -171,8 +172,8 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       const tickTimestamp = createTimestamp(1000 + i * 100);
       const prevY = currentState.active?.y;
       currentState = reducer(currentState, {
-        type: "Tick",
         timestampMs: tickTimestamp,
+        type: "Tick",
       });
 
       const newY = currentState.active?.y;
@@ -181,23 +182,23 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       if (newY === prevY) {
         break;
       }
-      if (newY && newY >= 17) {
+      if (newY !== undefined && newY >= 17) {
         break;
       }
     }
 
     // Step 4: Turn off soft drop
-    currentState = reducer(currentState, { type: "SoftDrop", on: false });
+    currentState = reducer(currentState, { on: false, type: "SoftDrop" });
     expect(currentState.physics.isSoftDropping).toBe(false);
 
     // Step 5: Second CCW rotation for T-spin setup (left → two)
-    currentState = reducer(currentState, { type: "Rotate", dir: "CCW" });
+    currentState = reducer(currentState, { dir: "CCW", type: "Rotate" });
     expect(currentState.active?.rot).toBe("two");
 
     // Step 6: Hard drop to lock the piece and trigger T-spin double
     currentState = reducer(currentState, {
-      type: "HardDrop",
       timestampMs: createTimestamp(2000),
+      type: "HardDrop",
     });
 
     // Check if piece is locked (no active piece)
@@ -240,12 +241,12 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     const timestamp = createTimestamp(1000);
 
     // Simulate a soft drop sequence that eventually locks
-    const actions: Action[] = [
-      { type: "TapMove", dir: -1, timestampMs: timestamp }, // Move left
-      { type: "SoftDrop", on: true }, // Start soft drop - should be included
-      { type: "Tick", timestampMs: timestamp }, // Game tick - should be filtered
-      { type: "SoftDrop", on: false }, // End soft drop - should be filtered
-      { type: "Lock", timestampMs: timestamp }, // Auto-lock from soft drop - should be filtered
+    const actions: Array<Action> = [
+      { dir: -1, timestampMs: timestamp, type: "TapMove" }, // Move left
+      { on: true, type: "SoftDrop" }, // Start soft drop - should be included
+      { timestampMs: timestamp, type: "Tick" }, // Game tick - should be filtered
+      { on: false, type: "SoftDrop" }, // End soft drop - should be filtered
+      { timestampMs: timestamp, type: "Lock" }, // Auto-lock from soft drop - should be filtered
     ];
 
     const result = extractFinesseActions(actions);
@@ -260,7 +261,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     const targetRot: Rot = "spawn";
 
     // Player sequence that moves left but doesn't include hard drop (simulating soft drop lock)
-    const playerInputs: FinesseAction[] = ["DASLeft"]; // Missing HardDrop
+    const playerInputs: Array<FinesseAction> = ["DASLeft"]; // Missing HardDrop
 
     const result = finesseCalculator.analyze(
       piece,
@@ -329,7 +330,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     const targetRot: Rot = "two";
 
     // Player sequence with soft drop - should bypass finesse analysis
-    const playerInputsWithSoftDrop: FinesseAction[] = [
+    const playerInputsWithSoftDrop: Array<FinesseAction> = [
       "MoveRight",
       "RotateCCW",
       "SoftDrop",
@@ -358,7 +359,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     const targetRot: Rot = "two";
 
     // Player sequence without soft drop - should get normal finesse analysis
-    const playerInputsWithoutSoftDrop: FinesseAction[] = [
+    const playerInputsWithoutSoftDrop: Array<FinesseAction> = [
       "MoveRight",
       "RotateCW",
       "RotateCW",

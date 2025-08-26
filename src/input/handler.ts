@@ -1,42 +1,43 @@
-import { Action, KeyAction, InputEvent, GameState } from "../state/types";
-import { KeyBindings, defaultKeyBindings } from "./keyboard";
+import {
+  type Action,
+  type KeyAction,
+  type InputEvent,
+  type GameState,
+} from "../state/types";
 
-// Input normalization utility
-export function normalizeInputSequence(
-  events: InputEvent[],
+import { type KeyBindings, defaultKeyBindings } from "./keyboard";
+
+// Check if two actions are opposite directional inputs
+function areOppositeDirections(current: KeyAction, next: KeyAction): boolean {
+  return (
+    (current === "LeftDown" && next === "RightDown") ||
+    (current === "RightDown" && next === "LeftDown")
+  );
+}
+
+// Find cancellation pairs within the cancel window
+function findCancellationPairs(
+  events: Array<InputEvent>,
   cancelWindowMs: number,
-): KeyAction[] {
-  // All events are already relevant with the clean KeyAction type
-  const relevantEvents = events;
-
-  // Sort by timestamp to ensure proper order
-  const sortedEvents = [...relevantEvents].sort((a, b) => a.tMs - b.tMs);
-
-  const result: KeyAction[] = [];
+): Set<number> {
   const toRemove = new Set<number>();
 
-  // Look for cancellation pairs
-  for (let i = 0; i < sortedEvents.length - 1; i++) {
+  for (let i = 0; i < events.length - 1; i++) {
     if (toRemove.has(i)) continue;
 
-    const current = sortedEvents[i];
+    const current = events[i];
     if (!current) continue;
 
-    for (let j = i + 1; j < sortedEvents.length; j++) {
+    for (let j = i + 1; j < events.length; j++) {
       if (toRemove.has(j)) continue;
 
-      const next = sortedEvents[j];
+      const next = events[j];
       if (!next) continue;
 
       const timeDiff = next.tMs - current.tMs;
+      if (timeDiff > cancelWindowMs) break;
 
-      if (timeDiff > cancelWindowMs) break; // Too far apart
-
-      // Check for opposite directional inputs (raw events)
-      if (
-        (current.action === "LeftDown" && next.action === "RightDown") ||
-        (current.action === "RightDown" && next.action === "LeftDown")
-      ) {
+      if (areOppositeDirections(current.action, next.action)) {
         toRemove.add(i);
         toRemove.add(j);
         break;
@@ -44,10 +45,19 @@ export function normalizeInputSequence(
     }
   }
 
-  // Build result without removed events
-  for (let i = 0; i < sortedEvents.length; i++) {
+  return toRemove;
+}
+
+// Build result array excluding removed events
+function buildResultArray(
+  events: Array<InputEvent>,
+  toRemove: Set<number>,
+): Array<KeyAction> {
+  const result: Array<KeyAction> = [];
+
+  for (let i = 0; i < events.length; i++) {
     if (!toRemove.has(i)) {
-      const event = sortedEvents[i];
+      const event = events[i];
       if (event) {
         result.push(event.action);
       }
@@ -57,8 +67,18 @@ export function normalizeInputSequence(
   return result;
 }
 
+// Input normalization utility
+export function normalizeInputSequence(
+  events: Array<InputEvent>,
+  cancelWindowMs: number,
+): Array<KeyAction> {
+  const sortedEvents = [...events].sort((a, b) => a.tMs - b.tMs);
+  const toRemove = findCancellationPairs(sortedEvents, cancelWindowMs);
+  return buildResultArray(sortedEvents, toRemove);
+}
+
 // Input Handler interface
-export interface InputHandler {
+export type InputHandler = {
   // Initialize the handler with a dispatch function
   init(dispatch: (action: Action) => void): void;
 
@@ -77,10 +97,10 @@ export interface InputHandler {
   // Update and retrieve key bindings
   setKeyBindings(bindings: KeyBindings): void;
   getKeyBindings(): KeyBindings;
-}
+};
 
 // Internal state that the input handler maintains
-export interface InputHandlerState {
+export type InputHandlerState = {
   isLeftKeyDown: boolean;
   isRightKeyDown: boolean;
   isSoftDropDown: boolean;
@@ -88,20 +108,19 @@ export interface InputHandlerState {
   arrLastTime: number | undefined;
   currentDirection: -1 | 1 | undefined; // -1 for left, 1 for right
   softDropLastTime?: number; // last timestamp a soft drop pulse was sent
-}
+};
 
 // Mock input handler for testing
 export class MockInputHandler implements InputHandler {
   private dispatch?: (action: Action) => void;
   private currentBindings: KeyBindings = defaultKeyBindings();
   private currentState: InputHandlerState = {
+    arrLastTime: undefined,
+    currentDirection: undefined,
+    dasStartTime: undefined,
     isLeftKeyDown: false,
     isRightKeyDown: false,
     isSoftDropDown: false,
-    dasStartTime: undefined,
-    arrLastTime: undefined,
-    currentDirection: undefined,
-    softDropLastTime: undefined,
   };
 
   init(dispatch: (action: Action) => void): void {
@@ -116,7 +135,6 @@ export class MockInputHandler implements InputHandler {
     // Mock implementation
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(_gameState: GameState, _nowMs: number): void {
     // Mock implementation
   }

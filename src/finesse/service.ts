@@ -1,24 +1,30 @@
-import {
-  GameState,
-  Action,
-  ActivePiece,
-  FinesseUIFeedback,
-  Rot,
-} from "../state/types";
-import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
-import { finesseCalculator, extractFinesseActions, Fault } from "./calculator";
-import { GameMode } from "../modes";
 import { dropToBottom } from "../core/board";
 import { PIECES } from "../core/pieces";
+import { type GameMode } from "../modes";
+import {
+  type GameState,
+  type Action,
+  type ActivePiece,
+  type FinesseUIFeedback,
+  type Rot,
+  type FinesseAction,
+} from "../state/types";
+import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
 
-export interface FinesseService {
+import {
+  finesseCalculator,
+  extractFinesseActions,
+  type Fault,
+} from "./calculator";
+
+export type FinesseService = {
   analyzePieceLock(
     state: GameState,
     lockedPiece: ActivePiece,
     gameMode: GameMode,
     timestampMs?: number,
-  ): Action[];
-}
+  ): Array<Action>;
+};
 
 export class DefaultFinesseService implements FinesseService {
   analyzePieceLock(
@@ -26,14 +32,62 @@ export class DefaultFinesseService implements FinesseService {
     lockedPiece: ActivePiece,
     gameMode: GameMode,
     timestampMs?: number,
-  ): Action[] {
-    const actions: Action[] = [];
-
-    // Determine intended analysis target from mode, if provided; otherwise use actual final
+  ): Array<Action> {
     const finalPosition = dropToBottom(state.board, lockedPiece);
+    const { targetRot, targetX } = this.determineAnalysisTarget(
+      gameMode,
+      state,
+      lockedPiece,
+      finalPosition,
+    );
+    const spawnPiece = this.createSpawnPiece(lockedPiece);
+    const playerInputs = extractFinesseActions(state.processedInputLog);
+
+    const finesseResult = finesseCalculator.analyze(
+      spawnPiece,
+      targetX,
+      targetRot,
+      playerInputs,
+      state.gameplay,
+    );
+
+    const faults = this.gatherModeFaults(
+      gameMode,
+      state,
+      lockedPiece,
+      finalPosition,
+      finesseResult.faults,
+    );
+    const mergedResult = {
+      ...finesseResult,
+      faults,
+      isOptimal: finesseResult.isOptimal && faults.length === 0,
+    };
+
+    const modeResult = gameMode.onPieceLocked(
+      state,
+      mergedResult,
+      lockedPiece,
+      finalPosition,
+    );
+
+    return this.buildActionList(
+      mergedResult,
+      modeResult,
+      playerInputs,
+      timestampMs,
+    );
+  }
+
+  private determineAnalysisTarget(
+    gameMode: GameMode,
+    state: GameState,
+    lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+  ): { targetX: number; targetRot: Rot } {
     let targetX: number = finalPosition.x;
     let targetRot: Rot = finalPosition.rot;
-    // Prefer mode guidance if available
+
     if (typeof gameMode.getGuidance === "function") {
       const g = gameMode.getGuidance(state);
       if (g?.target) {
@@ -48,38 +102,64 @@ export class DefaultFinesseService implements FinesseService {
       }
     }
 
-    // Build spawn-state origin for BFS minimality
+    return { targetRot, targetX };
+  }
+
+  private createSpawnPiece(lockedPiece: ActivePiece): ActivePiece {
     const spawnTopLeft = PIECES[lockedPiece.id].spawnTopLeft;
-    const spawnPiece: ActivePiece = {
+    return {
       id: lockedPiece.id,
       rot: "spawn",
       x: spawnTopLeft[0],
       y: spawnTopLeft[1],
     };
+  }
 
-    // Extract finesse actions from processed input log
-    const playerInputs = extractFinesseActions(state.processedInputLog);
+  private gatherModeFaults(
+    gameMode: GameMode,
+    state: GameState,
+    lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+    existingFaults: Array<Fault>,
+  ): Array<Fault> {
+    const faults: Array<Fault> = [...existingFaults];
 
-    // Analyze
-    const finesseResult = finesseCalculator.analyze(
-      spawnPiece,
-      targetX,
-      targetRot,
-      playerInputs,
-      state.gameplay,
+    this.checkForWrongPiece(gameMode, state, lockedPiece, faults);
+    this.checkForWrongTarget(
+      gameMode,
+      state,
+      lockedPiece,
+      finalPosition,
+      faults,
     );
 
-    // Inject mode-level faults: wrong piece or wrong target, if applicable
-    const faults: Fault[] = [...finesseResult.faults];
+    return faults;
+  }
+
+  private checkForWrongPiece(
+    gameMode: GameMode,
+    state: GameState,
+    lockedPiece: ActivePiece,
+    faults: Array<Fault>,
+  ): void {
     if (typeof gameMode.getExpectedPiece === "function") {
       const expected = gameMode.getExpectedPiece(state);
-      if (expected && lockedPiece.id !== expected) {
+      if (expected !== undefined && lockedPiece.id !== expected) {
         faults.push({
-          type: "wrong_piece",
           description: `Expected piece ${expected}, got ${lockedPiece.id}`,
+          type: "wrong_piece",
         });
       }
     }
+  }
+
+  private checkForWrongTarget(
+    gameMode: GameMode,
+    state: GameState,
+    lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+    faults: Array<Fault>,
+  ): void {
     if (typeof gameMode.getTargetFor === "function") {
       const t = gameMode.getTargetFor(lockedPiece, state);
       if (
@@ -87,61 +167,59 @@ export class DefaultFinesseService implements FinesseService {
         !(finalPosition.x === t.targetX && finalPosition.rot === t.targetRot)
       ) {
         faults.push({
+          description: `Expected target x=${String(t.targetX)}, rot=${t.targetRot}`,
           type: "wrong_target",
-          description: `Expected target x=${t.targetX}, rot=${t.targetRot}`,
         });
       }
     }
-    const mergedResult = {
-      ...finesseResult,
-      faults,
-      isOptimal: finesseResult.isOptimal && faults.length === 0,
-    };
+  }
 
-    const modeResult = gameMode.onPieceLocked(
-      state,
-      mergedResult,
-      lockedPiece,
-      finalPosition,
-    );
+  private buildActionList(
+    mergedResult: {
+      isOptimal: boolean;
+      faults: Array<Fault>;
+      optimalSequences: Array<Array<string>>;
+    },
+    modeResult: { nextPrompt?: string; modeData?: unknown },
+    playerInputs: Array<string>,
+    timestampMs?: number,
+  ): Array<Action> {
+    const actions: Array<Action> = [];
 
+    // Add finesse feedback action
     const feedback: FinesseUIFeedback = {
-      optimalSequence:
-        !mergedResult.isOptimal && mergedResult.optimalSequences.length > 0
-          ? mergedResult.optimalSequences[0]
-          : undefined,
       isOptimal: mergedResult.isOptimal,
+      ...(!mergedResult.isOptimal && mergedResult.optimalSequences.length > 0
+        ? {
+            optimalSequence: mergedResult
+              .optimalSequences[0] as Array<FinesseAction>,
+          }
+        : {}),
       timestamp: asNumber(
-        timestampMs ? createTimestamp(timestampMs) : fromNow(),
+        timestampMs !== undefined ? createTimestamp(timestampMs) : fromNow(),
       ),
     };
-
-    actions.push({
-      type: "UpdateFinesseFeedback",
-      feedback,
-    });
+    actions.push({ feedback, type: "UpdateFinesseFeedback" });
 
     // Add statistics tracking action
-    const optimalInputCount = mergedResult.optimalSequences.length
-      ? Math.min(...mergedResult.optimalSequences.map((s) => s.length))
-      : 0;
-
+    const optimalInputCount =
+      mergedResult.optimalSequences.length > 0
+        ? Math.min(...mergedResult.optimalSequences.map((s) => s.length))
+        : 0;
     actions.push({
-      type: "RecordPieceLock",
-      isOptimal: mergedResult.isOptimal,
+      faults: mergedResult.faults.map((f) => f.type),
       inputCount: playerInputs.length,
+      isOptimal: mergedResult.isOptimal,
       optimalInputCount,
-      faults: faults.map((f) => f.type),
+      type: "RecordPieceLock",
     });
 
-    if (modeResult.nextPrompt) {
-      actions.push({
-        type: "UpdateModePrompt",
-        prompt: modeResult.nextPrompt,
-      });
+    // Add mode-specific actions
+    if (modeResult.nextPrompt !== undefined) {
+      actions.push({ prompt: modeResult.nextPrompt, type: "UpdateModePrompt" });
     }
     if (modeResult.modeData !== undefined) {
-      actions.push({ type: "UpdateModeData", data: modeResult.modeData });
+      actions.push({ data: modeResult.modeData, type: "UpdateModeData" });
     }
 
     // Clear the processed input log after analysis

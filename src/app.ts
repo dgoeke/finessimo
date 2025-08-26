@@ -1,16 +1,21 @@
-import { GameState, Action, TimingConfig, GameplayConfig } from "./state/types";
-import { createTimestamp, fromNow } from "./types/timestamp";
-import { reducer } from "./state/reducer";
+import { finesseService } from "./finesse/service";
 import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
+import { gameModeRegistry } from "./modes";
+import { reducer } from "./state/reducer";
+import {
+  type GameState,
+  type Action,
+  type TimingConfig,
+  type GameplayConfig,
+} from "./state/types";
+import { createTimestamp, fromNow } from "./types/timestamp";
 import { BasicCanvasRenderer } from "./ui/canvas";
 import { BasicFinesseRenderer } from "./ui/finesse-feedback";
-import { BasicPreviewRenderer } from "./ui/preview";
 import { BasicHoldRenderer } from "./ui/hold";
-import { BasicSettingsRenderer, GameSettings } from "./ui/settings";
+import { BasicPreviewRenderer } from "./ui/preview";
+import { BasicSettingsRenderer, type GameSettings } from "./ui/settings";
 import { BasicStatisticsRenderer } from "./ui/statistics";
-import { gameModeRegistry } from "./modes";
-import { finesseService } from "./finesse/service";
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -47,8 +52,7 @@ export class FinessimoApp {
   }
 
   private initializeState(): GameState {
-    console.log("seed: ", this.randomSeed());
-    return reducer(undefined, { type: "Init", seed: this.randomSeed() });
+    return reducer(undefined, { seed: this.randomSeed(), type: "Init" });
   }
 
   initialize(
@@ -179,8 +183,8 @@ export class FinessimoApp {
 
     // Always dispatch Tick with timestamp for physics calculations
     this.dispatch({
-      type: "Tick",
       timestampMs: createTimestamp(currentTime),
+      type: "Tick",
     });
 
     // Handle line clear completion
@@ -195,15 +199,15 @@ export class FinessimoApp {
 
     // Auto-restart on top-out: treat as game over and immediately restart
     if (this.gameState.status === "topOut") {
-      const { timing, gameplay, currentMode } = this.gameState;
+      const { currentMode, gameplay, timing } = this.gameState;
       // Reinitialize with existing settings and mode, retaining stats across sessions
       this.dispatch({
-        type: "Init",
-        timing,
         gameplay,
         mode: currentMode,
-        seed: this.randomSeed(),
         retainStats: true,
+        seed: this.randomSeed(),
+        timing,
+        type: "Init",
       });
       this.spawnNextPiece();
       return;
@@ -215,7 +219,7 @@ export class FinessimoApp {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
       if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
-        this.dispatch({ type: "UpdateGuidance", guidance });
+        this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
   }
@@ -286,7 +290,7 @@ export class FinessimoApp {
     // This is a simple test method - in a real implementation,
     // input would come from the keyboard/touch handlers
     if (action === "lock") {
-      this.dispatch({ type: "Lock", timestampMs: fromNow() });
+      this.dispatch({ timestampMs: fromNow(), type: "Lock" });
     }
   }
 
@@ -294,27 +298,27 @@ export class FinessimoApp {
   setGameMode(modeName: string): void {
     const mode = gameModeRegistry.get(modeName);
     if (mode) {
-      this.dispatch({ type: "SetMode", mode: modeName });
+      this.dispatch({ mode: modeName, type: "SetMode" });
       // Apply optional initial config from mode
       if (typeof mode.initialConfig === "function") {
         const cfg = mode.initialConfig();
         if (cfg.timing)
-          this.dispatch({ type: "UpdateTiming", timing: cfg.timing });
+          this.dispatch({ timing: cfg.timing, type: "UpdateTiming" });
         if (cfg.gameplay)
-          this.dispatch({ type: "UpdateGameplay", gameplay: cfg.gameplay });
+          this.dispatch({ gameplay: cfg.gameplay, type: "UpdateGameplay" });
       }
 
       if (mode.shouldPromptNext(this.gameState)) {
         const prompt = mode.getNextPrompt(this.gameState);
-        if (prompt) {
-          this.dispatch({ type: "UpdateModePrompt", prompt });
+        if (prompt !== null) {
+          this.dispatch({ prompt, type: "UpdateModePrompt" });
         }
       }
     }
   }
 
   // Public method to get available game modes
-  getAvailableModes(): string[] {
+  getAvailableModes(): Array<string> {
     return gameModeRegistry.list();
   }
 
@@ -335,8 +339,8 @@ export class FinessimoApp {
       mode && typeof mode.onBeforeSpawn === "function"
         ? mode.onBeforeSpawn(this.gameState)
         : null;
-    if (override?.piece) {
-      this.dispatch({ type: "Spawn", piece: override.piece });
+    if (override?.piece !== undefined) {
+      this.dispatch({ piece: override.piece, type: "Spawn" });
       return;
     }
     this.dispatch({ type: "Spawn" });
@@ -344,7 +348,13 @@ export class FinessimoApp {
 
   // Handle settings changes
   private handleSettingsChange(newSettings: Partial<GameSettings>): void {
-    // Dispatch timing changes
+    this.updateTimingSettings(newSettings);
+    this.updateGameplaySettings(newSettings);
+    this.updateKeyBindings(newSettings);
+    this.updateUISettings(newSettings);
+  }
+
+  private updateTimingSettings(newSettings: Partial<GameSettings>): void {
     const timing: Partial<TimingConfig> = {};
     if (newSettings.dasMs !== undefined) timing.dasMs = newSettings.dasMs;
     if (newSettings.arrMs !== undefined) timing.arrMs = newSettings.arrMs;
@@ -358,11 +368,13 @@ export class FinessimoApp {
       timing.gravityMs = newSettings.gravityMs;
     if (newSettings.gravityEnabled !== undefined)
       timing.gravityEnabled = newSettings.gravityEnabled;
-    if (Object.keys(timing).length > 0) {
-      this.dispatch({ type: "UpdateTiming", timing });
-    }
 
-    // Dispatch gameplay/visual toggles that affect renderers
+    if (Object.keys(timing).length > 0) {
+      this.dispatch({ timing, type: "UpdateTiming" });
+    }
+  }
+
+  private updateGameplaySettings(newSettings: Partial<GameSettings>): void {
     const gameplay: Partial<GameplayConfig> = {};
     if (newSettings.finesseCancelMs !== undefined)
       gameplay.finesseCancelMs = newSettings.finesseCancelMs;
@@ -370,27 +382,28 @@ export class FinessimoApp {
       gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
     if (newSettings.nextPieceCount !== undefined)
       gameplay.nextPieceCount = newSettings.nextPieceCount;
-    if (Object.keys(gameplay).length > 0) {
-      this.dispatch({ type: "UpdateGameplay", gameplay });
-    }
 
-    // Keybindings: update input handler and controls UI immediately
+    if (Object.keys(gameplay).length > 0) {
+      this.dispatch({ gameplay, type: "UpdateGameplay" });
+    }
+  }
+
+  private updateKeyBindings(newSettings: Partial<GameSettings>): void {
     if (newSettings.keyBindings) {
       this.keyboardInputHandler.setKeyBindings(newSettings.keyBindings);
       if (this.touchInputHandler) {
         this.touchInputHandler.setKeyBindings(newSettings.keyBindings);
       }
     }
+  }
 
-    // Apply UI scale directly to document root
+  private updateUISettings(newSettings: Partial<GameSettings>): void {
     if (newSettings.uiScale !== undefined) {
       document.documentElement.style.setProperty(
         "--ui-scale",
         newSettings.uiScale.toString(),
       );
     }
-
-    // Other visual settings like themes can be applied here as needed
   }
 }
 

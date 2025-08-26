@@ -1,21 +1,22 @@
 import { describe, it, expect } from "@jest/globals";
+
+import { canPlacePiece } from "../../src/core/board";
+import { PIECES } from "../../src/core/pieces";
 import {
   createActivePiece,
   canSpawnPiece,
   isTopOut,
   spawnWithHold,
 } from "../../src/core/spawning";
-import { canPlacePiece } from "../../src/core/board";
-import { Board } from "../../src/state/types";
-import { PIECES } from "../../src/core/pieces";
+import { type Board } from "../../src/state/types";
 import { assertDefined } from "../test-helpers";
 
 // Helper to create a test board
 function createTestBoard(): Board {
   return {
-    width: 10,
-    height: 20,
     cells: new Uint8Array(200),
+    height: 20,
+    width: 10,
   };
 }
 
