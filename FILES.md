@@ -30,7 +30,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/input/handler.ts: Pure input utilities and mock. Provides `normalizeInputSequence`, pure DAS/ARR calculators, and a `MockInputHandler` used in tests. Core app input is handled by the state-machine-based handler below.
 - src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
 - src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
-- src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
+- src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Uses TinyKeys library for keyboard handling with pattern normalization for modifier keys (ShiftLeft/ShiftRight → Shift, etc). Provides collision detection for both raw key codes and normalized patterns. Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
 
 ### Input State Machines
 
