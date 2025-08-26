@@ -1,15 +1,15 @@
-declare module 'tinykeys' {
+declare module "tinykeys" {
   type KeyBindingMap = Record<string, (event: KeyboardEvent) => void>;
-  
+
   interface TinyKeysOptions {
-    event?: 'keydown' | 'keyup';
+    event?: "keydown" | "keyup";
   }
-  
+
   function tinykeys(
     target: EventTarget,
     bindings: KeyBindingMap,
-    options?: TinyKeysOptions
+    options?: TinyKeysOptions,
   ): () => void;
-  
+
   export default tinykeys;
 }

@@ -19,5 +19,6 @@ export default {
   coverageReporters: ["text", "lcov", "html"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^tinykeys$": "<rootDir>/__mocks__/tinykeys.ts",
   },
 };

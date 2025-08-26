@@ -24,7 +24,7 @@ export class StateMachineInputHandler implements InputHandler {
   // TinyKeys unsubscribe functions
   private tinyKeysUnsubDown?: () => void;
   private tinyKeysUnsubUp?: () => void;
-  
+
   // Bound event handlers for cleanup
   private resetAllInputsBound = () => this.resetAllInputs();
   private onVisibilityChangeBound = () => this.onVisibilityChange();
@@ -55,22 +55,25 @@ export class StateMachineInputHandler implements InputHandler {
     const downBindings = this.buildDownBindings();
     const upBindings = this.buildUpBindings();
     this.tinyKeysUnsubDown = tinykeys(window, downBindings);
-    this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: 'keyup' });
-    
+    this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: "keyup" });
+
     // Add safety event listeners for focus loss
-    window.addEventListener('blur', this.resetAllInputsBound);
-    document.addEventListener('visibilitychange', this.onVisibilityChangeBound);
+    window.addEventListener("blur", this.resetAllInputsBound);
+    document.addEventListener("visibilitychange", this.onVisibilityChangeBound);
   }
 
   stop(): void {
     this.tinyKeysUnsubDown?.();
     this.tinyKeysUnsubUp?.();
     this.tinyKeysUnsubDown = this.tinyKeysUnsubUp = undefined;
-    
+
     // Remove safety event listeners
-    window.removeEventListener('blur', this.resetAllInputsBound);
-    document.removeEventListener('visibilitychange', this.onVisibilityChangeBound);
-    
+    window.removeEventListener("blur", this.resetAllInputsBound);
+    document.removeEventListener(
+      "visibilitychange",
+      this.onVisibilityChangeBound,
+    );
+
     this.dasService.reset();
   }
 
@@ -83,7 +86,6 @@ export class StateMachineInputHandler implements InputHandler {
     if (gameState.status !== "playing") {
       return;
     }
-
 
     // Update DAS timing from game state - only when it changes
     if (gameState.timing) {
@@ -154,27 +156,46 @@ export class StateMachineInputHandler implements InputHandler {
   setKeyBindings(bindings: KeyBindings): void {
     // Check for duplicate key codes across actions
     const usedKeyCodes = new Set<string>();
+    const usedPatterns = new Set<string>();
     const duplicates: string[] = [];
-    
-    for (const [action, keyCodes] of Object.entries(bindings) as [BindableAction, string[]][]) {
+    const patternCollisions: string[] = [];
+
+    for (const action of Object.keys(bindings) as BindableAction[]) {
+      const keyCodes = bindings[action];
       for (const keyCode of keyCodes) {
+        // Check raw key code duplicates
         if (usedKeyCodes.has(keyCode)) {
           duplicates.push(keyCode);
         }
         usedKeyCodes.add(keyCode);
+
+        // Check normalized pattern collisions (e.g., ShiftLeft and ShiftRight both map to "Shift")
+        const pattern = this.toTinyKeysPattern(keyCode);
+        if (pattern !== keyCode && usedPatterns.has(pattern)) {
+          patternCollisions.push(`${keyCode} (maps to ${pattern})`);
+        }
+        usedPatterns.add(pattern);
       }
     }
-    
+
     if (duplicates.length > 0) {
-      console.warn(`Duplicate key bindings detected: ${duplicates.join(', ')}. Some bindings may be overwritten.`);
+      console.warn(
+        `Duplicate key bindings detected: ${duplicates.join(", ")}. Some bindings may be overwritten.`,
+      );
     }
-    
+
+    if (patternCollisions.length > 0) {
+      console.warn(
+        `Modifier key pattern collisions detected: ${patternCollisions.join(", ")}. Left/right variants of the same modifier will trigger the same action.`,
+      );
+    }
+
     this.bindings = { ...bindings };
     saveBindingsToStorage(bindings);
-    
+
     // Clear key states to prevent stale state from old bindings
     this.keyStates.clear();
-    
+
     // Rebuild TinyKeys bindings if currently active
     if (this.tinyKeysUnsubDown || this.tinyKeysUnsubUp) {
       this.tinyKeysUnsubDown?.();
@@ -182,7 +203,7 @@ export class StateMachineInputHandler implements InputHandler {
       const downBindings = this.buildDownBindings();
       const upBindings = this.buildUpBindings();
       this.tinyKeysUnsubDown = tinykeys(window, downBindings);
-      this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: 'keyup' });
+      this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: "keyup" });
     }
   }
 
@@ -253,7 +274,10 @@ export class StateMachineInputHandler implements InputHandler {
     const anotherDown = codes.some((c) => this.keyStates.get(c));
 
     // Guard against repeated KEY_DOWN for same direction or multiple keys for same action
-    if (this.dasService.getState().context.direction === direction || anotherDown) {
+    if (
+      this.dasService.getState().context.direction === direction ||
+      anotherDown
+    ) {
       return;
     }
 
@@ -271,83 +295,123 @@ export class StateMachineInputHandler implements InputHandler {
     this.handleMovementKeyUp(direction, timestamp);
   }
 
+  private toTinyKeysPattern(raw: string): string {
+    // Pass through TinyKeys DSL combos unchanged
+    if (raw.includes("+")) return raw;
+
+    // Normalize pure modifiers from KeyboardEvent.code → TinyKeys key token
+    switch (raw) {
+      case "ShiftLeft":
+      case "ShiftRight":
+        return "Shift";
+      case "ControlLeft":
+      case "ControlRight":
+        return "Control";
+      case "AltLeft":
+      case "AltRight":
+        return "Alt";
+      case "MetaLeft":
+      case "MetaRight":
+        return "Meta";
+      default:
+        return raw; // e.g., "KeyZ", "ArrowLeft"
+    }
+  }
+
   private buildDownBindings(): Record<string, (event: KeyboardEvent) => void> {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
-    
-    for (const [action, keyCodes] of Object.entries(this.bindings) as [BindableAction, string[]][]) {
+
+    for (const [action, keyCodes] of Object.entries(this.bindings) as [
+      BindableAction,
+      string[],
+    ][]) {
       for (const keyCode of keyCodes) {
-        bindings[keyCode] = (event: KeyboardEvent) => {
-          this.handleKeyEvent(action, 'down', event);
+        const pattern = this.toTinyKeysPattern(keyCode);
+        bindings[pattern] = (event: KeyboardEvent) => {
+          this.handleKeyEvent(action, "down", event);
         };
       }
     }
-    
+
     return bindings;
   }
-  
+
   private buildUpBindings(): Record<string, (event: KeyboardEvent) => void> {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
-    
+
     // Only bind keyup for actions that need release handling
-    const upActions: BindableAction[] = ['MoveLeft', 'MoveRight', 'SoftDrop'];
-    
-    for (const [action, keyCodes] of Object.entries(this.bindings) as [BindableAction, string[]][]) {
+    const upActions: BindableAction[] = ["MoveLeft", "MoveRight", "SoftDrop"];
+
+    for (const [action, keyCodes] of Object.entries(this.bindings) as [
+      BindableAction,
+      string[],
+    ][]) {
       if (upActions.includes(action)) {
         for (const keyCode of keyCodes) {
-          bindings[keyCode] = (event: KeyboardEvent) => {
-            this.handleKeyEvent(action, 'up', event);
+          const pattern = this.toTinyKeysPattern(keyCode);
+          bindings[pattern] = (event: KeyboardEvent) => {
+            this.handleKeyEvent(action, "up", event);
           };
         }
       }
     }
-    
+
     return bindings;
   }
-  
+
   private resetAllInputs(t = fromNow() as number): void {
     // Release DAS direction if any
     const dir = this.dasService.getState().context.direction;
     if (dir !== undefined) {
-      this.dasService.send({ type: 'KEY_UP', direction: dir, timestamp: t });
+      this.dasService.send({ type: "KEY_UP", direction: dir, timestamp: t });
     }
-    
+
     // Clear soft drop
     if (this.isSoftDropDown) {
-      this.dispatch?.({ type: 'SoftDrop', on: false });
+      this.dispatch?.({ type: "SoftDrop", on: false });
       this.isSoftDropDown = false;
     }
     this.softDropLastTime = undefined;
-    
+
     // Clear keyboard state
     this.keyStates.clear();
   }
-  
+
   private onVisibilityChange(): void {
     if (document.hidden) {
       this.resetAllInputs();
     }
   }
 
-  private handleKeyEvent(binding: BindableAction, phase: 'down' | 'up', event: KeyboardEvent): void {
+  private handleKeyEvent(
+    binding: BindableAction,
+    phase: "down" | "up",
+    event: KeyboardEvent,
+  ): void {
     if (!this.dispatch) return;
 
     // Check if gameplay is blocked
-    const blocked = document.body.classList.contains('settings-open') ||
-                    (this.currentGameState && this.currentGameState.status !== 'playing');
-    
+    const blocked =
+      document.body.classList.contains("settings-open") ||
+      (this.currentGameState && this.currentGameState.status !== "playing");
+
     if (blocked) {
       // Always process releases even when blocked to prevent stuck inputs
-      if (phase === 'up') {
+      if (phase === "up") {
         // Only clear keyStates for stateful actions
-        if (binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop') {
+        if (
+          binding === "MoveLeft" ||
+          binding === "MoveRight" ||
+          binding === "SoftDrop"
+        ) {
           this.keyStates.delete(event.code);
         }
         const t = fromNow() as number;
-        if (binding === 'MoveLeft' || binding === 'MoveRight') {
+        if (binding === "MoveLeft" || binding === "MoveRight") {
           this.handleMovementUp(binding, t);
         }
-        if (binding === 'SoftDrop') {
-          this.dispatch?.({ type: 'SoftDrop', on: false });
+        if (binding === "SoftDrop") {
+          this.dispatch?.({ type: "SoftDrop", on: false });
           this.isSoftDropDown = false;
         }
       }
@@ -358,13 +422,16 @@ export class StateMachineInputHandler implements InputHandler {
 
     const timestamp = fromNow() as number;
 
-    if (phase === 'down') {
+    if (phase === "down") {
       // Ignore repeats for all actions
       if (event.repeat) return;
-      
+
       // Only track keyStates for stateful actions (those that need release handling)
-      const isStateful = binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop';
-      
+      const isStateful =
+        binding === "MoveLeft" ||
+        binding === "MoveRight" ||
+        binding === "SoftDrop";
+
       if (isStateful) {
         if (this.keyStates.get(event.code)) return;
       }
@@ -414,7 +481,11 @@ export class StateMachineInputHandler implements InputHandler {
       }
     } else {
       // Handle key releases - only for stateful actions
-      if (binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop') {
+      if (
+        binding === "MoveLeft" ||
+        binding === "MoveRight" ||
+        binding === "SoftDrop"
+      ) {
         this.keyStates.delete(event.code);
       }
 
