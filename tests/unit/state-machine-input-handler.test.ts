@@ -12,6 +12,9 @@ import type {
 import type { SevenBagRng } from "../../src/core/rng";
 import { defaultKeyBindings } from "../../src/input/keyboard";
 
+// Mock TinyKeys
+jest.mock("tinykeys");
+
 describe("StateMachineInputHandler", () => {
   let handler: StateMachineInputHandler;
   let dispatchMock: jest.MockedFunction<(action: Action) => void>;
