@@ -239,6 +239,9 @@ export class TouchInputHandler implements InputHandler {
       });
 
       if (zone) {
+        // Prevent default touch behavior (including double-tap zoom) on control zones
+        event.preventDefault();
+
         // Add visual feedback
         zone.element.classList.add("active");
 
@@ -256,7 +259,9 @@ export class TouchInputHandler implements InputHandler {
 
     for (const touch of Array.from(event.changedTouches)) {
       const touchData = this.activeTouches.get(touch.identifier);
-      if (touchData) {
+      if (touchData?.zone) {
+        // Prevent default touch behavior on control zones
+        event.preventDefault();
         this.processSwipeGesture(touch, touchData);
       }
     }
@@ -336,6 +341,9 @@ export class TouchInputHandler implements InputHandler {
       const touchData = this.activeTouches.get(touch.identifier);
 
       if (touchData?.zone) {
+        // Prevent default touch behavior on control zones
+        event.preventDefault();
+
         const zone = touchData.zone;
         zone.element.classList.remove("active");
 

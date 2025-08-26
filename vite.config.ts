@@ -17,6 +17,10 @@ export default defineConfig({
     open: true,
   },
   resolve: {
-    extensions: [".ts", ".js"],
+    extensions: [".ts", ".js", ".tsx", ".jsx"],
+  },
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "@chnicoloso/lit-jsx",
   },
 });

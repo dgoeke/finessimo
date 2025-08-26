@@ -1,5 +1,14 @@
 import { FinessimoApp } from "./app";
 
+// Import components to register them
+import "./ui/components/finessimo-shell.tsx";
+import "./ui/components/game-board.tsx";
+import "./ui/components/finesse-overlay.tsx";
+import "./ui/components/piece-hold.tsx";
+import "./ui/components/piece-preview.tsx";
+import "./ui/components/stats-panel.tsx";
+import "./ui/components/settings-modal.tsx";
+
 // Main entry point
 function main(): void {
   // Starting Finessimo - Tetris Finesse Trainer
@@ -9,34 +18,25 @@ function main(): void {
 
   // Wait for DOM to be ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => initializeApp(app));
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => void initializeApp(app),
+    );
   } else {
-    initializeApp(app);
+    void initializeApp(app);
   }
 }
 
-function initializeApp(app: FinessimoApp): void {
-  // Get canvas element
-  const canvas = document.getElementById("game-canvas");
-  if (canvas === null || !(canvas instanceof HTMLCanvasElement)) {
-    console.error('Canvas element with id "game-canvas" not found');
-    return;
-  }
-
-  // Get finesse feedback panel element
-  const finesseFeedbackPanel = document.getElementById(
-    "finesse-feedback-panel",
-  );
-  if (finesseFeedbackPanel === null) {
-    console.error(
-      'Finesse feedback panel element with id "finesse-feedback-panel" not found',
-    );
-    return;
+async function initializeApp(app: FinessimoApp): Promise<void> {
+  // Wait for the finessimo-shell custom element to render its content
+  const shell = document.querySelector("finessimo-shell");
+  if (shell && "updateComplete" in shell) {
+    await (shell as { updateComplete: Promise<boolean> }).updateComplete;
   }
 
   // Initialize and start the application
   try {
-    app.initialize(canvas, finesseFeedbackPanel);
+    app.initialize();
     app.start();
 
     // Expose app globally for debugging
