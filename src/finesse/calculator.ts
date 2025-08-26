@@ -259,6 +259,16 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     playerInputs: FinesseAction[],
     config: GameplayConfig,
   ): FinesseResult {
+    // Skip finesse analysis if soft drop is detected
+    if (playerInputs.includes("SoftDrop")) {
+      return {
+        optimalSequences: [],
+        playerSequence: playerInputs,
+        isOptimal: true,
+        faults: [],
+      };
+    }
+
     // Calculate optimal sequences (already includes HardDrop)
     const optimalSequences = this.calculateOptimal(
       piece,
