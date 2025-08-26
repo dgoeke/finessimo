@@ -20,5 +20,6 @@ export default {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^tinykeys$": "<rootDir>/__mocks__/tinykeys.ts",
+    "^@lit-labs/signals$": "<rootDir>/__mocks__/@lit-labs/signals.ts",
   },
 };

@@ -28,7 +28,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [3, 2],
       ],
     },
-    color: "#00f0f0",
+    color: "#00FFFF", // I - light blue/cyan
     id: "I",
     spawnTopLeft: [3, -1],
   },
@@ -59,7 +59,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [2, 2],
       ],
     },
-    color: "#0000f0",
+    color: "#0000FF", // J - dark blue
     id: "J",
     spawnTopLeft: [3, -2],
   },
@@ -90,7 +90,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [0, 2],
       ],
     },
-    color: "#f0a000",
+    color: "#FF7F00", // L - orange
     id: "L",
     spawnTopLeft: [3, -2],
   },
@@ -121,7 +121,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [2, 1],
       ],
     },
-    color: "#f0f000",
+    color: "#FFFF00", // O - yellow
     id: "O",
     spawnTopLeft: [4, -2],
   },
@@ -152,7 +152,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [1, 2],
       ],
     },
-    color: "#00f000",
+    color: "#00FF00", // S - green
     id: "S",
     spawnTopLeft: [3, -2],
   },
@@ -183,7 +183,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [1, 2],
       ],
     },
-    color: "#a000f0",
+    color: "#FF00FF", // T - magenta
     id: "T",
     spawnTopLeft: [3, -2],
   },
@@ -214,7 +214,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
         [2, 2],
       ],
     },
-    color: "#f00000",
+    color: "#FF0000", // Z - red
     id: "Z",
     spawnTopLeft: [3, -2],
   },

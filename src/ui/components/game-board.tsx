@@ -1,49 +1,96 @@
-import { calculateGhostPosition } from "../core/board";
-import { PIECES } from "../core/pieces";
-import { type GameState, type Board, type ActivePiece } from "../state/types";
+import { SignalWatcher } from "@lit-labs/signals";
+import { LitElement, html } from "lit";
+import { customElement, query } from "lit/decorators.js";
 
-import { BasicFinesseRenderer, createFinesseVisualization } from "./finesse";
+import { calculateGhostPosition } from "../../core/board";
+import { PIECES } from "../../core/pieces";
+import { gameStateSignal, stateSelectors } from "../../state/signals";
+import { lightenColor, darkenColor } from "../utils/colors";
 
-export type CanvasRenderer = {
-  initialize(canvas: HTMLCanvasElement): void;
-  render(gameState: GameState): void;
-  destroy(): void;
-};
+import type { GameState, Board, ActivePiece } from "../../state/types";
 
-export class BasicCanvasRenderer implements CanvasRenderer {
-  private canvas: HTMLCanvasElement | undefined;
+@customElement("game-board")
+export class GameBoard extends SignalWatcher(LitElement) {
+  @query("canvas") private canvas!: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | undefined;
-  private finesseRenderer: BasicFinesseRenderer;
-  private cellSize = 30;
-  private boardWidth = 10;
-  private boardHeight = 20;
+  private readonly cellSize = 30;
+  private readonly boardWidth = 10;
+  private readonly boardHeight = 20;
+  private lastRenderState?: {
+    active: GameState["active"];
+    board: GameState["board"];
+    tick: GameState["tick"];
+  };
 
-  constructor() {
-    this.finesseRenderer = new BasicFinesseRenderer();
+  // Use light DOM for consistent styling
+  protected createRenderRoot(): HTMLElement | DocumentFragment {
+    return this;
   }
 
-  initialize(canvas: HTMLCanvasElement): void {
-    this.canvas = canvas;
-    const ctx = canvas.getContext("2d");
-
+  protected firstUpdated(): void {
+    // Initialize canvas context and size
+    const ctx = this.canvas.getContext("2d");
     if (!ctx) {
       throw new Error("Failed to get 2D rendering context");
     }
-
     this.ctx = ctx;
 
     // Set canvas size
-    canvas.width = this.boardWidth * this.cellSize;
-    canvas.height = this.boardHeight * this.cellSize;
+    this.canvas.width = this.boardWidth * this.cellSize;
+    this.canvas.height = this.boardHeight * this.cellSize;
 
-    // Initialize finesse renderer with same canvas
-    this.finesseRenderer.initialize(canvas);
-
-    // Canvas renderer initialized
+    // Lit will automatically call updated() after firstUpdated() completes
   }
 
-  render(gameState: GameState): void {
-    if (!this.ctx || !this.canvas) {
+  protected updated(): void {
+    if (!this.ctx) {
+      return;
+    }
+
+    // Get current state from the signal (reactive subscription)
+    const gameState = gameStateSignal.get();
+    const boardState = stateSelectors.getBoardState(gameState);
+
+    // Only re-render if the relevant state has actually changed
+    if (this.hasStateChanged(boardState)) {
+      this.renderGameBoard(gameState);
+      this.lastRenderState = boardState;
+    }
+  }
+
+  private hasStateChanged(newState: {
+    active: GameState["active"];
+    board: GameState["board"];
+    tick: GameState["tick"];
+  }): boolean {
+    if (!this.lastRenderState) {
+      return true;
+    }
+
+    // Compare active piece
+    if (this.lastRenderState.active !== newState.active) {
+      return true;
+    }
+
+    // Compare board state (reference equality is sufficient since board is immutable)
+    if (this.lastRenderState.board !== newState.board) {
+      return true;
+    }
+
+    // Compare tick for any other changes
+    if (this.lastRenderState.tick !== newState.tick) {
+      return true;
+    }
+
+    return false;
+  }
+
+  protected render(): unknown {
+    return html`<canvas></canvas>`;
+  }
+
+  private renderGameBoard(gameState: GameState): void {
+    if (!this.ctx) {
       console.error("Canvas not initialized");
       return;
     }
@@ -74,10 +121,6 @@ export class BasicCanvasRenderer implements CanvasRenderer {
 
     // Draw grid
     this.drawGrid();
-
-    // Render finesse visualization overlay
-    const finesseViz = createFinesseVisualization(gameState);
-    this.finesseRenderer.render(gameState, finesseViz);
   }
 
   private renderBoard(board: Board): void {
@@ -139,11 +182,29 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     const pixelX = x * this.cellSize;
     const pixelY = y * this.cellSize;
 
-    this.ctx.fillStyle = color;
+    // Create subtle gradient for depth
+    const gradient = this.ctx.createLinearGradient(
+      pixelX,
+      pixelY,
+      pixelX + this.cellSize,
+      pixelY + this.cellSize,
+    );
+    gradient.addColorStop(0, lightenColor(color, 0.3));
+    gradient.addColorStop(1, darkenColor(color, 0.2));
+
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
-    // Draw border
-    this.ctx.strokeStyle = "#333333";
+    // Add subtle highlight on top edge
+    this.ctx.fillStyle = lightenColor(color, 0.4);
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, 2);
+
+    // Add subtle shadow on bottom edge
+    this.ctx.fillStyle = darkenColor(color, 0.3);
+    this.ctx.fillRect(pixelX, pixelY + this.cellSize - 2, this.cellSize, 2);
+
+    // Draw refined border
+    this.ctx.strokeStyle = darkenColor(color, 0.4);
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
   }
@@ -167,7 +228,7 @@ export class BasicCanvasRenderer implements CanvasRenderer {
   }
 
   private drawGrid(): void {
-    if (!this.ctx || !this.canvas) return;
+    if (!this.ctx) return;
 
     this.ctx.strokeStyle = "#222222";
     this.ctx.lineWidth = 1;
@@ -192,23 +253,22 @@ export class BasicCanvasRenderer implements CanvasRenderer {
   }
 
   private getCellColor(cellValue: number): string {
+    // Official Tetris Guideline colors
     const colors = [
       "#000000", // 0 - empty (shouldn't be used)
-      "#00f0f0", // 1 - I
-      "#f0f000", // 2 - O
-      "#a000f0", // 3 - T
-      "#00f000", // 4 - S
-      "#f00000", // 5 - Z
-      "#0000f0", // 6 - J
-      "#f0a000", // 7 - L
+      "#00FFFF", // 1 - I (light blue/cyan)
+      "#FFFF00", // 2 - O (yellow)
+      "#FF00FF", // 3 - T (magenta)
+      "#00FF00", // 4 - S (green)
+      "#FF0000", // 5 - Z (red)
+      "#0000FF", // 6 - J (dark blue)
+      "#FF7F00", // 7 - L (orange)
     ];
     return colors[cellValue] ?? "#ffffff";
   }
 
-  destroy(): void {
-    this.finesseRenderer.destroy();
-    this.canvas = undefined;
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.ctx = undefined;
-    // Canvas renderer destroyed
   }
 }

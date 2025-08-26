@@ -142,7 +142,8 @@ body {
     max(16px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
     max(16px, env(safe-area-inset-left));
   display: grid;
-  grid-template-columns: minmax(65px, 1fr) auto minmax(65px, 1fr);
+  /* Left and right columns: minimum 60px, can grow equally */
+  grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
   gap: 20px;
   align-items: start;
   justify-content: center;
@@ -172,6 +173,20 @@ body {
   justify-content: flex-start;
   align-items: flex-start; /* Justify left toward board */
   min-width: 65px;
+  gap: 16px;
+}
+
+.preview-stats-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.stats-panel-container {
+  flex: 0 0 auto;
+  width: 150px;
 }
 
 .panel {
@@ -271,44 +286,36 @@ body {
   width: fit-content;
 }
 
-#game-canvas {
+game-board canvas {
   display: block;
-  /* Ensure proper aspect ratio */
+  /* Ensure proper aspect ratio is always maintained */
   aspect-ratio: 1 / 2;
-  /* Use available vertical space, but allow side columns to maintain their 65px minimum */
+  /* Use the smaller of: available height OR 2x available width */
   height: min(
     calc(100vh - var(--header-h) - 100px),
-    /* Full height minus header and padding */ calc((100vw - 130px - 72px) * 2)
-      /* Max height based on available width minus 130px for side columns and 72px for gaps+padding */
+    /* Available height */ calc((100vw - 128px - 40px - 32px) * 2)
+      /* 2x available width to maintain 1:2 ratio */
   );
-  width: auto;
-  max-width: calc(
-    100vw - 130px - 72px
-  ); /* Ensure side columns get their 100px minimum plus gaps+padding */
+  width: auto; /* Width derives from height via aspect-ratio */
   image-rendering: pixelated;
   background: #000;
   border-radius: 8px;
   border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
 }
-/* Mobile play grid containers (used on phones) */
-.mobile-play {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  align-items: start;
-}
-.mobile-hold-slot,
-.mobile-preview-slot {
-  display: none;
-}
-.mobile-board-slot {
-  display: flex;
-  justify-content: center;
-}
-.mobile-hold-slot,
-.mobile-preview-slot {
-  justify-content: center;
+
+/* Legacy support for any remaining #game-canvas references */
+#game-canvas {
+  display: block;
+  aspect-ratio: 1 / 2;
+  height: min(
+    calc(100vh - var(--header-h) - 100px),
+    calc((100vw - 128px - 40px - 32px) * 2)
+  );
+  width: auto;
+  image-rendering: pixelated;
+  background: #000;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
 }
 .board-frame {
   background: linear-gradient(
@@ -326,15 +333,11 @@ body {
 }
 
 /* Statistics Panel */
-#statistics-panel {
-  min-height: auto;
-  font-size: 11px;
-}
 
 /* Hide statistics panel when viewport is too narrow (panel would be < 150px) */
 @media (max-width: 652px) {
   /* 150px for panel + 130px for both columns + 300px min board + 72px gaps/padding = 652px */
-  #statistics-panel {
+  .stats-panel-container {
     display: none;
   }
 }
@@ -363,22 +366,6 @@ body {
 .mode-prompt .prompt-text {
   font-size: 14px;
   line-height: 1.4;
-}
-
-.finesse-feedback {
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 14px;
-  text-align: center;
-  background: transparent;
-  transition: all 0.2s ease;
-  max-width: 280px;
-  word-wrap: break-word;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
 }
 
 .finesse-feedback-overlay {
@@ -485,18 +472,17 @@ body {
 /* Responsive - only adjust spacing, not sizing logic */
 @media (max-width: 1100px) {
   .app.shell {
-    grid-template-columns: minmax(65px, 1fr) auto minmax(65px, 1fr);
+    grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
     gap: 12px;
     padding: 12px;
   }
 
+  game-board canvas,
   #game-canvas {
-    max-width: calc(
-      100vw - 130px - 48px
-    ); /* 130px for columns, 48px for gaps+padding at this breakpoint */
+    /* Adjust for tighter spacing: 128px for columns, 24px for gaps, 24px for padding */
     height: min(
       calc(100vh - var(--header-h) - 100px),
-      calc((100vw - 130px - 48px) * 2)
+      calc((100vw - 128px - 24px - 24px) * 2)
     );
   }
 }
@@ -518,54 +504,18 @@ body {
 
   /* Even smaller screens: tighter spacing */
   .app.shell {
+    grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
     gap: 8px;
     padding: 8px;
   }
 
+  game-board canvas,
   #game-canvas {
-    max-width: calc(
-      100vw - 130px - 32px
-    ); /* 130px for columns, 32px for gaps+padding at this breakpoint */
+    /* Even tighter spacing: 128px for columns, 16px for gaps, 16px for padding */
     height: min(
       calc(100vh - var(--header-h) - 100px),
-      calc((100vw - 130px - 32px) * 2)
+      calc((100vw - 128px - 16px - 16px) * 2)
     );
-  }
-  /* NEXT header: minimal and uppercase */
-  .mobile-preview-slot .preview-title {
-    display: block;
-    font-size: 10px;
-    margin: 0 0 2px 0;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  /* Hide right panel and controls on mobile */
-  .right-panel {
-    display: none;
-  }
-  /* Ensure mobile preview shows all items vertically */
-  .mobile-preview-slot .preview-container {
-    display: flex;
-    flex-direction: column !important;
-    gap: 2px;
-    width: 100%;
-  }
-  .mobile-preview-slot .preview-slot {
-    display: block !important;
-    width: 100%;
-    gap: 0;
-    background: transparent;
-    border: 0;
-    padding: 0;
-    border-radius: 0;
-  }
-  .mobile-preview-slot .preview-canvas {
-    width: 100%;
-    height: auto;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
   }
   /* Convert bottom buttons to floating overlays so they don't cover board space */
   .touch-buttons {
@@ -596,25 +546,12 @@ body {
 }
 
 /* Game Info Section - Preview and Hold */
-.game-info-section {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  margin-left: auto;
-  margin-right: auto;
-}
 
 /* Hold Section */
 .hold-section {
   text-align: center;
   display: inline-block;
   margin: 0 auto;
-}
-
-.hold-section.disabled {
-  opacity: 0.4;
 }
 
 .hold-title {
@@ -637,12 +574,6 @@ body {
   background: #000;
 }
 
-/* Preview Section */
-.preview-section {
-  display: inline-block;
-  margin: 0 auto;
-}
-
 .preview-title {
   margin: 0 0 12px 0;
   font-size: 12px;
@@ -657,7 +588,7 @@ body {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .preview-slot {
@@ -675,11 +606,7 @@ body {
 /* Responsive adjustments */
 @media (max-width: 680px) {
   .preview-container {
-    gap: 4px; /* Tighter spacing on mobile */
-  }
-
-  .preview-canvas {
-    max-width: 60px; /* Smaller preview pieces on mobile to keep column thin */
+    gap: 2px; /* Minimal spacing on mobile */
   }
 }
 
@@ -869,9 +796,10 @@ body.touch-active .app.shell {
   background: rgba(0, 0, 0, 0.7);
   z-index: 2000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   backdrop-filter: blur(4px);
+  padding-top: 10vh;
 }
 
 .settings-modal {
@@ -1178,4 +1106,84 @@ body.touch-active .app.shell {
   .button {
     width: 100%;
   }
+}
+
+/* Preview and Stats Panel Layout */
+.preview-stats-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+piece-preview {
+  flex: 0 0 auto; /* Don't grow or shrink, size naturally */
+  max-width: 120px; /* Constrain width to prevent taking full space */
+}
+
+.stats-panel-container {
+  flex: 0 0 auto; /* Don't grow or shrink */
+  width: 150px; /* Match original stats panel width */
+}
+
+/* Override panel styling for stats panel specifically */
+.stats-panel-container.panel {
+  background: rgba(0, 0, 0, 0.2); /* 50% translucent black */
+  border: none; /* Remove border */
+  border-radius: 0; /* Remove rounded edges */
+}
+
+/* Responsive: stack vertically on small screens */
+@media (max-width: 768px) {
+  .preview-stats-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stats-panel-container {
+    flex: none;
+    width: 100%; /* Full width when stacked vertically on mobile */
+  }
+}
+
+/* ===== LIT COMPONENT STYLES ===== */
+
+/* Finesse overlay component */
+finesse-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Game board component */
+game-board {
+  display: block;
+}
+
+game-board canvas {
+  display: block;
+  border: 2px solid var(--border, #333);
+  background: var(--board-bg, #000);
+}
+
+/* Piece hold component styles */
+piece-hold {
+  display: block;
+  background: transparent;
+  border: none;
+}
+
+/* Piece preview component styles */
+piece-preview {
+  display: block;
+  background: transparent;
+  border: none;
+}
+
+/* Stats panel component */
+stats-panel {
+  display: block;
 }

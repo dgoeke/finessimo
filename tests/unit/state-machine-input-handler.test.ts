@@ -443,7 +443,7 @@ describe("StateMachineInputHandler", () => {
       expect(storedBindings.RotateCCW).toEqual(["MetaRight"]);
     });
 
-    test("left/right modifier variants collision warning", () => {
+    test("left/right modifier variants work as separate keys", () => {
       // Bind different actions to left and right shift variants
       const bindings = {
         ...defaultKeyBindings(),
@@ -451,18 +451,15 @@ describe("StateMachineInputHandler", () => {
         MoveRight: ["ShiftRight"],
       };
 
-      // Should warn about pattern collision
+      // Should NOT warn about collisions since they're treated as separate keys now
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
       handler.setKeyBindings(bindings);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Modifier key pattern collisions detected"),
-      );
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("ShiftRight (maps to Shift)"),
+      expect(consoleSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("collision"),
       );
 
-      // Handler should still work despite collision
+      // Handler should work without issues
       expect(() => {
         handler.start();
         handler.stop();

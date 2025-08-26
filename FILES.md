@@ -20,6 +20,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 - src/state/types.ts: Core types and interfaces. GameState, Action union (including new TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions.
 - src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Comprehensive statistics tracking with derived metrics calculation.
+- src/state/signals.ts: Reactive state management using Lit signals. Global gameStateSignal with dispatch wrapper and selector helpers for efficient component updates.
 
 ## Types
 
@@ -30,7 +31,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/input/handler.ts: Pure input utilities and mock. Provides `normalizeInputSequence`, pure DAS/ARR calculators, and a `MockInputHandler` used in tests. Core app input is handled by the state-machine-based handler below.
 - src/input/keyboard.ts: Keyboard input handler with key bindings, storage persistence, DOM event handling. Delegates timing logic to InputProcessor for clean separation of concerns.
 - src/input/touch.ts: TouchInputHandler for mobile. Gesture detection, touch zones, swipe handling. Delegates timing logic to InputProcessor for unified behavior with keyboard input.
-- src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Uses TinyKeys library for keyboard handling with pattern normalization for modifier keys (ShiftLeft/ShiftRight → Shift, etc). Provides collision detection for both raw key codes and normalized patterns. Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
+- src/input/StateMachineInputHandler.ts: State machine-based input handler implementing InputHandler interface. Uses DASMachineService internally for precise input classification. Maps keyboard events to DAS machine events and dispatches granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Uses custom KeyBindingManager for keyboard handling with direct KeyboardEvent.code matching to support all keys including standalone modifier keys (ShiftLeft, ControlLeft, etc. work as individual keys). Always prevents default browser behavior for bound keys. Provides more accurate input classification for improved finesse analysis while maintaining backward compatibility.
 
 ### Input State Machines
 
@@ -57,18 +58,35 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## UI
 
-- src/ui/canvas.ts: Main board renderer. 10×20 grid, active piece, ghost piece (if enabled).
-- src/ui/hud.ts: Game state HUD. Status, stats, mode info, finesse feedback display.
-- src/ui/preview.ts: Next piece previews with mini canvases. Configurable display count.
-- src/ui/hold.ts: Hold piece display with availability state.
-- src/ui/finesse.ts: Finesse visualization. Target highlighting, path indicators, and progress overlay driven by `processedInputLog` coalesced into FinesseActions.
-- src/ui/finesse-feedback.ts: Finesse feedback UI component. Displays finesse analysis results and suggestions.
-- src/ui/statistics.ts: Statistics display panel. Real-time game statistics, performance metrics, session tracking.
-- src/ui/settings.ts: Settings panel with tabs (Timing, Gameplay, Visual, Controls). localStorage persistence, keybinding support.
-- src/ui/styles.css: Complete CSS styling. Responsive design, touch controls, modals.
+### Lit Components (Reactive UI)
+
+- src/ui/components/finessimo-shell.tsx: Main application shell component. Orchestrates all child components and provides three-column responsive layout.
+- src/ui/components/game-board.tsx: Self-contained game board canvas component. Inlined canvas rendering with reactive signal-based updates, gradient piece styling, ghost piece rendering.
+- src/ui/components/piece-hold.tsx: Hold piece display component. Self-contained canvas rendering with disabled state visualization and gradient piece styling.
+- src/ui/components/piece-preview.tsx: Next piece previews component. Multiple self-contained canvas elements with configurable display count and gradient piece styling.
+- src/ui/components/finesse-overlay.tsx: Finesse feedback overlay component. Reactive animations and mode prompts using signal-based state updates.
+- src/ui/components/stats-panel.tsx: Statistics display component. Timer-based updates at 2Hz for performance, independent of reactive signals.
+- src/ui/components/settings-modal.tsx: Settings modal component. Tabbed interface with timing, gameplay, visual, and control settings. localStorage persistence and keybinding capture.
+
+### UI Utilities
+
+- src/ui/utils/colors.ts: Shared color manipulation utilities. Functions for lightening and darkening hex colors used across canvas components for gradient piece styling.
+
+### Input Utilities
+
+- src/input/utils/key-binding-manager.ts: Simple keyboard event binding manager. Maps KeyboardEvent.code directly to handlers without pattern parsing. Supports all keys including modifiers as standalone bindings. Replaces tinykeys with focused, maintainable solution.
+
+### State Management
+
+- src/state/signals.ts: Reactive state management using Lit signals. Global gameStateSignal with dispatch wrapper and selector helpers.
+
+### Styling
+
+- src/ui/styles.css: Complete CSS styling. Responsive design, touch controls, modals, Lit component styling.
 
 ## Test Utilities
 
 - tests/test-types.ts: Type utilities for testing. InvalidGameState, MalformedAction types, type guards, helpers for creating test scenarios with invalid data.
 - tests/test-helpers.ts: Runtime assertion helpers. Type narrowing functions, safe array access, validation utilities for type-safe test code.
 - tests/helpers/assert.ts: Additional test assertion utilities and custom matchers.
+- tests/unit/key-binding-manager.test.ts: Unit tests for KeyBindingManager utility. Tests handler storage, listener management, cleanup logic, and edge cases using mock DOM elements.

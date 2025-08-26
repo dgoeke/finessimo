@@ -3,6 +3,7 @@ import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { gameModeRegistry } from "./modes";
 import { reducer } from "./state/reducer";
+import { gameStateSignal } from "./state/signals";
 import {
   type GameState,
   type Action,
@@ -10,36 +11,38 @@ import {
   type GameplayConfig,
 } from "./state/types";
 import { createTimestamp, fromNow } from "./types/timestamp";
-import { BasicCanvasRenderer } from "./ui/canvas";
-import { BasicFinesseRenderer } from "./ui/finesse-feedback";
-import { BasicHoldRenderer } from "./ui/hold";
-import { BasicPreviewRenderer } from "./ui/preview";
-import { BasicSettingsRenderer, type GameSettings } from "./ui/settings";
-import { BasicStatisticsRenderer } from "./ui/statistics";
+
+import type {
+  GameSettings,
+  SettingsModal,
+} from "./ui/components/settings-modal";
 
 export class FinessimoApp {
   private gameState: GameState;
   private keyboardInputHandler: KeyboardInputHandler;
   private touchInputHandler?: TouchInputHandler;
-  private canvasRenderer: BasicCanvasRenderer;
-  private finesseRenderer: BasicFinesseRenderer;
-  private previewRenderer: BasicPreviewRenderer;
-  private holdRenderer: BasicHoldRenderer;
-  private settingsRenderer: BasicSettingsRenderer;
-  private statisticsRenderer: BasicStatisticsRenderer;
+  private settingsModal: SettingsModal | null = null;
   private isRunning = false;
+  private isPaused = false;
   private lastFrameTime = 0;
   private readonly targetFrameTime = 1000 / 60; // 60 FPS
 
+  // Event handlers for settings modal
+  private handleSettingsOpened = (): void => {
+    this.pause();
+  };
+
+  private handleSettingsClosed = (): void => {
+    this.unpause();
+  };
+
   constructor() {
     this.gameState = this.initializeState();
+
+    // Initialize the signal with the same state
+    gameStateSignal.set(this.gameState);
+
     this.keyboardInputHandler = new KeyboardInputHandler();
-    this.canvasRenderer = new BasicCanvasRenderer();
-    this.finesseRenderer = new BasicFinesseRenderer();
-    this.previewRenderer = new BasicPreviewRenderer();
-    this.holdRenderer = new BasicHoldRenderer();
-    this.settingsRenderer = new BasicSettingsRenderer();
-    this.statisticsRenderer = new BasicStatisticsRenderer();
 
     // Initialize touch input if touch is supported
     if ("ontouchstart" in window) {
@@ -55,28 +58,8 @@ export class FinessimoApp {
     return reducer(undefined, { seed: this.randomSeed(), type: "Init" });
   }
 
-  initialize(
-    canvasElement: HTMLCanvasElement,
-    finesseFeedbackElement: HTMLElement,
-  ): void {
-    // Initialize renderers
-    this.canvasRenderer.initialize(canvasElement);
-    this.finesseRenderer.initialize(finesseFeedbackElement);
-
-    // Initialize unified layout components
-    const holdElement = document.getElementById("hold-container");
-    const previewElement = document.getElementById("preview-container");
-    const statisticsElement = document.getElementById("statistics-panel");
-
-    if (holdElement) {
-      this.holdRenderer.initialize(holdElement);
-    }
-    if (previewElement) {
-      this.previewRenderer.initialize(previewElement);
-    }
-    if (statisticsElement) {
-      this.statisticsRenderer.initialize(statisticsElement);
-    }
+  initialize(): void {
+    // All rendering now handled by Lit components
 
     // Initialize input handlers
     this.keyboardInputHandler.init(this.dispatch.bind(this));
@@ -91,31 +74,14 @@ export class FinessimoApp {
       this.touchInputHandler.start();
     }
 
-    // Initialize settings renderer
-    this.settingsRenderer.initialize(document.body);
-    this.settingsRenderer.onSettingsChange(
-      this.handleSettingsChange.bind(this),
-    );
+    // Find and initialize settings modal
+    this.initializeSettingsModal();
 
-    // No on-page controls list; users can view in Settings
+    // Apply persisted settings on startup
+    this.applyPersistedSettings();
 
     // Setup settings button
     this.setupSettingsButton();
-
-    // Apply persisted settings on init (if present)
-    try {
-      const initialSettings = this.settingsRenderer.getCurrentSettings();
-      const initialKeyBindings = this.settingsRenderer.getCurrentKeyBindings();
-      const toApply: Partial<GameSettings> = {
-        ...initialSettings,
-        keyBindings: initialKeyBindings,
-      };
-      this.handleSettingsChange(toApply);
-      // Prime the input handler timing with the current game state's timing
-      this.keyboardInputHandler.applyTiming(this.gameState.timing);
-    } catch {
-      /* ignore persisted settings errors */
-    }
 
     // Spawn initial piece
     this.spawnNextPiece();
@@ -145,12 +111,21 @@ export class FinessimoApp {
 
   destroy(): void {
     this.stop();
-    this.canvasRenderer.destroy();
-    this.finesseRenderer.destroy();
-    this.previewRenderer.destroy();
-    this.holdRenderer.destroy();
-    this.settingsRenderer.destroy();
-    this.statisticsRenderer.destroy();
+    // Remove settings event listeners if modal exists
+    if (this.settingsModal) {
+      this.settingsModal.removeEventListener(
+        "settings-change",
+        this.handleSettingsChangeEvent,
+      );
+      this.settingsModal.removeEventListener(
+        "settings-opened",
+        this.handleSettingsOpened,
+      );
+      this.settingsModal.removeEventListener(
+        "settings-closed",
+        this.handleSettingsClosed,
+      );
+    }
   }
 
   private gameLoop(): void {
@@ -171,6 +146,11 @@ export class FinessimoApp {
   }
 
   private update(): void {
+    // Skip game updates when paused (settings modal open)
+    if (this.isPaused) {
+      return;
+    }
+
     const currentTime = performance.now();
 
     // Update input handlers using the same timestamp used for Tick/physics
@@ -225,17 +205,7 @@ export class FinessimoApp {
   }
 
   private render(): void {
-    this.canvasRenderer.render(this.gameState);
-    this.finesseRenderer.render(this.gameState);
-    // Determine preview count from gameplay config (fallback to 5)
-    const previewCount = this.gameState.gameplay.nextPieceCount ?? 5;
-    this.previewRenderer.render(this.gameState.nextQueue, previewCount);
-
-    // Render hold piece
-    this.holdRenderer.render(this.gameState.hold, this.gameState.canHold);
-
-    // Render statistics
-    this.statisticsRenderer.render(this.gameState);
+    // All rendering now handled by Lit components via signals - no direct rendering needed
   }
 
   private dispatch(action: Action): void {
@@ -251,6 +221,9 @@ export class FinessimoApp {
     }
 
     this.gameState = newState;
+
+    // Update the signal to reflect the new state
+    gameStateSignal.set(newState);
 
     // Handle finesse analysis on piece lock for any lock source
     if (prevState.active && !newState.active) {
@@ -277,6 +250,9 @@ export class FinessimoApp {
     for (const action of finesseActions) {
       this.gameState = reducer(this.gameState, action);
     }
+
+    // Update signal after batch processing finesse actions
+    gameStateSignal.set(this.gameState);
   }
 
   // Public method to get current state (for debugging)
@@ -322,15 +298,72 @@ export class FinessimoApp {
     return gameModeRegistry.list();
   }
 
+  // Pause and unpause game methods
+  pause(): void {
+    this.isPaused = true;
+  }
+
+  unpause(): void {
+    this.isPaused = false;
+    // Reset frame time to avoid large time jumps
+    this.lastFrameTime = performance.now();
+  }
+
+  // Initialize settings modal and event handling
+  private initializeSettingsModal(): void {
+    this.settingsModal = document.querySelector("settings-modal");
+    if (this.settingsModal) {
+      this.settingsModal.addEventListener(
+        "settings-change",
+        this.handleSettingsChangeEvent,
+      );
+      this.settingsModal.addEventListener(
+        "settings-opened",
+        this.handleSettingsOpened,
+      );
+      this.settingsModal.addEventListener(
+        "settings-closed",
+        this.handleSettingsClosed,
+      );
+    }
+  }
+
+  // Apply persisted settings on startup
+  private applyPersistedSettings(): void {
+    if (!this.settingsModal) return;
+
+    try {
+      const initialSettings = this.settingsModal.getCurrentSettings();
+      const initialKeyBindings = this.settingsModal.getCurrentKeyBindings();
+      const toApply: Partial<GameSettings> = {
+        ...initialSettings,
+        keyBindings: initialKeyBindings,
+      };
+      this.handleSettingsChange(toApply);
+      // Prime the input handler timing with the current game state's timing
+      this.keyboardInputHandler.applyTiming(this.gameState.timing);
+    } catch {
+      /* ignore persisted settings errors */
+    }
+  }
+
   // Setup settings button handler
   private setupSettingsButton(): void {
     const settingsButton = document.getElementById("open-settings");
     if (settingsButton) {
       settingsButton.addEventListener("click", () => {
-        this.settingsRenderer.show();
+        if (this.settingsModal) {
+          this.settingsModal.show();
+        }
       });
     }
   }
+
+  // Event handler for settings-change events from the Lit component
+  private handleSettingsChangeEvent = (event: Event): void => {
+    const customEvent = event as CustomEvent<Partial<GameSettings>>;
+    this.handleSettingsChange(customEvent.detail);
+  };
 
   // Helper method to spawn the appropriate piece based on current mode
   private spawnNextPiece(): void {

@@ -1,5 +1,3 @@
-import tinykeys from "tinykeys";
-
 import { fromNow, createTimestamp } from "../types/timestamp";
 
 import {
@@ -8,6 +6,7 @@ import {
   saveBindingsToStorage,
 } from "./keyboard";
 import { DASMachineService } from "./machines/das";
+import { keyBindingManager } from "./utils/key-binding-manager";
 
 import type { InputHandler, InputHandlerState } from "./handler";
 import type { KeyBindings, BindableAction } from "./keyboard";
@@ -24,9 +23,9 @@ export class StateMachineInputHandler implements InputHandler {
   private lastDasMs?: number;
   private lastArrMs?: number;
 
-  // TinyKeys unsubscribe functions
-  private tinyKeysUnsubDown?: (() => void) | undefined;
-  private tinyKeysUnsubUp?: (() => void) | undefined;
+  // KeyBindingManager unsubscribe functions
+  private keyBindingsUnsubDown?: (() => void) | undefined;
+  private keyBindingsUnsubUp?: (() => void) | undefined;
 
   // Bound event handlers for cleanup
   private resetAllInputsBound = (): void => this.resetAllInputs();
@@ -54,11 +53,15 @@ export class StateMachineInputHandler implements InputHandler {
     this.softDropLastTime = undefined;
     this.dasService.reset();
 
-    // Register TinyKeys bindings
+    // Register key bindings
     const downBindings = this.buildDownBindings();
     const upBindings = this.buildUpBindings();
-    this.tinyKeysUnsubDown = tinykeys(window, downBindings);
-    this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: "keyup" });
+    this.keyBindingsUnsubDown = keyBindingManager.bind(window, downBindings, {
+      event: "keydown",
+    });
+    this.keyBindingsUnsubUp = keyBindingManager.bind(window, upBindings, {
+      event: "keyup",
+    });
 
     // Add safety event listeners for focus loss
     window.addEventListener("blur", this.resetAllInputsBound);
@@ -66,9 +69,9 @@ export class StateMachineInputHandler implements InputHandler {
   }
 
   stop(): void {
-    this.tinyKeysUnsubDown?.();
-    this.tinyKeysUnsubUp?.();
-    this.tinyKeysUnsubDown = this.tinyKeysUnsubUp = undefined;
+    this.keyBindingsUnsubDown?.();
+    this.keyBindingsUnsubUp?.();
+    this.keyBindingsUnsubDown = this.keyBindingsUnsubUp = undefined;
 
     // Remove safety event listeners
     window.removeEventListener("blur", this.resetAllInputsBound);
@@ -159,9 +162,7 @@ export class StateMachineInputHandler implements InputHandler {
   setKeyBindings(bindings: KeyBindings): void {
     // Check for duplicate key codes across actions
     const usedKeyCodes = new Set<string>();
-    const usedPatterns = new Set<string>();
     const duplicates: Array<string> = [];
-    const patternCollisions: Array<string> = [];
 
     for (const action of Object.keys(bindings) as Array<BindableAction>) {
       const keyCodes = bindings[action];
@@ -171,13 +172,6 @@ export class StateMachineInputHandler implements InputHandler {
           duplicates.push(keyCode);
         }
         usedKeyCodes.add(keyCode);
-
-        // Check normalized pattern collisions (e.g., ShiftLeft and ShiftRight both map to "Shift")
-        const pattern = this.toTinyKeysPattern(keyCode);
-        if (pattern !== keyCode && usedPatterns.has(pattern)) {
-          patternCollisions.push(`${keyCode} (maps to ${pattern})`);
-        }
-        usedPatterns.add(pattern);
       }
     }
 
@@ -187,26 +181,24 @@ export class StateMachineInputHandler implements InputHandler {
       );
     }
 
-    if (patternCollisions.length > 0) {
-      console.warn(
-        `Modifier key pattern collisions detected: ${patternCollisions.join(", ")}. Left/right variants of the same modifier will trigger the same action.`,
-      );
-    }
-
     this.bindings = { ...bindings };
     saveBindingsToStorage(bindings);
 
     // Clear key states to prevent stale state from old bindings
     this.keyStates.clear();
 
-    // Rebuild TinyKeys bindings if currently active
-    if (this.tinyKeysUnsubDown || this.tinyKeysUnsubUp) {
-      this.tinyKeysUnsubDown?.();
-      this.tinyKeysUnsubUp?.();
+    // Rebuild key bindings if currently active
+    if (this.keyBindingsUnsubDown || this.keyBindingsUnsubUp) {
+      this.keyBindingsUnsubDown?.();
+      this.keyBindingsUnsubUp?.();
       const downBindings = this.buildDownBindings();
       const upBindings = this.buildUpBindings();
-      this.tinyKeysUnsubDown = tinykeys(window, downBindings);
-      this.tinyKeysUnsubUp = tinykeys(window, upBindings, { event: "keyup" });
+      this.keyBindingsUnsubDown = keyBindingManager.bind(window, downBindings, {
+        event: "keydown",
+      });
+      this.keyBindingsUnsubUp = keyBindingManager.bind(window, upBindings, {
+        event: "keyup",
+      });
     }
   }
 
@@ -298,29 +290,6 @@ export class StateMachineInputHandler implements InputHandler {
     this.handleMovementKeyUp(direction, timestamp);
   }
 
-  private toTinyKeysPattern(raw: string): string {
-    // Pass through TinyKeys DSL combos unchanged
-    if (raw.includes("+")) return raw;
-
-    // Normalize pure modifiers from KeyboardEvent.code → TinyKeys key token
-    switch (raw) {
-      case "ShiftLeft":
-      case "ShiftRight":
-        return "Shift";
-      case "ControlLeft":
-      case "ControlRight":
-        return "Control";
-      case "AltLeft":
-      case "AltRight":
-        return "Alt";
-      case "MetaLeft":
-      case "MetaRight":
-        return "Meta";
-      default:
-        return raw; // e.g., "KeyZ", "ArrowLeft"
-    }
-  }
-
   private buildDownBindings(): Record<string, (event: KeyboardEvent) => void> {
     const bindings: Record<string, (event: KeyboardEvent) => void> = {};
 
@@ -328,8 +297,7 @@ export class StateMachineInputHandler implements InputHandler {
       [BindableAction, Array<string>]
     >) {
       for (const keyCode of keyCodes) {
-        const pattern = this.toTinyKeysPattern(keyCode);
-        bindings[pattern] = (event: KeyboardEvent): void => {
+        bindings[keyCode] = (event: KeyboardEvent): void => {
           this.handleKeyEvent(action, "down", event);
         };
       }
@@ -353,8 +321,7 @@ export class StateMachineInputHandler implements InputHandler {
     >) {
       if (upActions.includes(action)) {
         for (const keyCode of keyCodes) {
-          const pattern = this.toTinyKeysPattern(keyCode);
-          bindings[pattern] = (event: KeyboardEvent): void => {
+          bindings[keyCode] = (event: KeyboardEvent): void => {
             this.handleKeyEvent(action, "up", event);
           };
         }
@@ -504,6 +471,9 @@ export class StateMachineInputHandler implements InputHandler {
   ): void {
     if (!this.dispatch) return;
 
+    // Always prevent default behavior for game keys to avoid browser shortcuts
+    event.preventDefault();
+
     const blocked = this.isGameplayBlocked();
 
     if (blocked) {
@@ -512,8 +482,6 @@ export class StateMachineInputHandler implements InputHandler {
       }
       return;
     }
-
-    event.preventDefault();
     const timestamp = fromNow() as number;
 
     if (phase === "down") {
