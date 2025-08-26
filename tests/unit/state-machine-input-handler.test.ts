@@ -11,6 +11,22 @@ import type {
 } from "../../src/state/types";
 import type { SevenBagRng } from "../../src/core/rng";
 import { defaultKeyBindings } from "../../src/input/keyboard";
+// Use the active TinyKeys mock via Jest to share state with the module under test
+jest.mock("tinykeys");
+
+// Mock localStorage
+const mockLocalStorage = {
+  getItem: jest.fn<string | null, [string]>(),
+  setItem: jest.fn<void, [string, string]>(),
+  clear: jest.fn<void, []>(),
+};
+
+Object.defineProperty(window, "localStorage", {
+  value: mockLocalStorage,
+  writable: true,
+});
+
+// TinyKeys is mocked above; __mockTinyKeys references the same instance used by handler
 
 describe("StateMachineInputHandler", () => {
   let handler: StateMachineInputHandler;
@@ -121,6 +137,11 @@ describe("StateMachineInputHandler", () => {
 
     // Reset DOM state
     document.body.className = "";
+
+    // Clear mocks
+    mockLocalStorage.getItem.mockClear();
+    mockLocalStorage.setItem.mockClear();
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
@@ -383,6 +404,115 @@ describe("StateMachineInputHandler", () => {
       // Complete the right tap to get another dispatch
       handler.handleMovement("RightUp", 1150);
       expect(dispatchMock).toHaveBeenCalledTimes(2); // Left auto-tap + right manual tap
+    });
+  });
+
+  describe("modifier key bindings with TinyKeys", () => {
+    beforeEach(() => {
+      handler.init(dispatchMock);
+    });
+
+    afterEach(() => {
+      handler.stop();
+    });
+
+    test("modifier key normalization is applied correctly", () => {
+      // Bind actions to various modifier keys
+      const bindings = {
+        ...defaultKeyBindings(),
+        MoveLeft: ["ShiftLeft"],
+        MoveRight: ["ControlRight"],
+        RotateCW: ["AltLeft"],
+        RotateCCW: ["MetaRight"],
+      };
+
+      // This should not throw an error and should work correctly
+      expect(() => {
+        handler.setKeyBindings(bindings);
+        handler.start();
+        handler.stop();
+      }).not.toThrow();
+
+      // Verify bindings were stored correctly
+      const storedBindings = handler.getKeyBindings();
+      expect(storedBindings.MoveLeft).toEqual(["ShiftLeft"]);
+      expect(storedBindings.MoveRight).toEqual(["ControlRight"]);
+      expect(storedBindings.RotateCW).toEqual(["AltLeft"]);
+      expect(storedBindings.RotateCCW).toEqual(["MetaRight"]);
+    });
+
+    test("left/right modifier variants collision warning", () => {
+      // Bind different actions to left and right shift variants
+      const bindings = {
+        ...defaultKeyBindings(),
+        MoveLeft: ["ShiftLeft"],
+        MoveRight: ["ShiftRight"],
+      };
+
+      // Should warn about pattern collision
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+      handler.setKeyBindings(bindings);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Modifier key pattern collisions detected"),
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("ShiftRight (maps to Shift)"),
+      );
+
+      // Handler should still work despite collision
+      expect(() => {
+        handler.start();
+        handler.stop();
+      }).not.toThrow();
+
+      // Bindings should be stored as provided
+      const storedBindings = handler.getKeyBindings();
+      expect(storedBindings.MoveLeft).toEqual(["ShiftLeft"]);
+      expect(storedBindings.MoveRight).toEqual(["ShiftRight"]);
+
+      consoleSpy.mockRestore();
+    });
+
+    test("combo patterns can be set and retrieved", () => {
+      // Bind an action to a combo pattern
+      const bindings = {
+        ...defaultKeyBindings(),
+        RotateCCW: ["Control+KeyZ"],
+      };
+
+      expect(() => {
+        handler.setKeyBindings(bindings);
+        handler.start();
+        handler.stop();
+      }).not.toThrow();
+
+      // Combo should be stored correctly
+      const storedBindings = handler.getKeyBindings();
+      expect(storedBindings.RotateCCW).toEqual(["Control+KeyZ"]);
+    });
+
+    test("mixed modifier and non-modifier bindings work", () => {
+      const bindings = {
+        ...defaultKeyBindings(),
+        MoveLeft: ["ShiftLeft"], // Modifier key
+        MoveRight: ["ControlLeft"], // Modifier key
+        RotateCW: ["KeyZ"], // Non-modifier key
+        RotateCCW: ["Control+KeyX"], // Combo pattern
+      };
+
+      expect(() => {
+        handler.setKeyBindings(bindings);
+        handler.start();
+        handler.stop();
+      }).not.toThrow();
+
+      // All bindings should be stored correctly
+      const storedBindings = handler.getKeyBindings();
+      expect(storedBindings.MoveLeft).toEqual(["ShiftLeft"]);
+      expect(storedBindings.MoveRight).toEqual(["ControlLeft"]);
+      expect(storedBindings.RotateCW).toEqual(["KeyZ"]);
+      expect(storedBindings.RotateCCW).toEqual(["Control+KeyX"]);
     });
   });
 });
