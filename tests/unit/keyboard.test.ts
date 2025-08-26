@@ -50,14 +50,19 @@ describe("StateMachineInputHandler", () => {
 
     it("should register TinyKeys bindings on start", () => {
       handler.start();
-      const bindings = __mockTinyKeys.getBindings();
+      const keydownBindings = __mockTinyKeys.getKeydownBindings();
+      const keyupBindings = __mockTinyKeys.getKeyupBindings();
       
-      // Should have keydown and keyup bindings for each key
-      expect(bindings).toHaveProperty("ArrowLeft");
-      expect(bindings).toHaveProperty("ArrowLeft|keyup");
-      expect(bindings).toHaveProperty("ArrowRight");
-      expect(bindings).toHaveProperty("ArrowRight|keyup");
-      expect(bindings).toHaveProperty("Space");
+      // Should have keydown bindings for each key
+      expect(keydownBindings).toHaveProperty("ArrowLeft");
+      expect(keydownBindings).toHaveProperty("ArrowRight");
+      expect(keydownBindings).toHaveProperty("Space");
+      
+      // Should have keyup bindings for stateful keys only
+      expect(keyupBindings).toHaveProperty("ArrowLeft");
+      expect(keyupBindings).toHaveProperty("ArrowRight");
+      expect(keyupBindings).toHaveProperty("ArrowDown");
+      expect(keyupBindings).not.toHaveProperty("Space"); // HardDrop is not stateful
     });
 
     it("should unsubscribe TinyKeys bindings on stop", () => {
@@ -67,8 +72,10 @@ describe("StateMachineInputHandler", () => {
       handler.stop();
       
       expect(unsubscribe).toHaveBeenCalled();
-      const bindingsAfterStop = __mockTinyKeys.getBindings();
-      expect(Object.keys(bindingsAfterStop)).toHaveLength(0);
+      const keydownBindingsAfterStop = __mockTinyKeys.getKeydownBindings();
+      const keyupBindingsAfterStop = __mockTinyKeys.getKeyupBindings();
+      expect(Object.keys(keydownBindingsAfterStop)).toHaveLength(0);
+      expect(Object.keys(keyupBindingsAfterStop)).toHaveLength(0);
     });
   });
 
@@ -116,8 +123,7 @@ describe("StateMachineInputHandler", () => {
       handler.start();
 
       // Simulate key down (should not dispatch yet)
-      __mockTinyKeys.simulateKeyEvent("ArrowLeft", {
-        type: "keydown",
+      __mockTinyKeys.simulateKeyEvent("ArrowLeft", "keydown", {
         code: "ArrowLeft",
         repeat: false,
       });
@@ -126,8 +132,7 @@ describe("StateMachineInputHandler", () => {
       expect(mockDispatch).not.toHaveBeenCalled();
 
       // Simulate key up (should dispatch TapMove)
-      __mockTinyKeys.simulateKeyEvent("ArrowLeft|keyup", {
-        type: "keyup",
+      __mockTinyKeys.simulateKeyEvent("ArrowLeft", "keyup", {
         code: "ArrowLeft",
       });
 
@@ -142,8 +147,7 @@ describe("StateMachineInputHandler", () => {
     it("should dispatch input event on key up", () => {
       handler.start();
 
-      __mockTinyKeys.simulateKeyEvent("ArrowLeft|keyup", {
-        type: "keyup",
+      __mockTinyKeys.simulateKeyEvent("ArrowLeft", "keyup", {
         code: "ArrowLeft",
       });
 
@@ -154,8 +158,7 @@ describe("StateMachineInputHandler", () => {
     it("should ignore key repeat events", () => {
       handler.start();
 
-      __mockTinyKeys.simulateKeyEvent("ArrowLeft", {
-        type: "keydown",
+      __mockTinyKeys.simulateKeyEvent("ArrowLeft", "keydown", {
         code: "ArrowLeft",
         repeat: true,
       });
@@ -167,8 +170,7 @@ describe("StateMachineInputHandler", () => {
       document.body.classList.add("settings-open");
       handler.start();
 
-      __mockTinyKeys.simulateKeyEvent("ArrowLeft", {
-        type: "keydown",
+      __mockTinyKeys.simulateKeyEvent("ArrowLeft", "keydown", {
         code: "ArrowLeft",
         repeat: false,
       });

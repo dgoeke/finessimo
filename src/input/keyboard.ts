@@ -21,7 +21,7 @@ export function defaultKeyBindings(): KeyBindings {
     SoftDrop: ["ArrowDown", "KeyS"],
     HardDrop: ["Space"],
     RotateCW: ["ArrowUp", "KeyX"],
-    RotateCCW: ["ControlLeft", "KeyZ"],
+    RotateCCW: ["Control+KeyZ", "KeyZ"],
     Hold: ["KeyC"],
   };
 }

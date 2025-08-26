@@ -26,8 +26,8 @@ export class StateMachineInputHandler implements InputHandler {
   private tinyKeysUnsubUp?: () => void;
   
   // Bound event handlers for cleanup
-  private resetAllInputsBound = this.resetAllInputs.bind(this);
-  private onVisibilityChangeBound = this.onVisibilityChange.bind(this);
+  private resetAllInputsBound = () => this.resetAllInputs();
+  private onVisibilityChangeBound = () => this.onVisibilityChange();
 
   constructor(dasMs = 133, arrMs = 2) {
     this.dasService = new DASMachineService({
@@ -152,6 +152,23 @@ export class StateMachineInputHandler implements InputHandler {
   }
 
   setKeyBindings(bindings: KeyBindings): void {
+    // Check for duplicate key codes across actions
+    const usedKeyCodes = new Set<string>();
+    const duplicates: string[] = [];
+    
+    for (const [action, keyCodes] of Object.entries(bindings) as [BindableAction, string[]][]) {
+      for (const keyCode of keyCodes) {
+        if (usedKeyCodes.has(keyCode)) {
+          duplicates.push(keyCode);
+        }
+        usedKeyCodes.add(keyCode);
+      }
+    }
+    
+    if (duplicates.length > 0) {
+      console.warn(`Duplicate key bindings detected: ${duplicates.join(', ')}. Some bindings may be overwritten.`);
+    }
+    
     this.bindings = { ...bindings };
     saveBindingsToStorage(bindings);
     
@@ -231,19 +248,12 @@ export class StateMachineInputHandler implements InputHandler {
 
     const direction: -1 | 1 = keyBinding === "MoveLeft" ? -1 : 1;
 
-    // Guard against repeated KEY_DOWN for same direction
-    if (this.dasService.getState().context.direction === direction) {
-      return;
-    }
-
     // For keyboard events, check for multiple keys bound to same action
     const codes = this.bindings[keyBinding];
     const anotherDown = codes.some((c) => this.keyStates.get(c));
 
-    if (
-      this.dasService.getState().context.direction === direction &&
-      anotherDown
-    ) {
+    // Guard against repeated KEY_DOWN for same direction or multiple keys for same action
+    if (this.dasService.getState().context.direction === direction || anotherDown) {
       return;
     }
 
@@ -328,7 +338,10 @@ export class StateMachineInputHandler implements InputHandler {
     if (blocked) {
       // Always process releases even when blocked to prevent stuck inputs
       if (phase === 'up') {
-        this.keyStates.delete(event.code);
+        // Only clear keyStates for stateful actions
+        if (binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop') {
+          this.keyStates.delete(event.code);
+        }
         const t = fromNow() as number;
         if (binding === 'MoveLeft' || binding === 'MoveRight') {
           this.handleMovementUp(binding, t);
@@ -346,11 +359,16 @@ export class StateMachineInputHandler implements InputHandler {
     const timestamp = fromNow() as number;
 
     if (phase === 'down') {
-      // Ignore repeats
+      // Ignore repeats for all actions
       if (event.repeat) return;
-      if (this.keyStates.get(event.code)) return;
-
-      this.keyStates.set(event.code, true);
+      
+      // Only track keyStates for stateful actions (those that need release handling)
+      const isStateful = binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop';
+      
+      if (isStateful) {
+        if (this.keyStates.get(event.code)) return;
+        this.keyStates.set(event.code, true);
+      }
 
       // Handle different key types
       switch (binding) {
@@ -390,8 +408,10 @@ export class StateMachineInputHandler implements InputHandler {
           break;
       }
     } else {
-      // Handle key releases
-      this.keyStates.delete(event.code);
+      // Handle key releases - only for stateful actions
+      if (binding === 'MoveLeft' || binding === 'MoveRight' || binding === 'SoftDrop') {
+        this.keyStates.delete(event.code);
+      }
 
       switch (binding) {
         case "MoveLeft":

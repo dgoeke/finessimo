@@ -50,8 +50,7 @@ export const __mockTinyKeys = {
   getBindings: (): TinyKeysBindings => mockKeydownBindings,
   
   // Simulate a keyboard event by calling the appropriate handler
-  simulateKeyEvent: (keyPattern: string, eventInit: KeyboardEventInit = {}): void => {
-    const eventType = eventInit.type || 'keydown';
+  simulateKeyEvent: (keyPattern: string, eventType: 'keydown' | 'keyup' = 'keydown', eventInit: KeyboardEventInit = {}): void => {
     const bindings = eventType === 'keyup' ? mockKeyupBindings : mockKeydownBindings;
     const handler = bindings[keyPattern];
     
