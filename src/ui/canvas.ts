@@ -1,13 +1,14 @@
-import { GameState, Board, ActivePiece } from "../state/types";
-import { PIECES } from "../core/pieces";
 import { calculateGhostPosition } from "../core/board";
+import { PIECES } from "../core/pieces";
+import { type GameState, type Board, type ActivePiece } from "../state/types";
+
 import { BasicFinesseRenderer, createFinesseVisualization } from "./finesse";
 
-export interface CanvasRenderer {
+export type CanvasRenderer = {
   initialize(canvas: HTMLCanvasElement): void;
   render(gameState: GameState): void;
   destroy(): void;
-}
+};
 
 export class BasicCanvasRenderer implements CanvasRenderer {
   private canvas: HTMLCanvasElement | undefined;
@@ -154,11 +155,11 @@ export class BasicCanvasRenderer implements CanvasRenderer {
     const pixelY = y * this.cellSize;
 
     // Draw ghost piece with transparent fill and dashed border
-    this.ctx.fillStyle = color + "40"; // Add 40 for ~25% opacity
+    this.ctx.fillStyle = `${color}40`; // Add 40 for ~25% opacity
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
     // Draw dashed border for ghost piece
-    this.ctx.strokeStyle = color + "AA"; // Add AA for ~67% opacity
+    this.ctx.strokeStyle = `${color}AA`; // Add AA for ~67% opacity
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([4, 4]); // Dashed line pattern
     this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);

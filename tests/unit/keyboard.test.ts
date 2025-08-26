@@ -3,16 +3,16 @@ import {
   defaultKeyBindings,
   loadBindingsFromStorage,
   saveBindingsToStorage,
-  KeyBindings,
+  type KeyBindings,
 } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
-import { Action, GameState } from "../../src/state/types";
+import { type Action, type GameState } from "../../src/state/types";
 
 // Mock localStorage
 const mockLocalStorage = {
-  getItem: jest.fn<string | null, [string]>(),
-  setItem: jest.fn<void, [string, string]>(),
-  clear: jest.fn<void, []>(),
+  clear: jest.fn(),
+  getItem: jest.fn(),
+  setItem: jest.fn(),
 };
 
 Object.defineProperty(window, "localStorage", {
@@ -24,11 +24,11 @@ Object.defineProperty(window, "localStorage", {
 
 describe("StateMachineInputHandler", () => {
   let handler: StateMachineInputHandler;
-  let mockDispatch: jest.Mock<void, [Action]>;
+  let mockDispatch: jest.Mock<undefined, [Action]>;
 
   beforeEach(() => {
     handler = new StateMachineInputHandler();
-    mockDispatch = jest.fn<void, [Action]>();
+    mockDispatch = jest.fn<undefined, [Action]>();
 
     mockLocalStorage.getItem.mockClear();
     mockLocalStorage.setItem.mockClear();
@@ -87,7 +87,7 @@ describe("StateMachineInputHandler", () => {
       // Provide GameState for StateMachineInputHandler - it needs status: 'playing' to dispatch inputs
       const mockGameState = {
         status: "playing",
-        timing: { dasMs: 100, arrMs: 30, softDrop: 10 },
+        timing: { arrMs: 30, dasMs: 100, softDrop: 10 },
       } as GameState;
       handler.update(mockGameState, 1000);
     });
@@ -99,7 +99,7 @@ describe("StateMachineInputHandler", () => {
       expect(mockDispatch).not.toHaveBeenCalled(); // tap classification occurs on release
       handler.handleMovement("LeftUp", 1050);
       expect(mockDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "TapMove", dir: -1 }),
+        expect.objectContaining({ dir: -1, type: "TapMove" }),
       );
     });
 
@@ -232,7 +232,9 @@ describe("storage functions", () => {
       const bindings = defaultKeyBindings();
       saveBindingsToStorage(bindings);
 
-      const setItemCall = mockLocalStorage.setItem.mock.calls[0];
+      const setItemCall = mockLocalStorage.setItem.mock.calls[0] as
+        | [string, string]
+        | undefined;
       if (!setItemCall || typeof setItemCall[1] !== "string") {
         throw new Error("setItem call not found or invalid");
       }

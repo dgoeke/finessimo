@@ -11,17 +11,28 @@
 // Wall Kick Tables
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
+import { type ActivePiece, type Board, type Rot } from "../state/types";
+
+import { canPlacePiece } from "./board";
+
 export const KICKS_JLSTZ: Record<
   string,
-  readonly (readonly [number, number])[]
+  ReadonlyArray<readonly [number, number]>
 > = {
-  // 0 -> R / R -> 0
-  "spawn->right": [
+  // L -> 0 / 0 -> L
+  "left->spawn": [
     [0, 0],
     [-1, 0],
-    [-1, 1],
-    [0, -2],
-    [-1, -2],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
+  ],
+  "left->two": [
+    [0, 0],
+    [-1, 0],
+    [-1, -1],
+    [0, 2],
+    [-1, 2],
   ],
   "right->spawn": [
     [0, 0],
@@ -38,7 +49,15 @@ export const KICKS_JLSTZ: Record<
     [0, 2],
     [1, 2],
   ],
-  "two->right": [
+  "spawn->left": [
+    [0, 0],
+    [-1, 0],
+    [-1, 1],
+    [0, -2],
+    [-1, -2],
+  ],
+  // 0 -> R / R -> 0
+  "spawn->right": [
     [0, 0],
     [-1, 0],
     [-1, 1],
@@ -53,22 +72,7 @@ export const KICKS_JLSTZ: Record<
     [0, -2],
     [1, -2],
   ],
-  "left->two": [
-    [0, 0],
-    [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
-  ],
-  // L -> 0 / 0 -> L
-  "left->spawn": [
-    [0, 0],
-    [-1, 0],
-    [-1, -1],
-    [0, 2],
-    [-1, 2],
-  ],
-  "spawn->left": [
+  "two->right": [
     [0, 0],
     [-1, 0],
     [-1, 1],
@@ -78,9 +82,19 @@ export const KICKS_JLSTZ: Record<
 };
 
 // Standard kicks for I piece (SRS-compliant 4-way rotation)
-export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
-  // 0 -> R / R -> 0
-  "spawn->right": [
+export const KICKS_I: Record<
+  string,
+  ReadonlyArray<readonly [number, number]>
+> = {
+  // L -> 0 / 0 -> L
+  "left->spawn": [
+    [0, 0],
+    [-1, 0],
+    [2, 0],
+    [-1, 2],
+    [2, -1],
+  ],
+  "left->two": [
     [0, 0],
     [-2, 0],
     [1, 0],
@@ -102,12 +116,20 @@ export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
     [-1, 2],
     [2, -1],
   ],
-  "two->right": [
+  "spawn->left": [
     [0, 0],
     [1, 0],
     [-2, 0],
     [1, -2],
     [-2, 1],
+  ],
+  // 0 -> R / R -> 0
+  "spawn->right": [
+    [0, 0],
+    [-2, 0],
+    [1, 0],
+    [-2, -1],
+    [1, 2],
   ],
   // 2 -> L / L -> 2
   "two->left": [
@@ -117,22 +139,7 @@ export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
     [2, 1],
     [-1, -2],
   ],
-  "left->two": [
-    [0, 0],
-    [-2, 0],
-    [1, 0],
-    [-2, -1],
-    [1, 2],
-  ],
-  // L -> 0 / 0 -> L
-  "left->spawn": [
-    [0, 0],
-    [-1, 0],
-    [2, 0],
-    [-1, 2],
-    [2, -1],
-  ],
-  "spawn->left": [
+  "two->right": [
     [0, 0],
     [1, 0],
     [-2, 0],
@@ -141,13 +148,10 @@ export const KICKS_I: Record<string, readonly (readonly [number, number])[]> = {
   ],
 };
 
-import { ActivePiece, Board, Rot } from "../state/types";
-import { canPlacePiece } from "./board";
-
 // Helper function to get the appropriate kick table for a piece
 function getKickTable(
   pieceId: string,
-): Record<string, readonly (readonly [number, number])[]> {
+): Record<string, ReadonlyArray<readonly [number, number]>> {
   return pieceId === "I" ? KICKS_I : KICKS_JLSTZ;
 }
 
@@ -163,10 +167,10 @@ export function getNextRotation(currentRot: Rot, direction: "CW" | "CCW"): Rot {
         return "left";
       case "left":
         return "spawn";
+      default:
+        return currentRot;
     }
-  }
-
-  if (direction === "CCW") {
+  } else {
     switch (currentRot) {
       case "spawn":
         return "left";
@@ -176,10 +180,10 @@ export function getNextRotation(currentRot: Rot, direction: "CW" | "CCW"): Rot {
         return "right";
       case "right":
         return "spawn";
+      default:
+        return currentRot;
     }
   }
-
-  return currentRot;
 }
 
 // Check if a rotation is valid (doesn't perform it, just checks)

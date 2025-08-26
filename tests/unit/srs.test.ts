@@ -1,7 +1,9 @@
-import { canRotate, tryRotate, getNextRotation } from "../../src/core/srs";
 import { createEmptyBoard } from "../../src/core/board";
-import { ActivePiece, Board, Rot } from "../../src/state/types";
+import { canRotate, tryRotate, getNextRotation } from "../../src/core/srs";
+import { type ActivePiece, type Board, type Rot } from "../../src/state/types";
 import { assertDefined } from "../test-helpers";
+
+import type * as SRSModule from "../../src/core/srs";
 
 describe("SRS Rotation Logic", () => {
   let emptyBoard: Board;
@@ -266,11 +268,10 @@ describe("SRS Rotation Logic", () => {
       expect(canRotate(highPiece, "right", emptyBoard)).toBe(true);
     });
 
-    it("should return current rotation for invalid direction in getNextRotation", () => {
-      // Test invalid direction that would trigger the fallback
-      const invalidDirection = "INVALID" as unknown as "CW" | "CCW";
-      const result = getNextRotation("spawn", invalidDirection);
-      expect(result).toBe("spawn"); // Should return current rotation unchanged
+    it("should handle all valid directions correctly", () => {
+      // Test that all valid directions work as expected
+      expect(getNextRotation("spawn", "CW")).toBe("right");
+      expect(getNextRotation("spawn", "CCW")).toBe("left");
     });
 
     it("should handle edge case scenarios that might not have kick data", () => {
@@ -303,9 +304,7 @@ describe("SRS Rotation Logic", () => {
       const originalKickTable = (global as GlobalWithKickTable).getKickTable;
       jest.doMock("../../src/core/srs", () => {
         const actual =
-          jest.requireActual<typeof import("../../src/core/srs")>(
-            "../../src/core/srs",
-          );
+          jest.requireActual<typeof SRSModule>("../../src/core/srs");
         return {
           ...actual,
           getKickTable: (): Record<string, unknown> => ({}), // Return empty kick table

@@ -1,17 +1,18 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { reducer } from "../../src/state/reducer";
-import { GameState, Board, idx } from "../../src/state/types";
+import { type GameState, type Board, idx } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 
 function createTestState(): GameState {
   return reducer(undefined, {
-    type: "Init",
     seed: "test",
     timing: {
       gravityEnabled: true,
       gravityMs: 1000,
       lockDelayMs: 500,
     },
+    type: "Init",
   });
 }
 
@@ -36,9 +37,9 @@ function createAlmostFullBoard(): Board {
   }
 
   return {
-    width: 10,
-    height: 20,
     cells,
+    height: 20,
+    width: 10,
   };
 }
 
@@ -49,24 +50,24 @@ describe("top-out detection", () => {
     // Create state where piece will be forced to lock at y < 0
     const stateWithFullBoard: GameState = {
       ...state,
-      board: createAlmostFullBoard(),
       active: {
         id: "T",
+        rot: "spawn",
         x: 4,
         y: -1, // Piece position above visible board
-        rot: "spawn",
       },
+      board: createAlmostFullBoard(),
       physics: {
         ...state.physics,
-        lockDelayStartTime: 1000,
         lastGravityTime: 0,
+        lockDelayStartTime: 1000,
       },
     };
 
     // Trigger auto-lock
     const newState = reducer(stateWithFullBoard, {
-      type: "Tick",
       timestampMs: createTimestamp(1500 + 500),
+      type: "Tick",
     });
 
     expect(newState.status).toBe("topOut");
@@ -79,18 +80,18 @@ describe("top-out detection", () => {
     // Use the same almost full board that prevents movement
     const stateWithFullBoard: GameState = {
       ...state,
-      board: createAlmostFullBoard(),
       active: {
         id: "T",
+        rot: "spawn",
         x: 4,
         y: -2, // T-piece high above board
-        rot: "spawn",
       },
+      board: createAlmostFullBoard(),
     };
 
     const newState = reducer(stateWithFullBoard, {
-      type: "HardDrop",
       timestampMs: createTimestamp(1000),
+      type: "HardDrop",
     });
 
     expect(newState.status).toBe("topOut");
@@ -105,20 +106,20 @@ describe("top-out detection", () => {
       ...state,
       active: {
         id: "T",
+        rot: "spawn",
         x: 4,
         y: 18, // Safe position within board
-        rot: "spawn",
       },
       physics: {
         ...state.physics,
-        lockDelayStartTime: 1000,
         lastGravityTime: 0,
+        lockDelayStartTime: 1000,
       },
     };
 
     const newState = reducer(safeState, {
-      type: "Tick",
       timestampMs: createTimestamp(1500 + 500),
+      type: "Tick",
     });
 
     expect(newState.status).toBe("playing");

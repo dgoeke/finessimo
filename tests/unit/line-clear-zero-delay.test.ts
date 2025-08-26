@@ -1,19 +1,20 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { reducer } from "../../src/state/reducer";
-import { GameState, Board, idx } from "../../src/state/types";
+import { type GameState, type Board, idx } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 
 // Helper to create game state with zero line clear delay
 function createTestState(): GameState {
   return reducer(undefined, {
-    type: "Init",
     seed: "test",
     timing: {
       gravityEnabled: true,
       gravityMs: 1000,
-      lockDelayMs: 500,
       lineClearDelayMs: 0, // Zero delay for immediate clearing
+      lockDelayMs: 500,
     },
+    type: "Init",
   });
 }
 
@@ -30,9 +31,9 @@ function createBoardWithAlmostCompletedLines(): Board {
   }
 
   return {
-    width: 10,
-    height: 20,
     cells,
+    height: 20,
+    width: 10,
   };
 }
 
@@ -45,24 +46,24 @@ describe("line clear with zero delay", () => {
     // Set up state with almost completed lines and active piece that will complete them
     const stateWithBoard: GameState = {
       ...state,
-      board: boardWithGaps,
       active: {
         id: "O", // Use O piece which is simpler - 2x2 square
+        rot: "spawn", // O piece same in all rotations
         x: 3, // Position so cells land at x=4,5
         y: 18, // Position so cells land at y=18,19
-        rot: "spawn", // O piece same in all rotations
       },
+      board: boardWithGaps,
       physics: {
         ...state.physics,
-        lockDelayStartTime: 1000, // Already in lock delay
         lastGravityTime: 0,
+        lockDelayStartTime: 1000, // Already in lock delay
       },
     };
 
     // Trigger auto-lock with Tick after lock delay expires
     const newState = reducer(stateWithBoard, {
-      type: "Tick",
       timestampMs: createTimestamp(1500 + 500), // Past lock delay
+      type: "Tick",
     });
 
     // Lines should be cleared immediately
@@ -96,18 +97,18 @@ describe("line clear with zero delay", () => {
 
     const stateWithBoard: GameState = {
       ...state,
-      board: createBoardWithAlmostCompletedLines(),
       active: {
         id: "O",
+        rot: "spawn",
         x: 3,
         y: 10, // High up, will drop down
-        rot: "spawn",
       },
+      board: createBoardWithAlmostCompletedLines(),
     };
 
     const newState = reducer(stateWithBoard, {
-      type: "HardDrop",
       timestampMs: createTimestamp(1000),
+      type: "HardDrop",
     });
 
     // Lines should be cleared immediately

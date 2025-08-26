@@ -4,9 +4,10 @@ import {
   type InputHandler,
   type InputHandlerState,
 } from "../../src/input/handler";
-import type { Action, GameState, InputEvent } from "../../src/state/types";
 import { defaultKeyBindings, type KeyBindings } from "../../src/input/keyboard";
 import { createTimestamp } from "../../src/types/timestamp";
+
+import type { Action, GameState, InputEvent } from "../../src/state/types";
 
 describe("handler.ts", () => {
   describe("MockInputHandler", () => {
@@ -15,7 +16,7 @@ describe("handler.ts", () => {
 
     beforeEach(() => {
       mockHandler = new MockInputHandler();
-      dispatchMock = jest.fn<void, [Action]>();
+      dispatchMock = jest.fn();
     });
 
     afterEach(() => {
@@ -27,12 +28,12 @@ describe("handler.ts", () => {
         const state = mockHandler.getState();
 
         expect(state).toEqual({
+          arrLastTime: undefined,
+          currentDirection: undefined,
+          dasStartTime: undefined,
           isLeftKeyDown: false,
           isRightKeyDown: false,
           isSoftDropDown: false,
-          dasStartTime: undefined,
-          arrLastTime: undefined,
-          currentDirection: undefined,
           softDropLastTime: undefined,
         });
       });
@@ -86,11 +87,7 @@ describe("handler.ts", () => {
           state.arrLastTime === undefined ||
             typeof state.arrLastTime === "number",
         ).toBe(true);
-        expect(
-          state.currentDirection === undefined ||
-            state.currentDirection === -1 ||
-            state.currentDirection === 1,
-        ).toBe(true);
+        expect([-1, 1, undefined]).toContain(state.currentDirection);
         expect(
           state.softDropLastTime === undefined ||
             typeof state.softDropLastTime === "number",
@@ -148,9 +145,9 @@ describe("handler.ts", () => {
 
       test("setState updates internal state", () => {
         const updates: Partial<InputHandlerState> = {
-          isLeftKeyDown: true,
           currentDirection: -1,
           dasStartTime: 1000,
+          isLeftKeyDown: true,
         };
 
         mockHandler.setState(updates);
@@ -168,15 +165,15 @@ describe("handler.ts", () => {
       test("setState performs partial updates", () => {
         // Set initial state
         mockHandler.setState({
+          currentDirection: -1,
           isLeftKeyDown: true,
           isRightKeyDown: true,
-          currentDirection: -1,
         });
 
         // Partial update
         mockHandler.setState({
-          isLeftKeyDown: false,
           dasStartTime: 2000,
+          isLeftKeyDown: false,
         });
 
         const state = mockHandler.getState();
@@ -188,12 +185,12 @@ describe("handler.ts", () => {
 
       test("setState handles all state properties", () => {
         const fullState: InputHandlerState = {
+          arrLastTime: 1500,
+          currentDirection: 1,
+          dasStartTime: 1000,
           isLeftKeyDown: true,
           isRightKeyDown: true,
           isSoftDropDown: true,
-          dasStartTime: 1000,
-          arrLastTime: 1500,
-          currentDirection: 1,
           softDropLastTime: 2000,
         };
 
@@ -224,14 +221,14 @@ describe("handler.ts", () => {
       test("simulateAction handles various action types", () => {
         mockHandler.init(dispatchMock);
 
-        const actions: Action[] = [
+        const actions: Array<Action> = [
           { type: "Hold" },
-          { type: "Rotate", dir: "CW" },
-          { type: "SoftDrop", on: true },
-          { type: "HardDrop", timestampMs: createTimestamp(1000) },
-          { type: "TapMove", dir: -1, timestampMs: createTimestamp(1000) },
-          { type: "HoldMove", dir: 1, timestampMs: createTimestamp(1000) },
-          { type: "RepeatMove", dir: -1, timestampMs: createTimestamp(1000) },
+          { dir: "CW", type: "Rotate" },
+          { on: true, type: "SoftDrop" },
+          { timestampMs: createTimestamp(1000), type: "HardDrop" },
+          { dir: -1, timestampMs: createTimestamp(1000), type: "TapMove" },
+          { dir: 1, timestampMs: createTimestamp(1000), type: "HoldMove" },
+          { dir: -1, timestampMs: createTimestamp(1000), type: "RepeatMove" },
         ];
 
         actions.forEach((action) => {
@@ -302,34 +299,29 @@ describe("handler.ts", () => {
 
         // State should remain unchanged
         expect(mockHandler.getState()).toEqual({
+          arrLastTime: undefined,
+          currentDirection: undefined,
+          dasStartTime: undefined,
           isLeftKeyDown: false,
           isRightKeyDown: false,
           isSoftDropDown: false,
-          dasStartTime: undefined,
-          arrLastTime: undefined,
-          currentDirection: undefined,
           softDropLastTime: undefined,
         });
       });
 
-      test("setState with undefined values", () => {
+      test("setState with undefined values for optional fields", () => {
         mockHandler.setState({
-          isLeftKeyDown: true,
           dasStartTime: 1000,
+          isLeftKeyDown: true,
         });
 
         mockHandler.setState({
-          isLeftKeyDown: undefined as unknown as boolean, // Should be handled gracefully
-          dasStartTime: undefined,
+          dasStartTime: undefined, // This is valid - dasStartTime can be undefined
         });
 
         const state = mockHandler.getState();
         expect(state.dasStartTime).toBeUndefined();
-        // isLeftKeyDown might be undefined or false depending on implementation
-        expect(
-          typeof state.isLeftKeyDown === "boolean" ||
-            state.isLeftKeyDown === undefined,
-        ).toBe(true);
+        expect(state.isLeftKeyDown).toBe(true); // Should remain from previous setState
       });
 
       test("setKeyBindings with incomplete bindings", () => {
@@ -370,21 +362,21 @@ describe("handler.ts", () => {
 
         // Simulate a DAS scenario
         mockHandler.setState({
-          isLeftKeyDown: false,
           currentDirection: undefined,
           dasStartTime: undefined,
+          isLeftKeyDown: false,
         });
 
         // Key down
         mockHandler.setState({
-          isLeftKeyDown: true,
           currentDirection: -1,
           dasStartTime: 1000,
+          isLeftKeyDown: true,
         });
         mockHandler.simulateAction({
-          type: "TapMove",
           dir: -1,
           timestampMs: createTimestamp(1000),
+          type: "TapMove",
         });
 
         // DAS expires, start repeating
@@ -392,9 +384,9 @@ describe("handler.ts", () => {
           arrLastTime: 1133, // DAS + 133ms
         });
         mockHandler.simulateAction({
-          type: "HoldMove",
           dir: -1,
           timestampMs: createTimestamp(1133),
+          type: "HoldMove",
         });
 
         // ARR repeats
@@ -402,34 +394,34 @@ describe("handler.ts", () => {
           arrLastTime: 1135, // +2ms ARR
         });
         mockHandler.simulateAction({
-          type: "RepeatMove",
           dir: -1,
           timestampMs: createTimestamp(1135),
+          type: "RepeatMove",
         });
 
         // Key up
         mockHandler.setState({
-          isLeftKeyDown: false,
+          arrLastTime: undefined,
           currentDirection: undefined,
           dasStartTime: undefined,
-          arrLastTime: undefined,
+          isLeftKeyDown: false,
         });
 
         expect(dispatchMock).toHaveBeenCalledTimes(3);
         expect(dispatchMock).toHaveBeenNthCalledWith(1, {
-          type: "TapMove",
           dir: -1,
           timestampMs: createTimestamp(1000),
+          type: "TapMove",
         });
         expect(dispatchMock).toHaveBeenNthCalledWith(2, {
-          type: "HoldMove",
           dir: -1,
           timestampMs: createTimestamp(1133),
+          type: "HoldMove",
         });
         expect(dispatchMock).toHaveBeenNthCalledWith(3, {
-          type: "RepeatMove",
           dir: -1,
           timestampMs: createTimestamp(1135),
+          type: "RepeatMove",
         });
       });
 
@@ -441,33 +433,32 @@ describe("handler.ts", () => {
           isSoftDropDown: true,
           softDropLastTime: 1000,
         });
-        mockHandler.simulateAction({ type: "SoftDrop", on: true });
+        mockHandler.simulateAction({ on: true, type: "SoftDrop" });
 
         // Soft drop pulses
         mockHandler.setState({
           softDropLastTime: 1050,
         });
-        mockHandler.simulateAction({ type: "SoftDrop", on: true });
+        mockHandler.simulateAction({ on: true, type: "SoftDrop" });
 
         // Stop soft drop
         mockHandler.setState({
           isSoftDropDown: false,
-          softDropLastTime: undefined,
         });
-        mockHandler.simulateAction({ type: "SoftDrop", on: false });
+        mockHandler.simulateAction({ on: false, type: "SoftDrop" });
 
         expect(dispatchMock).toHaveBeenCalledTimes(3);
         expect(dispatchMock).toHaveBeenNthCalledWith(1, {
-          type: "SoftDrop",
           on: true,
+          type: "SoftDrop",
         });
         expect(dispatchMock).toHaveBeenNthCalledWith(2, {
-          type: "SoftDrop",
           on: true,
+          type: "SoftDrop",
         });
         expect(dispatchMock).toHaveBeenNthCalledWith(3, {
-          type: "SoftDrop",
           on: false,
+          type: "SoftDrop",
         });
       });
     });
@@ -475,10 +466,10 @@ describe("handler.ts", () => {
     describe("concurrent state management", () => {
       test("can handle multiple direction states", () => {
         mockHandler.setState({
-          isLeftKeyDown: true,
-          isRightKeyDown: true, // Both keys somehow pressed
           currentDirection: -1, // But left wins
           dasStartTime: 1000,
+          isLeftKeyDown: true,
+          isRightKeyDown: true, // Both keys somehow pressed
         });
 
         const state = mockHandler.getState();
@@ -492,28 +483,28 @@ describe("handler.ts", () => {
 
         // Start with left
         mockHandler.setState({
-          isLeftKeyDown: true,
           currentDirection: -1,
           dasStartTime: 1000,
+          isLeftKeyDown: true,
         });
 
         // Switch to right
         mockHandler.setState({
-          isLeftKeyDown: false,
-          isRightKeyDown: true,
           currentDirection: 1,
           dasStartTime: 1100, // New DAS timer
+          isLeftKeyDown: false,
+          isRightKeyDown: true,
         });
         mockHandler.simulateAction({
-          type: "TapMove",
           dir: 1,
           timestampMs: createTimestamp(1100),
+          type: "TapMove",
         });
 
         expect(dispatchMock).toHaveBeenCalledWith({
-          type: "TapMove",
           dir: 1,
           timestampMs: createTimestamp(1100),
+          type: "TapMove",
         });
       });
     });
@@ -529,8 +520,8 @@ describe("handler.ts", () => {
     });
 
     test("handles single input", () => {
-      const events: InputEvent[] = [
-        { tMs: 1000, frame: 1, action: "LeftDown" },
+      const events: Array<InputEvent> = [
+        { action: "LeftDown", frame: 1, tMs: 1000 },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -539,10 +530,10 @@ describe("handler.ts", () => {
 
     test("handles inputs with same timestamp", () => {
       const t = 1000;
-      const events: InputEvent[] = [
-        { tMs: t, frame: 1, action: "LeftDown" },
-        { tMs: t, frame: 1, action: "RightDown" }, // Same timestamp
-        { tMs: t, frame: 1, action: "RotateCW" },
+      const events: Array<InputEvent> = [
+        { action: "LeftDown", frame: 1, tMs: t },
+        { action: "RightDown", frame: 1, tMs: t }, // Same timestamp
+        { action: "RotateCW", frame: 1, tMs: t },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -551,9 +542,9 @@ describe("handler.ts", () => {
 
     test("handles very large cancel window", () => {
       const t = 1000;
-      const events: InputEvent[] = [
-        { tMs: t, frame: 1, action: "LeftDown" },
-        { tMs: t + 500, frame: 2, action: "RightDown" }, // 500ms apart
+      const events: Array<InputEvent> = [
+        { action: "LeftDown", frame: 1, tMs: t },
+        { action: "RightDown", frame: 2, tMs: t + 500 }, // 500ms apart
       ];
 
       const result = normalizeInputSequence(events, 1000); // 1000ms window
@@ -562,9 +553,9 @@ describe("handler.ts", () => {
 
     test("handles zero cancel window", () => {
       const t = 1000;
-      const events: InputEvent[] = [
-        { tMs: t, frame: 1, action: "LeftDown" },
-        { tMs: t + 1, frame: 2, action: "RightDown" }, // 1ms apart
+      const events: Array<InputEvent> = [
+        { action: "LeftDown", frame: 1, tMs: t },
+        { action: "RightDown", frame: 2, tMs: t + 1 }, // 1ms apart
       ];
 
       const result = normalizeInputSequence(events, 0); // No cancellation
@@ -573,11 +564,11 @@ describe("handler.ts", () => {
 
     test("preserves input order after cancellation", () => {
       const t = 1000;
-      const events: InputEvent[] = [
-        { tMs: t, frame: 1, action: "RotateCW" },
-        { tMs: t + 10, frame: 2, action: "LeftDown" },
-        { tMs: t + 20, frame: 3, action: "RightDown" }, // Cancels LeftDown
-        { tMs: t + 100, frame: 4, action: "Hold" },
+      const events: Array<InputEvent> = [
+        { action: "RotateCW", frame: 1, tMs: t },
+        { action: "LeftDown", frame: 2, tMs: t + 10 },
+        { action: "RightDown", frame: 3, tMs: t + 20 }, // Cancels LeftDown
+        { action: "Hold", frame: 4, tMs: t + 100 },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -585,10 +576,10 @@ describe("handler.ts", () => {
     });
 
     test("handles malformed events gracefully", () => {
-      const events: InputEvent[] = [
-        { tMs: 1000, frame: 1, action: "LeftDown" },
+      const events: Array<InputEvent> = [
+        { action: "LeftDown", frame: 1, tMs: 1000 },
         // Test with undefined/null values filtered out
-        { tMs: 1100, frame: 2, action: "RotateCW" },
+        { action: "RotateCW", frame: 2, tMs: 1100 },
       ];
 
       const result = normalizeInputSequence(events, 50);

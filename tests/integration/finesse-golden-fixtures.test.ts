@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
-import { finesseCalculator } from "../../src/finesse/calculator";
-import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
+
 import { PIECES } from "../../src/core/pieces";
+import { finesseCalculator } from "../../src/finesse/calculator";
+
+import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
 
@@ -11,13 +13,13 @@ function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   return { id, rot: "spawn", x: topLeft[0], y: topLeft[1] };
 }
 
-interface GoldenEntry {
+type GoldenEntry = {
   piece: keyof typeof PIECES;
   targetX: number;
   targetRot: Rot;
   expectedLen: number;
   first?: string;
-}
+};
 
 describe("Finesse golden fixtures", () => {
   const fixturesPath = path.join(
@@ -27,10 +29,10 @@ describe("Finesse golden fixtures", () => {
     "finesse_golden.json",
   );
   const raw = fs.readFileSync(fixturesPath, "utf-8");
-  const cases = JSON.parse(raw) as GoldenEntry[];
+  const cases = JSON.parse(raw) as Array<GoldenEntry>;
 
   for (const c of cases) {
-    test(`${c.piece} -> x=${c.targetX}, rot=${c.targetRot} expects ${c.expectedLen}`, () => {
+    test(`${c.piece} -> x=${String(c.targetX)}, rot=${c.targetRot} expects ${String(c.expectedLen)}`, () => {
       const piece = spawnPiece(c.piece);
       const seqs = finesseCalculator.calculateOptimal(
         piece,
@@ -50,7 +52,7 @@ describe("Finesse golden fixtures", () => {
       expect(one).toBeDefined();
       if (!one) return;
       expect(one[one.length - 1]).toBe("HardDrop");
-      if (c.first) {
+      if (c.first !== undefined && c.first !== "") {
         expect(one[0]).toBe(c.first);
       }
     });

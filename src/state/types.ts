@@ -1,11 +1,14 @@
+// Game state
+import type { SevenBagRng } from "../core/rng";
+import type { FaultType } from "../finesse/calculator";
 import type { Timestamp } from "../types/timestamp";
 
 // Board representation (dense array)
-export interface Board {
+export type Board = {
   readonly width: 10;
   readonly height: 20;
   readonly cells: Uint8Array; // length = 200, values: 0..7 (0=empty)
-}
+};
 
 // Helper for array indexing
 export const idx = (x: number, y: number, width = 10): number => y * width + x;
@@ -22,31 +25,31 @@ export function isCellBlocked(board: Board, x: number, y: number): boolean {
 export type PieceId = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 export type Rot = "spawn" | "right" | "two" | "left";
 
-export interface TetrominoShape {
+export type TetrominoShape = {
   id: PieceId;
-  cells: Record<Rot, readonly (readonly [number, number])[]>;
+  cells: Record<Rot, ReadonlyArray<readonly [number, number]>>;
   spawnTopLeft: readonly [number, number];
   color: string;
-}
+};
 
-export interface ActivePiece {
+export type ActivePiece = {
   id: PieceId;
   rot: Rot;
   x: number;
   y: number;
-}
+};
 
 // Config
-export interface GameplayConfig {
+export type GameplayConfig = {
   finesseCancelMs: number; // default: 50
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
   nextPieceCount?: number; // default 5 (preview count)
-}
+};
 
 export type SoftDropSpeed = number | "infinite";
 
-export interface TimingConfig {
+export type TimingConfig = {
   tickHz: 60;
   dasMs: number;
   arrMs: number;
@@ -56,7 +59,7 @@ export interface TimingConfig {
   lineClearDelayMs: number;
   gravityEnabled: boolean;
   gravityMs: number; // Milliseconds between gravity drops
-}
+};
 
 // Raw input events from keyboard/touch handlers
 export type KeyAction =
@@ -71,11 +74,11 @@ export type KeyAction =
   | "HardDrop"
   | "Hold";
 
-export interface InputEvent {
+export type InputEvent = {
   tMs: number;
   frame: number;
   action: KeyAction;
-}
+};
 
 // Finesse actions - abstract moves for optimal play analysis
 // These map 1:1 to icons/suggestions and make invalid states unrepresentable
@@ -92,33 +95,29 @@ export type FinesseAction =
 // Finesse move types for optimal play analysis
 
 // Game mode and finesse feedback
-export interface FinesseUIFeedback {
-  optimalSequence?: FinesseAction[];
+export type FinesseUIFeedback = {
+  optimalSequence?: Array<FinesseAction>;
   isOptimal: boolean;
   timestamp: number;
-}
+};
 
 // Generic guidance provided by game modes for UI and engine policies
-export interface ModeGuidance {
+export type ModeGuidance = {
   target?: { x: number; rot: Rot };
   label?: string; // prompt/description
   visual?: { highlightTarget?: boolean; showPath?: boolean };
-}
+};
 
 // Physics timing state
-export interface PhysicsState {
+export type PhysicsState = {
   lastGravityTime: number;
   lockDelayStartTime: number | null;
   isSoftDropping: boolean;
   lineClearStartTime: Timestamp | null;
-  lineClearLines: number[];
-}
+  lineClearLines: Array<number>;
+};
 
-// Game state
-import type { SevenBagRng } from "../core/rng";
-import type { FaultType } from "../finesse/calculator";
-
-export interface Stats {
+export type Stats = {
   // Basic counters
   piecesPlaced: number;
   linesCleared: number;
@@ -157,14 +156,14 @@ export interface Stats {
   doubleLines: number;
   tripleLines: number;
   tetrisLines: number;
-}
+};
 
-export interface GameState {
+export type GameState = {
   board: Board;
   active: ActivePiece | undefined;
   hold: PieceId | undefined;
   canHold: boolean;
-  nextQueue: PieceId[];
+  nextQueue: Array<PieceId>;
   rng: SevenBagRng; // SevenBagRng state from core/rng.ts
   timing: TimingConfig;
   gameplay: GameplayConfig;
@@ -173,7 +172,7 @@ export interface GameState {
   stats: Stats; // Basic stats; extended in Iteration 6
   physics: PhysicsState;
   // Processed actions log for finesse analysis - contains structured actions with tap/das distinction
-  processedInputLog: Action[];
+  processedInputLog: Array<Action>;
   // Game mode and finesse feedback
   currentMode: string;
   modeData?: unknown;
@@ -181,7 +180,7 @@ export interface GameState {
   modePrompt: string | null;
   // Optional, mode-provided guidance for visualization and prompts
   guidance?: ModeGuidance | null;
-}
+};
 
 // State transitions
 export type Action =
@@ -206,9 +205,9 @@ export type Action =
   | { type: "Lock"; timestampMs: Timestamp }
   | { type: "StartLockDelay"; timestampMs: Timestamp }
   | { type: "CancelLockDelay" }
-  | { type: "StartLineClear"; lines: number[]; timestampMs: Timestamp }
+  | { type: "StartLineClear"; lines: Array<number>; timestampMs: Timestamp }
   | { type: "CompleteLineClear" }
-  | { type: "ClearLines"; lines: number[] }
+  | { type: "ClearLines"; lines: Array<number> }
   | { type: "SetMode"; mode: string }
   | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
   | { type: "UpdateModePrompt"; prompt: string | null }
@@ -224,7 +223,7 @@ export type Action =
       isOptimal: boolean;
       inputCount: number;
       optimalInputCount: number;
-      faults: FaultType[];
+      faults: Array<FaultType>;
     }
   | { type: "ClearInputLog" };
 

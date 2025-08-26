@@ -1,17 +1,17 @@
-import { PieceId } from "../state/types";
 import { PIECES } from "../core/pieces";
+import { type PieceId } from "../state/types";
 
-export interface PreviewRenderer {
+export type PreviewRenderer = {
   initialize(container: HTMLElement): void;
   // Render next pieces; displayCount limits the number of preview slots shown
-  render(nextQueue: PieceId[], displayCount?: number): void;
+  render(nextQueue: Array<PieceId>, displayCount?: number): void;
   destroy(): void;
-}
+};
 
 export class BasicPreviewRenderer implements PreviewRenderer {
   private container: HTMLElement | undefined;
-  private canvases: HTMLCanvasElement[] = [];
-  private contexts: CanvasRenderingContext2D[] = [];
+  private canvases: Array<HTMLCanvasElement> = [];
+  private contexts: Array<CanvasRenderingContext2D> = [];
   private cellSize = 15; // Smaller than main board
   private previewCount = 5; // Maximum slots created
   private desiredCount = 5; // Current desired display count
@@ -21,37 +21,45 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     this.createPreviewElements();
   }
 
-  render(nextQueue: PieceId[], displayCount?: number): void {
+  render(nextQueue: Array<PieceId>, displayCount?: number): void {
     if (!this.container || this.canvases.length === 0) {
       console.error("Preview renderer not initialized");
       return;
     }
 
-    // Update desired count if provided
+    this.updateDesiredCount(displayCount);
+    this.renderPreviewPieces(nextQueue);
+    this.clearUnusedCanvases(nextQueue);
+  }
+
+  private updateDesiredCount(displayCount?: number): void {
     if (typeof displayCount === "number") {
       this.desiredCount = Math.max(
         1,
         Math.min(this.previewCount, Math.floor(displayCount)),
       );
     }
+  }
 
-    // Render each preview piece
+  private renderPreviewPieces(nextQueue: Array<PieceId>): void {
     const count = Math.min(
       this.desiredCount,
       nextQueue.length,
       this.previewCount,
     );
+
     for (let i = 0; i < count; i++) {
       const pieceId = nextQueue[i];
       const canvas = this.canvases[i];
       const ctx = this.contexts[i];
 
-      if (canvas && ctx && pieceId) {
+      if (canvas !== undefined && ctx !== undefined && pieceId !== undefined) {
         this.renderPreviewPiece(ctx, canvas, pieceId);
       }
     }
+  }
 
-    // Clear unused canvases
+  private clearUnusedCanvases(nextQueue: Array<PieceId>): void {
     for (let i = 0; i < this.previewCount; i++) {
       const canvas = this.canvases[i];
       const ctx = this.contexts[i];
@@ -106,16 +114,19 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     canvas: HTMLCanvasElement,
     pieceId: PieceId,
   ): void {
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const piece = PIECES[pieceId];
-    if (!piece) return;
-
-    // Always use spawn rotation for preview
     const cells = piece.cells.spawn;
+    const { offsetX, offsetY } = this.calculateCenterOffset(canvas, cells);
 
-    // Calculate piece bounds to center it
+    this.renderPieceCells(ctx, cells, offsetX, offsetY, piece.color);
+  }
+
+  private calculateCenterOffset(
+    canvas: HTMLCanvasElement,
+    cells: ReadonlyArray<readonly [number, number]>,
+  ): { offsetX: number; offsetY: number } {
     const minX = Math.min(...cells.map(([x]) => x));
     const maxX = Math.max(...cells.map(([x]) => x));
     const minY = Math.min(...cells.map(([, y]) => y));
@@ -124,19 +135,25 @@ export class BasicPreviewRenderer implements PreviewRenderer {
     const pieceWidth = (maxX - minX + 1) * this.cellSize;
     const pieceHeight = (maxY - minY + 1) * this.cellSize;
 
-    // Center the piece in the canvas
     const offsetX = (canvas.width - pieceWidth) / 2 - minX * this.cellSize;
     const offsetY = (canvas.height - pieceHeight) / 2 - minY * this.cellSize;
 
-    // Set uniform opacity for all preview pieces
+    return { offsetX, offsetY };
+  }
+
+  private renderPieceCells(
+    ctx: CanvasRenderingContext2D,
+    cells: ReadonlyArray<readonly [number, number]>,
+    offsetX: number,
+    offsetY: number,
+    color: string,
+  ): void {
     const alpha = 0.8;
 
-    // Render each cell
     for (const [dx, dy] of cells) {
       const x = dx * this.cellSize + offsetX;
       const y = dy * this.cellSize + offsetY;
-
-      this.drawPreviewCell(ctx, x, y, piece.color, alpha);
+      this.drawPreviewCell(ctx, x, y, color, alpha);
     }
   }
 
@@ -167,7 +184,7 @@ export class BasicPreviewRenderer implements PreviewRenderer {
       const r = parseInt(color.slice(1, 3), 16);
       const g = parseInt(color.slice(3, 5), 16);
       const b = parseInt(color.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      return `rgba(${String(r)}, ${String(g)}, ${String(b)}, ${String(alpha)})`;
     }
     return color; // fallback for non-hex colors
   }

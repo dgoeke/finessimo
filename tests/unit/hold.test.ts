@@ -1,18 +1,19 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { reducer } from "../../src/state/reducer";
-import { GameState } from "../../src/state/types";
+import { type GameState } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
-  return reducer(undefined, { type: "Init", seed: "test" });
+  return reducer(undefined, { seed: "test", type: "Init" });
 }
 
 // Helper to create state with active piece and next queue
 function createStateWithPiece(): GameState {
   const state = createTestState();
-  return reducer(state, { type: "Spawn", piece: "T" });
+  return reducer(state, { piece: "T", type: "Spawn" });
 }
 
 describe("hold system", () => {
@@ -49,8 +50,8 @@ describe("hold system", () => {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: 1000,
           lastGravityTime: 500,
+          lockDelayStartTime: 1000,
         },
       };
 
@@ -129,8 +130,8 @@ describe("hold system", () => {
 
       // Lock piece (should re-enable hold)
       const newState = reducer(state, {
-        type: "Lock",
         timestampMs: createTimestamp(performance.now()),
+        type: "Lock",
       });
       expect(newState.canHold).toBe(true);
     });
@@ -144,8 +145,8 @@ describe("hold system", () => {
 
       // Hard drop (should re-enable hold)
       const newState = reducer(state, {
-        type: "HardDrop",
         timestampMs: createTimestamp(1000),
+        type: "HardDrop",
       });
       expect(newState.canHold).toBe(true);
     });
@@ -219,8 +220,8 @@ describe("hold system", () => {
 
         // Progress the bag/queue deterministically by locking and spawning
         state = reducer(state, {
-          type: "HardDrop",
           timestampMs: createTimestamp(1000 + i),
+          type: "HardDrop",
         });
         state = reducer(state, { type: "Spawn" });
       }

@@ -1,22 +1,22 @@
-import { PieceId } from "../state/types";
+import { type PieceId } from "../state/types";
 
 // Simple seedable RNG state
-export interface SevenBagRng {
+export type SevenBagRng = {
   seed: string;
-  currentBag: PieceId[];
+  currentBag: Array<PieceId>;
   bagIndex: number;
   internalSeed: number;
-}
+};
 
-const ALL_PIECES: PieceId[] = ["I", "O", "T", "S", "Z", "J", "L"];
+const ALL_PIECES: Array<PieceId> = ["I", "O", "T", "S", "Z", "J", "L"];
 
 // Create initial RNG state
 export function createRng(seed = "default"): SevenBagRng {
   return {
-    seed,
-    currentBag: [],
     bagIndex: 0,
+    currentBag: [],
     internalSeed: hashString(seed),
+    seed,
   };
 }
 
@@ -37,9 +37,9 @@ function nextRandom(seed: number): number {
 
 // Shuffle array using Fisher-Yates algorithm
 function shuffle<T>(
-  array: T[],
+  array: Array<T>,
   seed: number,
-): { shuffled: T[]; nextSeed: number } {
+): { shuffled: Array<T>; nextSeed: number } {
   const result = [...array];
   let currentSeed = seed;
 
@@ -55,7 +55,7 @@ function shuffle<T>(
     }
   }
 
-  return { shuffled: result, nextSeed: currentSeed };
+  return { nextSeed: currentSeed, shuffled: result };
 }
 
 // Get next piece from the 7-bag
@@ -81,13 +81,13 @@ export function getNextPiece(rng: SevenBagRng): {
   }
 
   return {
-    piece,
     newRng: {
       ...rng,
-      currentBag,
       bagIndex: bagIndex + 1,
+      currentBag,
       internalSeed,
     },
+    piece,
   };
 }
 
@@ -95,8 +95,8 @@ export function getNextPiece(rng: SevenBagRng): {
 export function getNextPieces(
   rng: SevenBagRng,
   count: number,
-): { pieces: PieceId[]; newRng: SevenBagRng } {
-  const pieces: PieceId[] = [];
+): { pieces: Array<PieceId>; newRng: SevenBagRng } {
+  const pieces: Array<PieceId> = [];
   let currentRng = rng;
 
   for (let i = 0; i < count; i++) {
@@ -105,5 +105,5 @@ export function getNextPieces(
     currentRng = result.newRng;
   }
 
-  return { pieces, newRng: currentRng };
+  return { newRng: currentRng, pieces };
 }

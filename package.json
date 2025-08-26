@@ -12,12 +12,12 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src tests --ext .ts",
-    "lint:fix": "eslint src tests --ext .ts --fix",
+    "lint:fix": "eslint src tests --ext .ts --fix --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "format": "prettier --write --log-level warn ./src/ ./tests/",
     "format:check": "prettier --check .",
-    "pre-commit": "npm-run-all clean typecheck test lint format",
+    "pre-commit": "npm-run-all -s clean typecheck lint:fix test format",
     "assistants:build": "node scripts/build-assistants.cjs",
     "assistants:validate": "node scripts/validate-assistants.cjs",
     "assistants:pre-commit": "npm-run-all assistants:validate assistants:build && git diff --exit-code -- CLAUDE.md AGENTS.md || (echo '📝 Run assistants:build and commit outputs' && exit 1)"
@@ -36,6 +36,8 @@
     "tinykeys": "^1.4.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "@jest/globals": "^30.0.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
     "@typescript-eslint/eslint-plugin": "^8.40.0",
@@ -43,6 +45,11 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "eslint": "^9.34.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-import-x": "^4.16.1",
+    "eslint-plugin-perfectionist": "^4.15.0",
+    "eslint-plugin-promise": "^7.2.1",
     "handlebars": "^4.7.8",
     "husky": "^9.1.7",
     "jest": "^30.0.5",
@@ -52,7 +59,7 @@
     "prettier": "^3.6.2",
     "ts-jest": "^29.1.0",
     "typescript": "^5.1.0",
-    "typescript-eslint": "^8.40.0",
+    "typescript-eslint": "^8.41.0",
     "vite": "^7.1.3"
   }
 }

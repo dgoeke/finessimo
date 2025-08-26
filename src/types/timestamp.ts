@@ -24,4 +24,4 @@ export function assertTimestamp(n: unknown): asserts n is Timestamp {
 }
 
 // Helpers for interop
-export const asNumber = (t: Timestamp) => t as number;
+export const asNumber = (t: Timestamp): number => t as number;

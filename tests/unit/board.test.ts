@@ -10,7 +10,7 @@ import {
   getCompletedLines,
   clearLines,
 } from "../../src/core/board";
-import { ActivePiece, Board } from "../../src/state/types";
+import { type ActivePiece, type Board } from "../../src/state/types";
 import { assertDefined } from "../test-helpers";
 
 describe("Board Logic", () => {

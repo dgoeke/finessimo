@@ -1,5 +1,6 @@
-import { Action, GameState } from "../state/types";
-import { InputHandler, InputHandlerState } from "./handler";
+import { type Action, type GameState } from "../state/types";
+
+import { type InputHandler, type InputHandlerState } from "./handler";
 import { StateMachineInputHandler } from "./StateMachineInputHandler";
 
 // Public type for configurable key bindings
@@ -12,24 +13,24 @@ export type BindableAction =
   | "RotateCCW"
   | "Hold";
 
-export type KeyBindings = Record<BindableAction, string[]>; // KeyboardEvent.code values
+export type KeyBindings = Record<BindableAction, Array<string>>; // KeyboardEvent.code values
 
 export function defaultKeyBindings(): KeyBindings {
   return {
+    HardDrop: ["Space"],
+    Hold: ["KeyC"],
     MoveLeft: ["ArrowLeft", "KeyA"],
     MoveRight: ["ArrowRight", "KeyD"],
-    SoftDrop: ["ArrowDown", "KeyS"],
-    HardDrop: ["Space"],
-    RotateCW: ["ArrowUp", "KeyX"],
     RotateCCW: ["Control+KeyZ", "KeyZ"],
-    Hold: ["KeyC"],
+    RotateCW: ["ArrowUp", "KeyX"],
+    SoftDrop: ["ArrowDown", "KeyS"],
   };
 }
 
 const STORAGE_KEY = "finessimo";
 const LEGACY_BINDINGS_KEY = "finessimo-keybindings";
 
-const BINDABLE_ACTIONS: readonly BindableAction[] = [
+const BINDABLE_ACTIONS: ReadonlyArray<BindableAction> = [
   "MoveLeft",
   "MoveRight",
   "SoftDrop",
@@ -50,7 +51,7 @@ function hasKey<K extends string>(
   return k in o;
 }
 
-function isStringArray(a: unknown): a is string[] {
+function isStringArray(a: unknown): a is Array<string> {
   return Array.isArray(a) && a.every((s) => typeof s === "string");
 }
 
@@ -70,7 +71,7 @@ export function mapKeyToBinding(
   code: string,
   bindings: KeyBindings,
 ): BindableAction | null {
-  const inList = (codes: string[]): boolean => codes.includes(code);
+  const inList = (codes: Array<string>): boolean => codes.includes(code);
   if (inList(bindings.MoveLeft)) return "MoveLeft";
   if (inList(bindings.MoveRight)) return "MoveRight";
   if (inList(bindings.SoftDrop)) return "SoftDrop";
@@ -86,16 +87,16 @@ export function loadBindingsFromStorage(): KeyBindings {
   try {
     // Prefer consolidated store
     const storeRaw = localStorage.getItem(STORAGE_KEY);
-    if (storeRaw) {
+    if (storeRaw !== null) {
       const store: unknown = JSON.parse(storeRaw);
       if (isRecord(store) && hasKey(store, "keyBindings")) {
-        return coerceKeyBindings(store.keyBindings);
+        return coerceKeyBindings(store["keyBindings"]);
       }
     }
 
     // Fallback to legacy key
     const legacyRaw = localStorage.getItem(LEGACY_BINDINGS_KEY);
-    if (legacyRaw) {
+    if (legacyRaw !== null) {
       const legacy: unknown = JSON.parse(legacyRaw);
       const merged = { ...defaultKeyBindings(), ...coerceKeyBindings(legacy) };
       return merged;
@@ -110,20 +111,23 @@ export function loadBindingsFromStorage(): KeyBindings {
 export function saveBindingsToStorage(bindings: KeyBindings): void {
   try {
     // Try to preserve other settings in consolidated store
-    const storeRaw = localStorage.getItem(STORAGE_KEY);
-    let store: Record<string, unknown> = {};
-    if (storeRaw) {
-      try {
-        const parsed: unknown = JSON.parse(storeRaw);
-        if (isRecord(parsed)) store = parsed;
-      } catch {
-        // ignore parse errors, use empty store
-      }
-    }
-    store.keyBindings = bindings;
+    const store = getExistingStoreOrEmpty();
+    store["keyBindings"] = bindings;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   } catch {
     // Ignore storage errors
+  }
+}
+
+function getExistingStoreOrEmpty(): Record<string, unknown> {
+  const storeRaw = localStorage.getItem(STORAGE_KEY);
+  if (storeRaw === null) return {};
+
+  try {
+    const parsed: unknown = JSON.parse(storeRaw);
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {}; // ignore parse errors, use empty store
   }
 }
 

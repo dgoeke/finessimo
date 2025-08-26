@@ -2,17 +2,17 @@
  * Integration test for line clearing with real app update loop
  */
 
-import { reducer } from "../../src/state/reducer";
 import { shouldCompleteLineClear } from "../../src/app";
+import { reducer } from "../../src/state/reducer";
 import { createTimestamp } from "../../src/types/timestamp";
 
 describe("Line Clear Integration", () => {
   it("should complete line clearing through the app update loop", () => {
     // Initialize game state with 300ms delay (like real gameplay)
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 300 },
+      type: "Init",
     });
 
     // Create line clear scenario
@@ -21,16 +21,16 @@ describe("Line Clear Integration", () => {
     }
 
     // Spawn I piece and position it
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
 
     // Hard drop to trigger line clear
     const startTime = 1000;
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(startTime),
+      type: "HardDrop",
     });
 
     // Should be in lineClear status
@@ -64,12 +64,12 @@ describe("Line Clear Integration", () => {
 
   it("should handle the default UI settings scenario", () => {
     // This simulates what happens when the app starts with UI settings
-    let state = reducer(undefined, { type: "Init", seed: "test" }); // Default 0ms delay
+    let state = reducer(undefined, { seed: "test", type: "Init" }); // Default 0ms delay
 
     // Apply settings change to 300ms (like UI default)
     state = reducer(state, {
-      type: "UpdateTiming",
       timing: { lineClearDelayMs: 300 },
+      type: "UpdateTiming",
     });
 
     expect(state.timing.lineClearDelayMs).toBe(300);
@@ -79,13 +79,13 @@ describe("Line Clear Integration", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(2000),
+      type: "HardDrop",
     });
 
     // Should enter lineClear status with 300ms delay
@@ -99,9 +99,9 @@ describe("Line Clear Integration", () => {
 
   it("should prevent piece spawning during line clear delay", () => {
     let state = reducer(undefined, {
-      type: "Init",
       seed: "test",
       timing: { lineClearDelayMs: 200 },
+      type: "Init",
     });
 
     // Set up line clear
@@ -109,13 +109,13 @@ describe("Line Clear Integration", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { type: "Spawn", piece: "I" });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
-    state = reducer(state, { type: "TapMove", dir: 1 });
+    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, type: "TapMove" });
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(3000),
+      type: "HardDrop",
     });
 
     // Should be in lineClear status

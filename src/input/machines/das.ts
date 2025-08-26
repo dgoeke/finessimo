@@ -11,11 +11,17 @@
  * - State transitions are defined declaratively with guards and reducers
  *
  * ROBOT3 API PATTERNS:
- * - createMachine(stateDefinition, contextFactory) - creates the state machine
+ * - createMachine(initial, states, contextFactory) or createMachine(states, contextFactory)
+ *   We use the 3-arg form with initial "idle" to keep event typing tight.
  * - interpret(machine, onChange) - creates a service to run the machine
  * - service.send(event) - sends events to trigger transitions
  * - service.context - the CURRENT context (updated after reducers run)
  * - service.machine.state.name - the current state name
+
+ * TYPE CONVENTIONS IN THIS FILE:
+ * - Event names are the union DASEvent['type']; transitions must use those exact strings.
+ * - State builders return MachineState<DASEvent['type']> so the map of states is type-safe.
+ * - The machine/service are strongly typed via robot3's Machine/Service generics.
  *
  * DAS STATE FLOW:
  * idle → charging (on KEY_DOWN) → either:
@@ -34,20 +40,23 @@ import {
   action,
   interpret,
 } from "robot3";
-import type { Action } from "../../state/types";
+
 import { createTimestamp } from "../../types/timestamp";
+
+import type { Action } from "../../state/types";
+import type { MachineState, MachineStates, Machine, Service } from "robot3";
 
 export type DASState = "idle" | "charging" | "repeating";
 
 // DAS state machine context - this is the immutable state that flows through the machine
-export interface DASContext {
+export type DASContext = {
   direction: -1 | 1 | undefined; // -1 for left, 1 for right, undefined when no key held
   dasStartTime: number | undefined; // When DAS timer started (KEY_DOWN timestamp)
   arrLastTime: number | undefined; // Last time an ARR repeat fired
   dasMs: number; // DAS delay in milliseconds (how long to hold before repeating starts)
   arrMs: number; // ARR rate in milliseconds (how fast repeating happens)
   repeats: number; // Number of catch-up repeats to emit (for catch-up logic)
-}
+};
 
 // DAS state machine events - these trigger state transitions
 export type DASEvent =
@@ -57,12 +66,12 @@ export type DASEvent =
   | { type: "UPDATE_CONFIG"; dasMs: number; arrMs: number }; // Configuration update
 
 // Export interface for mapping DAS events
-export interface DASMachineEventMap {
+export type DASMachineEventMap = {
   KEY_DOWN: { direction: -1 | 1 };
   KEY_UP: { direction: -1 | 1 };
   TIMER_TICK: { deltaMs: number };
   UPDATE_CONFIG: { dasMs: number; arrMs: number };
-}
+};
 
 /*
  * ROBOT3 GUARDS - Functions that return true/false to determine if a transition should happen
@@ -71,12 +80,12 @@ export interface DASMachineEventMap {
  */
 
 // Guard: Check if event is a key down
-const isKeyDown = (_ctx: DASContext, event: DASEvent) => {
+const isKeyDown = (_ctx: DASContext, event: DASEvent): boolean => {
   return event.type === "KEY_DOWN";
 };
 
 // Guard: Check if key was released before DAS timer expired (= tap classification)
-const isKeyUpBeforeDAS = (ctx: DASContext, event: DASEvent) => {
+const isKeyUpBeforeDAS = (ctx: DASContext, event: DASEvent): boolean => {
   if (event.type !== "KEY_UP") return false;
   if (ctx.dasStartTime === undefined) return false;
   if (event.direction !== ctx.direction) return false;
@@ -86,7 +95,7 @@ const isKeyUpBeforeDAS = (ctx: DASContext, event: DASEvent) => {
 };
 
 // Guard: Check if DAS timer has expired (time to start repeating)
-const isDASExpired = (ctx: DASContext, event: DASEvent) => {
+const isDASExpired = (ctx: DASContext, event: DASEvent): boolean => {
   if (event.type !== "TIMER_TICK") return false;
   if (ctx.dasStartTime === undefined) return false;
 
@@ -96,7 +105,7 @@ const isDASExpired = (ctx: DASContext, event: DASEvent) => {
 
 // Guard: Check if key was released after DAS timer expired but before first repeat
 // This handles the edge case where user releases key after DAS expires but before TIMER_TICK
-const isKeyUpAfterDAS = (ctx: DASContext, event: DASEvent) => {
+const isKeyUpAfterDAS = (ctx: DASContext, event: DASEvent): boolean => {
   return (
     event.type === "KEY_UP" &&
     ctx.dasStartTime !== undefined &&
@@ -107,7 +116,7 @@ const isKeyUpAfterDAS = (ctx: DASContext, event: DASEvent) => {
 
 // Guard: Check if the correct directional key was released while repeating
 // IMPORTANT: Only KEY_UP for the SAME direction should stop repeating
-const isKeyUpFromRepeating = (ctx: DASContext, event: DASEvent) => {
+const isKeyUpFromRepeating = (ctx: DASContext, event: DASEvent): boolean => {
   return (
     event.type === "KEY_UP" &&
     ctx.direction !== undefined &&
@@ -116,7 +125,7 @@ const isKeyUpFromRepeating = (ctx: DASContext, event: DASEvent) => {
 };
 
 // Guard: Check if it's time to emit another ARR repeat
-const shouldEmitARR = (ctx: DASContext, event: DASEvent) => {
+const shouldEmitARR = (ctx: DASContext, event: DASEvent): boolean => {
   if (event.type !== "TIMER_TICK") return false;
   if (ctx.dasStartTime === undefined || ctx.direction === undefined)
     return false;
@@ -134,7 +143,7 @@ const shouldEmitARR = (ctx: DASContext, event: DASEvent) => {
 };
 
 // Guard: Check if event is a config update
-const isConfigUpdate = (_ctx: DASContext, event: DASEvent) => {
+const isConfigUpdate = (_ctx: DASContext, event: DASEvent): boolean => {
   return event.type === "UPDATE_CONFIG";
 };
 
@@ -153,9 +162,9 @@ export const updateContextKeyDown = (
   if (event.type === "KEY_DOWN") {
     return {
       ...ctx, // IMPORTANT: Always spread existing context
-      direction: event.direction, // Record which direction key was pressed
-      dasStartTime: event.timestamp, // Start the DAS timer
       arrLastTime: undefined, // Reset ARR timer
+      dasStartTime: event.timestamp, // Start the DAS timer
+      direction: event.direction, // Record which direction key was pressed
       repeats: 0, // Reset catch-up repeats
     };
   }
@@ -170,9 +179,9 @@ export const updateContextKeyUp = (
   void event; // Mark as used for interface compatibility
   return {
     ...ctx,
-    direction: undefined, // No key held
-    dasStartTime: undefined, // Clear DAS timer
     arrLastTime: undefined, // Clear ARR timer
+    dasStartTime: undefined, // Clear DAS timer
+    direction: undefined, // No key held
     repeats: 0, // Clear catch-up repeats
   };
 };
@@ -211,7 +220,7 @@ export const updateContextARR = (
     const safeArrMs = Math.max(1, ctx.arrMs); // Prevent divide by zero
 
     // Compute catch-up repeats based on how much time has passed
-    const baseTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
+    const baseTime = ctx.arrLastTime;
     const repeats = Math.floor((event.timestamp - baseTime) / safeArrMs);
 
     return {
@@ -230,64 +239,61 @@ export const updateConfig = (ctx: DASContext, event: DASEvent): DASContext => {
   if (event.type === "UPDATE_CONFIG") {
     return {
       ...ctx,
-      dasMs: Math.max(0, event.dasMs), // Clamp DAS to >= 0ms
       arrMs: Math.max(1, event.arrMs), // Clamp ARR to >= 1ms (prevent divide by zero)
+      dasMs: Math.max(0, event.dasMs), // Clamp DAS to >= 0ms
     };
   }
   return ctx; // No change if event doesn't match
 };
 
 /*
- * ROBOT3 MACHINE CREATION
- * Creates the state machine definition with states, transitions, guards, reducers, and actions
+ * ROBOT3 ACTION CREATORS - Pure functions that create action handlers
+ * These create the actual action functions used in the state machine
  */
-export const createDASMachine = (
-  initialContext: DASContext,
-  onAction?: (action: Action) => void, // Callback to emit Actions
-) => {
-  /*
-   * ROBOT3 ACTION FUNCTIONS - Handle side effects (Action emission)
-   * Actions receive (context, event) and perform side effects
-   * Actions do NOT return anything - they are for side effects only
-   * Actions are called AFTER reducers, so context contains the updated state
-   */
 
-  // Action: Emit a tap move (immediate move on key press)
-  const emitTapAction = (_ctx: DASContext, event: DASEvent) => {
+// Creates action function to emit tap moves
+const createEmitTapAction =
+  (onAction?: (action: Action) => void) =>
+  (_ctx: DASContext, event: DASEvent): void => {
     if (event.type === "KEY_UP" && onAction && "direction" in event) {
       onAction({
-        type: "TapMove",
-        dir: event.direction, // Direction from the KEY_UP event
+        dir: event.direction,
         timestampMs: createTimestamp(event.timestamp),
+        type: "TapMove",
       });
     }
   };
 
-  // Action: Emit hold start analytics event when DAS timer expires
-  const emitHoldStart = (ctx: DASContext, event: DASEvent) => {
+// Creates action function to emit hold start analytics events
+const createEmitHoldStart =
+  (onAction?: (action: Action) => void) =>
+  (ctx: DASContext, event: DASEvent): void => {
     if (ctx.direction !== undefined && onAction && "timestamp" in event) {
-      // First emit HoldStart for analytics/logging
       onAction({
-        type: "HoldStart",
         dir: ctx.direction,
         timestampMs: createTimestamp(event.timestamp),
+        type: "HoldStart",
       });
     }
   };
 
-  // Action: Emit a hold move (first move when DAS timer expires)
-  const emitHoldMove = (ctx: DASContext, event: DASEvent) => {
+// Creates action function to emit hold moves
+const createEmitHoldMove =
+  (onAction?: (action: Action) => void) =>
+  (ctx: DASContext, event: DASEvent): void => {
     if (ctx.direction !== undefined && onAction && "timestamp" in event) {
       onAction({
-        type: "HoldMove",
-        dir: ctx.direction, // Direction from context (what key is held)
+        dir: ctx.direction,
         timestampMs: createTimestamp(event.timestamp),
+        type: "HoldMove",
       });
     }
   };
 
-  // Action: Emit repeat moves (with catch-up support)
-  const emitRepeatMove = (ctx: DASContext, event: DASEvent) => {
+// Creates action function to emit repeat moves with catch-up support
+const createEmitRepeatMove =
+  (onAction?: (action: Action) => void) =>
+  (ctx: DASContext, event: DASEvent): void => {
     if (
       ctx.direction !== undefined &&
       onAction &&
@@ -295,120 +301,168 @@ export const createDASMachine = (
       ctx.dasStartTime !== undefined
     ) {
       const safeArrMs = Math.max(1, ctx.arrMs);
-      // After updateContextARR, arrLastTime points to the most recent repeat time
-      // and ctx.repeats indicates how many repeats elapsed since the previous arrLastTime.
-      // Reconstruct the series to emit all missed repeats in order.
       const latestTime = ctx.arrLastTime ?? ctx.dasStartTime + ctx.dasMs;
-      const repeats = Math.max(1, ctx.repeats || 1);
+      const repeats = Math.max(1, ctx.repeats !== 0 ? ctx.repeats : 1);
       const startTime = latestTime - (repeats - 1) * safeArrMs;
 
-      // Policy: emit only the latest eligible repeat to limit per-tick bursts
       const actionTimestamp = startTime + (repeats - 1) * safeArrMs;
       if (actionTimestamp <= event.timestamp) {
         onAction({
-          type: "RepeatMove",
           dir: ctx.direction,
           timestampMs: createTimestamp(actionTimestamp),
+          type: "RepeatMove",
         });
       }
     }
   };
 
-  /*
-   * ROBOT3 STATE MACHINE DEFINITION
-   * Each state has transitions defined by: event -> target_state + guard + reducer + action
-   * Order: guard (check if transition should happen) -> reducer (update context) -> action (side effect)
-   */
-  return createMachine(
-    {
-      // IDLE STATE: No keys held, waiting for input
-      idle: state(
-        transition(
-          "KEY_DOWN", // Event type to listen for
-          "charging", // Target state
-          guard(isKeyDown), // Guard: Check if it's a key down
-          reduce(updateContextKeyDown), // Reducer: Update context with key info
-          // Don't emit tap action yet - wait to see if it's a tap or hold
-        ),
-        transition(
-          "UPDATE_CONFIG", // Allow config updates in idle
-          "idle", // Stay in idle
-          guard(isConfigUpdate), // Guard: Check if it's a config update
-          reduce(updateConfig), // Reducer: Update DAS/ARR settings
-        ),
-      ),
+// Creates all action functions for the DAS machine
+const createDASActions = (
+  onAction?: (action: Action) => void,
+): {
+  emitTapAction: (ctx: DASContext, event: DASEvent) => void;
+  emitHoldStart: (ctx: DASContext, event: DASEvent) => void;
+  emitHoldMove: (ctx: DASContext, event: DASEvent) => void;
+  emitRepeatMove: (ctx: DASContext, event: DASEvent) => void;
+} => ({
+  emitHoldMove: createEmitHoldMove(onAction),
+  emitHoldStart: createEmitHoldStart(onAction),
+  emitRepeatMove: createEmitRepeatMove(onAction),
+  emitTapAction: createEmitTapAction(onAction),
+});
 
-      // CHARGING STATE: Key held, waiting to see if it's a tap or hold
-      charging: state(
-        transition(
-          "KEY_UP", // Key released before DAS expires
-          "idle", // Go back to idle (tap detected)
-          guard(isKeyUpBeforeDAS), // Guard: Released within DAS window
-          reduce(updateContextKeyUp), // Reducer: Clear all state
-          action(emitTapAction), // Action: Now we know it was a tap
-        ),
-        transition(
-          "KEY_UP", // Key released after DAS expires but before tick
-          "idle", // Go back to idle (edge case handling)
-          guard(isKeyUpAfterDAS), // Guard: Released after DAS but before repeat
-          reduce(updateContextKeyUp), // Reducer: Clear all state
-          action(emitTapAction), // Action: Still counts as a tap
-        ),
-        transition(
-          "TIMER_TICK", // Timer tick while charging
-          "repeating", // Move to repeating state (hold detected)
-          guard(isDASExpired), // Guard: DAS timer has expired
-          reduce(updateContextHoldStart), // Reducer: Set up ARR timing
-          action(emitHoldStart), // Action: Emit hold start for analytics
-          action(emitHoldMove), // Action: Emit first hold move
-        ),
-        transition(
-          "KEY_DOWN", // Different key pressed (key switching)
-          "charging", // Stay in charging with new key
-          guard(isKeyDown), // Guard: Check if it's a key down
-          reduce(updateContextKeyDown), // Reducer: Switch to new key
-          action(emitTapAction), // Action: Emit tap for new key
-        ),
-        transition(
-          "UPDATE_CONFIG", // Allow config updates while charging
-          "charging", // Stay in charging
-          guard(isConfigUpdate), // Guard: Check if it's a config update
-          reduce(updateConfig), // Reducer: Update DAS/ARR settings
-        ),
-      ),
+/*
+ * ROBOT3 STATE BUILDERS - Pure functions that create state definitions
+ * Each state builder returns a configured state with its transitions
+ */
 
-      // REPEATING STATE: Key held and repeating at ARR rate
-      repeating: state(
-        transition(
-          "KEY_UP", // Key released while repeating
-          "idle", // Go back to idle (end hold)
-          guard(isKeyUpFromRepeating), // Guard: Correct direction key released
-          reduce(updateContextKeyUp), // Reducer: Clear all state
-        ),
-        transition(
-          "TIMER_TICK", // Timer tick while repeating
-          "repeating", // Stay in repeating state
-          guard(shouldEmitARR), // Guard: Time for next ARR repeat
-          reduce(updateContextARR), // Reducer: Update ARR timing
-          action(emitRepeatMove), // Action: Emit repeat move
-        ),
-        transition(
-          "KEY_DOWN", // Different key pressed (key switching)
-          "charging", // Go to charging with new key
-          guard(isKeyDown), // Guard: Check if it's a key down
-          reduce(updateContextKeyDown), // Reducer: Switch to new key
-          action(emitTapAction), // Action: Emit tap for new key
-        ),
-        transition(
-          "UPDATE_CONFIG", // Allow config updates while repeating
-          "repeating", // Stay in repeating
-          guard(isConfigUpdate), // Guard: Check if it's a config update
-          reduce(updateConfig), // Reducer: Update DAS/ARR settings
-        ),
-      ),
-    },
-    () => initialContext, // Context factory function
+// Creates the idle state: waiting for input
+const createIdleState = (
+  _actions: ReturnType<typeof createDASActions>,
+): MachineState<DASEvent["type"]> =>
+  state(
+    transition(
+      "KEY_DOWN",
+      "charging",
+      guard(isKeyDown),
+      reduce(updateContextKeyDown),
+    ),
+    transition(
+      "UPDATE_CONFIG",
+      "idle",
+      guard(isConfigUpdate),
+      reduce(updateConfig),
+    ),
   );
+
+// Creates the charging state: key held, waiting to see if it's tap or hold
+const createChargingState = (
+  actions: ReturnType<typeof createDASActions>,
+): MachineState<DASEvent["type"]> =>
+  state(
+    transition(
+      "KEY_UP",
+      "idle",
+      guard(isKeyUpBeforeDAS),
+      reduce(updateContextKeyUp),
+      action(actions.emitTapAction),
+    ),
+    transition(
+      "KEY_UP",
+      "idle",
+      guard(isKeyUpAfterDAS),
+      reduce(updateContextKeyUp),
+      action(actions.emitTapAction),
+    ),
+    transition(
+      "TIMER_TICK",
+      "repeating",
+      guard(isDASExpired),
+      reduce(updateContextHoldStart),
+      action(actions.emitHoldStart),
+      action(actions.emitHoldMove),
+    ),
+    transition(
+      "KEY_DOWN",
+      "charging",
+      guard(isKeyDown),
+      reduce(updateContextKeyDown),
+      action(actions.emitTapAction),
+    ),
+    transition(
+      "UPDATE_CONFIG",
+      "charging",
+      guard(isConfigUpdate),
+      reduce(updateConfig),
+    ),
+  );
+
+// Creates the repeating state: key held and repeating at ARR rate
+const createRepeatingState = (
+  actions: ReturnType<typeof createDASActions>,
+): MachineState<DASEvent["type"]> =>
+  state(
+    transition(
+      "KEY_UP",
+      "idle",
+      guard(isKeyUpFromRepeating),
+      reduce(updateContextKeyUp),
+    ),
+    transition(
+      "TIMER_TICK",
+      "repeating",
+      guard(shouldEmitARR),
+      reduce(updateContextARR),
+      action(actions.emitRepeatMove),
+    ),
+    transition(
+      "KEY_DOWN",
+      "charging",
+      guard(isKeyDown),
+      reduce(updateContextKeyDown),
+      action(actions.emitTapAction),
+    ),
+    transition(
+      "UPDATE_CONFIG",
+      "repeating",
+      guard(isConfigUpdate),
+      reduce(updateConfig),
+    ),
+  );
+
+/*
+ * ROBOT3 MACHINE CREATION
+ * Creates the state machine definition with states, transitions, guards, reducers, and actions
+ */
+type DASEventType = DASEvent["type"];
+type DASStatesObject = Record<DASState, MachineState<DASEventType>>;
+export type DASMachine = Machine<
+  DASStatesObject,
+  DASContext,
+  DASState,
+  DASEventType
+>;
+
+export const createDASMachine = (
+  initialContext: DASContext,
+  onAction?: (action: Action) => void,
+): DASMachine => {
+  const actions = createDASActions(onAction);
+
+  const states = {
+    charging: createChargingState(actions),
+    idle: createIdleState(actions),
+    repeating: createRepeatingState(actions),
+  } as const;
+
+  // Note: robot3's return type narrows event type `F` to `string`.
+  // We pass a precisely typed states object and initial state, then cast to `DASMachine`
+  // to retain our stricter event/state typing at the boundaries of this module.
+  return createMachine(
+    "idle" as const,
+    states as unknown as MachineStates<DASStatesObject, DASEventType>,
+    (_ctx: DASContext): DASContext => initialContext,
+  ) as unknown as DASMachine;
 };
 
 // Default context factory with validation
@@ -416,28 +470,19 @@ export const createDefaultDASContext = (
   dasMs = 133, // Default per DESIGN.md
   arrMs = 2, // Default per DESIGN.md
 ): DASContext => ({
-  direction: undefined, // No key held initially
-  dasStartTime: undefined, // No DAS timer active
   arrLastTime: undefined, // No ARR timer active
-  dasMs: Math.max(0, dasMs), // Clamp DAS to >= 0ms
   arrMs: Math.max(1, arrMs), // Clamp ARR to >= 1ms (prevent divide by zero)
+  dasMs: Math.max(0, dasMs), // Clamp DAS to >= 0ms
+  dasStartTime: undefined, // No DAS timer active
+  direction: undefined, // No key held initially
   repeats: 0, // No catch-up repeats initially
 });
 
 /*
- * ROBOT3 SERVICE INTERFACE
- * Simplified TypeScript interface for robot3's interpret() service
- * Robot3 doesn't provide proper TypeScript types, so we define our own
+ * ROBOT3 SERVICE TYPES
+ * We leverage robot3's Machine/Service generics to strongly type the DAS service.
  */
-interface Robot3Service {
-  send(event: DASEvent): void; // Send events to trigger transitions
-  machine: {
-    state: {
-      name: string; // Current state name (idle/charging/repeating)
-    };
-  };
-  context: DASContext; // Current context (updated by reducers)
-}
+type DASService = Service<DASMachine>;
 
 /*
  * DAS MACHINE SERVICE - Thin wrapper around robot3
@@ -451,8 +496,8 @@ interface Robot3Service {
  * All state transitions are handled by the robot3 machine defined above.
  */
 export class DASMachineService {
-  private service: Robot3Service; // Robot3 service instance
-  private actionQueue: Action[] = []; // Queue for collecting emitted actions
+  private service: DASService; // Robot3 service instance
+  private actionQueue: Array<Action> = []; // Queue for collecting emitted actions
   private currentStateName: DASState; // Current state name stored from interpret callback
 
   constructor(initialContext?: DASContext) {
@@ -466,17 +511,16 @@ export class DASMachineService {
 
     // Create robot3 service with onChange callback to store current state name
     this.service = interpret(machine, (service) => {
-      // onChange callback - called after each transition
-      // Store current state name to avoid depending on service.machine.state.name
-      this.currentStateName = service.machine.state.name as DASState;
-    }) as Robot3Service;
+      // onChange: update a stable, typed snapshot of the current state name
+      this.currentStateName = service.machine.state.name;
+    });
   }
 
   /**
    * Send event to robot3 service and return any emitted actions
    * This is the main interface for triggering state transitions
    */
-  send(event: DASEvent): Action[] {
+  send(event: DASEvent): Array<Action> {
     this.service.send(event); // Send event to robot3 (triggers transitions)
     const actions = [...this.actionQueue]; // Copy collected actions
     this.actionQueue = []; // Clear queue for next send
@@ -487,20 +531,20 @@ export class DASMachineService {
    * Get current state and context from robot3
    * Uses stored currentStateName instead of accessing service.machine.state.name
    */
-  getState() {
+  getState(): { state: DASState; context: DASContext } {
     return {
-      state: this.currentStateName, // Current state name from stored value
       context: { ...this.service.context }, // Copy of current context
+      state: this.currentStateName, // Current state name from stored value
     };
   }
 
   /** Thin wrapper around sending UPDATE_CONFIG event */
-  updateConfig(dasMs: number, arrMs: number): Action[] {
-    return this.send({ type: "UPDATE_CONFIG", dasMs, arrMs });
+  updateConfig(dasMs: number, arrMs: number): Array<Action> {
+    return this.send({ arrMs, dasMs, type: "UPDATE_CONFIG" });
   }
 
   /** Reset by creating new robot3 service with preserved timing settings */
-  reset() {
+  reset(): void {
     const currentContext = this.service.context;
     const newContext = createDefaultDASContext(
       currentContext.dasMs,
@@ -513,14 +557,14 @@ export class DASMachineService {
       this.actionQueue.push(action);
     });
     this.service = interpret(machine, (service) => {
-      // onChange callback - store current state name
-      this.currentStateName = service.machine.state.name as DASState;
-    }) as Robot3Service;
+      // onChange: store current state name
+      this.currentStateName = service.machine.state.name;
+    });
     this.actionQueue = [];
   }
 
   /** Testing helper - direct context access for test setup */
-  setContextForTesting(context: DASContext) {
+  setContextForTesting(context: DASContext): void {
     // Robot3's service.context is mutable and can be updated directly
     Object.assign(this.service.context, context);
   }

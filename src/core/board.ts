@@ -1,18 +1,19 @@
 import {
-  Board,
-  ActivePiece,
-  PieceId,
+  type Board,
+  type ActivePiece,
+  type PieceId,
   idx,
   isCellBlocked,
 } from "../state/types";
+
 import { PIECES } from "./pieces";
 
 // Create an empty board
 export function createEmptyBoard(): Board {
   return {
-    width: 10,
-    height: 20,
     cells: new Uint8Array(200),
+    height: 20,
+    width: 10,
   };
 }
 
@@ -140,19 +141,19 @@ export function lockPiece(board: Board, piece: ActivePiece): Board {
 function getPieceValue(pieceId: PieceId): number {
   const mapping: Record<PieceId, number> = {
     I: 1,
-    O: 2,
-    T: 3,
-    S: 4,
-    Z: 5,
     J: 6,
     L: 7,
+    O: 2,
+    S: 4,
+    T: 3,
+    Z: 5,
   };
   return mapping[pieceId];
 }
 
 // Check for completed lines
-export function getCompletedLines(board: Board): number[] {
-  const completedLines: number[] = [];
+export function getCompletedLines(board: Board): Array<number> {
+  const completedLines: Array<number> = [];
 
   for (let y = 0; y < board.height; y++) {
     let isComplete = true;
@@ -171,7 +172,7 @@ export function getCompletedLines(board: Board): number[] {
 }
 
 // Clear completed lines from the board
-export function clearLines(board: Board, linesToClear: number[]): Board {
+export function clearLines(board: Board, linesToClear: Array<number>): Board {
   if (linesToClear.length === 0) {
     return board;
   }
@@ -180,17 +181,22 @@ export function clearLines(board: Board, linesToClear: number[]): Board {
   let targetY = board.height - 1;
 
   for (let y = board.height - 1; y >= 0; y--) {
-    if (!linesToClear.includes(y)) {
-      // Copy this line to the target position
-      if (targetY >= 0) {
-        for (let x = 0; x < board.width; x++) {
-          const sourceIndex = idx(x, y);
-          const targetIndex = idx(x, targetY);
-          newCells[targetIndex] = board.cells[sourceIndex] ?? 0;
-        }
-      }
-      targetY--;
+    if (linesToClear.includes(y)) {
+      continue; // Skip lines to clear
     }
+
+    // Copy this line to the target position
+    if (targetY < 0) {
+      targetY--;
+      continue;
+    }
+
+    for (let x = 0; x < board.width; x++) {
+      const sourceIndex = idx(x, y);
+      const targetIndex = idx(x, targetY);
+      newCells[targetIndex] = board.cells[sourceIndex] ?? 0;
+    }
+    targetY--;
   }
 
   return {

@@ -1,9 +1,18 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "strict": false
+    // Make the requirement explicit for tests:
+    "strictNullChecks": true,
+    // Jest globals/types:
+    "types": [
+      "jest",
+      "jest-environment-jsdom"
+    ]
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

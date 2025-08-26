@@ -2,13 +2,13 @@ import {
   createRng,
   getNextPiece,
   getNextPieces,
-  SevenBagRng,
+  type SevenBagRng,
 } from "../../src/core/rng";
-import { PieceId } from "../../src/state/types";
+import { type PieceId } from "../../src/state/types";
 import { createCorruptedRng } from "../test-types";
 
 describe("Seven Bag RNG", () => {
-  const ALL_PIECES: PieceId[] = ["I", "O", "T", "S", "Z", "J", "L"];
+  const ALL_PIECES: Array<PieceId> = ["I", "O", "T", "S", "Z", "J", "L"];
 
   describe("createRng", () => {
     it("should create RNG with default seed", () => {
@@ -52,7 +52,7 @@ describe("Seven Bag RNG", () => {
 
     it("should generate all pieces in first bag", () => {
       let currentRng = createRng("test");
-      const firstBagPieces: PieceId[] = [];
+      const firstBagPieces: Array<PieceId> = [];
 
       for (let i = 0; i < 7; i++) {
         const result = getNextPiece(currentRng);
@@ -86,8 +86,8 @@ describe("Seven Bag RNG", () => {
       const rng1 = createRng("deterministic");
       const rng2 = createRng("deterministic");
 
-      const pieces1: PieceId[] = [];
-      const pieces2: PieceId[] = [];
+      const pieces1: Array<PieceId> = [];
+      const pieces2: Array<PieceId> = [];
 
       let currentRng1 = rng1;
       let currentRng2 = rng2;
@@ -111,8 +111,8 @@ describe("Seven Bag RNG", () => {
       const rng1 = createRng("seed1");
       const rng2 = createRng("seed2");
 
-      const pieces1: PieceId[] = [];
-      const pieces2: PieceId[] = [];
+      const pieces1: Array<PieceId> = [];
+      const pieces2: Array<PieceId> = [];
 
       let currentRng1 = rng1;
       let currentRng2 = rng2;
@@ -191,7 +191,7 @@ describe("Seven Bag RNG", () => {
       const batchResult = getNextPieces(rng, 10);
 
       // Get pieces using individual calls
-      const individualPieces: PieceId[] = [];
+      const individualPieces: Array<PieceId> = [];
       let currentRng = rng;
       for (let i = 0; i < 10; i++) {
         const result = getNextPiece(currentRng);
@@ -221,7 +221,7 @@ describe("Seven Bag RNG", () => {
 
       // Test multiple bags
       for (let bag = 0; bag < 5; bag++) {
-        const bagPieces: PieceId[] = [];
+        const bagPieces: Array<PieceId> = [];
 
         for (let i = 0; i < 7; i++) {
           const result = getNextPiece(currentRng);
@@ -240,7 +240,7 @@ describe("Seven Bag RNG", () => {
     it("should not repeat the same piece consecutively across bags", () => {
       const rng = createRng("no-consecutive");
       let currentRng = rng;
-      const sequence: PieceId[] = [];
+      const sequence: Array<PieceId> = [];
 
       // Get pieces from multiple bags
       for (let i = 0; i < 21; i++) {
@@ -265,12 +265,12 @@ describe("Seven Bag RNG", () => {
       let currentRng = rng;
       const pieceCounts: Record<PieceId, number> = {
         I: 0,
-        O: 0,
-        T: 0,
-        S: 0,
-        Z: 0,
         J: 0,
         L: 0,
+        O: 0,
+        S: 0,
+        T: 0,
+        Z: 0,
       };
 
       // Generate 700 pieces (100 bags)

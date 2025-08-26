@@ -1,3 +1,5 @@
+import { interpret } from "robot3";
+
 import {
   createDefaultDASContext,
   createDASMachine,
@@ -6,9 +8,9 @@ import {
   updateContextHoldStart,
   updateContextARR,
   updateConfig,
+  type DASEvent,
 } from "../../src/input/machines/das";
-import { Action } from "../../src/state/types";
-import { interpret } from "robot3";
+import { type Action } from "../../src/state/types";
 
 // Helper functions to check action types
 const isTapMoveAction = (
@@ -81,11 +83,11 @@ describe("DAS State Machine", () => {
     test("has correct default context", () => {
       const defaultContext = createDefaultDASContext();
       expect(defaultContext).toEqual({
-        direction: undefined,
-        dasStartTime: undefined,
         arrLastTime: undefined,
-        dasMs: 133,
         arrMs: 2,
+        dasMs: 133,
+        dasStartTime: undefined,
+        direction: undefined,
         repeats: 0,
       });
     });
@@ -96,9 +98,9 @@ describe("DAS State Machine", () => {
       test("transitions to charging on key down", () => {
         const service = new DASMachineService();
         const actions = service.send({
-          type: "KEY_DOWN",
           direction: -1,
           timestamp: 1000,
+          type: "KEY_DOWN",
         });
 
         expect(service.getState().state).toBe("charging");
@@ -112,17 +114,17 @@ describe("DAS State Machine", () => {
 
         // KEY_DOWN should not emit action yet
         const downActions = service.send({
-          type: "KEY_DOWN",
           direction: 1,
           timestamp: 1500,
+          type: "KEY_DOWN",
         });
         expect(downActions).toHaveLength(0);
 
         // KEY_UP should emit the TapMove
         const upActions = service.send({
-          type: "KEY_UP",
           direction: 1,
           timestamp: 1550,
+          type: "KEY_UP",
         });
         expect(upActions).toHaveLength(1);
         if (isTapMoveAction(upActions[0])) {
@@ -137,14 +139,14 @@ describe("DAS State Machine", () => {
         const service = new DASMachineService();
 
         // Key down
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
         expect(service.getState().state).toBe("charging");
 
         // Key up before DAS (167ms) expires - at 100ms
         const actions = service.send({
-          type: "KEY_UP",
           direction: -1,
           timestamp: 1100,
+          type: "KEY_UP",
         });
 
         expect(service.getState().state).toBe("idle");
@@ -160,13 +162,13 @@ describe("DAS State Machine", () => {
       test("classifies as tap when released at exact DAS boundary", () => {
         const service = new DASMachineService();
 
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
         // Key up at exactly 166ms (1ms before DAS expires at 167ms)
         const actions = service.send({
-          type: "KEY_UP",
           direction: -1,
           timestamp: 1166,
+          type: "KEY_UP",
         });
 
         expect(service.getState().state).toBe("idle");
@@ -183,12 +185,12 @@ describe("DAS State Machine", () => {
         const service = new DASMachineService();
         service.updateConfig(167, 33);
 
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
         // DAS timer expires at 1000 + 167 = 1167ms
         const actions = service.send({
-          type: "TIMER_TICK",
           timestamp: 1167,
+          type: "TIMER_TICK",
         });
 
         expect(service.getState().state).toBe("repeating");
@@ -206,11 +208,11 @@ describe("DAS State Machine", () => {
         const service = new DASMachineService();
         service.updateConfig(167, 33);
 
-        service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
+        service.send({ direction: 1, timestamp: 2000, type: "KEY_DOWN" });
 
         const actions = service.send({
-          type: "TIMER_TICK",
           timestamp: 2167, // 2000 + 167ms DAS
+          type: "TIMER_TICK",
         });
 
         expect(actions).toHaveLength(2); // HoldStart + HoldMove
@@ -231,15 +233,15 @@ describe("DAS State Machine", () => {
         service.updateConfig(167, 33);
 
         // Get to repeating state
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-        service.send({ type: "TIMER_TICK", timestamp: 1167 });
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+        service.send({ timestamp: 1167, type: "TIMER_TICK" });
         expect(service.getState().state).toBe("repeating");
 
         // Key up
         const actions = service.send({
-          type: "KEY_UP",
           direction: -1,
           timestamp: 1300,
+          type: "KEY_UP",
         });
 
         expect(service.getState().state).toBe("idle");
@@ -253,15 +255,15 @@ describe("DAS State Machine", () => {
         const service = new DASMachineService();
 
         // Key down left to start charging
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
         expect(service.getState().state).toBe("charging");
         expect(service.getState().context.direction).toBe(-1);
 
         // Release opposite key (right) while charging left
         const actions = service.send({
-          type: "KEY_UP",
           direction: 1,
           timestamp: 1100,
+          type: "KEY_UP",
         });
 
         // Should remain in charging state
@@ -278,13 +280,13 @@ describe("DAS State Machine", () => {
         service.updateConfig(167, 33);
 
         // Get to repeating state
-        service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-        service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS expires
+        service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+        service.send({ timestamp: 1167, type: "TIMER_TICK" }); // DAS expires
 
         // First ARR tick at 1167 + 33 = 1200ms
         const actions1 = service.send({
-          type: "TIMER_TICK",
           timestamp: 1200,
+          type: "TIMER_TICK",
         });
 
         expect(actions1).toHaveLength(1);
@@ -295,8 +297,8 @@ describe("DAS State Machine", () => {
 
         // Second ARR tick at 1200 + 33 = 1233ms
         const actions2 = service.send({
-          type: "TIMER_TICK",
           timestamp: 1233,
+          type: "TIMER_TICK",
         });
 
         expect(actions2).toHaveLength(1);
@@ -310,13 +312,13 @@ describe("DAS State Machine", () => {
         const service = new DASMachineService();
         service.updateConfig(167, 33);
 
-        service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1000 });
-        service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS
+        service.send({ direction: 1, timestamp: 1000, type: "KEY_DOWN" });
+        service.send({ timestamp: 1167, type: "TIMER_TICK" }); // DAS
 
         // Simulate catching up after a delay - multiple ARR intervals passed
         const actions = service.send({
-          type: "TIMER_TICK",
           timestamp: 1300, // 1167 + 33 + 33 + 33 + 33 + ...
+          type: "TIMER_TICK",
         });
 
         // Should emit catch-up repeats for all missed ARR intervals
@@ -336,13 +338,13 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
       service.updateConfig(167, 33);
 
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // Key up at exactly DAS expiry time (167ms)
       const actions = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1167,
+        type: "KEY_UP",
       });
 
       // At exactly the boundary, should still be classified as tap (< DAS)
@@ -359,26 +361,26 @@ describe("DAS State Machine", () => {
 
       // First tap
       service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
       const actions1 = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1050,
+        type: "KEY_UP",
       });
 
       // Second tap quickly after
       service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1100,
+        type: "KEY_DOWN",
       });
       const actions2 = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1150,
+        type: "KEY_UP",
       });
 
       expect(actions1).toHaveLength(1);
@@ -391,16 +393,16 @@ describe("DAS State Machine", () => {
 
       // Start with left
       const actions1 = service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
 
       // Switch to right before DAS
       const actions2 = service.send({
-        type: "KEY_DOWN",
         direction: 1,
         timestamp: 1080,
+        type: "KEY_DOWN",
       });
 
       if (isTapMoveAction(actions1[0])) {
@@ -419,16 +421,16 @@ describe("DAS State Machine", () => {
 
       // Press LeftDown - no action emitted yet
       const leftActions = service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
 
       // Immediately press RightDown before any timer tick - switches to right key
       const rightActions = service.send({
-        type: "KEY_DOWN",
         direction: 1,
         timestamp: 1000, // Same timestamp - rapid alternation
+        type: "KEY_DOWN",
       });
 
       // No actions emitted on KEY_DOWN events in new architecture
@@ -442,9 +444,9 @@ describe("DAS State Machine", () => {
 
       // Now release the right key to get a tap action
       const upActions = service.send({
-        type: "KEY_UP",
         direction: 1,
         timestamp: 1050,
+        type: "KEY_UP",
       });
       expect(upActions).toHaveLength(1);
       if (isTapMoveAction(upActions[0])) {
@@ -458,15 +460,15 @@ describe("DAS State Machine", () => {
       service.updateConfig(167, 33);
 
       // Get to repeating with left
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // Switch to right - this should transition to charging state
       const actions = service.send({
-        type: "KEY_DOWN",
         direction: 1,
         timestamp: 1200,
+        type: "KEY_DOWN",
       });
 
       // No action emitted on KEY_DOWN in new architecture
@@ -479,9 +481,9 @@ describe("DAS State Machine", () => {
 
       // To get an action, we need to release the key
       const upActions = service.send({
-        type: "KEY_UP",
         direction: 1,
         timestamp: 1250,
+        type: "KEY_UP",
       });
       expect(upActions).toHaveLength(1);
       if (isTapMoveAction(upActions[0])) {
@@ -492,13 +494,13 @@ describe("DAS State Machine", () => {
     test("handles zero ARR timing", () => {
       const service = new DASMachineService(createDefaultDASContext(167, 0));
 
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
 
       // With 0ms ARR, should still work (uses Math.max(1, arrMs))
       const actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1168, // 1167 + Math.max(1, 0) = 1168
+        type: "TIMER_TICK",
       });
 
       expect(actions).toHaveLength(1);
@@ -509,13 +511,13 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
       service.updateConfig(167, 33);
 
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" }); // DAS
 
       // Simulate a very long hold - 10 seconds later
       const actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 11167,
+        type: "TIMER_TICK",
       });
 
       // Should still work and emit one action for current ARR timing
@@ -530,16 +532,16 @@ describe("DAS State Machine", () => {
       service.updateConfig(167, 33);
 
       const actions1 = service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1234,
+        type: "KEY_DOWN",
       });
 
-      service.send({ type: "TIMER_TICK", timestamp: 1401 }); // 1234 + 167
+      service.send({ timestamp: 1401, type: "TIMER_TICK" }); // 1234 + 167
 
       const actions2 = service.send({
-        type: "TIMER_TICK",
         timestamp: 1434, // 1401 + 33
+        type: "TIMER_TICK",
       });
 
       if (isTapMoveAction(actions1[0])) {
@@ -555,17 +557,17 @@ describe("DAS State Machine", () => {
 
       // Tap sequence
       const tapActions = service.send({
-        type: "KEY_DOWN",
         direction: 1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
-      service.send({ type: "KEY_UP", direction: 1, timestamp: 1100 });
+      service.send({ direction: 1, timestamp: 1100, type: "KEY_UP" });
 
       // Hold sequence
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 2000 });
+      service.send({ direction: -1, timestamp: 2000, type: "KEY_DOWN" });
       const holdActions = service.send({
-        type: "TIMER_TICK",
         timestamp: 2167,
+        type: "TIMER_TICK",
       });
 
       if (isTapMoveAction(tapActions[0])) {
@@ -584,20 +586,20 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Tap case - should emit TapMove on KEY_UP
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
       const tapUpActions = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1100,
+        type: "KEY_UP",
       });
 
       // Hold case - should not emit extra actions on KEY_UP (already emitted HoldMove)
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
-      service.send({ type: "TIMER_TICK", timestamp: 2167 }); // Triggers HoldStart + HoldMove
+      service.send({ direction: 1, timestamp: 2000, type: "KEY_DOWN" });
+      service.send({ timestamp: 2167, type: "TIMER_TICK" }); // Triggers HoldStart + HoldMove
       const holdUpActions = service.send({
-        type: "KEY_UP",
         direction: 1,
         timestamp: 2300,
+        type: "KEY_UP",
       });
 
       expect(tapUpActions).toHaveLength(1); // TapMove for confirmed tap
@@ -612,7 +614,7 @@ describe("DAS State Machine", () => {
     test("preserves direction correctly during charging", () => {
       const service = new DASMachineService();
 
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       expect(service.getState().context.direction).toBe(-1);
       expect(service.getState().context.dasStartTime).toBe(1000);
@@ -623,12 +625,12 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
       service.updateConfig(167, 33);
 
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: 1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
 
       expect(service.getState().context.arrLastTime).toBe(1167);
 
-      service.send({ type: "TIMER_TICK", timestamp: 1200 });
+      service.send({ timestamp: 1200, type: "TIMER_TICK" });
 
       expect(service.getState().context.arrLastTime).toBe(1200);
     });
@@ -636,8 +638,8 @@ describe("DAS State Machine", () => {
     test("resets context on key up", () => {
       const service = new DASMachineService();
 
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1100 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ direction: -1, timestamp: 1100, type: "KEY_UP" });
 
       const context = service.getState().context;
       expect(context.direction).toBeUndefined();
@@ -664,33 +666,33 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Left key down
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
       expect(service.getState().context.direction).toBe(-1);
 
       // Right key down (should override)
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1050 });
+      service.send({ direction: 1, timestamp: 1050, type: "KEY_DOWN" });
       expect(service.getState().context.direction).toBe(1);
       expect(service.getState().context.dasStartTime).toBe(1050);
     });
 
     test("handles rapid tap sequences", () => {
       const service = new DASMachineService();
-      const allActions: Action[] = [];
+      const allActions: Array<Action> = [];
 
       // Rapid left taps
       for (let i = 0; i < 5; i++) {
         // KEY_DOWN no longer emits actions
         service.send({
-          type: "KEY_DOWN",
           direction: -1,
           timestamp: 1000 + i * 100,
+          type: "KEY_DOWN",
         });
 
         // Actions are emitted on KEY_UP
         const upActions = service.send({
-          type: "KEY_UP",
           direction: -1,
           timestamp: 1000 + i * 100 + 50,
+          type: "KEY_UP",
         });
         allActions.push(...upActions);
       }
@@ -710,30 +712,30 @@ describe("DAS State Machine", () => {
 
       // Key down - should emit tap move
       const initialActions = service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
 
       // DAS expires - should emit hold start
       const holdStartActions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1167,
+        type: "TIMER_TICK",
       });
 
       // Multiple ARR ticks - should emit repeat moves
       const arr1Actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1200,
+        type: "TIMER_TICK",
       });
 
       const arr2Actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1233,
+        type: "TIMER_TICK",
       });
 
       // Key up when hitting wall
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1300 });
+      service.send({ direction: -1, timestamp: 1300, type: "KEY_UP" });
 
       if (isTapMoveAction(initialActions[0])) {
         expect(initialActions[0].type).toBe("TapMove");
@@ -757,8 +759,8 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Get to repeating state
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // Reset
@@ -777,9 +779,9 @@ describe("DAS State Machine", () => {
 
       // Try to send KEY_UP while in idle (no active direction)
       const actions = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_UP",
       });
 
       expect(actions).toHaveLength(0);
@@ -791,8 +793,8 @@ describe("DAS State Machine", () => {
 
       // Timer tick in idle state
       const actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1000,
+        type: "TIMER_TICK",
       });
 
       expect(actions).toHaveLength(0);
@@ -804,9 +806,9 @@ describe("DAS State Machine", () => {
 
       // Test with a valid timestamp - KEY_DOWN no longer emits actions
       const downActions = service.send({
-        type: "KEY_DOWN",
         direction: 1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
 
       expect(downActions).toHaveLength(0); // No action on KEY_DOWN
@@ -814,9 +816,9 @@ describe("DAS State Machine", () => {
 
       // Action is emitted on KEY_UP
       const upActions = service.send({
-        type: "KEY_UP",
         direction: 1,
         timestamp: 1050,
+        type: "KEY_UP",
       });
 
       expect(upActions).toHaveLength(1); // Should emit action on KEY_UP
@@ -832,8 +834,8 @@ describe("DAS State Machine", () => {
 
       // Send TIMER_TICK without any previous key down (dasStartTime undefined)
       const actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1000,
+        type: "TIMER_TICK",
       });
 
       expect(actions).toHaveLength(0);
@@ -845,8 +847,8 @@ describe("DAS State Machine", () => {
       service.updateConfig(167, 33);
 
       // Get to repeating state first
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS expires
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" }); // DAS expires
       expect(service.getState().state).toBe("repeating");
 
       // Now manually mess with the context to simulate undefined direction
@@ -857,8 +859,8 @@ describe("DAS State Machine", () => {
 
       // Send TIMER_TICK - should not emit ARR since direction is undefined
       const actions = service.send({
-        type: "TIMER_TICK",
         timestamp: 1200,
+        type: "TIMER_TICK",
       });
 
       expect(actions).toHaveLength(0);
@@ -868,7 +870,7 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Get to charging state
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
       expect(service.getState().state).toBe("charging");
 
       // Update config while charging
@@ -884,8 +886,8 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Get to repeating state
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // Update config while repeating
@@ -901,18 +903,18 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Test updateContextKeyDown with non-KEY_DOWN event
-      service.send({ type: "TIMER_TICK", timestamp: 1000 });
+      service.send({ timestamp: 1000, type: "TIMER_TICK" });
       expect(service.getState().context.direction).toBeUndefined();
 
       // Test updateContextHoldStart with wrong event type
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1100 }); // Should not call updateContextHoldStart
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ direction: -1, timestamp: 1100, type: "KEY_UP" }); // Should not call updateContextHoldStart
       expect(service.getState().context.arrLastTime).toBeUndefined();
 
       // Test updateContextARR with wrong event type
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
-      service.send({ type: "TIMER_TICK", timestamp: 2167 }); // Get to repeating
-      service.send({ type: "KEY_UP", direction: 1, timestamp: 2200 }); // Should not call updateContextARR
+      service.send({ direction: 1, timestamp: 2000, type: "KEY_DOWN" });
+      service.send({ timestamp: 2167, type: "TIMER_TICK" }); // Get to repeating
+      service.send({ direction: 1, timestamp: 2200, type: "KEY_UP" }); // Should not call updateContextARR
       expect(service.getState().state).toBe("idle");
     });
 
@@ -920,10 +922,10 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Get to charging state
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // Send a TIMER_TICK that doesn't meet DAS expiry condition (too early)
-      const actions = service.send({ type: "TIMER_TICK", timestamp: 1050 }); // Only 50ms elapsed
+      const actions = service.send({ timestamp: 1050, type: "TIMER_TICK" }); // Only 50ms elapsed
 
       expect(actions).toHaveLength(0); // No actions should be emitted
       expect(service.getState().context.arrLastTime).toBeUndefined(); // Should remain undefined
@@ -935,12 +937,12 @@ describe("DAS State Machine", () => {
       service.updateConfig(167, 33);
 
       // Get to repeating state
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 }); // DAS expires
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" }); // DAS expires
       expect(service.getState().state).toBe("repeating");
 
       // Send a TIMER_TICK that doesn't meet ARR condition (too early)
-      const actions = service.send({ type: "TIMER_TICK", timestamp: 1180 }); // Only 13ms after ARR start
+      const actions = service.send({ timestamp: 1180, type: "TIMER_TICK" }); // Only 13ms after ARR start
 
       expect(actions).toHaveLength(0); // No actions should be emitted
       expect(service.getState().context.arrLastTime).toBe(1167); // Should remain at DAS expiry time
@@ -951,7 +953,7 @@ describe("DAS State Machine", () => {
       const initialConfig = { ...service.getState().context };
 
       // Send a different event type - should not modify config
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       expect(service.getState().context.dasMs).toBe(initialConfig.dasMs);
       expect(service.getState().context.arrMs).toBe(initialConfig.arrMs);
@@ -962,36 +964,36 @@ describe("DAS State Machine", () => {
 
       // Test updateContextKeyDown return branch (line 89)
       // This happens when event.type !== "KEY_DOWN"
-      service.send({ type: "UPDATE_CONFIG", dasMs: 100, arrMs: 20 });
+      service.send({ arrMs: 20, dasMs: 100, type: "UPDATE_CONFIG" });
       expect(service.getState().context.direction).toBeUndefined(); // Should remain unchanged
 
       // Test updateContextHoldStart return branch (line 127)
       // Get to charging state, then send wrong event type or conditions not met
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // Send KEY_UP which should not trigger updateContextHoldStart
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1100 });
+      service.send({ direction: -1, timestamp: 1100, type: "KEY_UP" });
       // Context should be reset, but updateContextHoldStart's return branch was hit
       expect(service.getState().state).toBe("idle");
 
       // Test updateContextARR return branch (line 152)
       // Get to repeating state first
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
-      service.send({ type: "TIMER_TICK", timestamp: 2167 }); // Get to repeating
+      service.send({ direction: 1, timestamp: 2000, type: "KEY_DOWN" });
+      service.send({ timestamp: 2167, type: "TIMER_TICK" }); // Get to repeating
 
       // Send event that doesn't match conditions for updateContextARR
       // This could be a KEY_DOWN which transitions to charging without calling updateContextARR
       const actions = service.send({
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 2200,
+        type: "KEY_DOWN",
       });
       expect(actions).toHaveLength(0); // No action on KEY_DOWN
       expect(service.getState().state).toBe("charging"); // Transitions to charging
 
       // Test updateConfig return branch (line 163)
       // Send non-UPDATE_CONFIG event when updateConfig might be called
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 3000 });
+      service.send({ direction: 1, timestamp: 3000, type: "KEY_DOWN" });
       // The config should remain unchanged from previous updateConfig call
       expect(service.getState().context.dasMs).toBe(100);
       expect(service.getState().context.arrMs).toBe(20);
@@ -1023,31 +1025,31 @@ describe("DAS State Machine", () => {
       // 1. Send events in specific orders that cause reducers to return early
 
       // Create a scenario that triggers updateContextHoldStart but doesn't meet conditions
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // Send TIMER_TICK events at different states to cover all branches
 
       // First, test when DAS hasn't expired yet (should hit return branches)
-      let actions = service.send({ type: "TIMER_TICK", timestamp: 1050 }); // 50ms < 100ms (new DAS)
+      let actions = service.send({ timestamp: 1050, type: "TIMER_TICK" }); // 50ms < 100ms (new DAS)
       expect(actions).toHaveLength(0);
 
       // Now let DAS expire to get to repeating state (using new 100ms DAS time)
-      actions = service.send({ type: "TIMER_TICK", timestamp: 1100 });
+      actions = service.send({ timestamp: 1100, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // Send TIMER_TICK too early for ARR (should hit return branch)
-      actions = service.send({ type: "TIMER_TICK", timestamp: 1110 }); // Only 10ms later, need 20ms
+      actions = service.send({ timestamp: 1110, type: "TIMER_TICK" }); // Only 10ms later, need 20ms
       expect(actions).toHaveLength(0);
 
       // Test various event combinations to exercise all code paths
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1300 }); // Reset to idle
+      service.send({ direction: -1, timestamp: 1300, type: "KEY_UP" }); // Reset to idle
 
       // Test updateContextKeyDown with different event types
-      service.send({ type: "TIMER_TICK", timestamp: 1400 }); // Not KEY_DOWN
+      service.send({ timestamp: 1400, type: "TIMER_TICK" }); // Not KEY_DOWN
       expect(service.getState().context.direction).toBeUndefined();
 
       // Test updateConfig with different event types
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1500 }); // Not UPDATE_CONFIG
+      service.send({ direction: 1, timestamp: 1500, type: "KEY_DOWN" }); // Not UPDATE_CONFIG
       expect(service.getState().context.dasMs).toBe(100); // Should remain from the updateConfig call above
     });
   });
@@ -1057,14 +1059,14 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Key down to start charging
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
       expect(service.getState().state).toBe("charging");
 
       // Key up after DAS expiry (167ms) but before first timer tick
       const actions = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1200, // 200ms after start, which is > 167ms DAS
+        type: "KEY_UP",
       });
 
       expect(service.getState().state).toBe("idle");
@@ -1081,15 +1083,15 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // Get to repeating state with left direction
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
-      service.send({ type: "TIMER_TICK", timestamp: 1167 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
+      service.send({ timestamp: 1167, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // KEY_UP for right direction (opposite) should not exit repeating
       const actions = service.send({
-        type: "KEY_UP",
         direction: 1, // Opposite direction
         timestamp: 1300,
+        type: "KEY_UP",
       });
 
       expect(service.getState().state).toBe("repeating"); // Should still be repeating
@@ -1101,20 +1103,20 @@ describe("DAS State Machine", () => {
       const service = new DASMachineService();
 
       // KEY_DOWN left at t=1000
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
       expect(service.getState().state).toBe("charging");
       expect(service.getState().context.direction).toBe(-1);
 
       // KEY_DOWN right at t=1080 (switch to charging right)
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 1080 });
+      service.send({ direction: 1, timestamp: 1080, type: "KEY_DOWN" });
       expect(service.getState().state).toBe("charging");
       expect(service.getState().context.direction).toBe(1);
 
       // KEY_UP left at t=1100 - should be ignored since we're now charging right
       const actions = service.send({
-        type: "KEY_UP",
         direction: -1,
         timestamp: 1100,
+        type: "KEY_UP",
       });
 
       expect(service.getState().state).toBe("charging"); // Should remain charging
@@ -1168,32 +1170,32 @@ describe("DAS State Machine", () => {
 
       // updateContextKeyDown with non-KEY_DOWN event
       const ctx1 = updateContextKeyDown(initialContext, {
-        type: "TIMER_TICK",
         timestamp: 1000,
+        type: "TIMER_TICK",
       });
       expect(ctx1).toBe(initialContext); // Should return unchanged context
 
       // updateContextHoldStart with wrong event type or conditions not met
       const ctx2 = updateContextHoldStart(initialContext, {
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
       expect(ctx2).toBe(initialContext); // Should return unchanged context
 
       // updateContextARR with wrong event type
       const ctx3 = updateContextARR(initialContext, {
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
       expect(ctx3).toBe(initialContext); // Should return unchanged context
 
       // updateConfig with non-UPDATE_CONFIG event
       const ctx4 = updateConfig(initialContext, {
-        type: "KEY_DOWN",
         direction: -1,
         timestamp: 1000,
+        type: "KEY_DOWN",
       });
       expect(ctx4).toBe(initialContext); // Should return unchanged context
     });
@@ -1209,12 +1211,19 @@ describe("DAS State Machine", () => {
       expect(typeof machine).toBe("object");
 
       // Create a service using interpret
-      const service = interpret(machine, () => {
-        // onChange callback - this will trigger when state changes
-      });
+      const service = interpret(
+        machine as Parameters<typeof interpret>[0],
+        () => {
+          // onChange callback - this will trigger when state changes
+        },
+      ) as unknown as {
+        send: (event: DASEvent) => void;
+        machine: unknown;
+        context: unknown;
+      };
 
       // Send an event to the service to trigger state changes and context usage
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // Verify the service was created and can handle events
       expect(service).toBeDefined();
@@ -1226,32 +1235,39 @@ describe("DAS State Machine", () => {
       const initialContext = createDefaultDASContext(100, 20);
       const machine = createDASMachine(initialContext);
 
-      const service = interpret(machine, () => {
-        // State change callback
-      });
+      const service = interpret(
+        machine as Parameters<typeof interpret>[0],
+        () => {
+          // State change callback
+        },
+      ) as unknown as {
+        send: (event: DASEvent) => void;
+        machine: unknown;
+        context: unknown;
+      };
 
       // Complete test sequence through all states:
 
       // 1. Start with key down
-      service.send({ type: "KEY_DOWN", direction: -1, timestamp: 1000 });
+      service.send({ direction: -1, timestamp: 1000, type: "KEY_DOWN" });
 
       // 2. Release quickly (tap)
-      service.send({ type: "KEY_UP", direction: -1, timestamp: 1050 });
+      service.send({ direction: -1, timestamp: 1050, type: "KEY_UP" });
 
       // 3. Press key again
-      service.send({ type: "KEY_DOWN", direction: 1, timestamp: 2000 });
+      service.send({ direction: 1, timestamp: 2000, type: "KEY_DOWN" });
 
       // 4. Hold until DAS expires
-      service.send({ type: "TIMER_TICK", timestamp: 2100 });
+      service.send({ timestamp: 2100, type: "TIMER_TICK" });
 
       // 5. Continue holding for ARR
-      service.send({ type: "TIMER_TICK", timestamp: 2120 });
+      service.send({ timestamp: 2120, type: "TIMER_TICK" });
 
       // 6. Release to end hold
-      service.send({ type: "KEY_UP", direction: 1, timestamp: 2200 });
+      service.send({ direction: 1, timestamp: 2200, type: "KEY_UP" });
 
       // 7. Update configuration
-      service.send({ type: "UPDATE_CONFIG", dasMs: 200, arrMs: 30 });
+      service.send({ arrMs: 30, dasMs: 200, type: "UPDATE_CONFIG" });
 
       // Verify the service handled all transitions
       expect(service).toBeDefined();

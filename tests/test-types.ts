@@ -1,3 +1,4 @@
+import type { SevenBagRng } from "../src/core/rng";
 import type {
   GameState,
   Action,
@@ -6,14 +7,14 @@ import type {
   Board,
   Rot,
 } from "../src/state/types";
-import type { SevenBagRng } from "../src/core/rng";
 
 // Deep partial type for testing invalid/partial states
-export type DeepPartial<T> = T extends object
-  ? {
-      [P in keyof T]?: DeepPartial<T[P]>;
-    }
-  : T;
+export type DeepPartial<T> =
+  T extends Record<string, unknown>
+    ? {
+        [P in keyof T]?: DeepPartial<T[P]>;
+      }
+    : T;
 
 // Invalid game state for testing error handling
 export type InvalidGameState = DeepPartial<GameState>;
@@ -39,9 +40,9 @@ export type MalformedAction =
   | { type: unknown; [key: string]: unknown };
 
 // Corrupted RNG for testing RNG error handling
-export interface CorruptedRng extends Omit<SevenBagRng, "currentBag"> {
-  currentBag: (PieceId | undefined | null)[];
-}
+export type CorruptedRng = {
+  currentBag: Array<PieceId | undefined | null>;
+} & Omit<SevenBagRng, "currentBag">;
 
 // Invalid piece for testing
 export type InvalidPiece =
@@ -54,32 +55,34 @@ export type InvalidPiece =
     };
 
 // Corrupted board for testing
-export interface CorruptedBoard extends Omit<Board, "cells"> {
+export type CorruptedBoard = {
   cells: unknown;
-}
+} & Omit<Board, "cells">;
 
 // Type guards
 export function isValidGameState(state: unknown): state is GameState {
-  if (!state || typeof state !== "object") return false;
+  if (state === undefined || state === null || typeof state !== "object")
+    return false;
   const s = state as Record<string, unknown>;
   return (
-    s.board !== undefined &&
-    s.tick !== undefined &&
-    s.status !== undefined &&
-    s.rng !== undefined &&
-    s.timing !== undefined &&
-    s.gameplay !== undefined &&
-    s.physics !== undefined &&
-    s.inputLog !== undefined &&
-    s.stats !== undefined
+    s["board"] !== undefined &&
+    s["tick"] !== undefined &&
+    s["status"] !== undefined &&
+    s["rng"] !== undefined &&
+    s["timing"] !== undefined &&
+    s["gameplay"] !== undefined &&
+    s["physics"] !== undefined &&
+    s["inputLog"] !== undefined &&
+    s["stats"] !== undefined
   );
 }
 
 export function isValidAction(action: unknown): action is Action {
-  if (!action || typeof action !== "object") return false;
+  if (action === undefined || action === null || typeof action !== "object")
+    return false;
   const a = action as Record<string, unknown>;
   return (
-    typeof a.type === "string" &&
+    typeof a["type"] === "string" &&
     [
       "Init",
       "Tick",
@@ -96,7 +99,7 @@ export function isValidAction(action: unknown): action is Action {
       "CompleteLineClear",
       "ClearLines",
       "EnqueueInput",
-    ].includes(a.type)
+    ].includes(a["type"])
   );
 }
 
@@ -132,7 +135,7 @@ export function createCorruptedRng(
   seed: string,
   corruption: "empty" | "undefined" | "null" = "undefined",
 ): CorruptedRng {
-  const bag: (PieceId | undefined | null)[] =
+  const bag: Array<PieceId | undefined | null> =
     corruption === "empty"
       ? []
       : corruption === "undefined"
@@ -140,9 +143,9 @@ export function createCorruptedRng(
         : [null];
 
   return {
-    seed,
-    currentBag: bag,
     bagIndex: 0,
+    currentBag: bag,
     internalSeed: 12345,
+    seed,
   };
 }

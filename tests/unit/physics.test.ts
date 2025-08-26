@@ -1,22 +1,23 @@
 import { describe, it, expect } from "@jest/globals";
+
 import { reducer } from "../../src/state/reducer";
-import { GameState } from "../../src/state/types";
+import { type GameState } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
   return reducer(undefined, {
-    type: "Init",
     seed: "test",
     timing: { gravityEnabled: true, gravityMs: 1000 },
+    type: "Init",
   });
 }
 
 // Helper to create state with active piece
 function createStateWithPiece(): GameState {
   const state = createTestState();
-  return reducer(state, { type: "Spawn", piece: "T" });
+  return reducer(state, { piece: "T", type: "Spawn" });
 }
 
 describe("physics system", () => {
@@ -41,8 +42,8 @@ describe("physics system", () => {
       const gravityTime =
         state.physics.lastGravityTime + state.timing.gravityMs + 1;
       const newState = reducer(state, {
-        type: "Tick",
         timestampMs: createTimestamp(gravityTime),
+        type: "Tick",
       });
 
       expect(newState.active).toBeDefined();
@@ -54,13 +55,13 @@ describe("physics system", () => {
     it("should not move piece when gravity disabled", () => {
       let state = createTestState();
       state = { ...state, timing: { ...state.timing, gravityEnabled: false } };
-      state = reducer(state, { type: "Spawn", piece: "T" });
+      state = reducer(state, { piece: "T", type: "Spawn" });
       assertActivePiece(state);
       const originalY = state.active.y;
 
       const newState = reducer(state, {
-        type: "Tick",
         timestampMs: createTimestamp(performance.now() + 2000),
+        type: "Tick",
       });
 
       assertActivePiece(newState);
@@ -72,12 +73,12 @@ describe("physics system", () => {
 
       // Move piece to bottom by hard dropping it
       state = reducer(state, {
-        type: "HardDrop",
         timestampMs: createTimestamp(1000),
+        type: "HardDrop",
       });
 
       // Spawn a new piece and put it near the bottom manually
-      state = reducer(state, { type: "Spawn", piece: "T" });
+      state = reducer(state, { piece: "T", type: "Spawn" });
 
       // Move the piece to a position where it can't drop further
       assertActivePiece(state);
@@ -97,8 +98,8 @@ describe("physics system", () => {
       // Apply gravity when at bottom
       const gravityTime = 1000 + state.timing.gravityMs + 1;
       const newState = reducer(state, {
-        type: "Tick",
         timestampMs: createTimestamp(gravityTime),
+        type: "Tick",
       });
 
       expect(newState.physics.lockDelayStartTime).toBe(gravityTime);
@@ -118,8 +119,8 @@ describe("physics system", () => {
       // Trigger lock delay expiration
       const expiredTime = 1000 + state.timing.lockDelayMs + 1;
       const newState = reducer(state, {
-        type: "Tick",
         timestampMs: createTimestamp(expiredTime),
+        type: "Tick",
       });
 
       expect(newState.active).toBeUndefined();
@@ -131,16 +132,16 @@ describe("physics system", () => {
     it("should enable soft dropping", () => {
       const state = createStateWithPiece();
 
-      const newState = reducer(state, { type: "SoftDrop", on: true });
+      const newState = reducer(state, { on: true, type: "SoftDrop" });
 
       expect(newState.physics.isSoftDropping).toBe(true);
     });
 
     it("should disable soft dropping", () => {
       let state = createStateWithPiece();
-      state = reducer(state, { type: "SoftDrop", on: true });
+      state = reducer(state, { on: true, type: "SoftDrop" });
 
-      const newState = reducer(state, { type: "SoftDrop", on: false });
+      const newState = reducer(state, { on: false, type: "SoftDrop" });
 
       expect(newState.physics.isSoftDropping).toBe(false);
     });
@@ -150,7 +151,7 @@ describe("physics system", () => {
       assertActivePiece(state);
       const originalY = state.active.y;
 
-      const newState = reducer(state, { type: "SoftDrop", on: true });
+      const newState = reducer(state, { on: true, type: "SoftDrop" });
 
       assertActivePiece(newState);
       expect(newState.active.y).toBe(originalY + 1);
@@ -171,8 +172,8 @@ describe("physics system", () => {
       const gravityTime = state.physics.lastGravityTime + expectedInterval + 1;
 
       const newState = reducer(state, {
-        type: "Tick",
         timestampMs: createTimestamp(gravityTime),
+        type: "Tick",
       });
 
       assertActivePiece(state);
@@ -189,7 +190,7 @@ describe("physics system", () => {
         physics: { ...state.physics, lockDelayStartTime: 1000 },
       };
 
-      const newState = reducer(state, { type: "TapMove", dir: 1 });
+      const newState = reducer(state, { dir: 1, type: "TapMove" });
 
       expect(newState.physics.lockDelayStartTime).toBeNull();
     });
@@ -201,7 +202,7 @@ describe("physics system", () => {
         physics: { ...state.physics, lockDelayStartTime: 1000 },
       };
 
-      const newState = reducer(state, { type: "Rotate", dir: "CW" });
+      const newState = reducer(state, { dir: "CW", type: "Rotate" });
 
       expect(newState.physics.lockDelayStartTime).toBeNull();
     });
@@ -211,8 +212,8 @@ describe("physics system", () => {
       const timestamp = performance.now();
 
       const newState = reducer(state, {
-        type: "StartLockDelay",
         timestampMs: createTimestamp(timestamp),
+        type: "StartLockDelay",
       });
 
       expect(newState.physics.lockDelayStartTime).toBe(timestamp);
@@ -238,9 +239,9 @@ describe("physics system", () => {
       const lines = [18, 19];
 
       const newState = reducer(state, {
-        type: "StartLineClear",
         lines,
         timestampMs: createTimestamp(timestamp),
+        type: "StartLineClear",
       });
 
       expect(newState.status).toBe("lineClear");
@@ -261,12 +262,12 @@ describe("physics system", () => {
       state = {
         ...state,
         board: { ...state.board, cells },
-        status: "lineClear",
         physics: {
           ...state.physics,
-          lineClearStartTime: createTimestamp(1000),
           lineClearLines: [18, 19],
+          lineClearStartTime: createTimestamp(1000),
         },
+        status: "lineClear",
       };
 
       const newState = reducer(state, { type: "CompleteLineClear" });
@@ -291,7 +292,7 @@ describe("physics system", () => {
       // the piece cannot be placed even at its spawn position
       // This is actually very rare in normal Tetris since pieces spawn above board
       // For testing purposes, let's just verify normal spawn works
-      const normalSpawn = reducer(state, { type: "Spawn", piece: "T" });
+      const normalSpawn = reducer(state, { piece: "T", type: "Spawn" });
       expect(normalSpawn.status).toBe("playing");
       expect(normalSpawn.active).toBeDefined();
 

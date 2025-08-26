@@ -5,17 +5,17 @@
  * when lineClearDelayMs > 0, causing game softlock.
  */
 
-import { reducer } from "../../src/state/reducer";
-import { GameState } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
 import { shouldCompleteLineClear } from "../../src/app";
+import { reducer } from "../../src/state/reducer";
+import { type GameState } from "../../src/state/types";
+import { createTimestamp } from "../../src/types/timestamp";
 
 // Helper function to create a state with a line ready to clear
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
   let state = reducer(undefined, {
-    type: "Init",
     seed: "test",
     timing: { lineClearDelayMs },
+    type: "Init",
   });
 
   // Fill bottom row leaving space for I piece (4 cells)
@@ -24,19 +24,19 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
   }
 
   // Spawn I piece
-  state = reducer(state, { type: "Spawn", piece: "I" });
+  state = reducer(state, { piece: "I", type: "Spawn" });
 
   // Move I piece to complete the line
   if (state.active) {
     // I piece spawns at x=3 with cells at [0,1],[1,1],[2,1],[3,1] relative to piece
     // At x=3, this puts cells at board positions x=3,4,5,6
     // We want to fill x=6,7,8,9 to complete the line (since x=0-5 are already filled)
-    state = reducer(state, { type: "TapMove", dir: 1 }); // x=4 -> cells at 4,5,6,7
-    state = reducer(state, { type: "TapMove", dir: 1 }); // x=5 -> cells at 5,6,7,8
-    state = reducer(state, { type: "TapMove", dir: 1 }); // x=6 -> cells at 6,7,8,9
+    state = reducer(state, { dir: 1, type: "TapMove" }); // x=4 -> cells at 4,5,6,7
+    state = reducer(state, { dir: 1, type: "TapMove" }); // x=5 -> cells at 5,6,7,8
+    state = reducer(state, { dir: 1, type: "TapMove" }); // x=6 -> cells at 6,7,8,9
     state = reducer(state, {
-      type: "HardDrop",
       timestampMs: createTimestamp(1000),
+      type: "HardDrop",
     });
   }
 
@@ -92,7 +92,8 @@ describe("Line Clearing Regression Tests", () => {
 
     it("should complete line clearing after delay expires", () => {
       let state = createStateWithCompleteLine(100);
-      const startTime = state.physics.lineClearStartTime!;
+      expect(state.physics.lineClearStartTime).not.toBeNull();
+      const startTime = state.physics.lineClearStartTime as number;
 
       // Before delay expires, should not complete
       expect(shouldCompleteLineClear(state, startTime + 50)).toBe(false);
@@ -119,7 +120,8 @@ describe("Line Clearing Regression Tests", () => {
 
     it("should handle 300ms delay correctly", () => {
       const state = createStateWithCompleteLine(300);
-      const startTime = state.physics.lineClearStartTime!;
+      expect(state.physics.lineClearStartTime).not.toBeNull();
+      const startTime = state.physics.lineClearStartTime as number;
 
       // Should be in lineClear status
       expect(state.status).toBe("lineClear");
@@ -137,7 +139,8 @@ describe("Line Clearing Regression Tests", () => {
 
     it("should handle 500ms delay correctly", () => {
       const state = createStateWithCompleteLine(500);
-      const startTime = state.physics.lineClearStartTime!;
+      expect(state.physics.lineClearStartTime).not.toBeNull();
+      const startTime = state.physics.lineClearStartTime as number;
 
       // Should be in lineClear status
       expect(state.status).toBe("lineClear");
@@ -157,9 +160,9 @@ describe("Line Clearing Regression Tests", () => {
   describe("Edge cases", () => {
     it("should not complete line clear if not in lineClear status", () => {
       const state = reducer(undefined, {
-        type: "Init",
         seed: "test",
         timing: { lineClearDelayMs: 100 },
+        type: "Init",
       });
 
       // Playing status should not trigger completion
@@ -184,9 +187,9 @@ describe("Line Clearing Regression Tests", () => {
 
     it("should handle multiple line clears with delay", () => {
       let state = reducer(undefined, {
-        type: "Init",
         seed: "test",
         timing: { lineClearDelayMs: 100 },
+        type: "Init",
       });
 
       // Create a simpler 2-line clear scenario
@@ -198,15 +201,15 @@ describe("Line Clearing Regression Tests", () => {
       }
 
       // Create first I piece to clear both lines
-      state = reducer(state, { type: "Spawn", piece: "I" });
+      state = reducer(state, { piece: "I", type: "Spawn" });
       if (state.active) {
         // Move I piece to complete both lines (x=6 -> cells at 6,7,8,9)
-        state = reducer(state, { type: "TapMove", dir: 1 }); // x=4
-        state = reducer(state, { type: "TapMove", dir: 1 }); // x=5
-        state = reducer(state, { type: "TapMove", dir: 1 }); // x=6
+        state = reducer(state, { dir: 1, type: "TapMove" }); // x=4
+        state = reducer(state, { dir: 1, type: "TapMove" }); // x=5
+        state = reducer(state, { dir: 1, type: "TapMove" }); // x=6
         state = reducer(state, {
-          type: "HardDrop",
           timestampMs: createTimestamp(1000),
+          type: "HardDrop",
         });
       }
 
@@ -214,7 +217,8 @@ describe("Line Clearing Regression Tests", () => {
       expect(state.status).toBe("lineClear");
       expect(state.physics.lineClearLines.length).toBeGreaterThan(0);
 
-      const startTime = state.physics.lineClearStartTime!;
+      expect(state.physics.lineClearStartTime).not.toBeNull();
+      const startTime = state.physics.lineClearStartTime as number;
       expect(shouldCompleteLineClear(state, startTime + 100)).toBe(true);
 
       // Complete clearing

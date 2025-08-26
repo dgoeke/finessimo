@@ -1,5 +1,5 @@
-import type { GameState, ActivePiece, PieceId } from "../src/state/types";
 import type { SevenBagRng } from "../src/core/rng";
+import type { GameState, ActivePiece, PieceId } from "../src/state/types";
 
 // Assertion helper that provides runtime type narrowing
 export function assertDefined<T>(
@@ -26,7 +26,7 @@ export function assertHasPiece(
   state: GameState,
   message?: string,
 ): asserts state is GameState & { hold: PieceId } {
-  if (!state.hold) {
+  if (state.hold === undefined) {
     throw new Error(message ?? "Expected state to have a held piece");
   }
 }
@@ -35,12 +35,12 @@ export function assertHasPiece(
 export function assertValidBag(
   rng: SevenBagRng,
   message?: string,
-): asserts rng is SevenBagRng & { currentBag: PieceId[] } {
-  if (!rng.currentBag || rng.currentBag.length === 0) {
+): asserts rng is SevenBagRng & { currentBag: Array<PieceId> } {
+  if (rng.currentBag.length === 0) {
     throw new Error(message ?? "Expected RNG to have a valid bag");
   }
   for (const piece of rng.currentBag) {
-    if (!piece || !["I", "O", "T", "S", "Z", "J", "L"].includes(piece)) {
+    if (!["I", "O", "T", "S", "Z", "J", "L"].includes(piece)) {
       throw new Error(message ?? `Invalid piece in bag: ${piece}`);
     }
   }
@@ -52,13 +52,13 @@ export function getOrDefault<T, K extends keyof T>(
   key: K,
   defaultValue: T[K],
 ): T[K] {
-  if (!obj) return defaultValue;
+  if (obj === undefined || obj === null) return defaultValue;
   return obj[key] ?? defaultValue;
 }
 
 // Safe array access with bounds checking
 export function safeArrayAccess<T>(
-  arr: T[] | undefined | null,
+  arr: Array<T> | undefined | null,
   index: number,
   defaultValue: T,
 ): T {
@@ -69,10 +69,10 @@ export function safeArrayAccess<T>(
 }
 
 // Type-safe property existence check
-export function hasProperty<T extends object, K extends PropertyKey>(
-  obj: T,
-  key: K,
-): obj is T & Record<K, unknown> {
+export function hasProperty<
+  T extends Record<string, unknown>,
+  K extends PropertyKey,
+>(obj: T, key: K): obj is T & Record<K, unknown> {
   return key in obj;
 }
 
@@ -88,14 +88,14 @@ export function assertNotNull<T>(
 
 // Assert array has minimum length
 export function assertArrayLength<T>(
-  arr: T[] | undefined | null,
+  arr: Array<T> | undefined | null,
   minLength: number,
   message?: string,
-): asserts arr is T[] {
+): asserts arr is Array<T> {
   if (!arr || arr.length < minLength) {
     throw new Error(
       message ??
-        `Expected array to have at least ${minLength} elements, got ${arr?.length ?? 0}`,
+        `Expected array to have at least ${String(minLength)} elements, got ${String(arr?.length ?? 0)}`,
     );
   }
 }
