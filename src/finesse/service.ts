@@ -15,6 +15,7 @@ import {
   finesseCalculator,
   extractFinesseActions,
   type Fault,
+  type FinesseResult,
 } from "./calculator";
 
 export type FinesseService = {
@@ -42,6 +43,30 @@ export class DefaultFinesseService implements FinesseService {
     );
     const spawnPiece = this.createSpawnPiece(lockedPiece);
     const playerInputs = extractFinesseActions(state.processedInputLog);
+
+    // Short-circuit: if no player inputs, emit optimal empty feedback and stats
+    if (playerInputs.length === 0) {
+      const emptyResult: FinesseResult = {
+        faults: [],
+        isOptimal: true,
+        optimalSequences: [],
+        playerSequence: [],
+      };
+
+      const modeResult = gameMode.onPieceLocked(
+        state,
+        emptyResult,
+        lockedPiece,
+        finalPosition,
+      );
+
+      return this.buildActionList(
+        { faults: [], isOptimal: true, optimalSequences: [] },
+        modeResult,
+        playerInputs,
+        timestampMs,
+      );
+    }
 
     const finesseResult = finesseCalculator.analyze(
       spawnPiece,
@@ -186,19 +211,33 @@ export class DefaultFinesseService implements FinesseService {
   ): Array<Action> {
     const actions: Array<Action> = [];
 
-    // Add finesse feedback action
-    const feedback: FinesseUIFeedback = {
-      isOptimal: mergedResult.isOptimal,
-      ...(!mergedResult.isOptimal && mergedResult.optimalSequences.length > 0
-        ? {
-            optimalSequence: mergedResult
-              .optimalSequences[0] as Array<FinesseAction>,
-          }
-        : {}),
-      timestamp: asNumber(
-        timestampMs !== undefined ? createTimestamp(timestampMs) : fromNow(),
-      ),
-    };
+    // Add finesse feedback action. If player made no inputs, emit optimal empty suggestion.
+    const hasPlayerInput = playerInputs.length > 0;
+    const feedback: FinesseUIFeedback = hasPlayerInput
+      ? {
+          isOptimal: mergedResult.isOptimal,
+          ...(!mergedResult.isOptimal &&
+          mergedResult.optimalSequences.length > 0
+            ? {
+                optimalSequence: mergedResult
+                  .optimalSequences[0] as Array<FinesseAction>,
+              }
+            : {}),
+          timestamp: asNumber(
+            timestampMs !== undefined
+              ? createTimestamp(timestampMs)
+              : fromNow(),
+          ),
+        }
+      : {
+          isOptimal: true,
+          optimalSequence: [],
+          timestamp: asNumber(
+            timestampMs !== undefined
+              ? createTimestamp(timestampMs)
+              : fromNow(),
+          ),
+        };
     actions.push({ feedback, type: "UpdateFinesseFeedback" });
 
     // Add statistics tracking action

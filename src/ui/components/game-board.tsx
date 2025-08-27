@@ -215,8 +215,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const pixelX = x * this.cellSize;
     const pixelY = y * this.cellSize;
 
-    const color = "#111111"
-    const borderColor = "#555555"
+    const color = "#111111";
+    const borderColor = "#555555";
 
     // Create subtle gradient for depth
     const gradient = this.ctx.createLinearGradient(
@@ -228,7 +228,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     gradient.addColorStop(0, lightenColor(color, 0.1));
     gradient.addColorStop(1, darkenColor(color, 0.9));
 
-    this.ctx.fillStyle = "#000000" //gradient;
+    this.ctx.fillStyle = "#000000"; //gradient;
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
     // Add subtle highlight on top edge
@@ -243,7 +243,12 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // this.ctx.strokeStyle = darkenColor(borderColor, 0.3);
     this.ctx.strokeStyle = borderColor;
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(pixelX + 1, pixelY + 1, this.cellSize - 2, this.cellSize - 2);
+    this.ctx.strokeRect(
+      pixelX + 1,
+      pixelY + 1,
+      this.cellSize - 2,
+      this.cellSize - 2,
+    );
   }
 
   private drawGrid(): void {

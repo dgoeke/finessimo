@@ -73,7 +73,10 @@ describe("FinesseService", () => {
   test("creates actions with custom timestamp", () => {
     let state = baseState();
     const customTimestamp = 12345;
-    const processedActions: Array<Action> = [];
+    // Provide at least one input so feedback is present (suggestion allowed)
+    const processedActions: Array<Action> = [
+      { timestampMs: createTimestamp(100), type: "HardDrop" },
+    ];
     state = { ...state, processedInputLog: processedActions };
 
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 };
@@ -90,6 +93,37 @@ describe("FinesseService", () => {
     expect(feedbackAction).toBeTruthy();
     // @ts-expect-error narrowing by runtime check above
     expect(feedbackAction.feedback.timestamp).toBe(customTimestamp);
+  });
+
+  test("no inputs short-circuits to optimal empty feedback", () => {
+    let state = baseState();
+    // No processed inputs from the player
+    state = { ...state, processedInputLog: [] };
+
+    const locked: ActivePiece = { id: "T", rot: "spawn", x: 3, y: 5 };
+    const actions = service.analyzePieceLock(state, locked, mode);
+
+    const feedbackAction = actions.find(
+      (a) => a.type === "UpdateFinesseFeedback",
+    );
+    expect(feedbackAction).toBeTruthy();
+    // @ts-expect-error narrowing by runtime check above
+    expect(feedbackAction.feedback).toEqual({
+      isOptimal: true,
+      optimalSequence: [],
+      // timestamp is dynamic; check presence and type
+      timestamp: expect.any(Number),
+    });
+
+    // Verify stats record marks it as optimal with zero inputs
+    const recordAction = actions.find((a) => a.type === "RecordPieceLock");
+    expect(recordAction).toBeTruthy();
+    // @ts-expect-error narrowing by runtime check above
+    expect(recordAction.inputCount).toBe(0);
+    // @ts-expect-error narrowing by runtime check above
+    expect(recordAction.optimalInputCount).toBe(0);
+    // @ts-expect-error narrowing by runtime check above
+    expect(recordAction.isOptimal).toBe(true);
   });
 
   test("always includes ClearInputLog action as final action", () => {
