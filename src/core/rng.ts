@@ -1,5 +1,7 @@
 import { type PieceId } from "../state/types";
 
+import { type PieceRandomGenerator } from "./rng-interface";
+
 // Simple seedable RNG state
 export type SevenBagRng = {
   seed: string;
@@ -106,4 +108,47 @@ export function getNextPieces(
   }
 
   return { newRng: currentRng, pieces };
+}
+
+/**
+ * Wrapper class that implements PieceRandomGenerator interface for SevenBagRng
+ */
+export class SevenBagRngImpl implements PieceRandomGenerator {
+  constructor(private state: SevenBagRng) {}
+
+  getNextPiece(): {
+    piece: PieceId;
+    newRng: PieceRandomGenerator;
+  } {
+    const result = getNextPiece(this.state);
+    return {
+      newRng: new SevenBagRngImpl(result.newRng),
+      piece: result.piece,
+    };
+  }
+
+  getNextPieces(count: number): {
+    pieces: Array<PieceId>;
+    newRng: PieceRandomGenerator;
+  } {
+    const result = getNextPieces(this.state, count);
+    return {
+      newRng: new SevenBagRngImpl(result.newRng),
+      pieces: result.pieces,
+    };
+  }
+
+  /**
+   * Get the internal state (for compatibility with existing code)
+   */
+  getState(): SevenBagRng {
+    return this.state;
+  }
+}
+
+/**
+ * Create a new SevenBagRng generator with the interface
+ */
+export function createSevenBagRng(seed = "default"): PieceRandomGenerator {
+  return new SevenBagRngImpl(createRng(seed));
 }

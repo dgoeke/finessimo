@@ -1,6 +1,6 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { createRng } from "../../src/core/rng";
+import { createSevenBagRng } from "../../src/core/rng";
 import { type FinesseResult } from "../../src/finesse/calculator";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
@@ -24,7 +24,7 @@ const mockGameState: GameState = {
     lockDelayStartTime: null,
   },
   processedInputLog: [],
-  rng: createRng("test"),
+  rng: createSevenBagRng("test"),
   stats: {
     accuracyPercentage: 0,
     attempts: 0,

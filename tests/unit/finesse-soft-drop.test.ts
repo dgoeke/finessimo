@@ -1,6 +1,6 @@
 import { createEmptyBoard } from "../../src/core/board";
 import { PIECES } from "../../src/core/pieces";
-import { createRng } from "../../src/core/rng";
+import { createSevenBagRng } from "../../src/core/rng";
 import {
   finesseCalculator,
   extractFinesseActions,
@@ -98,7 +98,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
         lockDelayStartTime: null,
       },
       processedInputLog: [],
-      rng: createRng("12345"),
+      rng: createSevenBagRng("12345"),
       stats: {
         accuracyPercentage: 0,
         attempts: 0,

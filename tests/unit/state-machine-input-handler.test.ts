@@ -1,7 +1,8 @@
+import { createSevenBagRng } from "../../src/core/rng";
 import { defaultKeyBindings } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
 
-import type { SevenBagRng } from "../../src/core/rng";
+import type { PieceRandomGenerator } from "../../src/core/rng-interface";
 import type {
   Action,
   GameState,
@@ -102,12 +103,7 @@ describe("StateMachineInputHandler", () => {
       lockDelayStartTime: null,
     };
 
-    const rng: SevenBagRng = {
-      bagIndex: 0,
-      currentBag: ["T", "I", "O"],
-      internalSeed: 42,
-      seed: "42",
-    };
+    const rng: PieceRandomGenerator = createSevenBagRng("42");
 
     return {
       active,

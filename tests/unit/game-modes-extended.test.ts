@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "@jest/globals";
 
-import { createRng } from "../../src/core/rng";
+import { createSevenBagRng } from "../../src/core/rng";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
 
@@ -25,7 +25,7 @@ const mockState = (): GameState => ({
     lockDelayStartTime: null,
   },
   processedInputLog: [],
-  rng: createRng("t"),
+  rng: createSevenBagRng("t"),
   stats: {
     accuracyPercentage: 0,
     attempts: 0,

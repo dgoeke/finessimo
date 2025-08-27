@@ -7,12 +7,8 @@ import {
   clearLines,
 } from "../core/board";
 import { PIECES } from "../core/pieces";
-import {
-  createRng,
-  getNextPiece,
-  getNextPieces,
-  type SevenBagRng,
-} from "../core/rng";
+import { createSevenBagRng } from "../core/rng";
+import { type PieceRandomGenerator } from "../core/rng-interface";
 import { createActivePiece, canSpawnPiece, isTopOut } from "../core/spawning";
 import { tryRotate, getNextRotation } from "../core/srs";
 import { createTimestamp } from "../types/timestamp";
@@ -129,13 +125,17 @@ function applyStatsBaseUpdate(
 // Initial game state
 function createInitialState(
   seed: string,
-  timing?: Partial<TimingConfig>,
-  gameplay?: Partial<GameplayConfig>,
-  mode?: string,
-  previousStats?: Stats,
+  config: {
+    timing?: Partial<TimingConfig> | undefined;
+    gameplay?: Partial<GameplayConfig> | undefined;
+    mode?: string | undefined;
+    previousStats?: Stats | undefined;
+    customRng?: PieceRandomGenerator | undefined;
+  } = {},
 ): GameState {
-  const rng = createRng(seed);
-  const { newRng, pieces: initialQueue } = getNextPieces(rng, 5); // Generate 5-piece preview
+  const { customRng, gameplay, mode, previousStats, timing } = config;
+  const rng = customRng ?? createSevenBagRng(seed);
+  const { newRng, pieces: initialQueue } = rng.getNextPieces(5); // Generate 5-piece preview
 
   // Create default stats with all fields zeroed
   const defaults: Stats = {
@@ -236,11 +236,11 @@ const wouldTopOut = (piece: ActivePiece): boolean => {
 
 const getNextPieceFromQueue = (
   holdQueue: Array<PieceId>,
-  rng: SevenBagRng,
+  rng: PieceRandomGenerator,
 ): {
   newActive: ActivePiece;
   newPiece: PieceId;
-  newRng: SevenBagRng;
+  newRng: PieceRandomGenerator;
 } | null => {
   if (holdQueue.length === 0) return null;
 
@@ -248,7 +248,7 @@ const getNextPieceFromQueue = (
   if (nextPiece === undefined) return null;
 
   const newActive = createActivePiece(nextPiece);
-  const { newRng: updatedRng, piece } = getNextPiece(rng);
+  const { newRng: updatedRng, piece } = rng.getNextPiece();
 
   return { newActive, newPiece: piece, newRng: updatedRng };
 };
@@ -479,6 +479,36 @@ const actionHandlers: ActionHandlerMap = {
     };
   },
 
+  CreateGarbageRow: (state, action) => {
+    const newCells = new Uint8Array(200);
+
+    // Shift all existing rows up by one
+    for (let y = 0; y < 19; y++) {
+      for (let x = 0; x < 10; x++) {
+        const sourceIdx = (y + 1) * 10 + x;
+        const destIdx = y * 10 + x;
+        newCells[destIdx] = state.board.cells[sourceIdx] ?? 0;
+      }
+    }
+
+    // Add the provided row at the bottom (row 19)
+    for (let x = 0; x < 10; x++) {
+      const bottomIdx = 19 * 10 + x;
+      newCells[bottomIdx] = action.row[x] ?? 0;
+    }
+
+    // Update active piece position if it exists (move it up)
+    const newActive = state.active
+      ? { ...state.active, y: state.active.y - 1 }
+      : undefined;
+
+    return {
+      ...state,
+      active: newActive,
+      board: { ...state.board, cells: newCells },
+    };
+  },
+
   HardDrop: (state, action) => {
     if (!state.active) return state;
 
@@ -507,7 +537,7 @@ const actionHandlers: ActionHandlerMap = {
     const currentPieceId = state.active.id;
     let newActive: ActivePiece | undefined;
     const holdQueue = [...state.nextQueue];
-    let newRng: SevenBagRng = state.rng;
+    let newRng: PieceRandomGenerator = state.rng;
 
     if (state.hold !== undefined) {
       newActive = createActivePiece(state.hold);
@@ -569,13 +599,13 @@ const actionHandlers: ActionHandlerMap = {
 
   // Core game actions
   Init: (state, action) =>
-    createInitialState(
-      action.seed,
-      action.timing,
-      action.gameplay,
-      action.mode,
-      action.retainStats === true ? state.stats : undefined,
-    ),
+    createInitialState(action.seed, {
+      customRng: action.rng,
+      gameplay: action.gameplay,
+      mode: action.mode,
+      previousStats: action.retainStats === true ? state.stats : undefined,
+      timing: action.timing,
+    }),
 
   Lock: (state, action) => {
     if (typeof state.tick !== "number" || state.active === undefined) {
@@ -716,7 +746,7 @@ const actionHandlers: ActionHandlerMap = {
     }
 
     let pieceToSpawn: PieceId;
-    let spawnRng: SevenBagRng = state.rng;
+    let spawnRng: PieceRandomGenerator = state.rng;
     const newQueue = [...state.nextQueue];
 
     if (action.piece !== undefined) {
@@ -728,7 +758,7 @@ const actionHandlers: ActionHandlerMap = {
       pieceToSpawn = nextFromQueue;
 
       while (newQueue.length < 5) {
-        const { newRng: updatedRng, piece } = getNextPiece(spawnRng);
+        const { newRng: updatedRng, piece } = spawnRng.getNextPiece();
         newQueue.push(piece);
         spawnRng = updatedRng;
       }
@@ -864,13 +894,13 @@ export const reducer: (
   // Handle initialization
   if (state === undefined) {
     if (action.type === "Init") {
-      return createInitialState(
-        action.seed,
-        action.timing,
-        action.gameplay,
-        action.mode,
-        undefined,
-      );
+      return createInitialState(action.seed, {
+        customRng: action.rng,
+        gameplay: action.gameplay,
+        mode: action.mode,
+        previousStats: undefined,
+        timing: action.timing,
+      });
     }
     throw new Error(`Cannot process action ${action.type} without state`);
   }

@@ -10,7 +10,7 @@ import {
   type TimingConfig,
   type GameplayConfig,
 } from "./state/types";
-import { createTimestamp, fromNow } from "./types/timestamp";
+import { createTimestamp } from "./types/timestamp";
 
 import type {
   GameSettings,
@@ -258,16 +258,6 @@ export class FinessimoApp {
   // Public method to get current state (for debugging)
   getState(): GameState {
     return this.gameState;
-  }
-
-  // Public method to simulate input (for testing)
-  simulateInput(action: string): void {
-    // Simulating input (no console logging)
-    // This is a simple test method - in a real implementation,
-    // input would come from the keyboard/touch handlers
-    if (action === "lock") {
-      this.dispatch({ timestampMs: fromNow(), type: "Lock" });
-    }
   }
 
   // Public method to change game mode

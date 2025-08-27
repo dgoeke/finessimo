@@ -1,5 +1,5 @@
 // Game state
-import type { SevenBagRng } from "../core/rng";
+import type { PieceRandomGenerator } from "../core/rng-interface";
 import type { FaultType } from "../finesse/calculator";
 import type { Timestamp } from "../types/timestamp";
 
@@ -164,7 +164,7 @@ export type GameState = {
   hold: PieceId | undefined;
   canHold: boolean;
   nextQueue: Array<PieceId>;
-  rng: SevenBagRng; // SevenBagRng state from core/rng.ts
+  rng: PieceRandomGenerator; // Generic RNG interface for testability
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
@@ -191,6 +191,7 @@ export type Action =
       gameplay?: Partial<GameplayConfig>;
       mode?: string;
       retainStats?: boolean;
+      rng?: PieceRandomGenerator; // Optional custom RNG for testing
     }
   | { type: "Tick"; timestampMs: Timestamp }
   | { type: "Spawn"; piece?: PieceId }
@@ -230,7 +231,22 @@ export type Action =
       optimalInputCount: number;
       faults: Array<FaultType>;
     }
-  | { type: "ClearInputLog" };
+  | { type: "ClearInputLog" }
+  | {
+      type: "CreateGarbageRow";
+      row: readonly [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ]; // Exactly 10 cell values (0 = empty, 1-7 = pieces, 8 = garbage)
+    }; // Adds a row to the bottom of the board
 
 export type Reducer = (
   s: Readonly<GameState> | undefined,
