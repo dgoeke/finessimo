@@ -20,9 +20,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(1000),
       type: "HardDrop",
@@ -72,9 +72,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(2000),
       type: "HardDrop",
@@ -110,9 +110,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(3000),
       type: "HardDrop",
@@ -122,7 +122,7 @@ describe("Line Clear Edge Cases", () => {
     expect(state.active).toBeUndefined();
 
     // Try to move non-existent piece
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
 
     // Should be unchanged
     expect(state.status).toBe("lineClear");
@@ -146,9 +146,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
 
     const lockTime = 5000;
     state = reducer(state, {
@@ -186,9 +186,9 @@ describe("Line Clear Edge Cases", () => {
 
     // First line clear
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(4000),
       type: "HardDrop",

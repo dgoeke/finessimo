@@ -21,7 +21,7 @@ describe("Reducer - Extended Coverage", () => {
       const actions: Array<Action> = [
         { timestampMs: createTimestamp(1), type: "Tick" },
         { type: "Spawn" },
-        { dir: -1, type: "TapMove" },
+        { dir: -1, optimistic: false, type: "TapMove" },
         { dir: 1, type: "HoldMove" },
         { on: true, type: "SoftDrop" },
         { on: false, type: "SoftDrop" },
@@ -31,7 +31,7 @@ describe("Reducer - Extended Coverage", () => {
         { type: "Hold" },
         { timestampMs: createTimestamp(performance.now()), type: "Lock" },
         { lines: [19], type: "ClearLines" },
-        { dir: 1, type: "TapMove" },
+        { dir: 1, optimistic: false, type: "TapMove" },
       ];
 
       actions.forEach((action) => {
@@ -190,7 +190,7 @@ describe("Reducer - Extended Coverage", () => {
         canHold: false,
         processedInputLog: [
           { dir: "CW", type: "Rotate" },
-          { dir: 1, type: "TapMove" },
+          { dir: 1, optimistic: false, type: "TapMove" },
         ],
         tick: 42,
       };
@@ -251,7 +251,7 @@ describe("Reducer - Extended Coverage", () => {
   describe("Action processing and state updates", () => {
     it("should append move actions to processedInputLog when there's an active piece", () => {
       const existingActions: Array<Action> = [
-        { dir: -1, type: "TapMove" },
+        { dir: -1, optimistic: false, type: "TapMove" },
         { dir: "CW", type: "Rotate" },
       ];
 
@@ -260,7 +260,7 @@ describe("Reducer - Extended Coverage", () => {
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
         processedInputLog: existingActions,
       };
-      const newAction: Action = { dir: 1, type: "TapMove" };
+      const newAction: Action = { dir: 1, optimistic: false, type: "TapMove" };
 
       const result = reducer(stateWithActions, newAction);
 
@@ -272,8 +272,8 @@ describe("Reducer - Extended Coverage", () => {
 
     it("should handle all movement action types", () => {
       const moveActions: Array<Action> = [
-        { dir: -1, type: "TapMove" },
-        { dir: 1, type: "TapMove" },
+        { dir: -1, optimistic: false, type: "TapMove" },
+        { dir: 1, optimistic: false, type: "TapMove" },
         { dir: -1, type: "HoldMove" },
         { dir: 1, type: "HoldMove" },
         { dir: -1, type: "RepeatMove" },
@@ -336,6 +336,7 @@ describe("Reducer - Extended Coverage", () => {
       };
       reducer(stateWithPiece, {
         dir: -1,
+        optimistic: false,
         type: "TapMove",
       });
 
@@ -352,7 +353,11 @@ describe("Reducer - Extended Coverage", () => {
         ...initialState,
         active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
       };
-      const result = reducer(stateWithPiece, { dir: -1, type: "TapMove" });
+      const result = reducer(stateWithPiece, {
+        dir: -1,
+        optimistic: false,
+        type: "TapMove",
+      });
 
       expect(result).not.toBe(stateWithPiece);
       expect(result.processedInputLog).not.toBe(
@@ -381,6 +386,7 @@ describe("Reducer - Extended Coverage", () => {
           };
           state = reducer(state, {
             dir: -1,
+            optimistic: false,
             type: "TapMove",
           });
         }
@@ -422,7 +428,11 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should handle TapMove with invalid direction", () => {
-      const malformedAction = { dir: "invalid", type: "TapMove" }; // Invalid direction
+      const malformedAction = {
+        dir: "invalid",
+        optimistic: false,
+        type: "TapMove",
+      }; // Invalid direction
 
       expect(() =>
         reducer(initialState, malformedAction as unknown as Action),
@@ -483,12 +493,14 @@ describe("Reducer - Extended Coverage", () => {
         expect(() =>
           reducer(invalidState as InvalidGameState as GameState, {
             dir: -1,
+            optimistic: false,
             type: "TapMove",
           }),
         ).not.toThrow();
 
         const result = reducer(invalidState as InvalidGameState as GameState, {
           dir: -1,
+          optimistic: false,
           type: "TapMove",
         });
         expect(result).toBe(invalidState);

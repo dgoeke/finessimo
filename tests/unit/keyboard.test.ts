@@ -92,15 +92,18 @@ describe("StateMachineInputHandler", () => {
       handler.update(mockGameState, 1000);
     });
 
-    it("should dispatch input event on left key down and up (complete tap)", () => {
+    it("should dispatch input event immediately on key down (optimistic movement)", () => {
       handler.start();
       // Simulate via public API (independent of TinyKeys mock)
       handler.handleMovement("LeftDown", 1000);
-      expect(mockDispatch).not.toHaveBeenCalled(); // tap classification occurs on release
-      handler.handleMovement("LeftUp", 1050);
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({ dir: -1, type: "TapMove" }),
-      );
+      ); // Optimistic movement emitted immediately
+
+      // KEY_UP should not emit additional action
+      mockDispatch.mockClear();
+      handler.handleMovement("LeftUp", 1050);
+      expect(mockDispatch).not.toHaveBeenCalled(); // No duplicate movement
     });
 
     it("should dispatch input event on key up", () => {
@@ -112,14 +115,17 @@ describe("StateMachineInputHandler", () => {
       expect(mockDispatch).not.toHaveBeenCalled();
     });
 
-    it("should ignore key repeat events", () => {
+    it("should ignore repeated key down events for the same direction", () => {
       handler.start();
 
-      // Simulate repeated downs; second down should be ignored by DAS direction guard
+      // First down emits optimistic move
       handler.handleMovement("LeftDown", 1000);
-      handler.handleMovement("LeftDown", 1010);
+      expect(mockDispatch).toHaveBeenCalledTimes(1); // Optimistic move emitted
 
-      expect(mockDispatch).not.toHaveBeenCalled();
+      // Simulate repeated down (browser key repeat behavior); should be ignored for same direction
+      mockDispatch.mockClear();
+      handler.handleMovement("LeftDown", 1010);
+      expect(mockDispatch).not.toHaveBeenCalled(); // No duplicate optimistic move for same direction
     });
 
     it("should ignore inputs when settings are open", () => {

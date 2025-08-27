@@ -14,6 +14,16 @@ import {
   type Action,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import {
+  MoveLeft,
+  MoveRight,
+  HoldMoveLeft,
+  HoldMoveRight,
+  HoldStartLeft,
+  HoldStartRight,
+  RotateCW,
+  HardDrop,
+} from "../helpers/actions";
 import { assertDefined } from "../test-helpers";
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
@@ -322,26 +332,21 @@ describe("extractFinesseActions", () => {
 
   test("converts TapMove actions correctly", () => {
     const actions: Array<Action> = [
-      { dir: -1, timestampMs: timestamp, type: "TapMove" },
-      { dir: 1, timestampMs: timestamp, type: "TapMove" },
+      MoveLeft({ timestampMs: timestamp }),
+      MoveRight({ timestampMs: timestamp }),
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "MoveRight"]);
   });
 
   test("converts Rotate actions correctly", () => {
-    const actions: Array<Action> = [
-      { dir: "CW", type: "Rotate" },
-      { dir: "CCW", type: "Rotate" },
-    ];
+    const actions: Array<Action> = [RotateCW(), { dir: "CCW", type: "Rotate" }];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["RotateCW", "RotateCCW"]);
   });
 
   test("converts HardDrop actions correctly", () => {
-    const actions: Array<Action> = [
-      { timestampMs: timestamp, type: "HardDrop" },
-    ];
+    const actions: Array<Action> = [HardDrop(timestamp)];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["HardDrop"]);
   });
@@ -391,8 +396,8 @@ describe("extractFinesseActions", () => {
 
   test("handles mixed sequence with taps and holds", () => {
     const actions: Array<Action> = [
-      { dir: -1, timestampMs: timestamp, type: "TapMove" },
-      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
+      { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       { dir: "CW", type: "Rotate" },
       { dir: 1, timestampMs: timestamp, type: "HoldStart" },
       { dir: 1, timestampMs: timestamp, type: "HoldMove" },
@@ -412,7 +417,7 @@ describe("extractFinesseActions", () => {
 
   test("ignores irrelevant action types", () => {
     const actions: Array<Action> = [
-      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       { timestampMs: timestamp, type: "Tick" },
       { type: "Spawn" },
       { dir: "CW", type: "Rotate" },
@@ -460,11 +465,53 @@ describe("extractFinesseActions", () => {
 
   test("handles invalid direction TapMove (should be filtered out)", () => {
     const actions: Array<Action> = [
-      { dir: -1, timestampMs: timestamp, type: "TapMove" },
+      { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       // No invalid direction test since TypeScript prevents it
-      { dir: 1, timestampMs: timestamp, type: "TapMove" },
+      { dir: 1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "MoveRight"]);
+  });
+
+  test("filters out optimistic TapMove when followed by HoldStart in same direction", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ optimistic: true, timestampMs: timestamp }), // Optimistic move
+      HoldStartLeft({ timestampMs: timestamp }), // Hold start - should filter out optimistic
+      HoldMoveLeft({ timestampMs: createTimestamp(timestamp + 167) }), // Hold move
+    ];
+    const result = extractFinesseActions(actions);
+    // Should only see DASLeft (optimistic TapMove filtered out)
+    expect(result).toEqual(["DASLeft"]);
+  });
+
+  test("keeps TapMove when HoldStart is in different direction", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ timestampMs: timestamp }), // Left tap (non-optimistic by default)
+      HoldStartRight({ timestampMs: createTimestamp(timestamp + 100) }), // Right hold start
+      HoldMoveRight({ timestampMs: createTimestamp(timestamp + 267) }), // Right hold move
+    ];
+    const result = extractFinesseActions(actions);
+    // Should see both MoveLeft and DASRight
+    expect(result).toEqual(["MoveLeft", "DASRight"]);
+  });
+
+  test("keeps TapMove when no following HoldStart", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ timestampMs: timestamp }), // Just a tap, no hold
+    ];
+    const result = extractFinesseActions(actions);
+    // Should see MoveLeft (no HoldStart to filter it out)
+    expect(result).toEqual(["MoveLeft"]);
+  });
+
+  test("keeps non-optimistic TapMove even when followed by DAS in same direction", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ timestampMs: timestamp }), // Real tap (not optimistic, default)
+      HoldStartLeft({ timestampMs: createTimestamp(timestamp + 100) }), // Separate hold start
+      HoldMoveLeft({ timestampMs: createTimestamp(timestamp + 267) }), // Hold move
+    ];
+    const result = extractFinesseActions(actions);
+    // Should see both MoveLeft and DASLeft (tap + separate DAS)
+    expect(result).toEqual(["MoveLeft", "DASLeft"]);
   });
 });

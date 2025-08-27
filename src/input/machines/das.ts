@@ -56,6 +56,7 @@ export type DASContext = {
   dasMs: number; // DAS delay in milliseconds (how long to hold before repeating starts)
   arrMs: number; // ARR rate in milliseconds (how fast repeating happens)
   repeats: number; // Number of catch-up repeats to emit (for catch-up logic)
+  optimisticMoveEmitted: boolean; // Track if optimistic movement has been emitted for current key sequence
 };
 
 // DAS state machine events - these trigger state transitions
@@ -82,6 +83,14 @@ export type DASMachineEventMap = {
 // Guard: Check if event is a key down
 const isKeyDown = (_ctx: DASContext, event: DASEvent): boolean => {
   return event.type === "KEY_DOWN";
+};
+
+// Guard: Check if this is a new key down (different direction or from idle)
+const isNewKeyDown = (ctx: DASContext, event: DASEvent): boolean => {
+  return (
+    event.type === "KEY_DOWN" &&
+    (ctx.direction === undefined || ctx.direction !== event.direction)
+  );
 };
 
 // Guard: Check if key was released before DAS timer expired (= tap classification)
@@ -165,6 +174,7 @@ export const updateContextKeyDown = (
       arrLastTime: undefined, // Reset ARR timer
       dasStartTime: event.timestamp, // Start the DAS timer
       direction: event.direction, // Record which direction key was pressed
+      optimisticMoveEmitted: true, // Mark that we emitted optimistic move
       repeats: 0, // Reset catch-up repeats
     };
   }
@@ -182,6 +192,7 @@ export const updateContextKeyUp = (
     arrLastTime: undefined, // Clear ARR timer
     dasStartTime: undefined, // Clear DAS timer
     direction: undefined, // No key held
+    optimisticMoveEmitted: false, // Reset for next key sequence
     repeats: 0, // Clear catch-up repeats
   };
 };
@@ -200,6 +211,7 @@ export const updateContextHoldStart = (
       ...ctx,
       // Set arrLastTime to when the first repeat should happen (DAS start + DAS duration)
       arrLastTime: ctx.dasStartTime + ctx.dasMs,
+      optimisticMoveEmitted: false, // Reset when transitioning to repeating state
       repeats: 0, // Reset catch-up repeats when starting hold
     };
   }
@@ -251,13 +263,20 @@ export const updateConfig = (ctx: DASContext, event: DASEvent): DASContext => {
  * These create the actual action functions used in the state machine
  */
 
-// Creates action function to emit tap moves
+// Creates action function to emit tap moves (optimized to skip if optimistic move already emitted)
 const createEmitTapAction =
   (onAction?: (action: Action) => void) =>
-  (_ctx: DASContext, event: DASEvent): void => {
+  (ctx: DASContext, event: DASEvent): void => {
+    // Skip if optimistic move already emitted for this sequence
+    if (ctx.optimisticMoveEmitted) {
+      return; // No duplicate movement
+    }
+
+    // Original tap logic for backward compatibility
     if (event.type === "KEY_UP" && onAction && "direction" in event) {
       onAction({
         dir: event.direction,
+        optimistic: false, // Not optimistic - this is a confirmed tap
         timestampMs: createTimestamp(event.timestamp),
         type: "TapMove",
       });
@@ -316,6 +335,20 @@ const createEmitRepeatMove =
     }
   };
 
+// Creates action function to emit optimistic moves immediately on KEY_DOWN
+const createEmitOptimisticMove =
+  (onAction?: (action: Action) => void) =>
+  (_ctx: DASContext, event: DASEvent): void => {
+    if (event.type === "KEY_DOWN" && onAction && "direction" in event) {
+      onAction({
+        dir: event.direction,
+        optimistic: true, // Flag this as an optimistic move
+        timestampMs: createTimestamp(event.timestamp),
+        type: "TapMove", // Use TapMove - same movement logic, proper analytics
+      });
+    }
+  };
+
 // Creates all action functions for the DAS machine
 const createDASActions = (
   onAction?: (action: Action) => void,
@@ -324,9 +357,11 @@ const createDASActions = (
   emitHoldStart: (ctx: DASContext, event: DASEvent) => void;
   emitHoldMove: (ctx: DASContext, event: DASEvent) => void;
   emitRepeatMove: (ctx: DASContext, event: DASEvent) => void;
+  emitOptimisticMove: (ctx: DASContext, event: DASEvent) => void;
 } => ({
   emitHoldMove: createEmitHoldMove(onAction),
   emitHoldStart: createEmitHoldStart(onAction),
+  emitOptimisticMove: createEmitOptimisticMove(onAction),
   emitRepeatMove: createEmitRepeatMove(onAction),
   emitTapAction: createEmitTapAction(onAction),
 });
@@ -338,7 +373,7 @@ const createDASActions = (
 
 // Creates the idle state: waiting for input
 const createIdleState = (
-  _actions: ReturnType<typeof createDASActions>,
+  actions: ReturnType<typeof createDASActions>,
 ): MachineState<DASEvent["type"]> =>
   state(
     transition(
@@ -346,6 +381,7 @@ const createIdleState = (
       "charging",
       guard(isKeyDown),
       reduce(updateContextKeyDown),
+      action(actions.emitOptimisticMove), // NEW: Emit optimistic movement
     ),
     transition(
       "UPDATE_CONFIG",
@@ -364,15 +400,17 @@ const createChargingState = (
       "KEY_UP",
       "idle",
       guard(isKeyUpBeforeDAS),
-      reduce(updateContextKeyUp),
+      // Emit tap before resetting context to avoid double-move
       action(actions.emitTapAction),
+      reduce(updateContextKeyUp),
     ),
     transition(
       "KEY_UP",
       "idle",
       guard(isKeyUpAfterDAS),
-      reduce(updateContextKeyUp),
+      // Emit tap before resetting context to avoid double-move
       action(actions.emitTapAction),
+      reduce(updateContextKeyUp),
     ),
     transition(
       "TIMER_TICK",
@@ -385,9 +423,16 @@ const createChargingState = (
     transition(
       "KEY_DOWN",
       "charging",
-      guard(isKeyDown),
+      guard(isNewKeyDown), // Only for new/different direction
       reduce(updateContextKeyDown),
-      action(actions.emitTapAction),
+      action(actions.emitOptimisticMove), // Emit optimistic move for new direction
+    ),
+    transition(
+      "KEY_DOWN",
+      "charging",
+      guard(isKeyDown), // Any KEY_DOWN (fallback for same direction)
+      reduce(updateContextKeyDown),
+      // No action - don't emit optimistic move for repeated same direction
     ),
     transition(
       "UPDATE_CONFIG",
@@ -418,9 +463,16 @@ const createRepeatingState = (
     transition(
       "KEY_DOWN",
       "charging",
-      guard(isKeyDown),
+      guard(isNewKeyDown), // Only for new/different direction
       reduce(updateContextKeyDown),
-      action(actions.emitTapAction),
+      action(actions.emitOptimisticMove), // Emit optimistic move for new direction
+    ),
+    transition(
+      "KEY_DOWN",
+      "charging",
+      guard(isKeyDown), // Any KEY_DOWN (fallback for same direction)
+      reduce(updateContextKeyDown),
+      // No action - don't emit optimistic move for repeated same direction
     ),
     transition(
       "UPDATE_CONFIG",
@@ -475,6 +527,7 @@ export const createDefaultDASContext = (
   dasMs: Math.max(0, dasMs), // Clamp DAS to >= 0ms
   dasStartTime: undefined, // No DAS timer active
   direction: undefined, // No key held initially
+  optimisticMoveEmitted: false, // Initialize flag
   repeats: 0, // No catch-up repeats initially
 });
 
@@ -500,8 +553,12 @@ export class DASMachineService {
   private actionQueue: Array<Action> = []; // Queue for collecting emitted actions
   private currentStateName: DASState; // Current state name stored from interpret callback
 
-  constructor(initialContext?: DASContext) {
-    const context = initialContext ?? createDefaultDASContext();
+  constructor(initialContext?: Partial<DASContext>) {
+    // Merge provided partial context with safe defaults
+    const context: DASContext = {
+      ...createDefaultDASContext(initialContext?.dasMs, initialContext?.arrMs),
+      ...initialContext,
+    };
     this.currentStateName = "idle"; // Initialize with default state
 
     // Create the robot3 machine with action callback to collect Actions

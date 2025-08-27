@@ -226,7 +226,12 @@ describe("handler.ts", () => {
           { dir: "CW", type: "Rotate" },
           { on: true, type: "SoftDrop" },
           { timestampMs: createTimestamp(1000), type: "HardDrop" },
-          { dir: -1, timestampMs: createTimestamp(1000), type: "TapMove" },
+          {
+            dir: -1,
+            optimistic: false,
+            timestampMs: createTimestamp(1000),
+            type: "TapMove",
+          },
           { dir: 1, timestampMs: createTimestamp(1000), type: "HoldMove" },
           { dir: -1, timestampMs: createTimestamp(1000), type: "RepeatMove" },
         ];
@@ -345,7 +350,7 @@ describe("handler.ts", () => {
         const malformedActions = [
           {} as Action,
           { type: "UnknownAction" } as unknown as Action,
-          { type: "TapMove" } as Action, // Missing required properties
+          { optimistic: false, type: "TapMove" } as Action, // Missing required properties
           null as unknown as Action,
           undefined as unknown as Action,
         ];
@@ -375,6 +380,7 @@ describe("handler.ts", () => {
         });
         mockHandler.simulateAction({
           dir: -1,
+          optimistic: false,
           timestampMs: createTimestamp(1000),
           type: "TapMove",
         });
@@ -410,6 +416,7 @@ describe("handler.ts", () => {
         expect(dispatchMock).toHaveBeenCalledTimes(3);
         expect(dispatchMock).toHaveBeenNthCalledWith(1, {
           dir: -1,
+          optimistic: false,
           timestampMs: createTimestamp(1000),
           type: "TapMove",
         });
@@ -497,12 +504,14 @@ describe("handler.ts", () => {
         });
         mockHandler.simulateAction({
           dir: 1,
+          optimistic: false,
           timestampMs: createTimestamp(1100),
           type: "TapMove",
         });
 
         expect(dispatchMock).toHaveBeenCalledWith({
           dir: 1,
+          optimistic: false,
           timestampMs: createTimestamp(1100),
           type: "TapMove",
         });
