@@ -2,10 +2,6 @@
 
 This file provides a quick, high-level map of all TypeScript files under src/ and what they do. It's meant to help future AI assistants orient quickly before diving into code.
 
-## Documentation
-
-- DAS-Playbook.md: Comprehensive architecture guide for DAS state machine integration. Describes the problem with current input handling (tap vs hold classification), solution using Robot3 state machines, implementation phases, file structure, and migration strategy. Essential reading for understanding the state machine approach to input classification.
-
 ## Dependencies
 
 - Added Robot3 (v1.1.1): Fast 1kB functional library for creating finite state machines. Used for DAS state machine implementation to provide proper input classification at the source.
