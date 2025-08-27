@@ -199,13 +199,24 @@ describe("StateMachineInputHandler", () => {
       handler.init(dispatchMock);
     });
 
-    test("handleMovement dispatches TapMove actions", () => {
-      // Complete tap sequence: down then up
+    test("handleMovement dispatches TapMove actions immediately on key down", () => {
+      // Optimistic movement: TapMove dispatched immediately on key down
       handler.handleMovement("LeftDown", 1000);
-      handler.handleMovement("LeftUp", 1050);
 
       expect(dispatchMock).toHaveBeenCalledWith({
         dir: -1,
+        optimistic: true,
+        timestampMs: expect.any(Number) as number,
+        type: "TapMove",
+      });
+
+      // Key up should not dispatch additional TapMove
+      dispatchMock.mockClear();
+      handler.handleMovement("LeftUp", 1050);
+
+      expect(dispatchMock).not.toHaveBeenCalledWith({
+        dir: -1,
+        optimistic: expect.any(Boolean) as boolean,
         timestampMs: expect.any(Number) as number,
         type: "TapMove",
       });
@@ -394,18 +405,19 @@ describe("StateMachineInputHandler", () => {
     test("handles direction switching", () => {
       handler.init(dispatchMock);
 
-      // Press left
+      // Press left - emits optimistic move
       handler.handleMovement("LeftDown", 1000);
       expect(handler.getState().currentDirection).toBe(-1);
+      expect(dispatchMock).toHaveBeenCalledTimes(1); // Optimistic left move
 
-      // Press right (should switch and auto-complete left as tap)
+      // Press right (should switch and emit optimistic move)
       handler.handleMovement("RightDown", 1100);
       expect(handler.getState().currentDirection).toBe(1);
-      expect(dispatchMock).toHaveBeenCalledTimes(1); // Left direction auto-completed as tap
+      expect(dispatchMock).toHaveBeenCalledTimes(2); // Left optimistic + right optimistic
 
-      // Complete the right tap to get another dispatch
+      // Complete the right tap - no additional dispatch (optimistic already emitted)
       handler.handleMovement("RightUp", 1150);
-      expect(dispatchMock).toHaveBeenCalledTimes(2); // Left auto-tap + right manual tap
+      expect(dispatchMock).toHaveBeenCalledTimes(2); // Still just the 2 optimistic moves
     });
   });
 

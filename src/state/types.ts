@@ -194,7 +194,12 @@ export type Action =
     }
   | { type: "Tick"; timestampMs: Timestamp }
   | { type: "Spawn"; piece?: PieceId }
-  | { type: "TapMove"; dir: -1 | 1; timestampMs?: Timestamp }
+  | {
+      type: "TapMove";
+      dir: -1 | 1;
+      optimistic: boolean;
+      timestampMs?: Timestamp;
+    }
   | { type: "HoldMove"; dir: -1 | 1; timestampMs?: Timestamp }
   | { type: "RepeatMove"; dir: -1 | 1; timestampMs?: Timestamp }
   | { type: "HoldStart"; dir: -1 | 1; timestampMs?: Timestamp }

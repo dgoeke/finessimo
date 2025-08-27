@@ -25,7 +25,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Actions without active piece", () => {
     it("should return unchanged state for Move action without active piece", () => {
-      const action: Action = { dir: -1, type: "TapMove" };
+      const action: Action = { dir: -1, optimistic: false, type: "TapMove" };
       const result = reducer(validState, action);
       expect(result).toBe(validState); // Same reference
     });
@@ -95,7 +95,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { dir: -1, type: "TapMove" };
+      const action: Action = { dir: -1, optimistic: false, type: "TapMove" };
       const result = reducer(edgeState, action);
       expect(result).toBe(edgeState); // No movement possible
     });

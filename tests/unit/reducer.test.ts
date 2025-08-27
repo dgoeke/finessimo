@@ -217,6 +217,7 @@ describe("Reducer", () => {
       });
       reducer(initialState, {
         dir: 1,
+        optimistic: false,
         type: "TapMove",
       });
 
@@ -259,6 +260,7 @@ describe("Reducer", () => {
       // Dispatch TapMove action
       const stateAfterTap = reducer(stateWithPiece, {
         dir: -1,
+        optimistic: false,
         timestampMs: timestamp,
         type: "TapMove",
       });
@@ -266,6 +268,7 @@ describe("Reducer", () => {
       expect(stateAfterTap.processedInputLog).toHaveLength(1);
       expect(stateAfterTap.processedInputLog[0]).toEqual({
         dir: -1,
+        optimistic: false,
         timestampMs: timestamp,
         type: "TapMove",
       });
@@ -312,6 +315,7 @@ describe("Reducer", () => {
       // Dispatch actions with different timestamps
       state = reducer(state, {
         dir: -1,
+        optimistic: false,
         timestampMs: timestamp1,
         type: "TapMove",
       });

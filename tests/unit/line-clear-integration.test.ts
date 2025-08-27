@@ -22,9 +22,9 @@ describe("Line Clear Integration", () => {
 
     // Spawn I piece and position it
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
 
     // Hard drop to trigger line clear
     const startTime = 1000;
@@ -80,9 +80,9 @@ describe("Line Clear Integration", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(2000),
       type: "HardDrop",
@@ -110,9 +110,9 @@ describe("Line Clear Integration", () => {
     }
 
     state = reducer(state, { piece: "I", type: "Spawn" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
-    state = reducer(state, { dir: 1, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, {
       timestampMs: createTimestamp(3000),
       type: "HardDrop",

@@ -32,13 +32,55 @@ export type Fault = {
   position?: number; // Index in the player sequence where fault occurs
 };
 
-// Convert Actions to FinesseActions for analysis (with DAS coalescing)
+// Convert Actions to FinesseActions for analysis (with optimistic move filtering)
 export function extractFinesseActions(
   actions: Array<Action>,
 ): Array<FinesseAction> {
-  return actions
-    .map(convertSingleAction)
-    .filter((action): action is FinesseAction => action !== undefined);
+  // Create pairs of original actions and their converted finesse actions
+  const actionPairs = actions
+    .map((action, index) => ({
+      finesse: convertSingleAction(action),
+      index,
+      original: action,
+    }))
+    .filter(
+      (
+        pair,
+      ): pair is { finesse: FinesseAction; index: number; original: Action } =>
+        pair.finesse !== undefined,
+    );
+
+  // Sliding window to filter out optimistic moves followed by DAS in same direction
+  const result: Array<FinesseAction> = [];
+
+  for (let i = 0; i < actionPairs.length; i++) {
+    const current = actionPairs[i];
+    if (!current) continue;
+
+    // Check if this is an optimistic TapMove (only filter optimistic moves)
+    if (current.original.type === "TapMove" && current.original.optimistic) {
+      // Look at the next action pair to see if it's a DAS in the same direction
+      const next = actionPairs[i + 1];
+
+      const isDASInSameDirection =
+        next &&
+        next.original.type === "HoldMove" &&
+        "dir" in next.original &&
+        "dir" in current.original &&
+        next.original.dir === current.original.dir &&
+        (next.finesse === "DASLeft" || next.finesse === "DASRight");
+
+      if (isDASInSameDirection === true) {
+        // Skip this optimistic move - it will be followed by the DAS action
+        continue;
+      }
+    }
+
+    // Keep this action
+    result.push(current.finesse);
+  }
+
+  return result;
 }
 
 // Convert single action with reduced complexity
@@ -64,6 +106,7 @@ function convertSingleAction(action: Action): FinesseAction | undefined {
     return action.on ? "SoftDrop" : undefined;
   }
 
+  // HoldStart, RepeatMove are just telemetry - ignore them for finesse analysis
   // All other actions are ignored
   return undefined;
 }

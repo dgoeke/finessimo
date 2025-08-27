@@ -153,6 +153,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     // Step 1: Move right to x=4 (T-spin position)
     currentState = reducer(currentState, {
       dir: 1,
+      optimistic: false,
       timestampMs: createTimestamp(1000),
       type: "TapMove",
     });
@@ -242,7 +243,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
 
     // Simulate a soft drop sequence that eventually locks
     const actions: Array<Action> = [
-      { dir: -1, timestampMs: timestamp, type: "TapMove" }, // Move left
+      { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" }, // Move left
       { on: true, type: "SoftDrop" }, // Start soft drop - should be included
       { timestampMs: timestamp, type: "Tick" }, // Game tick - should be filtered
       { on: false, type: "SoftDrop" }, // End soft drop - should be filtered
