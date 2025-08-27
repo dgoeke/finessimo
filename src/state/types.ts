@@ -1,6 +1,6 @@
 // Game state
 import type { PieceRandomGenerator } from "../core/rng-interface";
-import type { FaultType } from "../finesse/calculator";
+import type { FaultType, FinesseResult } from "../finesse/calculator";
 import type { Timestamp } from "../types/timestamp";
 
 // Board representation (dense array)
@@ -48,6 +48,7 @@ export type GameplayConfig = {
   // Finesse toggles
   finesseFeedbackEnabled?: boolean; // default true
   finesseBoopEnabled?: boolean; // default false
+  retryOnFinesseError?: boolean; // default false - retry piece on hard drop finesse errors
 };
 
 export type SoftDropSpeed = number | "infinite";
@@ -98,11 +99,7 @@ export type FinesseAction =
 // Finesse move types for optimal play analysis
 
 // Game mode and finesse feedback
-export type FinesseUIFeedback = {
-  optimalSequence?: Array<FinesseAction>;
-  isOptimal: boolean;
-  timestamp: number;
-};
+// FinesseUIFeedback has been replaced with FinesseResult from finesse/calculator.ts
 
 // Generic guidance provided by game modes for UI and engine policies
 export type ModeGuidance = {
@@ -161,6 +158,17 @@ export type Stats = {
   tetrisLines: number;
 };
 
+// Pending lock system types
+export type LockSource = "hardDrop" | "softDrop" | "gravity" | "force";
+
+export type PendingLock = {
+  finalPos: ActivePiece; // result of dropToBottom or last grounded pos
+  source: LockSource; // origin of lock condition
+  completedLines: Array<number>; // lines that would be cleared if committed
+  pieceId: PieceId; // convenience for respawn/retry
+  timestampMs: Timestamp; // preserve original timestamp for lockCurrentPiece
+};
+
 export type GameState = {
   board: Board;
   active: ActivePiece | undefined;
@@ -171,7 +179,10 @@ export type GameState = {
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
-  status: "playing" | "lineClear" | "topOut";
+  status: "playing" | "lineClear" | "topOut" | "resolvingLock";
+  // Invariant: When status === "resolvingLock", pendingLock MUST be non-null
+  // When status !== "resolvingLock", pendingLock MUST be null
+  pendingLock: PendingLock | null;
   stats: Stats; // Basic stats; extended in Iteration 6
   physics: PhysicsState;
   // Processed actions log for finesse analysis - contains structured actions with tap/das distinction
@@ -179,7 +190,7 @@ export type GameState = {
   // Game mode and finesse feedback
   currentMode: string;
   modeData?: unknown;
-  finesseFeedback: FinesseUIFeedback | null;
+  finesseFeedback: FinesseResult | null;
   modePrompt: string | null;
   // Optional, mode-provided guidance for visualization and prompts
   guidance?: ModeGuidance | null;
@@ -218,8 +229,19 @@ export type Action =
   | { type: "CompleteLineClear" }
   | { type: "ClearLines"; lines: Array<number> }
   | { type: "SetMode"; mode: string }
-  | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
+  | { type: "UpdateFinesseFeedback"; feedback: FinesseResult | null }
   | { type: "UpdateModePrompt"; prompt: string | null }
+  // Externalized preview refill (mode-owned RNG)
+  | {
+      type: "RefillPreview";
+      pieces: Array<PieceId>;
+      rng: PieceRandomGenerator;
+    }
+  | {
+      type: "ReplacePreview";
+      pieces: Array<PieceId>;
+      rng: PieceRandomGenerator;
+    }
   // Settings updates
   | { type: "UpdateTiming"; timing: Partial<TimingConfig> }
   | { type: "UpdateGameplay"; gameplay: Partial<GameplayConfig> }
@@ -249,7 +271,10 @@ export type Action =
         number,
         number,
       ]; // Exactly 10 cell values (0 = empty, 1-7 = pieces, 8 = garbage)
-    }; // Adds a row to the bottom of the board
+    } // Adds a row to the bottom of the board
+  // Pending lock system actions
+  | { type: "CommitLock" }
+  | { type: "RetryPendingLock" };
 
 export type Reducer = (
   s: Readonly<GameState> | undefined,

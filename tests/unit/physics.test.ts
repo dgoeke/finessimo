@@ -1,8 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { reducer } from "../../src/state/reducer";
 import { type GameState } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state

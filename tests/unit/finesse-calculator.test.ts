@@ -186,8 +186,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
       player,
       cfg,
     );
-    expect(res.isOptimal).toBe(true);
-    expect(res.faults.length).toBe(0);
+    expect(res.kind).toBe("optimal");
     expect(res.playerSequence).toEqual(["DASLeft", "HardDrop"]);
   });
 
@@ -204,8 +203,12 @@ describe("Finesse Calculator (BFS minimality)", () => {
       player,
       cfg,
     );
-    expect(res.isOptimal).toBe(false);
-    expect(res.faults.some((f: Fault) => f.type === "extra_input")).toBe(true);
+    expect(res.kind).toBe("faulty");
+    if (res.kind === "faulty") {
+      expect(res.faults.some((f: Fault) => f.type === "extra_input")).toBe(
+        true,
+      );
+    }
   });
 
   test("analyze: too short sequence flagged as suboptimal_path", () => {
@@ -221,10 +224,12 @@ describe("Finesse Calculator (BFS minimality)", () => {
       player,
       cfg,
     );
-    expect(res.isOptimal).toBe(false);
-    expect(res.faults.some((f: Fault) => f.type === "suboptimal_path")).toBe(
-      true,
-    );
+    expect(res.kind).toBe("faulty");
+    if (res.kind === "faulty") {
+      expect(res.faults.some((f: Fault) => f.type === "suboptimal_path")).toBe(
+        true,
+      );
+    }
   });
 
   test("analyze: strict normalization only accepts valid finesse KeyActions", () => {

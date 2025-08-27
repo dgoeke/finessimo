@@ -16,6 +16,7 @@ const mockGameState: GameState = {
   hold: undefined,
   modePrompt: null,
   nextQueue: [],
+  pendingLock: null,
   physics: {
     isSoftDropping: false,
     lastGravityTime: 0,
@@ -74,8 +75,7 @@ const mockPiece: ActivePiece = {
 };
 
 const mockOptimalResult: FinesseResult = {
-  faults: [],
-  isOptimal: true,
+  kind: "optimal",
   optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
   playerSequence: ["MoveLeft", "MoveLeft", "HardDrop"],
 };
@@ -88,7 +88,7 @@ const mockSuboptimalResult: FinesseResult = {
       type: "extra_input",
     },
   ],
-  isOptimal: false,
+  kind: "faulty",
   optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
   playerSequence: [
     "MoveLeft",
@@ -103,7 +103,7 @@ const mockSuboptimalResult: FinesseResult = {
 describe("FreePlayMode", () => {
   const mode = new FreePlayMode();
 
-  test("should provide feedback for optimal finesse", () => {
+  test("does not emit textual feedback for optimal finesse", () => {
     const result = mode.onPieceLocked(
       mockGameState,
       mockOptimalResult,
@@ -111,13 +111,10 @@ describe("FreePlayMode", () => {
       mockPiece,
     );
 
-    expect(result.feedback).toContain("✓ Optimal finesse");
-    expect(result.feedback).toContain("3 inputs");
-    expect(result.isComplete).toBeUndefined();
-    expect(result.nextPrompt).toBeUndefined();
+    expect(result).toEqual({});
   });
 
-  test("should provide feedback for suboptimal finesse", () => {
+  test("does not emit textual feedback for suboptimal finesse", () => {
     const result = mode.onPieceLocked(
       mockGameState,
       mockSuboptimalResult,
@@ -125,10 +122,7 @@ describe("FreePlayMode", () => {
       mockPiece,
     );
 
-    expect(result.feedback).toContain("✗ Non-optimal finesse");
-    expect(result.feedback).toContain("Used 6 inputs");
-    expect(result.feedback).toContain("optimal was 3");
-    expect(result.feedback).toContain("3 extra inputs");
+    expect(result).toEqual({});
   });
 
   test("should not prompt for next challenge", () => {
@@ -150,7 +144,7 @@ describe("GuidedMode", () => {
     };
   });
 
-  test("should provide feedback for optimal finesse and advance drill", () => {
+  test("advances drill and provides next prompt on optimal finesse", () => {
     // Match current drill (T at x=0, rot=spawn)
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
     const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
@@ -163,13 +157,10 @@ describe("GuidedMode", () => {
     if (result.modeData !== undefined)
       state = { ...state, modeData: result.modeData };
 
-    expect(result.feedback).toContain("✓ Perfect!");
-    expect(result.feedback).toContain("3 inputs (optimal)");
-    expect(result.feedback).toContain("Moving to next drill");
     expect(result.nextPrompt).toContain("Place T-piece at right edge");
   });
 
-  test("should provide feedback for suboptimal finesse without advancing", () => {
+  test("does not advance drill on suboptimal finesse", () => {
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
     const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
     const result = mode.onPieceLocked(
@@ -179,14 +170,11 @@ describe("GuidedMode", () => {
       finalPos,
     );
 
-    expect(result.feedback).toContain("✗ Try again!");
-    expect(result.feedback).toContain("Used 6 inputs");
-    expect(result.feedback).toContain("optimal is 3");
-    expect(result.feedback).toContain("3 extra inputs");
     expect(result.nextPrompt).toBeUndefined();
+    expect(result.modeData).toBeDefined();
   });
 
-  test("should show optimal sequence hint after multiple attempts", () => {
+  test("tracks attempts across suboptimal tries", () => {
     // First attempt - suboptimal
     const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
     const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
@@ -196,20 +184,19 @@ describe("GuidedMode", () => {
       locked,
       finalPos,
     );
-    expect(result.feedback).not.toContain("Optimal sequence:");
+    expect(result.modeData).toBeDefined();
     if (result.modeData !== undefined)
       state = { ...state, modeData: result.modeData };
 
     // Second attempt - suboptimal
     result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
-    expect(result.feedback).not.toContain("Optimal sequence:");
+    expect(result.modeData).toBeDefined();
     if (result.modeData !== undefined)
       state = { ...state, modeData: result.modeData };
 
     // Third attempt - should show hint
     result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
-    expect(result.feedback).toContain("Optimal sequence:");
-    expect(result.feedback).toContain("MoveLeft → MoveLeft → HardDrop");
+    expect(result.modeData).toBeDefined();
   });
 
   test("should provide next prompt when no active piece", () => {
@@ -246,7 +233,6 @@ describe("GuidedMode", () => {
       if (result.modeData !== undefined)
         state = { ...state, modeData: result.modeData };
       if (i === 6) {
-        expect(result.feedback).toContain("All drills completed!");
         expect(result.isComplete).toBe(true);
       }
     }

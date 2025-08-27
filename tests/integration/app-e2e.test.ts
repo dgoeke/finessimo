@@ -20,6 +20,7 @@ type TestContext = {
   element: HTMLElement;
   originalPerformanceNow: () => number;
   originalRAF: typeof requestAnimationFrame;
+  originalQuerySelector: Document["querySelector"];
   currentFrameCallbacks: Array<FrameRequestCallback>;
   nextFrameCallbacks: Array<FrameRequestCallback>;
   timeManager: TimeManager;
@@ -33,8 +34,9 @@ function setupDOM(): HTMLElement {
   const root = document.createElement("div");
   document.body.appendChild(root);
 
-  // Create finessimo-shell custom element (app expects this)
-  const shell = document.createElement("finessimo-shell");
+  // Create mock finessimo-shell element (using div to avoid custom element teardown issues)
+  const shell = document.createElement("div");
+  shell.setAttribute("tag-name", "finessimo-shell"); // For identification without custom element registration
   root.appendChild(shell);
 
   // Create settings button (app looks for this)
@@ -77,6 +79,19 @@ function createTestContext(): TestContext {
   );
   global.performance.now = (): number => timeManager.currentTime;
 
+  // Mock document.querySelector to return our mock settings modal
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  const originalQuerySelector = document.querySelector.bind(document);
+
+  const settingsModal = element.querySelector("#mock-settings-modal");
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  document.querySelector = jest.fn((selector: string) => {
+    if (selector === "settings-modal") {
+      return settingsModal;
+    }
+    return originalQuerySelector(selector);
+  });
+
   // Initialize and start the app
   app.initialize();
   app.start();
@@ -93,6 +108,7 @@ function createTestContext(): TestContext {
     element,
     nextFrameCallbacks,
     originalPerformanceNow,
+    originalQuerySelector,
     originalRAF,
     timeManager,
   };
@@ -108,6 +124,8 @@ function cleanupTestContext(ctx: TestContext): void {
   // Restore mocks and verify they're properly restored
   global.requestAnimationFrame = ctx.originalRAF;
   global.performance.now = ctx.originalPerformanceNow;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  document.querySelector = ctx.originalQuerySelector;
 
   // Verify RAF mock is restored
   expect(global.requestAnimationFrame).toBe(ctx.originalRAF);
@@ -408,20 +426,27 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
     it("should rotate piece clockwise on ArrowUp key press", () => {
       const initialState = getState(ctx);
       const initialRot = initialState.active?.rot;
+      const pieceId = initialState.active?.id;
 
       tapKey("ArrowUp");
       advanceFrame(ctx);
 
       const newState = getState(ctx);
-      const expectedRot =
-        initialRot === "spawn"
-          ? "right"
-          : initialRot === "right"
-            ? "two"
-            : initialRot === "two"
-              ? "left"
-              : "spawn";
-      expect(newState.active?.rot).toBe(expectedRot);
+
+      // O piece doesn't rotate in SRS (all rotations are identical)
+      if (pieceId === "O") {
+        expect(newState.active?.rot).toBe("spawn");
+      } else {
+        const expectedRot =
+          initialRot === "spawn"
+            ? "right"
+            : initialRot === "right"
+              ? "two"
+              : initialRot === "two"
+                ? "left"
+                : "spawn";
+        expect(newState.active?.rot).toBe(expectedRot);
+      }
     });
 
     it("should hard drop and lock piece on Space key press", () => {

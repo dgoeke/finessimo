@@ -1,4 +1,3 @@
-import { reducer } from "../../src/state/reducer";
 import {
   type GameState,
   type Action,
@@ -6,6 +5,7 @@ import {
   idx,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { type InvalidGameState } from "../test-types";
 
 describe("Reducer - Extended Coverage", () => {
@@ -204,9 +204,8 @@ describe("Reducer - Extended Coverage", () => {
 
       expect(result.active).toBeUndefined();
       expect(result.canHold).toBe(true);
-      expect(result.processedInputLog).toEqual(
-        stateWithPiece.processedInputLog,
-      ); // inputLog is preserved until ClearInputLog action
+      // Lock resolution pipeline performs finesse analysis then clears the input log
+      expect(result.processedInputLog).toEqual([]);
       expect(result.tick).toBe(43); // Incremented
     });
 
@@ -407,8 +406,8 @@ describe("Reducer - Extended Coverage", () => {
       }
 
       expect(state.tick).toBe(tickCount);
-      // inputLog is no longer cleared on Lock, so it accumulates during rapid inputs
-      expect(state.processedInputLog.length).toBeGreaterThan(0);
+      // Lock resolution pipeline clears the input log after analysis
+      expect(state.processedInputLog.length).toBe(0);
       expect(state.canHold).toBe(true);
     });
   });

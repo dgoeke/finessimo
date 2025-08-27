@@ -1,5 +1,5 @@
-import { reducer } from "../../src/state/reducer";
 import { type GameState } from "../../src/state/types";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
 describe("Reducer success paths: Rotate and Hold", () => {

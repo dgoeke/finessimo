@@ -1,4 +1,3 @@
-import { reducer } from "../../src/state/reducer";
 import {
   type GameState,
   type TimingConfig,
@@ -6,6 +5,7 @@ import {
   type Action,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
 describe("Reducer", () => {
@@ -92,9 +92,8 @@ describe("Reducer", () => {
 
       expect(newState.active).toBeUndefined();
       expect(newState.canHold).toBe(true);
-      expect(newState.processedInputLog).toEqual(
-        stateWithActivePiece.processedInputLog,
-      ); // processedInputLog is preserved
+      // Lock resolution pipeline performs finesse analysis then clears the input log
+      expect(newState.processedInputLog).toEqual([]);
       expect(newState.tick).toBe(stateWithActivePiece.tick + 1);
     });
 

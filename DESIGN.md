@@ -256,7 +256,7 @@ export type Action =
   | { type: "ClearLines"; lines: number[] }
   | { type: "EnqueueInput"; event: InputEvent }
   | { type: "SetMode"; mode: string }
-  | { type: "UpdateFinesseFeedback"; feedback: FinesseUIFeedback | null }
+  | { type: "UpdateFinesseFeedback"; feedback: FinesseResult | null }
   | { type: "UpdateModePrompt"; prompt: string | null }
   // Settings updates
   | { type: "UpdateTiming"; timing: Partial<TimingConfig> }

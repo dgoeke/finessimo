@@ -1,7 +1,10 @@
+import { type FinesseResult } from "./finesse/calculator";
 import { finesseService } from "./finesse/service";
 import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { gameModeRegistry } from "./modes";
+import { runLockPipeline } from "./modes/lock-pipeline";
+import { getActiveRng, planPreviewRefill } from "./modes/spawn-service";
 import { reducer } from "./state/reducer";
 import { gameStateSignal } from "./state/signals";
 import {
@@ -36,6 +39,51 @@ export class FinessimoApp {
     this.unpause();
   };
 
+  private createFinesseAnalyzer(): (state: GameState) => {
+    result: FinesseResult;
+    actions: Array<Action>;
+  } {
+    // Type guard for UpdateFinesseFeedback action
+    const isFinesseUpdateAction = (
+      action: Action,
+    ): action is Extract<Action, { type: "UpdateFinesseFeedback" }> => {
+      return action.type === "UpdateFinesseFeedback";
+    };
+
+    return (state: GameState) => {
+      const currentMode = gameModeRegistry.get(state.currentMode);
+      if (!currentMode || !state.pendingLock) {
+        return {
+          actions: [],
+          result: {
+            kind: "optimal",
+            optimalSequences: [],
+            playerSequence: [],
+          },
+        };
+      }
+
+      // Get the analysis actions from the service
+      const activePiece = state.pendingLock.finalPos;
+      const actions = finesseService.analyzePieceLock(
+        state,
+        activePiece,
+        currentMode,
+        state.pendingLock.timestampMs,
+      );
+
+      // Extract FinesseResult from the analysis actions with type safety
+      const finesseUpdateAction = actions.find(isFinesseUpdateAction);
+      const result: FinesseResult = finesseUpdateAction?.feedback ?? {
+        kind: "optimal",
+        optimalSequences: [],
+        playerSequence: [],
+      };
+
+      return { actions, result };
+    };
+  }
+
   constructor() {
     this.gameState = this.initializeState();
 
@@ -55,11 +103,23 @@ export class FinessimoApp {
   }
 
   private initializeState(): GameState {
-    return reducer(undefined, { seed: this.randomSeed(), type: "Init" });
+    const seed = this.randomSeed();
+    const defaultMode = gameModeRegistry.get("freePlay");
+    // If the mode provides RNG, supply it on init
+    const rng = defaultMode ? getActiveRng(defaultMode, seed) : undefined;
+    let initAction: Extract<Action, { type: "Init" }> = {
+      mode: defaultMode?.name ?? "freePlay",
+      seed,
+      type: "Init",
+    };
+    if (rng) {
+      initAction = { ...initAction, rng };
+    }
+    return reducer(undefined, initAction);
   }
 
   initialize(): void {
-    // All rendering now handled by Lit components
+    // All rendering is handled by Lit components
 
     // Initialize input handlers
     this.keyboardInputHandler.init(this.dispatch.bind(this));
@@ -202,6 +262,8 @@ export class FinessimoApp {
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
+
+    // Preview refill is handled in dispatch when queue shrinks
   }
 
   private render(): void {
@@ -209,50 +271,34 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
-    // Store previous state for finesse analysis
-    const prevState = this.gameState;
-
     // Apply the action through the reducer
-    const newState = reducer(this.gameState, action);
+    let newState = reducer(this.gameState, action);
 
-    // Check if state actually changed (for debugging)
-    if (newState !== this.gameState) {
-      // State changed; no console logging in production
+    // Handle lock resolution through pipeline
+    if (
+      newState.status === "resolvingLock" &&
+      action.type !== "CommitLock" &&
+      action.type !== "RetryPendingLock"
+    ) {
+      // Run the lock pipeline to make commit/retry decision
+      runLockPipeline(
+        newState,
+        (pipelineAction) => {
+          newState = reducer(newState, pipelineAction);
+        },
+        this.createFinesseAnalyzer(),
+      );
+      // Note: Zero-delay line clears are handled automatically by the reducer
     }
 
+    const prevQueueLen = this.gameState.nextQueue.length;
     this.gameState = newState;
-
-    // Update the signal to reflect the new state
     gameStateSignal.set(newState);
 
-    // Handle finesse analysis on piece lock for any lock source
-    if (prevState.active && !newState.active) {
-      // Extract timestamp from Lock action, if available
-      const lockTimestamp =
-        action.type === "Lock" ? action.timestampMs : undefined;
-      this.handlePieceLock(prevState, lockTimestamp);
+    // If preview queue shrank, top it up once according to mode policy
+    if (newState.nextQueue.length < prevQueueLen) {
+      this.ensurePreviewFilled(newState);
     }
-  }
-
-  private handlePieceLock(prevState: GameState, timestampMs?: number): void {
-    if (!prevState.active) return;
-
-    const currentMode = gameModeRegistry.get(prevState.currentMode);
-    if (!currentMode) return;
-
-    const finesseActions = finesseService.analyzePieceLock(
-      this.gameState, // Use current state which has the processed input log
-      prevState.active,
-      currentMode,
-      timestampMs,
-    );
-
-    for (const action of finesseActions) {
-      this.gameState = reducer(this.gameState, action);
-    }
-
-    // Update signal after batch processing finesse actions
-    gameStateSignal.set(this.gameState);
   }
 
   // Public method to get current state (for debugging)
@@ -279,6 +325,24 @@ export class FinessimoApp {
         if (prompt !== null) {
           this.dispatch({ prompt, type: "UpdateModePrompt" });
         }
+      }
+
+      // Initialize RNG/preview for the mode immediately on switch
+      if (typeof mode.createRng === "function") {
+        const desired = Math.max(
+          5,
+          this.gameState.gameplay.nextPieceCount ?? 5,
+        );
+        const seededRng = getActiveRng(
+          mode,
+          this.randomSeed(),
+          this.gameState.rng,
+        );
+        const { newRng, pieces } =
+          typeof mode.getPreview === "function"
+            ? mode.getPreview(this.gameState, seededRng, desired)
+            : seededRng.getNextPieces(desired);
+        this.dispatch({ pieces, rng: newRng, type: "ReplacePreview" });
       }
     }
   }
@@ -369,6 +433,20 @@ export class FinessimoApp {
     this.dispatch({ type: "Spawn" });
   }
 
+  // Maintain preview queue length using mode-owned RNG
+  private ensurePreviewFilled(state: GameState = this.gameState): void {
+    const mode = gameModeRegistry.get(state.currentMode);
+    const desired = Math.max(5, state.gameplay.nextPieceCount ?? 5);
+    const refill = planPreviewRefill(state, mode, desired);
+    if (refill && refill.pieces.length > 0) {
+      this.dispatch({
+        pieces: refill.pieces,
+        rng: refill.newRng,
+        type: "RefillPreview",
+      });
+    }
+  }
+
   // Handle settings changes
   private handleSettingsChange(newSettings: Partial<GameSettings>): void {
     this.updateTimingSettings(newSettings);
@@ -408,6 +486,8 @@ export class FinessimoApp {
       gameplay.finesseFeedbackEnabled = newSettings.finesseFeedbackEnabled;
     if (newSettings.finesseBoopEnabled !== undefined)
       gameplay.finesseBoopEnabled = newSettings.finesseBoopEnabled;
+    if (newSettings.retryOnFinesseError !== undefined)
+      gameplay.retryOnFinesseError = newSettings.retryOnFinesseError;
 
     if (Object.keys(gameplay).length > 0) {
       this.dispatch({ gameplay, type: "UpdateGameplay" });

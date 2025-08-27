@@ -22,6 +22,8 @@ import {
   type PieceId,
   type ActivePiece,
   type Stats,
+  type PendingLock,
+  type LockSource,
 } from "./types";
 
 import type { FaultType } from "../finesse/calculator";
@@ -50,9 +52,12 @@ const defaultTimingConfig: TimingConfig = {
 
 // Default gameplay configuration
 const defaultGameplayConfig: GameplayConfig = {
+  finesseBoopEnabled: false,
   finesseCancelMs: 50,
+  finesseFeedbackEnabled: true,
   ghostPieceEnabled: true,
   nextPieceCount: 5,
+  retryOnFinesseError: false,
 };
 
 // Create initial physics state
@@ -210,6 +215,7 @@ function createInitialState(
     modeData: null,
     modePrompt: null,
     nextQueue: initialQueue,
+    pendingLock: null,
     physics: createInitialPhysics(),
     processedInputLog: [],
     rng: newRng,
@@ -236,11 +242,8 @@ const wouldTopOut = (piece: ActivePiece): boolean => {
 
 const getNextPieceFromQueue = (
   holdQueue: Array<PieceId>,
-  rng: PieceRandomGenerator,
 ): {
   newActive: ActivePiece;
-  newPiece: PieceId;
-  newRng: PieceRandomGenerator;
 } | null => {
   if (holdQueue.length === 0) return null;
 
@@ -248,90 +251,25 @@ const getNextPieceFromQueue = (
   if (nextPiece === undefined) return null;
 
   const newActive = createActivePiece(nextPiece);
-  const { newRng: updatedRng, piece } = rng.getNextPiece();
-
-  return { newActive, newPiece: piece, newRng: updatedRng };
+  return { newActive };
 };
 
-const lockCurrentPiece = (
-  baseState: GameState,
+const createPendingLock = (
+  board: GameState["board"],
   piece: ActivePiece,
+  source: LockSource,
   timestampMs: Timestamp,
-): GameState => {
-  const lockedBoard = lockPiece(baseState.board, piece);
-  const completedLines = getCompletedLines(lockedBoard);
-  const topOut = wouldTopOut(piece);
+): PendingLock => {
+  const finalPos = source === "hardDrop" ? dropToBottom(board, piece) : piece;
+  const simulatedBoard = lockPiece(board, finalPos);
+  const completedLines = getCompletedLines(simulatedBoard);
 
-  // Update basic piece stats and line clear type statistics
-  const deltaStats: Partial<GameState["stats"]> = {
-    piecesPlaced: baseState.stats.piecesPlaced + 1,
-    sessionPiecesPlaced: baseState.stats.sessionPiecesPlaced + 1,
-  };
-
-  if (!topOut) {
-    deltaStats.linesCleared =
-      baseState.stats.linesCleared + completedLines.length;
-    deltaStats.sessionLinesCleared =
-      baseState.stats.sessionLinesCleared + completedLines.length;
-
-    if (completedLines.length === 1) {
-      deltaStats.singleLines = baseState.stats.singleLines + 1;
-    } else if (completedLines.length === 2) {
-      deltaStats.doubleLines = baseState.stats.doubleLines + 1;
-    } else if (completedLines.length === 3) {
-      deltaStats.tripleLines = baseState.stats.tripleLines + 1;
-    } else if (completedLines.length === 4) {
-      deltaStats.tetrisLines = baseState.stats.tetrisLines + 1;
-    }
-  }
-
-  const newStats = applyStatsBaseUpdate(baseState.stats, deltaStats);
-
-  const nextState: GameState = {
-    ...baseState,
-    active: undefined,
-    board: lockedBoard,
-    canHold: true,
-    physics: {
-      ...baseState.physics,
-      lockDelayStartTime: null,
-    },
-    stats: newStats,
-  };
-
-  if (topOut) {
-    return { ...nextState, status: "topOut" };
-  }
-
-  if (completedLines.length === 0) {
-    // No lines; remain in playing state
-    return nextState;
-  }
-
-  if (baseState.timing.lineClearDelayMs === 0) {
-    // Immediate clear with no animation delay
-    const cleared = clearLines(lockedBoard, completedLines);
-    return {
-      ...nextState,
-      board: cleared,
-      physics: {
-        ...nextState.physics,
-        lineClearLines: [],
-        lineClearStartTime: null,
-      },
-      status: "playing",
-    };
-  }
-
-  // Stage line clear animation
   return {
-    ...nextState,
-    physics: {
-      ...nextState.physics,
-      lineClearLines: completedLines,
-      lineClearStartTime: timestampMs,
-    },
-    status: "lineClear",
+    completedLines,
+    finalPos,
+    pieceId: piece.id,
+    source,
+    timestampMs,
   };
 };
 
@@ -416,11 +354,27 @@ const checkLockDelayTimeout = (
       currentState.timing.lockDelayMs
   ) {
     if (currentState.active) {
-      return lockCurrentPiece(
-        currentState,
+      // Use pending lock seam for consistent lock flow
+      const lockSource: LockSource = currentState.physics.isSoftDropping
+        ? "softDrop"
+        : "gravity";
+      const pending = createPendingLock(
+        currentState.board,
         currentState.active,
+        lockSource,
         createTimestamp(timestampMs),
       );
+
+      return {
+        ...currentState,
+        active: undefined, // Clear active piece during lock resolution
+        pendingLock: pending,
+        physics: {
+          ...currentState.physics,
+          lockDelayStartTime: null,
+        },
+        status: "resolvingLock",
+      };
     }
   }
   return currentState;
@@ -443,6 +397,92 @@ const applyGravityLogic = (
   return checkLockDelayTimeout(currentState, timestampMs);
 };
 
+/**
+ * Applies a pending lock without requiring temporary state manipulation.
+ * This is a pure function that directly applies the lock logic without
+ * needing to temporarily set the active piece.
+ */
+const applyPendingLock = (
+  state: GameState,
+  pendingLock: PendingLock,
+): GameState => {
+  const { finalPos, timestampMs } = pendingLock;
+  const lockedBoard = lockPiece(state.board, finalPos);
+  const completedLines = getCompletedLines(lockedBoard);
+  const topOut = wouldTopOut(finalPos);
+
+  // Update basic piece stats
+  const deltaStats: Partial<GameState["stats"]> = {
+    piecesPlaced: state.stats.piecesPlaced + 1,
+    sessionPiecesPlaced: state.stats.sessionPiecesPlaced + 1,
+  };
+
+  if (!topOut) {
+    deltaStats.linesCleared = state.stats.linesCleared + completedLines.length;
+    deltaStats.sessionLinesCleared =
+      state.stats.sessionLinesCleared + completedLines.length;
+
+    if (completedLines.length === 1) {
+      deltaStats.singleLines = state.stats.singleLines + 1;
+    } else if (completedLines.length === 2) {
+      deltaStats.doubleLines = state.stats.doubleLines + 1;
+    } else if (completedLines.length === 3) {
+      deltaStats.tripleLines = state.stats.tripleLines + 1;
+    } else if (completedLines.length === 4) {
+      deltaStats.tetrisLines = state.stats.tetrisLines + 1;
+    }
+  }
+
+  const newStats = applyStatsBaseUpdate(state.stats, deltaStats);
+
+  const nextState: GameState = {
+    ...state,
+    active: undefined,
+    board: lockedBoard,
+    canHold: true,
+    pendingLock: null,
+    physics: {
+      ...state.physics,
+      lockDelayStartTime: null,
+    },
+    stats: newStats,
+  };
+
+  if (topOut) {
+    return { ...nextState, status: "topOut" };
+  }
+
+  if (completedLines.length === 0) {
+    return { ...nextState, status: "playing" };
+  }
+
+  if (state.timing.lineClearDelayMs === 0) {
+    // Immediate clear with no animation delay
+    const cleared = clearLines(lockedBoard, completedLines);
+    return {
+      ...nextState,
+      board: cleared,
+      physics: {
+        ...nextState.physics,
+        lineClearLines: [],
+        lineClearStartTime: null,
+      },
+      status: "playing",
+    };
+  }
+
+  // Stage line clear animation
+  return {
+    ...nextState,
+    physics: {
+      ...nextState.physics,
+      lineClearLines: completedLines,
+      lineClearStartTime: timestampMs,
+    },
+    status: "lineClear",
+  };
+};
+
 // Individual action handlers - pure functions
 const actionHandlers: ActionHandlerMap = {
   CancelLockDelay: (state, _action) => ({
@@ -459,6 +499,23 @@ const actionHandlers: ActionHandlerMap = {
     ...state,
     board: clearLines(state.board, action.lines),
   }),
+
+  CommitLock: (state, _action) => {
+    if (state.status !== "resolvingLock") {
+      return state;
+    }
+
+    // Enforce invariant: resolvingLock status requires pendingLock to exist
+    if (!state.pendingLock) {
+      throw new Error(
+        "Invalid state: status is 'resolvingLock' but pendingLock is null. " +
+          "This violates the GameState invariant and indicates a reducer bug.",
+      );
+    }
+
+    // Apply the pending lock directly without temporary state manipulation
+    return applyPendingLock(state, state.pendingLock);
+  },
 
   CompleteLineClear: (state, _action) => {
     if (
@@ -512,20 +569,29 @@ const actionHandlers: ActionHandlerMap = {
   HardDrop: (state, action) => {
     if (!state.active) return state;
 
-    const timestampMs = action.timestampMs;
-    const droppedPiece = dropToBottom(state.board, state.active);
-
     const stateWithHardDrop = {
       ...state,
       processedInputLog: [...state.processedInputLog, action],
     };
 
-    const lockedState = lockCurrentPiece(
-      stateWithHardDrop,
-      droppedPiece,
-      timestampMs,
+    const pending = createPendingLock(
+      state.board,
+      state.active,
+      "hardDrop",
+      action.timestampMs,
     );
-    return { ...lockedState, tick: state.tick + 1 };
+
+    return {
+      ...stateWithHardDrop,
+      active: undefined, // Clear active piece during lock resolution
+      pendingLock: pending,
+      physics: {
+        ...stateWithHardDrop.physics,
+        lockDelayStartTime: null,
+      },
+      status: "resolvingLock",
+      tick: state.tick + 1,
+    };
   },
 
   // Hold system
@@ -537,16 +603,14 @@ const actionHandlers: ActionHandlerMap = {
     const currentPieceId = state.active.id;
     let newActive: ActivePiece | undefined;
     const holdQueue = [...state.nextQueue];
-    let newRng: PieceRandomGenerator = state.rng;
 
+    // Consume from preview if first hold
     if (state.hold !== undefined) {
       newActive = createActivePiece(state.hold);
     } else {
-      const result = getNextPieceFromQueue(holdQueue, newRng);
+      const result = getNextPieceFromQueue(holdQueue);
       if (!result) return state;
       newActive = result.newActive;
-      holdQueue.push(result.newPiece);
-      newRng = result.newRng;
     }
 
     if (!canSpawnPiece(state.board, newActive.id)) {
@@ -563,7 +627,6 @@ const actionHandlers: ActionHandlerMap = {
         ...state.physics,
         lockDelayStartTime: null,
       },
-      rng: newRng,
     };
   },
 
@@ -612,13 +675,28 @@ const actionHandlers: ActionHandlerMap = {
       return state;
     }
 
-    const timestampMs = action.timestampMs;
-    const stateWithIncrementedTick = { ...state, tick: state.tick + 1 };
-    return lockCurrentPiece(
-      stateWithIncrementedTick,
+    // Determine lock source based on current state
+    const lockSource: LockSource = state.physics.isSoftDropping
+      ? "softDrop"
+      : "gravity";
+    const pending = createPendingLock(
+      state.board,
       state.active,
-      timestampMs,
+      lockSource,
+      action.timestampMs,
     );
+
+    return {
+      ...state,
+      active: undefined, // Clear active piece during lock resolution
+      pendingLock: pending,
+      physics: {
+        ...state.physics,
+        lockDelayStartTime: null,
+      },
+      status: "resolvingLock",
+      tick: state.tick + 1,
+    };
   },
 
   // Statistics
@@ -648,6 +726,13 @@ const actionHandlers: ActionHandlerMap = {
     return { ...state, stats: newStats };
   },
 
+  // Append externally provided preview pieces and set RNG
+  RefillPreview: (state, action) => ({
+    ...state,
+    nextQueue: [...state.nextQueue, ...action.pieces],
+    rng: action.rng,
+  }),
+
   RepeatMove: (state, action) => {
     // Same logic as TapMove
     if (state.active === undefined) {
@@ -672,6 +757,42 @@ const actionHandlers: ActionHandlerMap = {
       active: stepped,
       physics: newPhysics,
       processedInputLog: [...state.processedInputLog, action],
+    };
+  },
+
+  // Replace preview queue and set RNG (e.g., on mode switch)
+  ReplacePreview: (state, action) => ({
+    ...state,
+    nextQueue: [...action.pieces],
+    rng: action.rng,
+  }),
+
+  RetryPendingLock: (state, _action) => {
+    if (!state.pendingLock || state.status !== "resolvingLock") {
+      return state;
+    }
+
+    // Restore piece to spawn without committing board changes
+    const pieceId = state.pendingLock.pieceId;
+
+    return {
+      ...state,
+      // Restore active piece at spawn position
+      active: createActivePiece(pieceId),
+      // Unlock hold so player can hold again if needed
+      canHold: true,
+      // Clear pending lock state
+      pendingLock: null,
+      // Reset physics state
+      physics: {
+        ...state.physics,
+        lineClearLines: [],
+        lineClearStartTime: null,
+        lockDelayStartTime: null,
+      },
+      // Return to playing status
+      status: "playing" as const,
+      // Note: board and stats remain unchanged - no commitment occurred
     };
   },
 
@@ -746,7 +867,6 @@ const actionHandlers: ActionHandlerMap = {
     }
 
     let pieceToSpawn: PieceId;
-    let spawnRng: PieceRandomGenerator = state.rng;
     const newQueue = [...state.nextQueue];
 
     if (action.piece !== undefined) {
@@ -756,12 +876,6 @@ const actionHandlers: ActionHandlerMap = {
       const nextFromQueue = newQueue.shift();
       if (nextFromQueue === undefined) return state;
       pieceToSpawn = nextFromQueue;
-
-      while (newQueue.length < 5) {
-        const { newRng: updatedRng, piece } = spawnRng.getNextPiece();
-        newQueue.push(piece);
-        spawnRng = updatedRng;
-      }
     }
 
     if (isTopOut(state.board, pieceToSpawn)) {
@@ -778,7 +892,6 @@ const actionHandlers: ActionHandlerMap = {
         lastGravityTime: state.physics.lastGravityTime,
         lockDelayStartTime: null,
       },
-      rng: spawnRng,
     };
   },
 

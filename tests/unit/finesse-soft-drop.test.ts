@@ -5,7 +5,6 @@ import {
   finesseCalculator,
   extractFinesseActions,
 } from "../../src/finesse/calculator";
-import { reducer } from "../../src/state/reducer";
 import {
   type FinesseAction,
   idx,
@@ -17,6 +16,7 @@ import {
   type Action,
 } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 const cfg: GameplayConfig = { finesseCancelMs: 50 };
 
@@ -90,6 +90,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       modeData: null,
       modePrompt: null,
       nextQueue: ["I", "O", "S"],
+      pendingLock: null,
       physics: {
         isSoftDropping: false,
         lastGravityTime: 0,
@@ -196,6 +197,9 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     currentState = reducer(currentState, { dir: "CCW", type: "Rotate" });
     expect(currentState.active?.rot).toBe("two");
 
+    // Snapshot player input log before lock analysis clears it
+    const playerActions = currentState.processedInputLog.slice();
+
     // Step 6: Hard drop to lock the piece and trigger T-spin double
     currentState = reducer(currentState, {
       timestampMs: createTimestamp(2000),
@@ -210,7 +214,6 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     expect(currentState.stats.doubleLines).toBe(1);
 
     // Verify finesse analysis works but shows limitations
-    const playerActions = currentState.processedInputLog;
     const finesseActions = extractFinesseActions(playerActions);
     const tPiece = spawnPiece("T");
     const optimalSequences = finesseCalculator.calculateOptimal(
@@ -225,7 +228,6 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       "RotateCCW",
       "SoftDrop",
       "RotateCCW",
-      "HardDrop",
     ]);
 
     // The optimalSequence doesn't include softdrop and can't even work on our
@@ -272,8 +274,12 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       cfg,
     );
 
-    expect(result.isOptimal).toBe(false);
-    expect(result.faults.some((f) => f.type === "suboptimal_path")).toBe(true);
+    expect(result.kind).toBe("faulty");
+    if (result.kind === "faulty") {
+      expect(result.faults.some((f) => f.type === "suboptimal_path")).toBe(
+        true,
+      );
+    }
 
     // The optimal sequence should include HardDrop
     expect(result.optimalSequences.length).toBeGreaterThan(0);
@@ -348,8 +354,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     );
 
     // Should bypass analysis and return neutral feedback
-    expect(result.isOptimal).toBe(true);
-    expect(result.faults).toEqual([]);
+    expect(result.kind).toBe("optimal");
     expect(result.optimalSequences).toEqual([]);
     expect(result.playerSequence).toEqual(playerInputsWithSoftDrop);
   });
@@ -377,8 +382,10 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     );
 
     // Should provide normal analysis with faults for suboptimal play
-    expect(result.isOptimal).toBe(false);
-    expect(result.faults.length).toBeGreaterThan(0);
+    expect(result.kind).toBe("faulty");
+    if (result.kind === "faulty") {
+      expect(result.faults.length).toBeGreaterThan(0);
+    }
     expect(result.optimalSequences.length).toBeGreaterThan(0);
   });
 });

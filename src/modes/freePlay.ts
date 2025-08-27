@@ -1,3 +1,5 @@
+import { createSevenBagRng } from "../core/rng";
+import { type PieceRandomGenerator } from "../core/rng-interface";
 import { type FinesseResult } from "../finesse/calculator";
 import {
   type GameState,
@@ -7,7 +9,12 @@ import {
   type ModeGuidance,
 } from "../state/types";
 
-import { type GameMode, type GameModeResult } from "./index";
+import {
+  type GameMode,
+  type GameModeResult,
+  type ResolveLockContext,
+  type ResolveLockDecision,
+} from "./index";
 
 export class FreePlayMode implements GameMode {
   readonly name = "freePlay";
@@ -24,36 +31,16 @@ export class FreePlayMode implements GameMode {
 
   onPieceLocked(
     _gameState: GameState,
-    finesseResult: FinesseResult,
+    _finesseResult: FinesseResult,
     _lockedPiece: ActivePiece,
     _finalPosition: ActivePiece,
   ): GameModeResult {
+    // FreePlay does not emit textual feedback; overlay renders from FinesseResult
+    void _gameState;
+    void _finesseResult;
     void _lockedPiece;
     void _finalPosition;
-    const { faults, isOptimal, optimalSequences, playerSequence } =
-      finesseResult;
-
-    if (isOptimal) {
-      return {
-        feedback: `✓ Optimal finesse! Used ${String(playerSequence.length)} inputs.`,
-      };
-    }
-
-    const optimalLength = optimalSequences[0]?.length ?? 0;
-    const extraInputs = playerSequence.length - optimalLength;
-
-    let feedback = `✗ Non-optimal finesse. Used ${String(playerSequence.length)} inputs, optimal was ${String(optimalLength)}.`;
-
-    if (extraInputs > 0) {
-      feedback += ` ${String(extraInputs)} extra input${extraInputs > 1 ? "s" : ""}.`;
-    }
-
-    if (faults.length > 0) {
-      const faultDescriptions = faults.map((f) => f.description).join(", ");
-      feedback += ` Issues: ${faultDescriptions}`;
-    }
-
-    return { feedback };
+    return {};
   }
 
   shouldPromptNext(_gameState: GameState): boolean {
@@ -79,6 +66,46 @@ export class FreePlayMode implements GameMode {
   getExpectedPiece(_gameState: GameState): PieceId | undefined {
     void _gameState;
     return undefined;
+  }
+
+  // Lock resolution - implements retry on finesse error for hard drops
+  onResolveLock(ctx: ResolveLockContext): ResolveLockDecision {
+    const { finesse, pending, state } = ctx;
+
+    // Only retry on hard drops with finesse errors when setting is enabled
+    if (
+      state.gameplay.retryOnFinesseError === true &&
+      pending.source === "hardDrop" &&
+      finesse.kind === "faulty" &&
+      finesse.optimalSequences.length > 0
+    ) {
+      return { action: "retry" };
+    }
+
+    return { action: "commit" };
+  }
+
+  // 7-bag defaults for RNG and preview
+  createRng(seed: string, _prev?: PieceRandomGenerator): PieceRandomGenerator {
+    void _prev;
+    return createSevenBagRng(seed);
+  }
+
+  getNextPiece(
+    _state: GameState,
+    rng: PieceRandomGenerator,
+  ): { piece: PieceId; newRng: PieceRandomGenerator } {
+    void _state;
+    return rng.getNextPiece();
+  }
+
+  getPreview(
+    _state: GameState,
+    rng: PieceRandomGenerator,
+    count: number,
+  ): { pieces: Array<PieceId>; newRng: PieceRandomGenerator } {
+    void _state;
+    return rng.getNextPieces(count);
   }
 
   reset(): void {

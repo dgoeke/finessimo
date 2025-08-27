@@ -204,8 +204,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.fillRect(pixelX, pixelY + this.cellSize - 2, this.cellSize, 2);
 
     // Draw refined border
-    this.ctx.strokeStyle = darkenColor(color, 0.4);
-    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = darkenColor(color, 0.3);
+    this.ctx.lineWidth = 2;
     this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
   }
 

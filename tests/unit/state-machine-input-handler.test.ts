@@ -117,6 +117,7 @@ describe("StateMachineInputHandler", () => {
       modeData: null,
       modePrompt: null,
       nextQueue: ["I", "O", "S"],
+      pendingLock: null,
       physics,
       processedInputLog: [],
       rng,

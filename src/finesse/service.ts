@@ -5,15 +5,13 @@ import {
   type GameState,
   type Action,
   type ActivePiece,
-  type FinesseUIFeedback,
   type Rot,
-  type FinesseAction,
 } from "../state/types";
-import { asNumber, fromNow, createTimestamp } from "../types/timestamp";
 
 import {
   finesseCalculator,
   extractFinesseActions,
+  assertNever,
   type Fault,
   type FinesseResult,
 } from "./calculator";
@@ -32,7 +30,7 @@ export class DefaultFinesseService implements FinesseService {
     state: GameState,
     lockedPiece: ActivePiece,
     gameMode: GameMode,
-    timestampMs?: number,
+    _timestampMs?: number,
   ): Array<Action> {
     const finalPosition = dropToBottom(state.board, lockedPiece);
     const { targetRot, targetX } = this.determineAnalysisTarget(
@@ -47,8 +45,7 @@ export class DefaultFinesseService implements FinesseService {
     // Short-circuit: if no player inputs, emit optimal empty feedback and stats
     if (playerInputs.length === 0) {
       const emptyResult: FinesseResult = {
-        faults: [],
-        isOptimal: true,
+        kind: "optimal",
         optimalSequences: [],
         playerSequence: [],
       };
@@ -60,12 +57,7 @@ export class DefaultFinesseService implements FinesseService {
         finalPosition,
       );
 
-      return this.buildActionList(
-        { faults: [], isOptimal: true, optimalSequences: [] },
-        modeResult,
-        playerInputs,
-        timestampMs,
-      );
+      return this.buildActionList(emptyResult, modeResult, playerInputs);
     }
 
     const finesseResult = finesseCalculator.analyze(
@@ -76,18 +68,27 @@ export class DefaultFinesseService implements FinesseService {
       state.gameplay,
     );
 
-    const faults = this.gatherModeFaults(
+    // Gather additional mode-specific faults
+    const existingFaults =
+      finesseResult.kind === "faulty" ? finesseResult.faults : [];
+    const modeFaults = this.gatherModeFaults(
       gameMode,
       state,
       lockedPiece,
       finalPosition,
-      finesseResult.faults,
+      existingFaults,
     );
-    const mergedResult = {
-      ...finesseResult,
-      faults,
-      isOptimal: finesseResult.isOptimal && faults.length === 0,
-    };
+
+    // Merge results - if we have any faults (calculator + mode), result is faulty
+    const mergedResult: FinesseResult =
+      modeFaults.length === 0 && finesseResult.kind === "optimal"
+        ? finesseResult // Keep optimal as-is
+        : {
+            faults: modeFaults,
+            kind: "faulty",
+            optimalSequences: finesseResult.optimalSequences,
+            playerSequence: finesseResult.playerSequence,
+          };
 
     const modeResult = gameMode.onPieceLocked(
       state,
@@ -96,12 +97,7 @@ export class DefaultFinesseService implements FinesseService {
       finalPosition,
     );
 
-    return this.buildActionList(
-      mergedResult,
-      modeResult,
-      playerInputs,
-      timestampMs,
-    );
+    return this.buildActionList(mergedResult, modeResult, playerInputs);
   }
 
   private determineAnalysisTarget(
@@ -200,58 +196,44 @@ export class DefaultFinesseService implements FinesseService {
   }
 
   private buildActionList(
-    mergedResult: {
-      isOptimal: boolean;
-      faults: Array<Fault>;
-      optimalSequences: Array<Array<string>>;
-    },
+    mergedResult: FinesseResult,
     modeResult: { nextPrompt?: string; modeData?: unknown },
     playerInputs: Array<string>,
-    timestampMs?: number,
   ): Array<Action> {
     const actions: Array<Action> = [];
 
-    // Add finesse feedback action. If player made no inputs, emit optimal empty suggestion.
-    const hasPlayerInput = playerInputs.length > 0;
-    const feedback: FinesseUIFeedback = hasPlayerInput
-      ? {
-          isOptimal: mergedResult.isOptimal,
-          ...(!mergedResult.isOptimal &&
-          mergedResult.optimalSequences.length > 0
-            ? {
-                optimalSequence: mergedResult
-                  .optimalSequences[0] as Array<FinesseAction>,
-              }
-            : {}),
-          timestamp: asNumber(
-            timestampMs !== undefined
-              ? createTimestamp(timestampMs)
-              : fromNow(),
-          ),
-        }
-      : {
-          isOptimal: true,
-          optimalSequence: [],
-          timestamp: asNumber(
-            timestampMs !== undefined
-              ? createTimestamp(timestampMs)
-              : fromNow(),
-          ),
-        };
+    // Add finesse feedback action - pass the rich FinesseResult directly
+    const feedback = mergedResult;
     actions.push({ feedback, type: "UpdateFinesseFeedback" });
 
-    // Add statistics tracking action
+    // Add statistics tracking action using exhaustive checking
     const optimalInputCount =
       mergedResult.optimalSequences.length > 0
         ? Math.min(...mergedResult.optimalSequences.map((s) => s.length))
         : 0;
-    actions.push({
-      faults: mergedResult.faults.map((f) => f.type),
-      inputCount: playerInputs.length,
-      isOptimal: mergedResult.isOptimal,
-      optimalInputCount,
-      type: "RecordPieceLock",
-    });
+
+    switch (mergedResult.kind) {
+      case "optimal":
+        actions.push({
+          faults: [],
+          inputCount: playerInputs.length,
+          isOptimal: true,
+          optimalInputCount,
+          type: "RecordPieceLock",
+        });
+        break;
+      case "faulty":
+        actions.push({
+          faults: mergedResult.faults.map((f) => f.type),
+          inputCount: playerInputs.length,
+          isOptimal: false,
+          optimalInputCount,
+          type: "RecordPieceLock",
+        });
+        break;
+      default:
+        assertNever(mergedResult);
+    }
 
     // Add mode-specific actions
     if (modeResult.nextPrompt !== undefined) {

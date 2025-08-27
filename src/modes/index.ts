@@ -1,3 +1,4 @@
+import { type PieceRandomGenerator } from "../core/rng-interface";
 import { type FinesseResult } from "../finesse/calculator";
 import {
   type GameState,
@@ -7,13 +8,22 @@ import {
   type ModeGuidance,
   type TimingConfig,
   type GameplayConfig,
+  type PendingLock,
 } from "../state/types";
 
 import { FreePlayMode } from "./freePlay";
 import { GuidedMode } from "./guided";
 
+// Lock resolution types for mode-driven retry decisions
+export type ResolveLockContext = {
+  state: GameState; // current state
+  pending: PendingLock; // source/finalPos/lines
+  finesse: FinesseResult; // result from analyzer
+};
+
+export type ResolveLockDecision = { action: "commit" } | { action: "retry" };
+
 export type GameModeResult = {
-  feedback: string;
   isComplete?: boolean;
   nextPrompt?: string;
   // Optional: supply a new opaque mode data object to store in GameState
@@ -55,6 +65,23 @@ export type GameMode = {
   ): { targetX: number; targetRot: Rot } | null;
   // Optional: provide expected piece for the current challenge (e.g., Guided)
   getExpectedPiece?(gameState: GameState): PieceId | undefined;
+
+  // Lock resolution hook for retry decisions
+  onResolveLock?(ctx: ResolveLockContext): ResolveLockDecision;
+
+  // RNG ownership and preview control
+  createRng?(seed: string, prev?: PieceRandomGenerator): PieceRandomGenerator;
+
+  getNextPiece?(
+    state: GameState,
+    rng: PieceRandomGenerator,
+  ): { piece: PieceId; newRng: PieceRandomGenerator };
+
+  getPreview?(
+    state: GameState,
+    rng: PieceRandomGenerator,
+    count: number,
+  ): { pieces: Array<PieceId>; newRng: PieceRandomGenerator };
 
   reset(): void;
 };

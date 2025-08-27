@@ -9,13 +9,20 @@ import {
   type Board,
 } from "../state/types";
 
-// Finesse calculation result
-export type FinesseResult = {
-  optimalSequences: Array<Array<FinesseAction>>; // Can be multiple paths of the same length
-  playerSequence: Array<FinesseAction>; // normalized from player input
-  isOptimal: boolean;
-  faults: Array<Fault>; // Fault type to be defined
-};
+// Finesse calculation result - discriminated union for type safety
+export type FinesseResult =
+  | {
+      kind: "optimal";
+      playerSequence: Array<FinesseAction>;
+      optimalSequences: Array<Array<FinesseAction>>;
+      faults?: never;
+    }
+  | {
+      kind: "faulty";
+      playerSequence: Array<FinesseAction>;
+      optimalSequences: Array<Array<FinesseAction>>;
+      faults: Array<Fault>;
+    };
 
 // Fault types for type safety
 export type FaultType =
@@ -31,6 +38,20 @@ export type Fault = {
   description: string;
   position?: number; // Index in the player sequence where fault occurs
 };
+
+// Exhaustive checking helper for compile-time safety
+export function assertNever(x: never): never {
+  throw new Error(`Unexpected FinesseResult variant: ${JSON.stringify(x)}`);
+}
+
+// Type guards for ergonomic narrowing
+export const isOptimalResult = (
+  r: FinesseResult,
+): r is Extract<FinesseResult, { kind: "optimal" }> => r.kind === "optimal";
+
+export const isFaultyResult = (
+  r: FinesseResult,
+): r is Extract<FinesseResult, { kind: "faulty" }> => r.kind === "faulty";
 
 // Convert Actions to FinesseActions for analysis (with optimistic move filtering)
 export function extractFinesseActions(
@@ -298,8 +319,7 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     // Skip finesse analysis if soft drop is detected
     if (playerInputs.includes("SoftDrop")) {
       return {
-        faults: [],
-        isOptimal: true,
+        kind: "optimal",
         optimalSequences: [],
         playerSequence: playerInputs,
       };
@@ -340,12 +360,21 @@ export class BfsFinesseCalculator implements FinesseCalculator {
       });
     }
 
-    return {
-      faults,
-      isOptimal,
-      optimalSequences,
-      playerSequence,
-    };
+    // Return discriminated union based on fault analysis
+    if (isOptimal && faults.length === 0) {
+      return {
+        kind: "optimal",
+        optimalSequences,
+        playerSequence,
+      };
+    } else {
+      return {
+        faults,
+        kind: "faulty",
+        optimalSequences,
+        playerSequence,
+      };
+    }
   }
 
   // Input normalization: all FinesseActions are valid by design with clean architecture

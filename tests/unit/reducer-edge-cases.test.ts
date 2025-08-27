@@ -1,6 +1,6 @@
-import { reducer } from "../../src/state/reducer";
 import { type GameState, type Action } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
 

@@ -6,9 +6,9 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { reducer } from "../../src/state/reducer";
 import { type GameState } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 // Helper function to create a state with a line ready to clear
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
@@ -34,10 +34,22 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=4 -> cells at 4,5,6,7
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=5 -> cells at 5,6,7,8
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=6 -> cells at 6,7,8,9
+
+    // HardDrop stages a pending lock for pre-commit pipeline decisions
     state = reducer(state, {
       timestampMs: createTimestamp(1000),
       type: "HardDrop",
     });
+
+    // If still resolving, manually commit the staged lock for this test
+    if (state.status === "resolvingLock") {
+      state = reducer(state, { type: "CommitLock" });
+
+      // Handle zero-delay line clear completion
+      if (state.status === "lineClear" && lineClearDelayMs === 0) {
+        state = reducer(state, { type: "CompleteLineClear" });
+      }
+    }
   }
 
   return state;
@@ -207,10 +219,18 @@ describe("Line Clearing Regression Tests", () => {
         state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=4
         state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=5
         state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=6
+
+        // HardDrop stages a pending lock for pre-commit pipeline decisions
         state = reducer(state, {
           timestampMs: createTimestamp(1000),
           type: "HardDrop",
         });
+
+        // If still resolving, manually commit the staged lock for this test
+        if (state.status === "resolvingLock") {
+          state = reducer(state, { type: "CommitLock" });
+          // Note: Don't auto-complete line clear for positive delay (100ms)
+        }
       }
 
       // Should be in lineClear status with line(s) to clear

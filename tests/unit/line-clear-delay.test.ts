@@ -1,12 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { reducer } from "../../src/state/reducer";
 import { type GameState, type Board, idx } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline } from "../helpers/reducer-with-pipeline";
 
 function createStateWithDelay(delayMs: number): GameState {
-  return reducer(undefined, {
+  return reducerWithPipeline(undefined, {
     seed: "lc-delay-test",
     timing: {
       gravityEnabled: false,
@@ -36,7 +36,7 @@ describe("line clear with non-zero delay", () => {
       // lastGravityTime remains 0 since gravity is disabled
     };
 
-    const afterDrop = reducer(s1, {
+    const afterDrop = reducerWithPipeline(s1, {
       timestampMs: createTimestamp(1000),
       type: "HardDrop",
     });
@@ -53,7 +53,9 @@ describe("line clear with non-zero delay", () => {
     expect(shouldCompleteLineClear(afterDrop, clearStartTime + 250)).toBe(true);
 
     // Completing clears lines and returns to playing
-    const completed = reducer(afterDrop, { type: "CompleteLineClear" });
+    const completed = reducerWithPipeline(afterDrop, {
+      type: "CompleteLineClear",
+    });
     expect(completed.status).toBe("playing");
     expect(completed.physics.lineClearStartTime).toBeNull();
     expect(completed.physics.lineClearLines).toEqual([]);

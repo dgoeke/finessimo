@@ -3,8 +3,8 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { reducer } from "../../src/state/reducer";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Line Clear Integration", () => {
   it("should complete line clearing through the app update loop", () => {

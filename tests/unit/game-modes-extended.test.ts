@@ -17,6 +17,7 @@ const mockState = (): GameState => ({
   hold: undefined,
   modePrompt: null,
   nextQueue: [],
+  pendingLock: null,
   physics: {
     isSoftDropping: false,
     lastGravityTime: 0,
@@ -68,7 +69,7 @@ const mockState = (): GameState => ({
 });
 
 describe("FreePlayMode - extended", () => {
-  test("suboptimal shorter sequence lists issues without extra inputs", () => {
+  test("FreePlay returns no textual feedback for suboptimal sequences", () => {
     const mode = new FreePlayMode();
     const state = mockState();
 
@@ -80,7 +81,7 @@ describe("FreePlayMode - extended", () => {
           type: "suboptimal_path",
         },
       ],
-      isOptimal: false,
+      kind: "faulty",
       optimalSequences: [["MoveLeft", "MoveLeft", "HardDrop"]],
       playerSequence: ["MoveLeft"], // shorter
     };
@@ -91,10 +92,7 @@ describe("FreePlayMode - extended", () => {
       { id: "T", rot: "spawn", x: 3, y: 0 },
       { id: "T", rot: "spawn", x: 0, y: 0 },
     );
-    expect(out.feedback).toContain("✗ Non-optimal finesse");
-    expect(out.feedback).toContain("Used 1 inputs, optimal was 3");
-    expect(out.feedback).not.toContain("extra input");
-    expect(out.feedback).toContain("Issues: Sequence incomplete");
+    expect(out).toEqual({});
   });
 
   test("target and expected piece helpers are null/undefined", () => {
@@ -122,7 +120,7 @@ describe("GuidedMode - extended", () => {
     };
   });
 
-  test("wrong piece does not advance and gives feedback", () => {
+  test("wrong piece does not advance", () => {
     const guidance = mode.getGuidance(state);
     expect(guidance?.target).toBeDefined();
     const wrongPiece: ActivePiece = { id: "J", rot: "spawn", x: 4, y: 0 };
@@ -136,8 +134,7 @@ describe("GuidedMode - extended", () => {
     const result = mode.onPieceLocked(
       state,
       {
-        faults: [],
-        isOptimal: true,
+        kind: "optimal",
         optimalSequences: [["HardDrop"]],
         playerSequence: ["HardDrop"],
       },
@@ -145,14 +142,14 @@ describe("GuidedMode - extended", () => {
       finalPos,
     );
 
-    expect(result.feedback).toContain("Wrong piece");
+    expect(result.modeData).toBeUndefined();
     expect(
       (state.modeData as { currentDrillIndex: number } | undefined)
         ?.currentDrillIndex ?? 0,
     ).toBe(0);
   });
 
-  test("wrong target does not advance and gives feedback", () => {
+  test("wrong target does not advance", () => {
     const guidance = mode.getGuidance(state);
     const expected = mode.getExpectedPiece(state);
     expect(guidance?.target).toBeDefined();
@@ -166,8 +163,7 @@ describe("GuidedMode - extended", () => {
     const result = mode.onPieceLocked(
       state,
       {
-        faults: [],
-        isOptimal: true,
+        kind: "optimal",
         optimalSequences: [["HardDrop"]],
         playerSequence: ["HardDrop"],
       },
@@ -175,7 +171,7 @@ describe("GuidedMode - extended", () => {
       finalPos,
     );
 
-    expect(result.feedback).toContain("Wrong target");
+    expect(result.modeData).toBeUndefined();
     expect(
       (state.modeData as { currentDrillIndex: number } | undefined)
         ?.currentDrillIndex ?? 0,

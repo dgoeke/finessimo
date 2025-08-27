@@ -1,4 +1,4 @@
-import { type FinesseResult } from "../finesse/calculator";
+import { type FinesseResult, assertNever } from "../finesse/calculator";
 import {
   type GameState,
   type PieceId,
@@ -113,7 +113,7 @@ export class GuidedMode implements GameMode {
     const currentDrill = this.drills[data.currentDrillIndex];
 
     if (!currentDrill) {
-      return { feedback: "All drills completed! Well done!", isComplete: true };
+      return { isComplete: true };
     }
 
     const validationResult = this.validatePieceAndTarget(
@@ -125,12 +125,14 @@ export class GuidedMode implements GameMode {
       return validationResult;
     }
 
-    const { isOptimal } = finesseResult;
-    if (isOptimal) {
-      return this.handleOptimalSolution(data, finesseResult.playerSequence);
+    switch (finesseResult.kind) {
+      case "optimal":
+        return this.handleOptimalSolution(data);
+      case "faulty":
+        return this.handleSuboptimalSolution(data);
+      default:
+        return assertNever(finesseResult);
     }
-
-    return this.handleSuboptimalSolution(data, finesseResult);
   }
 
   private validatePieceAndTarget(
@@ -139,7 +141,8 @@ export class GuidedMode implements GameMode {
     expected: GuidedDrill,
   ): GameModeResult | null {
     if (lockedPiece.id !== expected.piece) {
-      return { feedback: `✗ Wrong piece. Expected ${expected.piece}.` };
+      // Do not advance; textual feedback is not emitted here
+      return {};
     }
     if (
       !(
@@ -147,66 +150,31 @@ export class GuidedMode implements GameMode {
         finalPosition.rot === expected.targetRot
       )
     ) {
-      return {
-        feedback: `✗ Wrong target. Place at x=${String(expected.targetX)}, rot=${expected.targetRot}.`,
-      };
+      // Do not advance; textual feedback is not emitted here
+      return {};
     }
     return null;
   }
 
-  private handleOptimalSolution(
-    data: GuidedData,
-    playerSequence: Array<string>,
-  ): GameModeResult {
+  private handleOptimalSolution(data: GuidedData): GameModeResult {
     const nextIndex = data.currentDrillIndex + 1;
     const nextDrill = this.drills[nextIndex];
-    const feedback = `✓ Perfect! Completed drill in ${String(playerSequence.length)} inputs (optimal).`;
-
     if (nextDrill) {
       return {
-        feedback: `${feedback} Moving to next drill.`,
         modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
         nextPrompt: nextDrill.description,
       };
     } else {
       return {
-        feedback: `${feedback} All drills completed! Excellent work!`,
         isComplete: true,
         modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
       };
     }
   }
 
-  private handleSuboptimalSolution(
-    data: GuidedData,
-    finesseResult: FinesseResult,
-  ): GameModeResult {
-    const { faults, optimalSequences, playerSequence } = finesseResult;
-    const optimalLength = optimalSequences[0]?.length ?? 0;
-    const extraInputs = playerSequence.length - optimalLength;
-
-    let feedback = `✗ Try again! Used ${String(playerSequence.length)} inputs, optimal is ${String(optimalLength)}.`;
-
-    if (extraInputs > 0) {
-      feedback += ` You used ${String(extraInputs)} extra input${extraInputs > 1 ? "s" : ""}.`;
-    }
-
-    if (faults.length > 0 && faults[0]) {
-      feedback += ` Hint: ${faults[0].description}`;
-    }
-
+  private handleSuboptimalSolution(data: GuidedData): GameModeResult {
     const nextAttempts = data.attemptsOnCurrentDrill + 1;
-    if (
-      nextAttempts > 2 &&
-      optimalSequences.length > 0 &&
-      optimalSequences[0]
-    ) {
-      const optimalStr = optimalSequences[0].join(" → ");
-      feedback += ` Optimal sequence: ${optimalStr}`;
-    }
-
     return {
-      feedback,
       modeData: {
         attemptsOnCurrentDrill: nextAttempts,
         currentDrillIndex: data.currentDrillIndex,

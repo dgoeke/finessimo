@@ -3,8 +3,8 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { reducer } from "../../src/state/reducer";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {

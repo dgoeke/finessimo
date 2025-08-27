@@ -1,6 +1,6 @@
 // Mock Lit to avoid ESM node resolution for real 'lit' package in tests
-import { reducer } from "../../src/state/reducer";
 import { type GameState } from "../../src/state/types";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 jest.mock(
   "lit",
   () => ({
@@ -9,6 +9,13 @@ jest.mock(
       __x = 0;
       requestUpdate(): void {
         this.__x += 1;
+      }
+      // Provide proper custom element lifecycle methods for JSDOM teardown
+      connectedCallback(): void {
+        // No-op for tests
+      }
+      disconnectedCallback(): void {
+        // No-op for tests
       }
     },
   }),
@@ -134,14 +141,15 @@ describe("finesse-overlay boop behavior", () => {
       OriginalAudioContext;
   });
 
-  function createStateWithFeedback(timestamp: number): GameState {
+  function createStateWithFeedback(_timestamp: number): GameState {
     const base = reducer(undefined, { seed: "test", type: "Init" });
     return {
       ...base,
       finesseFeedback: {
-        isOptimal: false,
-        optimalSequence: ["MoveLeft"],
-        timestamp,
+        faults: [],
+        kind: "faulty",
+        optimalSequences: [["MoveLeft"]],
+        playerSequence: [],
       },
       gameplay: {
         ...base.gameplay,
@@ -178,8 +186,15 @@ describe("finesse-overlay boop behavior", () => {
     }
     expect(boopCount).toBe(1);
 
-    // New feedback (different timestamp) should boop again
+    // New feedback (different content) should boop again
     const state2 = createStateWithFeedback(1200);
+    // Make the feedback different by changing the sequence
+    if (state2.finesseFeedback) {
+      state2.finesseFeedback = {
+        ...state2.finesseFeedback,
+        optimalSequences: [["MoveRight"]], // Different from MoveLeft
+      };
+    }
     (
       el as unknown as { updateFinesseFeedback: (s: GameState) => void }
     ).updateFinesseFeedback(state2);

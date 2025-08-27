@@ -1,9 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { reducer } from "../../src/state/reducer";
 import { type GameState, type Board, idx } from "../../src/state/types";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 function createStateWithDelay(delayMs: number): GameState {
   return reducer(undefined, {

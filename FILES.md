@@ -4,18 +4,18 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Dependencies
 
-- Added Robot3 (v1.1.1): Fast 1kB functional library for creating finite state machines. Used for DAS state machine implementation to provide proper input classification at the source.
+- Robot3 (v1.1.1): Functional finite state machines. Used for DAS state machine implementation to provide proper input classification at the source.
 
 ## Root Application
 
 - src/main.ts: Browser entrypoint. Initializes FinessimoApp on DOM ready.
-- src/app.ts: Main app orchestrator. 60 FPS game loop, state management, finesse analysis integration, mode switching, settings dispatch.
+- src/app.ts: Main app orchestrator. 60 FPS game loop, state management, finesse analysis integration, lock pipeline invocation, mode switching, settings dispatch.
 - src/global.d.ts: Global TypeScript declarations and ambient module types.
 
 ## State
 
-- src/state/types.ts: Core types and interfaces. GameState, Action union (including new TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ comprehensive metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions.
-- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Comprehensive statistics tracking with derived metrics calculation.
+- src/state/types.ts: Core types and interfaces. GameState, Action union (including TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions. `retryOnFinesseError` in GameplayConfig.
+- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Implements `RetryPendingLock` logic for piece restoration. Supports `RefillPreview`/`ReplacePreview` for mode-owned RNG/preview.
 - src/state/signals.ts: Reactive state management using Lit signals. Global gameStateSignal with dispatch wrapper and selector helpers for efficient component updates.
 
 ## Types
@@ -31,7 +31,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ### Input State Machines
 
-- src/input/machines/das.ts: DAS (Delayed Auto Shift) state machine implementation using Robot3. Provides DASMachineService for manual state management and createDASMachine for Robot3 integration. Handles tap vs hold input classification at source with states: idle → charging → repeating. Updated to emit granular action types (TapMove, HoldMove, RepeatMove, HoldStart) instead of generic Move actions. Includes comprehensive context management, timing logic, and precise action emission for enhanced finesse analysis. Exports reducer functions and guard functions for testability.
+- src/input/machines/das.ts: DAS (Delayed Auto Shift) state machine implementation using Robot3. Provides DASMachineService for manual state management and createDASMachine for Robot3 integration. Handles tap vs hold input classification at source with states: idle → charging → repeating. Emits granular action types (TapMove, HoldMove, RepeatMove, HoldStart). Exports reducer and guard functions for testability.
 
 ## Core Mechanics
 
@@ -48,9 +48,11 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Modes
 
-- src/modes/index.ts: Game mode contracts and registry. Mode-agnostic hooks for config, spawning, guidance. Registers FreePlayMode and GuidedMode.
-- src/modes/freePlay.ts: Free-play mode. Finesse evaluation on final placement, succinct feedback.
+- src/modes/index.ts: Game mode contracts and registry. Mode-agnostic hooks for config, spawning, guidance, lock resolution, RNG/preview. Registers FreePlayMode and GuidedMode.
+- src/modes/freePlay.ts: Free-play mode. Finesse evaluation on final placement, succinct feedback. Implements `onResolveLock` retry-on-finesse-error for suboptimal hard drops. Provides 7-bag defaults for RNG/preview.
 - src/modes/guided.ts: Guided training drills. Piece/target challenges, progress tracking, hints, expected piece/target validation.
+- src/modes/lock-pipeline.ts: Pure lock resolution pipeline. Coordinates finesse analysis, mode consultation, and commit/retry decisions. Runs synchronously for consistent game flow.
+- src/modes/spawn-service.ts: Pure helpers to externalize RNG and preview queue refills. Provides `planPreviewRefill` and mode-aware RNG provisioning.
 
 ## UI
 
@@ -86,4 +88,5 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/test-types.ts: Type utilities for testing. InvalidGameState, MalformedAction types, type guards, helpers for creating test scenarios with invalid data.
 - tests/test-helpers.ts: Runtime assertion helpers. Type narrowing functions, safe array access, validation utilities for type-safe test code.
 - tests/helpers/assert.ts: Additional test assertion utilities and custom matchers.
+- tests/helpers/reducer-with-pipeline.ts: Pipeline-aware reducer wrapper for tests. Automatically runs the lock pipeline on staged pending locks and mirrors preview refill behavior.
 - tests/unit/key-binding-manager.test.ts: Unit tests for KeyBindingManager utility. Tests handler storage, listener management, cleanup logic, and edge cases using mock DOM elements.

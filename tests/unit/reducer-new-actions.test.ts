@@ -1,4 +1,4 @@
-import { reducer } from "../../src/state/reducer";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Reducer - new action branches", () => {
   it("handles SetMode", () => {
@@ -11,7 +11,11 @@ describe("Reducer - new action branches", () => {
 
   it("handles UpdateFinesseFeedback", () => {
     const init = reducer(undefined, { seed: "test", type: "Init" });
-    const fb = { isOptimal: true, message: "ok", timestamp: performance.now() };
+    const fb = {
+      kind: "optimal" as const,
+      optimalSequences: [],
+      playerSequence: [],
+    };
     const state = reducer(init, {
       feedback: fb,
       type: "UpdateFinesseFeedback",

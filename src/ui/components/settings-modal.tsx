@@ -28,6 +28,7 @@ export type GameSettings = {
   // Finesse settings
   finesseFeedbackEnabled: boolean;
   finesseBoopEnabled: boolean;
+  retryOnFinesseError: boolean;
 
   // Controls
   keyBindings?: KeyBindings;
@@ -626,6 +627,17 @@ export class SettingsModal extends LitElement {
             Boop sound on finesse feedback
           </label>
         </div>
+
+        <div class="setting-group">
+          <label>
+            <input
+              type="checkbox"
+              id="retry-on-finesse-error"
+              .checked=${this.currentSettings.retryOnFinesseError}
+            />
+            Retry piece on finesse errors (hard drop only)
+          </label>
+        </div>
       </div>
     `;
   }
@@ -892,6 +904,12 @@ export class SettingsModal extends LitElement {
     );
     if (finesseBoopInput)
       newSettings.finesseBoopEnabled = finesseBoopInput.checked;
+
+    const retryOnFinesseErrorInput = this.querySelector<HTMLInputElement>(
+      "#retry-on-finesse-error",
+    );
+    if (retryOnFinesseErrorInput)
+      newSettings.retryOnFinesseError = retryOnFinesseErrorInput.checked;
   }
 
   private resetToDefaults(): void {
@@ -935,6 +953,7 @@ export class SettingsModal extends LitElement {
       lineClearDelayMs: 125,
       lockDelayMs: 500,
       nextPieceCount: 5,
+      retryOnFinesseError: false,
       softDrop: 20,
     };
   }
@@ -1022,6 +1041,8 @@ export class SettingsModal extends LitElement {
       out.finesseFeedbackEnabled = s["finesseFeedbackEnabled"];
     if (isBool(s["finesseBoopEnabled"]))
       out.finesseBoopEnabled = s["finesseBoopEnabled"];
+    if (isBool(s["retryOnFinesseError"]))
+      out.retryOnFinesseError = s["retryOnFinesseError"];
   }
 
   private loadStoreFromStorage(): {
@@ -1069,10 +1090,16 @@ export class SettingsModal extends LitElement {
       ...this.currentSettings,
       arrMs: gameState.timing.arrMs,
       dasMs: gameState.timing.dasMs,
+      finesseBoopEnabled: gameState.gameplay.finesseBoopEnabled ?? false,
       finesseCancelMs: gameState.gameplay.finesseCancelMs,
+      finesseFeedbackEnabled: gameState.gameplay.finesseFeedbackEnabled ?? true,
+      ghostPieceEnabled: gameState.gameplay.ghostPieceEnabled ?? true,
+      gravityEnabled: gameState.timing.gravityEnabled,
       gravityMs: gameState.timing.gravityMs,
       lineClearDelayMs: gameState.timing.lineClearDelayMs,
       lockDelayMs: gameState.timing.lockDelayMs,
+      nextPieceCount: gameState.gameplay.nextPieceCount ?? 5,
+      retryOnFinesseError: gameState.gameplay.retryOnFinesseError ?? false,
       softDrop: gameState.timing.softDrop,
     };
   }

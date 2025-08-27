@@ -1,3 +1,6 @@
+[ ] Clean up type suppressions
+[ ] Re-evaluate types to be stronger branded types, check timestamp consistency
+
 ## Features
 
 [ ] DCD handling

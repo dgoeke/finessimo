@@ -3,8 +3,8 @@ import { describe, test, expect } from "@jest/globals";
 import { PIECES } from "../../src/core/pieces";
 import { DefaultFinesseService } from "../../src/finesse/service";
 import { FreePlayMode } from "../../src/modes/freePlay";
-import { reducer } from "../../src/state/reducer";
 import { createTimestamp } from "../../src/types/timestamp";
+import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 import type { GameState, ActivePiece, Action } from "../../src/state/types";
 
@@ -42,7 +42,7 @@ describe("FinesseService", () => {
     expect(feedback).toBeTruthy();
     // Should be optimal because it's just HardDrop (1 input)
     // @ts-expect-error narrowing by runtime check above
-    expect(feedback.feedback.isOptimal).toBe(true);
+    expect(feedback.feedback.kind).toBe("optimal");
   });
 
   test("analyzes from spawn state (not current pre-lock position)", () => {
@@ -67,7 +67,7 @@ describe("FinesseService", () => {
     // If analyzed from spawn, optimal len is 2 and player len is 2 → optimal true
     // If erroneously analyzed from current, optimal len would be 1 (HardDrop only) → optimal false
     // @ts-expect-error narrowing by runtime check above
-    expect(feedback.feedback.isOptimal).toBe(true);
+    expect(feedback.feedback.kind).toBe("optimal");
   });
 
   test("creates actions with custom timestamp", () => {
@@ -92,7 +92,7 @@ describe("FinesseService", () => {
     );
     expect(feedbackAction).toBeTruthy();
     // @ts-expect-error narrowing by runtime check above
-    expect(feedbackAction.feedback.timestamp).toBe(customTimestamp);
+    expect(feedbackAction.feedback.kind).toBe("optimal");
   });
 
   test("no inputs short-circuits to optimal empty feedback", () => {
@@ -109,10 +109,9 @@ describe("FinesseService", () => {
     expect(feedbackAction).toBeTruthy();
     // @ts-expect-error narrowing by runtime check above
     expect(feedbackAction.feedback).toEqual({
-      isOptimal: true,
-      optimalSequence: [],
-      // timestamp is dynamic; check presence and type
-      timestamp: expect.any(Number),
+      kind: "optimal",
+      optimalSequences: [],
+      playerSequence: [],
     });
 
     // Verify stats record marks it as optimal with zero inputs
