@@ -32,7 +32,8 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 1.  Functional architecture with immutable state and pure reducers.
 2.  Strict TypeScript types.
 3.  Unidirectional data flow; strict separation of stateful I/O (Input Handler) from the pure core logic.
-4.  Incremental development with testable phases and extensibility via pluggable modes.
+4.  Audio and other side-effects confined to UI edge components, keeping core logic pure.
+5.  Incremental development with testable phases and extensibility via pluggable modes.
 
 ## System Architecture
 
@@ -40,7 +41,7 @@ A web-based training application to learn "2-step finesse" (placing any piece wi
 
 Keybindings and Settings
 
-- A modal Settings panel exposes tabs for Timing, Gameplay, Visual, and Controls (Keybindings).
+- A modal Settings panel exposes tabs for Timing, Gameplay, Finesse, and Controls (Keybindings).
 - Keybindings are configurable and persisted locally (localStorage) under a single `finessimo` key (with both settings and keyBindings). The keyboard input handler loads these on startup and can be updated live via `setKeyBindings`.
 - While rebinding, the Settings panel adds `settings-open` to `<body>` so the keyboard handler ignores keydown/keyup to prevent interference.
 
@@ -175,6 +176,9 @@ export interface GameplayConfig {
   // Visual/gameplay toggles
   ghostPieceEnabled?: boolean; // default: true
   nextPieceCount?: number; // default: 5 (preview count)
+  // Finesse toggles
+  finesseFeedbackEnabled?: boolean; // default: true
+  finesseBoopEnabled?: boolean; // default: false
 }
 
 export interface TimingConfig {

@@ -45,6 +45,9 @@ export type GameplayConfig = {
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
   nextPieceCount?: number; // default 5 (preview count)
+  // Finesse toggles
+  finesseFeedbackEnabled?: boolean; // default true
+  finesseBoopEnabled?: boolean; // default false
 };
 
 export type SoftDropSpeed = number | "infinite";

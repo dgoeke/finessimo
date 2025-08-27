@@ -374,7 +374,6 @@ export class FinessimoApp {
     this.updateTimingSettings(newSettings);
     this.updateGameplaySettings(newSettings);
     this.updateKeyBindings(newSettings);
-    this.updateUISettings(newSettings);
   }
 
   private updateTimingSettings(newSettings: Partial<GameSettings>): void {
@@ -405,6 +404,10 @@ export class FinessimoApp {
       gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
     if (newSettings.nextPieceCount !== undefined)
       gameplay.nextPieceCount = newSettings.nextPieceCount;
+    if (newSettings.finesseFeedbackEnabled !== undefined)
+      gameplay.finesseFeedbackEnabled = newSettings.finesseFeedbackEnabled;
+    if (newSettings.finesseBoopEnabled !== undefined)
+      gameplay.finesseBoopEnabled = newSettings.finesseBoopEnabled;
 
     if (Object.keys(gameplay).length > 0) {
       this.dispatch({ gameplay, type: "UpdateGameplay" });
@@ -417,15 +420,6 @@ export class FinessimoApp {
       if (this.touchInputHandler) {
         this.touchInputHandler.setKeyBindings(newSettings.keyBindings);
       }
-    }
-  }
-
-  private updateUISettings(newSettings: Partial<GameSettings>): void {
-    if (newSettings.uiScale !== undefined) {
-      document.documentElement.style.setProperty(
-        "--ui-scale",
-        newSettings.uiScale.toString(),
-      );
     }
   }
 }

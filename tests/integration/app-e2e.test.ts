@@ -686,18 +686,18 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       expect(state.gameplay.nextPieceCount).toBe(3);
     });
 
-    it("should update UI settings", () => {
-      // Test UI scale setting
+    it("should update finesse settings", () => {
+      // Test finesse feedback and boop settings
       ctx.app.handleSettingsChange({
-        uiScale: 1.5,
+        finesseBoopEnabled: true,
+        finesseFeedbackEnabled: false,
       });
 
       advanceFrame(ctx);
 
-      // Check that CSS custom property was set
-      const uiScaleValue =
-        document.documentElement.style.getPropertyValue("--ui-scale");
-      expect(uiScaleValue).toBe("1.5");
+      const state = getState(ctx);
+      expect(state.gameplay.finesseFeedbackEnabled).toBe(false);
+      expect(state.gameplay.finesseBoopEnabled).toBe(true);
     });
 
     it("should handle partial settings updates", () => {

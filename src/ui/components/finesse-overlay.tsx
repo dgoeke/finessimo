@@ -3,12 +3,15 @@ import { LitElement, html } from "lit";
 import { customElement, state, query } from "lit/decorators.js";
 
 import { gameStateSignal } from "../../state/signals";
+import { playBoop } from "../audio";
 
 import type { GameState, FinesseAction } from "../../state/types";
 
 @customElement("finesse-overlay")
 export class FinesseOverlay extends SignalWatcher(LitElement) {
   @state() private lastFeedbackTimestamp: number | null = null;
+  // Tracks last shown feedback timestamp to avoid duplicate boops
+  @state() private lastBoopTimestamp: number | null = null;
   @state() private isShowing = false;
 
   @query(".finesse-feedback-overlay") private feedbackEl?: HTMLElement;
@@ -92,24 +95,58 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     const hasSeq =
       fb !== null && !fb.isOptimal && Array.isArray(seq) && seq.length > 0;
 
-    if (hasSeq) {
-      this.showFinesseFeedback(feedbackEl, fb, seq);
+    if (!hasSeq) {
+      // No active feedback: hide and reset timestamps
+      this.hideFinesseFeedback(feedbackEl, true);
+      return;
+    }
+
+    // Check if this is new feedback
+    const currentTimestamp = fb.timestamp;
+    this.maybeBoop(
+      currentTimestamp,
+      gameState.gameplay.finesseBoopEnabled ?? false,
+    );
+
+    // Update feedback timestamp for popup logic
+    const isNewFeedback =
+      this.lastFeedbackTimestamp === null ||
+      currentTimestamp !== this.lastFeedbackTimestamp;
+    if (isNewFeedback) {
+      this.lastFeedbackTimestamp = currentTimestamp;
+    }
+
+    // Handle popup display separately
+    const feedbackEnabled = gameState.gameplay.finesseFeedbackEnabled ?? true;
+    if (feedbackEnabled) {
+      this.showFinesseFeedback(feedbackEl, fb, seq, isNewFeedback);
     } else {
-      this.hideFinesseFeedback(feedbackEl);
+      // Hide visually but preserve timestamps so boop doesn't retrigger
+      this.hideFinesseFeedback(feedbackEl, false);
     }
   }
+
+  private maybeBoop(currentTimestamp: number, boopEnabled: boolean): void {
+    const isNewBoop =
+      this.lastBoopTimestamp === null ||
+      currentTimestamp !== this.lastBoopTimestamp;
+    if (isNewBoop) {
+      this.lastBoopTimestamp = currentTimestamp;
+      if (boopEnabled) playBoop();
+    }
+  }
+
+  // Removed: boop handled directly in updateFinesseFeedback to keep it independent
 
   private showFinesseFeedback(
     finesseFeedbackEl: HTMLElement,
     fb: NonNullable<GameState["finesseFeedback"]>,
     seq: Array<FinesseAction>,
+    isNewTimestamp: boolean,
   ): void {
     const currentTimestamp = fb.timestamp;
     const now = performance.now();
-    const shouldShow = now - currentTimestamp < 1000;
-    const isNewTimestamp =
-      this.lastFeedbackTimestamp === null ||
-      currentTimestamp !== this.lastFeedbackTimestamp;
+    const shouldShow = now - currentTimestamp < 1500;
 
     const readableActions: Array<string> = [];
     for (const action of seq) {
@@ -150,8 +187,14 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     }
   }
 
-  private hideFinesseFeedback(finesseFeedbackEl: HTMLElement): void {
-    this.lastFeedbackTimestamp = null;
+  private hideFinesseFeedback(
+    finesseFeedbackEl: HTMLElement,
+    resetTimestamps: boolean,
+  ): void {
+    if (resetTimestamps) {
+      this.lastFeedbackTimestamp = null;
+      this.lastBoopTimestamp = null;
+    }
     finesseFeedbackEl.classList.remove("show");
     finesseFeedbackEl.classList.add("hide");
     finesseFeedbackEl.removeAttribute("aria-label");
@@ -189,6 +232,14 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
   }
 
   private renderFinesseFeedback(gameState: GameState): unknown {
+    // Check if finesse feedback is enabled
+    const feedbackEnabled = gameState.gameplay.finesseFeedbackEnabled ?? true;
+    if (!feedbackEnabled) {
+      return html`
+        <div class="finesse-feedback-overlay">Finesse feedback disabled</div>
+      `;
+    }
+
     const fb = gameState.finesseFeedback;
     const seq = fb?.optimalSequence;
     const hasSeq =
@@ -226,6 +277,7 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     }
     this.onTransitionEnd = null;
     this.lastFeedbackTimestamp = null;
+    this.lastBoopTimestamp = null;
     this.isShowing = false;
   }
 }

@@ -31,6 +31,10 @@ describe("Reducer - Extended Coverage", () => {
         { timestampMs: createTimestamp(performance.now()), type: "Lock" },
         { lines: [19], type: "ClearLines" },
         { dir: 1, optimistic: false, type: "TapMove" },
+        {
+          gameplay: { finesseBoopEnabled: true, finesseFeedbackEnabled: false },
+          type: "UpdateGameplay",
+        },
       ];
 
       actions.forEach((action) => {
@@ -503,6 +507,45 @@ describe("Reducer - Extended Coverage", () => {
         });
         expect(result).toBe(invalidState);
       });
+    });
+  });
+
+  describe("UpdateGameplay action", () => {
+    it("should update gameplay config with finesse settings", () => {
+      const result = reducer(initialState, {
+        gameplay: {
+          finesseBoopEnabled: true,
+          finesseFeedbackEnabled: false,
+          ghostPieceEnabled: false,
+        },
+        type: "UpdateGameplay",
+      });
+
+      expect(result.gameplay.finesseFeedbackEnabled).toBe(false);
+      expect(result.gameplay.finesseBoopEnabled).toBe(true);
+      expect(result.gameplay.ghostPieceEnabled).toBe(false);
+      // Preserve existing values
+      expect(result.gameplay.finesseCancelMs).toBe(
+        initialState.gameplay.finesseCancelMs,
+      );
+    });
+
+    it("should partially update gameplay config", () => {
+      const result = reducer(initialState, {
+        gameplay: {
+          finesseFeedbackEnabled: false,
+        },
+        type: "UpdateGameplay",
+      });
+
+      expect(result.gameplay.finesseFeedbackEnabled).toBe(false);
+      // Other values should remain unchanged
+      expect(result.gameplay.finesseBoopEnabled).toBe(
+        initialState.gameplay.finesseBoopEnabled,
+      );
+      expect(result.gameplay.finesseCancelMs).toBe(
+        initialState.gameplay.finesseCancelMs,
+      );
     });
   });
 });

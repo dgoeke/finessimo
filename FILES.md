@@ -66,11 +66,12 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/ui/components/piece-preview.tsx: Next piece previews component. Multiple self-contained canvas elements with configurable display count and gradient piece styling.
 - src/ui/components/finesse-overlay.tsx: Finesse feedback overlay component. Reactive animations and mode prompts using signal-based state updates.
 - src/ui/components/stats-panel.tsx: Statistics display component. Timer-based updates at 2Hz for performance, independent of reactive signals.
-- src/ui/components/settings-modal.tsx: Settings modal component. Tabbed interface with timing, gameplay, visual, and control settings. localStorage persistence and keybinding capture.
+- src/ui/components/settings-modal.tsx: Settings modal component. Tabbed interface with timing, gameplay, finesse, and control settings. localStorage persistence and keybinding capture.
 
 ### UI Utilities
 
 - src/ui/utils/colors.ts: Shared color manipulation utilities. Functions for lightening and darkening hex colors used across canvas components for gradient piece styling.
+- src/ui/audio.ts: Minimal audio helper for UI sound effects. WebAudio-based boop sound with browser compatibility and graceful fallback handling.
 
 ### Input Utilities
 

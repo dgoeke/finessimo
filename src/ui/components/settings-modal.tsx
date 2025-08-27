@@ -25,10 +25,9 @@ export type GameSettings = {
   ghostPieceEnabled: boolean;
   nextPieceCount: number;
 
-  // Visual settings
-  boardTheme: string;
-  showGrid: boolean;
-  uiScale: number;
+  // Finesse settings
+  finesseFeedbackEnabled: boolean;
+  finesseBoopEnabled: boolean;
 
   // Controls
   keyBindings?: KeyBindings;
@@ -383,7 +382,7 @@ export class SettingsModal extends LitElement {
             ${this.renderTabs()}
             <div class="settings-panels">
               ${this.renderTimingPanel()} ${this.renderGameplayPanel()}
-              ${this.renderVisualPanel()} ${this.renderControlsPanel()}
+              ${this.renderFinessePanel()} ${this.renderControlsPanel()}
             </div>
           </div>
           ${this.renderFooter()}
@@ -407,7 +406,7 @@ export class SettingsModal extends LitElement {
     const tabs = [
       { id: "timing", label: "Timing" },
       { id: "gameplay", label: "Gameplay" },
-      { id: "visual", label: "Visual" },
+      { id: "finesse", label: "Finesse" },
       { id: "controls", label: "Controls" },
     ];
 
@@ -600,60 +599,31 @@ export class SettingsModal extends LitElement {
     `;
   }
 
-  private renderVisualPanel(): unknown {
+  private renderFinessePanel(): unknown {
     return html`
       <div
-        class="settings-panel ${this.currentTab === "visual" ? "active" : ""}"
+        class="settings-panel ${this.currentTab === "finesse" ? "active" : ""}"
       >
         <div class="setting-group">
-          <label>Board Theme</label>
-          <select id="board-theme" .value=${this.currentSettings.boardTheme}>
-            <option
-              value="default"
-              ?selected=${this.currentSettings.boardTheme === "default"}
-            >
-              Default
-            </option>
-            <option
-              value="classic"
-              ?selected=${this.currentSettings.boardTheme === "classic"}
-            >
-              Classic
-            </option>
-            <option
-              value="minimal"
-              ?selected=${this.currentSettings.boardTheme === "minimal"}
-            >
-              Minimal
-            </option>
-          </select>
+          <label>
+            <input
+              type="checkbox"
+              id="finesse-feedback-enabled"
+              .checked=${this.currentSettings.finesseFeedbackEnabled}
+            />
+            Show popup for finesse feedback
+          </label>
         </div>
 
         <div class="setting-group">
           <label>
             <input
               type="checkbox"
-              id="show-grid"
-              .checked=${this.currentSettings.showGrid}
+              id="finesse-boop-enabled"
+              .checked=${this.currentSettings.finesseBoopEnabled}
             />
-            Show Grid Lines
+            Boop sound on finesse feedback
           </label>
-        </div>
-
-        <div class="setting-group">
-          <label>UI Scale</label>
-          <input
-            type="range"
-            id="ui-scale"
-            min="0.8"
-            max="1.5"
-            step="0.1"
-            .value=${String(this.currentSettings.uiScale)}
-            @input=${(e: Event): void => this.handleRangeInput(e)}
-          />
-          <span class="value-display"
-            >${String(this.currentSettings.uiScale)}x</span
-          >
         </div>
       </div>
     `;
@@ -768,7 +738,7 @@ export class SettingsModal extends LitElement {
   }
 
   private getSuffixForInput(id: string): string {
-    if (id === "soft-drop-speed" || id === "ui-scale") return "x";
+    if (id === "soft-drop-speed") return "x";
     if (
       id === "arr-rate" ||
       id === "das-delay" ||
@@ -841,7 +811,7 @@ export class SettingsModal extends LitElement {
 
     this.collectTimingSettings(newSettings);
     this.collectGameplaySettings(newSettings);
-    this.collectVisualSettings(newSettings);
+    this.collectFinesseSettings(newSettings);
 
     // Update internal settings
     this.currentSettings = { ...this.currentSettings, ...newSettings };
@@ -909,15 +879,18 @@ export class SettingsModal extends LitElement {
       newSettings.nextPieceCount = parseInt(nextCountInput.value);
   }
 
-  private collectVisualSettings(newSettings: Partial<GameSettings>): void {
-    const themeSelect = this.querySelector<HTMLSelectElement>("#board-theme");
-    if (themeSelect) newSettings.boardTheme = themeSelect.value;
+  private collectFinesseSettings(newSettings: Partial<GameSettings>): void {
+    const finesseFeedbackInput = this.querySelector<HTMLInputElement>(
+      "#finesse-feedback-enabled",
+    );
+    if (finesseFeedbackInput)
+      newSettings.finesseFeedbackEnabled = finesseFeedbackInput.checked;
 
-    const showGridInput = this.querySelector<HTMLInputElement>("#show-grid");
-    if (showGridInput) newSettings.showGrid = showGridInput.checked;
-
-    const uiScaleInput = this.querySelector<HTMLInputElement>("#ui-scale");
-    if (uiScaleInput) newSettings.uiScale = parseFloat(uiScaleInput.value);
+    const finesseBoopInput = this.querySelector<HTMLInputElement>(
+      "#finesse-boop-enabled",
+    );
+    if (finesseBoopInput)
+      newSettings.finesseBoopEnabled = finesseBoopInput.checked;
   }
 
   private resetToDefaults(): void {
@@ -951,18 +924,17 @@ export class SettingsModal extends LitElement {
   private getDefaultSettings(): GameSettings {
     return {
       arrMs: 2,
-      boardTheme: "default",
       dasMs: 133,
+      finesseBoopEnabled: false,
       finesseCancelMs: 50,
+      finesseFeedbackEnabled: true,
       ghostPieceEnabled: true,
       gravityEnabled: false,
       gravityMs: 1000,
       lineClearDelayMs: 0,
       lockDelayMs: 500,
       nextPieceCount: 5,
-      showGrid: true,
       softDrop: 10,
-      uiScale: 1.0,
     };
   }
 
@@ -1003,11 +975,10 @@ export class SettingsModal extends LitElement {
     const out: Partial<GameSettings> = {};
     const isNum = (v: unknown): v is number => typeof v === "number";
     const isBool = (v: unknown): v is boolean => typeof v === "boolean";
-    const isStr = (v: unknown): v is string => typeof v === "string";
 
     this.coerceTimingSettings(s, out, isNum);
     this.coerceGameplaySettings(s, out, isNum, isBool);
-    this.coerceVisualSettings(s, out, isStr, isBool, isNum);
+    this.coerceFinesseSettings(s, out, isBool);
 
     return out;
   }
@@ -1038,16 +1009,15 @@ export class SettingsModal extends LitElement {
     if (isNum(s["nextPieceCount"])) out.nextPieceCount = s["nextPieceCount"];
   }
 
-  private coerceVisualSettings(
+  private coerceFinesseSettings(
     s: Record<string, unknown>,
     out: Partial<GameSettings>,
-    isStr: (v: unknown) => v is string,
     isBool: (v: unknown) => v is boolean,
-    isNum: (v: unknown) => v is number,
   ): void {
-    if (isStr(s["boardTheme"])) out.boardTheme = s["boardTheme"];
-    if (isBool(s["showGrid"])) out.showGrid = s["showGrid"];
-    if (isNum(s["uiScale"])) out.uiScale = s["uiScale"];
+    if (isBool(s["finesseFeedbackEnabled"]))
+      out.finesseFeedbackEnabled = s["finesseFeedbackEnabled"];
+    if (isBool(s["finesseBoopEnabled"]))
+      out.finesseBoopEnabled = s["finesseBoopEnabled"];
   }
 
   private loadStoreFromStorage(): {
