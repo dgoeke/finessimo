@@ -171,7 +171,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
       // Only render ghost piece within visible board area
       if (x >= 0 && x < this.boardWidth && y >= 0 && y < this.boardHeight) {
-        this.drawGhostCell(x, y, shape.color);
+        this.drawGhostCell(x, y);
       }
     }
   }
@@ -209,22 +209,41 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
   }
 
-  private drawGhostCell(x: number, y: number, color: string): void {
+  private drawGhostCell(x: number, y: number): void {
     if (!this.ctx) return;
 
     const pixelX = x * this.cellSize;
     const pixelY = y * this.cellSize;
 
-    // Draw ghost piece with transparent fill and dashed border
-    this.ctx.fillStyle = `${color}40`; // Add 40 for ~25% opacity
+    const color = "#111111"
+    const borderColor = "#555555"
+
+    // Create subtle gradient for depth
+    const gradient = this.ctx.createLinearGradient(
+      pixelX,
+      pixelY,
+      pixelX + this.cellSize,
+      pixelY + this.cellSize,
+    );
+    gradient.addColorStop(0, lightenColor(color, 0.1));
+    gradient.addColorStop(1, darkenColor(color, 0.9));
+
+    this.ctx.fillStyle = "#000000" //gradient;
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
-    // Draw dashed border for ghost piece
-    this.ctx.strokeStyle = `${color}AA`; // Add AA for ~67% opacity
+    // Add subtle highlight on top edge
+    this.ctx.fillStyle = lightenColor(color, 0.1);
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, 2);
+
+    // Add subtle shadow on bottom edge
+    this.ctx.fillStyle = darkenColor(color, 0.3);
+    this.ctx.fillRect(pixelX, pixelY + this.cellSize - 2, this.cellSize, 2);
+
+    // Draw refined border
+    // this.ctx.strokeStyle = darkenColor(borderColor, 0.3);
+    this.ctx.strokeStyle = borderColor;
     this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([4, 4]); // Dashed line pattern
-    this.ctx.strokeRect(pixelX, pixelY, this.cellSize, this.cellSize);
-    this.ctx.setLineDash([]); // Reset line dash
+    this.ctx.strokeRect(pixelX + 1, pixelY + 1, this.cellSize - 2, this.cellSize - 2);
   }
 
   private drawGrid(): void {
