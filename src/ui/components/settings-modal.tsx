@@ -315,10 +315,6 @@ export class SettingsModal extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
-
-    // Sync settings from current game state
-    const gameState = gameStateSignal.get();
-    this.syncSettingsFromGameState(gameState);
   }
 
   disconnectedCallback(): void {
@@ -327,6 +323,11 @@ export class SettingsModal extends LitElement {
   }
 
   show(): void {
+    // Sync settings from current game state when opening the modal
+    // so the UI reflects any live changes applied while playing
+    const gameState = gameStateSignal.get();
+    this.syncSettingsFromGameState(gameState);
+
     this.visible = true;
     document.body.classList.add("settings-open");
     // Emit event to pause game
@@ -404,7 +405,7 @@ export class SettingsModal extends LitElement {
 
   private renderTabs(): unknown {
     const tabs = [
-      { id: "timing", label: "Timing" },
+      { id: "timing", label: "Handling" },
       { id: "gameplay", label: "Gameplay" },
       { id: "finesse", label: "Finesse" },
       { id: "controls", label: "Controls" },
@@ -508,7 +509,7 @@ export class SettingsModal extends LitElement {
             type="range"
             id="line-clear-delay"
             min="0"
-            max="500"
+            max="1000"
             step="10"
             .value=${String(this.currentSettings.lineClearDelayMs)}
             @input=${(e: Event): void => this.handleRangeInput(e)}
@@ -923,18 +924,18 @@ export class SettingsModal extends LitElement {
   // Settings persistence and defaults
   private getDefaultSettings(): GameSettings {
     return {
-      arrMs: 2,
-      dasMs: 133,
+      arrMs: 33,
+      dasMs: 167,
       finesseBoopEnabled: false,
       finesseCancelMs: 50,
       finesseFeedbackEnabled: true,
       ghostPieceEnabled: true,
-      gravityEnabled: false,
-      gravityMs: 1000,
-      lineClearDelayMs: 0,
+      gravityEnabled: true,
+      gravityMs: 750,
+      lineClearDelayMs: 125,
       lockDelayMs: 500,
       nextPieceCount: 5,
-      softDrop: 10,
+      softDrop: 20,
     };
   }
 
@@ -990,6 +991,9 @@ export class SettingsModal extends LitElement {
   ): void {
     if (isNum(s["dasMs"])) out.dasMs = s["dasMs"];
     if (isNum(s["arrMs"])) out.arrMs = s["arrMs"];
+    // Support both numeric softDrop multiplier and the string "infinite"
+    if (isNum(s["softDrop"]) || s["softDrop"] === "infinite")
+      out.softDrop = s["softDrop"];
     if (isNum(s["lockDelayMs"])) out.lockDelayMs = s["lockDelayMs"];
     if (isNum(s["lineClearDelayMs"]))
       out.lineClearDelayMs = s["lineClearDelayMs"];
