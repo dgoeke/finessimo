@@ -14,6 +14,10 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
   --radius: 12px;
   --key-h: 26px;
+  /* Layout constants for header/grid sync */
+  --side-col-w: 60px; /* fixed hold/preview column width */
+  --board-frame-extra-w: 26px; /* board-frame padding+border width */
+  --col-gap: 20px; /* column gap default; overridden in media queries */
 }
 
 @media (prefers-color-scheme: light) {
@@ -80,9 +84,22 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .header-inner {
-  max-width: 1200px;
+  /* Match (board outer width) + two fixed side columns + two column gaps */
+  width: min(
+    /* Height-limited path: board canvas width + frame + two gaps + two 60px cols */
+      calc(
+        (2 * var(--side-col-w)) + (2 * var(--col-gap)) +
+          var(--board-frame-extra-w) + ((100vh - var(--header-h) - 100px) / 2)
+      ),
+    /* Width-limited path: align to grid container width (columns + gaps) */
+      calc(
+        100vw - max(16px, env(safe-area-inset-left)) -
+          max(16px, env(safe-area-inset-right))
+      ),
+    1200px
+  );
   margin: 0 auto;
-  padding: 10px 12px;
+  padding: 10px 2px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -143,8 +160,8 @@ body {
     max(16px, env(safe-area-inset-left));
   display: grid;
   /* Left and right columns: minimum 60px, can grow equally */
-  grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
-  gap: 20px;
+  grid-template-columns: 60px auto 60px; /* Lock side columns to 60px */
+  gap: var(--col-gap);
   align-items: start;
   justify-content: center;
 }
@@ -155,7 +172,8 @@ body {
   gap: 16px;
   justify-content: flex-start;
   align-items: flex-end; /* Justify right toward board */
-  min-width: 65px;
+  width: 60px;
+  min-width: 60px;
 }
 
 .board-column {
@@ -172,7 +190,9 @@ body {
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start; /* Justify left toward board */
-  min-width: 65px;
+  position: relative; /* Anchor stats panel absolutely without affecting column width */
+  width: 60px;
+  min-width: 60px;
   gap: 16px;
 }
 
@@ -181,12 +201,15 @@ body {
   flex-direction: row;
   gap: 16px;
   align-items: flex-start;
-  width: 100%;
+  width: 60px; /* Keep flow content (preview) constrained to 60px */
 }
 
 .stats-panel-container {
   flex: 0 0 auto;
   width: 150px;
+  position: absolute; /* Place to the right of the 60px preview column */
+  left: calc(60px + 16px);
+  top: 0;
 }
 
 .panel {
@@ -471,9 +494,12 @@ game-board canvas {
 
 /* Responsive - only adjust spacing, not sizing logic */
 @media (max-width: 1100px) {
+  :root {
+    --col-gap: 12px;
+  }
   .app.shell {
-    grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
-    gap: 12px;
+    grid-template-columns: 60px auto 60px; /* Keep side columns fixed */
+    gap: var(--col-gap);
     padding: 12px;
   }
 
@@ -488,8 +514,12 @@ game-board canvas {
 }
 
 @media (max-width: 680px) {
+  :root {
+    --col-gap: 8px;
+  }
   .header-inner {
-    padding: 0 8px;
+    padding: 0;
+    width: 100%;
   }
   .brand-text .title {
     font-size: 18px;
@@ -504,7 +534,7 @@ game-board canvas {
 
   /* Even smaller screens: tighter spacing */
   .app.shell {
-    grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
+    grid-template-columns: 60px auto 60px; /* Keep side columns fixed */
     gap: 8px;
     padding: 8px;
   }

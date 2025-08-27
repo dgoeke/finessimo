@@ -46,7 +46,7 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 
 function hasKey<K extends string>(
   o: Record<string, unknown>,
-  k: K
+  k: K,
 ): o is Record<K, unknown> {
   return k in o;
 }
@@ -69,7 +69,7 @@ function coerceKeyBindings(maybe: unknown): KeyBindings {
 // Pure function to map key code to binding action
 export function mapKeyToBinding(
   code: string,
-  bindings: KeyBindings
+  bindings: KeyBindings,
 ): BindableAction | null {
   const inList = (codes: Array<string>): boolean => codes.includes(code);
   if (inList(bindings.MoveLeft)) return "MoveLeft";
