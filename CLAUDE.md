@@ -1,41 +1,147 @@
 # CLAUDE: Finessimo
 
-# Shared partial used by assistant-specific templates
-
 You are an expert TypeScript developer working on **Finessimo** — Tetris 2-step finesse trainer.
 
 **Source of truth docs:**
-
 - `DESIGN.md`
 - `FILES.md`
 
-**Core principles**
+---
 
+## Core principles
 - Functional architecture: immutable state + pure reducers
 - Unidirectional data flow: UI → Input Handler → Reducer → State → UI
 - Side-effects live only in Input Handler; core logic is pure
 
-**Build & quality gate**
+- Make invalid states unrepresentable using **Haskell‑style types in TypeScript**: *branded primitives*, *discriminated unions*, *user‑defined type guards*, and the narrowest possible types.
+- Functional core with immutable data; side effects at the edges (input devices, time, DOM, persistence).
+- Small, composable modules with explicit data flow.
 
+---
+
+## Type System Philosophy (Haskell‑ish, in TypeScript)
+Adopt a **types‑first** workflow. Design the domain model before writing behavior. Prefer types that encode invariants so that many runtime checks become unnecessary.
+
+### 1) Branded primitives (opaque types)
+Use nominal “brands” to prevent mixing look‑alike primitives. Define factories/guards at the **edges**; use branded types in the **core**.
+
+```ts
+// brands.ts
+declare const brand: unique symbol;
+
+export type Brand<T, B extends string> = T & { readonly [brand]: B };
+
+// Examples
+export type Timestamp = Brand<number, "Timestamp">;   // instant in ms
+export type DurationMs = Brand<number, "DurationMs">; // delta in ms
+export type Seed = Brand<string, "Seed">;
+export type GridCoord = Brand<number, "GridCoord">;
+export type CellValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8; // keep narrow if branded at creation
+
+// Constructors / guards (at boundaries)
+export const asTimestamp = (n: number): Timestamp => n as Timestamp;
+export const asDurationMs = (n: number): DurationMs => n as DurationMs;
+export const asGrid = (n: number): GridCoord => Math.trunc(n) as GridCoord;
+export const isCellValue = (n: number): n is CellValue => n >= 0 && n <= 8 && Number.isInteger(n);
+```
+
+### 2) Discriminated unions with exhaustive handling
+Model state with precise variants and **require** exhaustiveness using a `never` guard.
+
+```ts
+type PlayingState = { status: "playing"; pendingLock: null };
+type ResolvingLockState = { status: "resolvingLock"; pendingLock: { at: Timestamp } };
+type LineClearState = { status: "lineClear"; lines: readonly number[]; startedAt: Timestamp };
+type TopOutState = { status: "topOut"; reason: "blockout" };
+
+export type GameState =
+  & { /* shared, readonly fields here */ readonly level: number }
+  & ( PlayingState | ResolvingLockState | LineClearState | TopOutState );
+
+export function assertNever(x: never): never {
+  throw new Error(`Unreachable variant: ${String(x)}`);
+}
+
+export function selectNext(s: GameState): GameState {
+  switch (s.status) {
+    case "playing":        /* ... */ return s;
+    case "resolvingLock":  /* ... */ return s;
+    case "lineClear":      /* ... */ return s;
+    case "topOut":         /* ... */ return s;
+    default:                return assertNever(s); // ensures exhaustive
+  }
+}
+```
+
+### 3) Guards + narrowing at boundaries
+Write **type guards** for parsing/untrusted inputs (DOM events, JSON, query params). The pure core should accept already‑narrowed/branded values.
+
+```ts
+export const isNonEmptyString = (u: unknown): u is string =>
+  typeof u === "string" && u.length > 0;
+
+export const isTimestamp = (u: unknown): u is Timestamp =>
+  typeof u === "number" && Number.isFinite(u);
+```
+
+### 4) Prefer readonly / literal types
+- Use `readonly` properties and `as const` where appropriate.
+- Prefer unions of string literals over `enum` (unless interop requires).
+
+### 5) Lint/type strictness (tsconfig recommended flags)
+- `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`,
+  `"noImplicitOverride": true`, `"useUnknownInCatchVariables": true`.
+- Prefer `satisfies` for intent checks:
+  ```ts
+  const keyMap = { Space: "hardDrop" } as const satisfies Record<string, "hardDrop">;
+  ```
+
+---
+
+## Build & quality gate
 - Always run `npm run pre-commit` before considering any change done.
 - Do **not** introduce TypeScript/ESLint suppressions (e.g., `// @ts-ignore`, `// eslint-disable-next-line`). Fix root causes instead.
 
-**When test failures surface correctness improvements**
+### Build tools available
+- `npm run typecheck` — runs `tsc` to check types only
+- `npm run lint:fix` — runs lint, auto‑orders imports, fixes safe issues
+- `npm run test` — runs all unit tests
+- `npm run pre-commit` — wrapper for the above
 
-- Update tests to match correct behavior; don’t reintroduce unsafe patterns.
+---
+
+## Workflow
+1) Start by reading `FILES.md` to locate code; finish by ensuring it stays accurate.
+2) Sketch the **types first** (brands, unions, guards). Make invalid states unrepresentable.
+3) Implement thin, testable slices. Keep reducers/core logic deterministic and pure; isolate side effects.
+4) Replace runtime checks with type‑level guarantees when safe; prefer compile‑time failures.
+5) Update `FILES.md` and docs as files move or new modules appear.
+
+---
+
+## Type‑driven testing guidance
+- Prefer **exhaustive switch** tests that cover every union variant.
+- Add **type‑level tests** (compile‑only) using `Expect`/`Equals` utilities to lock invariants.
+
+```ts
+// tests/types/invariants.test.ts (compile-only patterns)
+type Equals<A,B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Expect<T extends true> = T;
+
+type _1 = Expect<Equals<GameState["status"], "playing" | "resolvingLock" | "lineClear" | "topOut">>;
+```
+
+When test failures surface correctness improvements:
+- Update tests to reflect correct behavior; don’t reintroduce unsafe patterns.
 - Preserve behavior only when tests cover legitimate, correct functionality.
 
-**Workflow**
+---
 
-1. Start by reading `FILES.md` to locate code; finish by ensuring it stays accurate.
-2. Implement thin, testable slices.
-3. Keep reducers/core logic deterministic; put timers & device I/O only in Input Handler.
-
-**Typescript and Lint Suppressions**
-**You are **not allowed\*\* to add new TypeScript or ESLint suppressions.
+## TypeScript and ESLint suppressions
+**You are not allowed** to add new TypeScript or ESLint suppressions.
 
 Forbidden examples:
-
 - `// @ts-ignore`
 - `// @ts-expect-error`
 - `// @ts-nocheck`
@@ -45,16 +151,19 @@ Forbidden examples:
 - `// eslint-disable-next-line`
 - `/* eslint-disable */`
 
-Instead: fix the underlying error properly.
+Instead: fix the underlying error properly (narrow types, add brands/guards, or refactor).
 
-**Example of updating tests correctly**
+---
+
+## Examples (updated to match the style)
 
 ```ts
 // ❌ Old test assuming invalid state
 expect(gameReducer(stateWithoutActivePiece, lockAction)).toBeTruthy();
 
-// ✅ Updated test with valid state
-expect(gameReducer(stateWithActivePiece, lockAction)).toBeTruthy();
+// ✅ Updated test with valid, typed state
+const s: GameState = { status: "playing", level: 1, pendingLock: null } as const;
+expect(gameReducer(s, lockAction)).toBeTruthy();
 ```
 
 ```ts
@@ -71,7 +180,7 @@ expect(newState).not.toBe(state);
 // @ts-ignore
 const score: number = "100";
 
-// ✅ Do this
+// ✅ Do this (narrow and convert explicitly)
 const score = Number.parseInt("100", 10);
 ```
 
@@ -79,11 +188,11 @@ const score = Number.parseInt("100", 10);
 // ❌ Don’t mutate state directly
 state.level++;
 
-// ✅ Always return a new state
-return { ...state, level: state.level + 1 };
+// ✅ Always return a new state (readonly, new object)
+return { ...state, level: state.level + 1 } as const;
 ```
 
-```
+```md
 // ❌ FILES.md not updated
 src/modes/newMode.ts   (missing from FILES.md)
 
@@ -101,7 +210,6 @@ git commit -m "fix bug"
 ```
 
 **Claude-specific notes**
-
 - concise, example-driven; propose diffs; never add lint/TS suppressions
 - Claude Code
 - If tests fail because you improved correctness or safety, update tests rather than weakening code. Preserve existing behavior only when it’s legitimately correct.
