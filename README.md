@@ -1,123 +1,62 @@
-# Finessimo - Finesse Trainer
+# Finessimo — 2‑Step Finesse Trainer 🎮
 
-A web-based training application to learn "2-step finesse" - placing any tetromino piece with minimum inputs.
+This is Finessimo — a small game that helps you master “2‑step finesse”: placing any tetromino with the minimum inputs. The goal is durable muscle memory first; speed follows naturally. For new players learning block stacking games, getting used to finesse movements early can be useful to avoid having to re-learn muscle memory later.
 
-## Quick Start
+If you want the deep dive, see `DESIGN.md` (architecture) and `FILES.md` (map).
 
-### Prerequisites
+## Getting Started 🚀
 
-- Node.js 18+
-- npm or yarn
+- Prereqs: Node.js 18+, npm
+- Install: `npm install`
+- Dev server (HMR): `npm run dev` → opens `http://localhost:3000`
 
-### Installation
+## Quality Gates ✅
 
-```bash
-# Install dependencies
-npm install
+- `npm run typecheck` — TypeScript only (no emit)
+- `npm run lint` — Lint (no fixes) • `npm run lint:fix` to auto‑fix
+- `npm run test` — Jest unit tests
+- One‑shot all checks: `npm run pre-commit` (clean → typecheck → lint:fix → test → format)
 
-# Start development server (with hot reload)
-npm run dev
+Other handy scripts 🛠️
 
-# Run tests
-npm test
+- `npm run build` — Production build (Vite)
+- `npm run test:watch` / `npm run test:coverage`
 
-# Build for production
-npm run build
-```
+## Developer Overview 🧩
 
-### Development
+The architecture is functional, deterministic, and types‑first.
 
-```bash
-# Start development server with HMR
-npm run dev
+### Architecture 🏗️
 
-# Run tests in watch mode
-npm test:watch
+- Flow: UI → Input Handler → Reducer → State → UI
+- Core: Pure reducer with immutable `GameState` (discriminated union). Branded primitives keep look‑alike types from mixing.
+- Input: A Robot3‑powered DAS/ARR state machine drives movement; handlers dispatch pure `Action`s and append normalized `ProcessedAction` entries for finesse analysis.
+- Pipeline: After a piece locks, a pure lock pipeline runs finesse analysis and asks the active mode whether to commit or retry.
+- Determinism: Seeded 7‑bag via `PieceRandomGenerator`; modes can own RNG/preview.
+- Reactivity: `@lit-labs/signals` exposes `gameStateSignal` + selectors for minimal UI work.
 
-# Type checking
-npm run typecheck
+### Key Files & Folders 📁
 
-# Linting
-npm run lint
-npm run lint:fix
-```
+- `src/app.ts` — App loop, wiring, lock pipeline, mode switching, settings dispatch.
+- `src/state/types.ts` — Brands, `GameState` union, `Action` union, `ProcessedAction`, stats.
+- `src/state/reducer.ts` — Pure reducer; physics timestamps; pending‑lock seam; derived stats.
+- `src/state/signals.ts` — Global signal + selectors + reducer‑backed dispatch.
+- `src/input/StateMachineInputHandler.ts` — Keyboard/touch over DAS/ARR; logging rules.
+- `src/input/machines/das.ts` — Robot3 DAS machine (idle → charging → repeating).
+- `src/finesse/*` — BFS calculator, pure service, processed‑log helpers.
+- `src/modes/*` — Mode contracts/registry (FreePlay, Guided), spawn/RNG/guidance hooks, lock decisions.
+- `src/core/*` — Board ops, SRS rotation, RNGs, spawning/top‑out.
+- `src/ui/*` — Lit components, canvas rendering, settings modal, audio.
+- `src/types/*` — Branded primitives (`DurationMs`, `GridCoord`, `Seed`, …) and `Timestamp` utilities.
 
-## Architecture
+### Working Agreements 🤝
 
-Finessimo follows a functional, unidirectional data flow:
+- Purity: Side‑effects only at the edges (input, DOM/time, storage, audio). Core stays pure.
+- Types‑first: Encode invariants with brands and discriminated unions. Use `assertNever` for exhaustiveness.
+- Immutability: Never mutate in reducers; always return new objects/arrays.
+- No suppressions: Don’t add `@ts-ignore` or ESLint disables — fix the types instead.
+- Run the gates: `npm run pre-commit` before committing.
 
-- UI → Input Handler → Reducer → State → UI
-- UI (Canvas + HUD) renders the immutable `GameState`.
-- Input Handlers are stateful and own all device timing (DAS/ARR, soft-drop repeats). They dispatch pure `Action`s only.
-- The reducer is pure/deterministic and creates new state snapshots for every action.
-- Core logic (movement, rotation via SRS, collision, line clears, 7‑bag RNG) lives under `src/core`.
-- Finesse analysis runs after a piece locks; the service compares the player’s normalized inputs against minimal BFS sequences.
-
-### Mode System (Mode-Agnostic Hooks)
-
-Game modes are self-contained policies exposed via hooks; the engine never branches on a mode name.
-
-- `initialConfig?()` applies timing/gameplay overrides when a mode activates.
-- `initModeData?()` initializes `GameState.modeData` (opaque per-mode substate).
-- `onBeforeSpawn?(state)` can override the next piece.
-- `getGuidance?(state)` emits `ModeGuidance` (target/prompt/visual flags). The app stores this in `state.guidance`, and UI renders it.
-
-Guided mode uses `modeData` to track drill index/attempts; on each lock it returns updated `modeData` and feedback. Free Play supplies no guidance or spawn overrides.
-
-### Input
-
-- Keyboard (DOM): DAS/ARR and soft drop repeats are implemented, with keyup suppression for rotation keys.
-- Touch: Quick downward swipe triggers Hard Drop; sustained downward movement engages Soft Drop (released on touch end).
-
-### Settings
-
-- Timing: DAS/ARR, soft-drop speed, lock delay, line clear delay, gravity on/off and speed.
-- Gameplay: finesse cancel window (ms).
-- Visual: ghost piece toggle, next preview count, UI scale.
-
-Settings are applied by dispatching `UpdateTiming`/`UpdateGameplay` actions. The canvas respects `ghostPieceEnabled`; the preview shows up to `nextPieceCount` items.
-
-### ✅ Completed Features
-
-- Architecture skeleton and unidirectional data flow
-- Types & Reducer: pure state transitions and immutability
-- Input handling: DOM + mock handlers, DAS/ARR timing, normalization tests
-- Core logic: SRS rotation, movement/collision, line clear utils
-- Finesse calculator: BFS minimality on empty board
-- Finesse service: analyzes from spawn state; applies 50ms cancellation window; mode-aware faults
-- Modes: Free-play and Guided with drill prompts, progression, guidance, and spawn policy hooks
-- UI: Canvas board and HUD with feedback and prompts
-- Tests: Broad unit coverage plus golden fixtures
-
-### 🎮 Try It Out
-
-1. Start the dev server: `npm run dev`
-2. Open `http://localhost:3000` (auto-opens)
-
-## Testing
-
-### Running Tests
-
-```bash
-npm test
-npm run typecheck
-npm test:coverage
-npm test:watch
-```
-
-## Design Reference
-
-See `DESIGN.md` for detailed contracts (types, actions, and mode hooks).
-
-## Contributing
-
-This is an AI-assisted implementation following strict architectural principles. All changes should:
-
-1. Maintain functional architecture patterns
-2. Preserve unidirectional data flow
-3. Keep core logic pure and testable
-4. Follow existing TypeScript conventions
-
-## License
+## License 📜
 
 MIT
