@@ -11,10 +11,20 @@ import { createSevenBagRng } from "../core/rng";
 import { type PieceRandomGenerator } from "../core/rng-interface";
 import { createActivePiece, canSpawnPiece, isTopOut } from "../core/spawning";
 import { tryRotate, getNextRotation } from "../core/srs";
+import {
+  createDurationMs,
+  durationMsAsNumber,
+  createGridCoord,
+  gridCoordAsNumber,
+  type Seed,
+} from "../types/brands";
 import { createTimestamp } from "../types/timestamp";
 
 import {
   type GameState,
+  type PlayingState,
+  type LineClearState,
+  type TopOutState,
   type Action,
   type TimingConfig,
   type GameplayConfig,
@@ -24,6 +34,7 @@ import {
   type Stats,
   type PendingLock,
   type LockSource,
+  createBoardCells,
 } from "./types";
 
 import type { FaultType } from "../finesse/calculator";
@@ -39,12 +50,12 @@ type ActionHandlerMap = {
 
 // Default timing configuration
 const defaultTimingConfig: TimingConfig = {
-  arrMs: 2,
-  dasMs: 133,
+  arrMs: createDurationMs(2),
+  dasMs: createDurationMs(133),
   gravityEnabled: false, // Gravity OFF by default per DESIGN.md
-  gravityMs: 500, // 500ms gravity for visibility
-  lineClearDelayMs: 0,
-  lockDelayMs: 500,
+  gravityMs: createDurationMs(500), // 500ms gravity for visibility
+  lineClearDelayMs: createDurationMs(0),
+  lockDelayMs: createDurationMs(500),
   // Default soft drop multiplier relative to gravity
   softDrop: 10,
   tickHz: 60,
@@ -53,7 +64,7 @@ const defaultTimingConfig: TimingConfig = {
 // Default gameplay configuration
 const defaultGameplayConfig: GameplayConfig = {
   finesseBoopEnabled: false,
-  finesseCancelMs: 50,
+  finesseCancelMs: createDurationMs(50),
   finesseFeedbackEnabled: true,
   ghostPieceEnabled: true,
   nextPieceCount: 5,
@@ -61,10 +72,10 @@ const defaultGameplayConfig: GameplayConfig = {
 };
 
 // Create initial physics state
-function createInitialPhysics(): PhysicsState {
+function createInitialPhysics(timestampMs: Timestamp): PhysicsState {
   return {
     isSoftDropping: false,
-    lastGravityTime: 0,
+    lastGravityTime: timestampMs,
     lineClearLines: [],
     lineClearStartTime: null,
     lockDelayStartTime: null,
@@ -129,7 +140,8 @@ function applyStatsBaseUpdate(
 
 // Initial game state
 function createInitialState(
-  seed: string,
+  seed: Seed,
+  timestampMs: Timestamp,
   config: {
     timing?: Partial<TimingConfig> | undefined;
     gameplay?: Partial<GameplayConfig> | undefined;
@@ -137,7 +149,7 @@ function createInitialState(
     previousStats?: Stats | undefined;
     customRng?: PieceRandomGenerator | undefined;
   } = {},
-): GameState {
+): PlayingState {
   const { customRng, gameplay, mode, previousStats, timing } = config;
   const rng = customRng ?? createSevenBagRng(seed);
   const { newRng, pieces: initialQueue } = rng.getNextPieces(5); // Generate 5-piece preview
@@ -156,7 +168,7 @@ function createInitialState(
     linesCleared: 0,
     linesPerMinute: 0,
 
-    longestSessionMs: 0,
+    longestSessionMs: createDurationMs(0),
     optimalInputs: 0,
     optimalPlacements: 0,
 
@@ -169,13 +181,13 @@ function createInitialState(
     // Session-specific counters
     sessionPiecesPlaced: 0,
     // Session tracking
-    sessionStartMs: 0,
+    sessionStartMs: timestampMs,
     // Line clear statistics
     singleLines: 0,
-    startedAtMs: 0,
+    startedAtMs: timestampMs,
 
     tetrisLines: 0,
-    timePlayedMs: 0,
+    timePlayedMs: createDurationMs(0),
 
     // Fault tracking
     totalFaults: 0,
@@ -192,9 +204,9 @@ function createInitialState(
           ...previousStats,
           sessionLinesCleared: 0,
           sessionPiecesPlaced: 0,
-          sessionStartMs: 0,
+          sessionStartMs: timestampMs,
           // Reset session-specific stats
-          timePlayedMs: 0,
+          timePlayedMs: createDurationMs(0),
           totalSessions: previousStats.totalSessions + 1,
         },
         {},
@@ -211,16 +223,17 @@ function createInitialState(
     currentMode: mode ?? "freePlay",
     finesseFeedback: null,
     gameplay: { ...defaultGameplayConfig, ...gameplay },
+    guidance: null,
     hold: undefined,
     modeData: null,
     modePrompt: null,
     nextQueue: initialQueue,
     pendingLock: null,
-    physics: createInitialPhysics(),
+    physics: createInitialPhysics(timestampMs),
     processedInputLog: [],
     rng: newRng,
     stats: initialStats,
-    status: "playing",
+    status: "playing" as const,
     tick: 0,
     timing: { ...defaultTimingConfig, ...timing },
   };
@@ -273,18 +286,17 @@ const createPendingLock = (
   };
 };
 
-const updateSessionStats = (stats: Stats, timestampMs: number): Stats => {
-  const sessionStartMs =
-    stats.sessionStartMs === 0 ? timestampMs : stats.sessionStartMs;
-  const gameStartMs = stats.startedAtMs === 0 ? timestampMs : stats.startedAtMs;
-  const sessionTimeMs = timestampMs - sessionStartMs;
+const updateSessionStats = (stats: Stats, timestampMs: Timestamp): Stats => {
+  const timestampNum = timestampMs as number;
+  const sessionStartNum = stats.sessionStartMs as number;
+  const sessionTimeMs = timestampNum - sessionStartNum;
   const updatedTimeMs = Math.max(0, sessionTimeMs);
 
   return applyStatsBaseUpdate(stats, {
-    longestSessionMs: Math.max(stats.longestSessionMs, updatedTimeMs),
-    sessionStartMs,
-    startedAtMs: gameStartMs,
-    timePlayedMs: updatedTimeMs,
+    longestSessionMs: createDurationMs(
+      Math.max(stats.longestSessionMs as number, updatedTimeMs),
+    ),
+    timePlayedMs: createDurationMs(updatedTimeMs),
   });
 };
 
@@ -297,7 +309,7 @@ const shouldApplyGravity = (currentState: GameState): boolean => {
 };
 
 const calculateGravityInterval = (currentState: GameState): number => {
-  let gravityInterval = currentState.timing.gravityMs;
+  let gravityInterval = durationMsAsNumber(currentState.timing.gravityMs);
 
   if (currentState.physics.isSoftDropping) {
     if (currentState.timing.softDrop === "infinite") {
@@ -306,7 +318,7 @@ const calculateGravityInterval = (currentState: GameState): number => {
       const m = Math.max(1, currentState.timing.softDrop);
       gravityInterval = Math.max(
         1,
-        Math.floor(currentState.timing.gravityMs / m),
+        Math.floor(durationMsAsNumber(currentState.timing.gravityMs) / m),
       );
     }
   }
@@ -316,7 +328,7 @@ const calculateGravityInterval = (currentState: GameState): number => {
 
 const processGravityDrop = (
   currentState: GameState,
-  timestampMs: number,
+  timestampMs: Timestamp,
 ): GameState => {
   if (!currentState.active) return currentState;
 
@@ -346,12 +358,13 @@ const processGravityDrop = (
 
 const checkLockDelayTimeout = (
   currentState: GameState,
-  timestampMs: number,
+  timestampMs: Timestamp,
 ): GameState => {
   if (
     currentState.physics.lockDelayStartTime !== null &&
-    timestampMs - currentState.physics.lockDelayStartTime >=
-      currentState.timing.lockDelayMs
+    (timestampMs as number) -
+      (currentState.physics.lockDelayStartTime as number) >=
+      durationMsAsNumber(currentState.timing.lockDelayMs)
   ) {
     if (currentState.active) {
       // Use pending lock seam for consistent lock flow
@@ -362,7 +375,7 @@ const checkLockDelayTimeout = (
         currentState.board,
         currentState.active,
         lockSource,
-        createTimestamp(timestampMs),
+        createTimestamp(timestampMs as number),
       );
 
       return {
@@ -382,12 +395,13 @@ const checkLockDelayTimeout = (
 
 const applyGravityLogic = (
   currentState: GameState,
-  timestampMs: number,
+  timestampMs: Timestamp,
 ): GameState => {
   if (!currentState.active) return currentState;
 
-  const timeSinceLastGravity =
-    timestampMs - currentState.physics.lastGravityTime;
+  const timestampNum = timestampMs as number;
+  const lastGravityNum = currentState.physics.lastGravityTime as number;
+  const timeSinceLastGravity = timestampNum - lastGravityNum;
   const gravityInterval = calculateGravityInterval(currentState);
 
   if (timeSinceLastGravity >= gravityInterval) {
@@ -435,12 +449,12 @@ const applyPendingLock = (
 
   const newStats = applyStatsBaseUpdate(state.stats, deltaStats);
 
-  const nextState: GameState = {
+  // Base shared fields for all possible next states
+  const sharedFields = {
     ...state,
     active: undefined,
     board: lockedBoard,
     canHold: true,
-    pendingLock: null,
     physics: {
       ...state.physics,
       lockDelayStartTime: null,
@@ -449,42 +463,62 @@ const applyPendingLock = (
   };
 
   if (topOut) {
-    return { ...nextState, status: "topOut" };
+    const topOutState: TopOutState = {
+      ...sharedFields,
+      pendingLock: null,
+      status: "topOut" as const,
+    };
+    return topOutState;
   }
 
   if (completedLines.length === 0) {
-    return { ...nextState, status: "playing" };
+    const playingState: PlayingState = {
+      ...sharedFields,
+      pendingLock: null,
+      status: "playing" as const,
+    };
+    return playingState;
   }
 
-  if (state.timing.lineClearDelayMs === 0) {
+  if (durationMsAsNumber(state.timing.lineClearDelayMs) === 0) {
     // Immediate clear with no animation delay
     const cleared = clearLines(lockedBoard, completedLines);
-    return {
-      ...nextState,
+    const clearedPlayingState: PlayingState = {
+      ...sharedFields,
       board: cleared,
+      pendingLock: null,
       physics: {
-        ...nextState.physics,
+        ...sharedFields.physics,
         lineClearLines: [],
         lineClearStartTime: null,
       },
-      status: "playing",
+      status: "playing" as const,
     };
+    return clearedPlayingState;
   }
 
   // Stage line clear animation
-  return {
-    ...nextState,
+  const lineClearState: LineClearState = {
+    ...sharedFields,
+    pendingLock: null,
     physics: {
-      ...nextState.physics,
+      ...sharedFields.physics,
       lineClearLines: completedLines,
       lineClearStartTime: timestampMs,
+      lockDelayStartTime: null,
     },
-    status: "lineClear",
+    status: "lineClear" as const,
   };
+  return lineClearState;
 };
 
 // Individual action handlers - pure functions
 const actionHandlers: ActionHandlerMap = {
+  AppendProcessed: (state, action) => ({
+    ...state,
+    processedInputLog: [...state.processedInputLog, action.entry],
+  }),
+
   CancelLockDelay: (state, _action) => ({
     ...state,
     physics: {
@@ -505,13 +539,7 @@ const actionHandlers: ActionHandlerMap = {
       return state;
     }
 
-    // Enforce invariant: resolvingLock status requires pendingLock to exist
-    if (!state.pendingLock) {
-      throw new Error(
-        "Invalid state: status is 'resolvingLock' but pendingLock is null. " +
-          "This violates the GameState invariant and indicates a reducer bug.",
-      );
-    }
+    // Type system now guarantees pendingLock exists when status is 'resolvingLock'
 
     // Apply the pending lock directly without temporary state manipulation
     return applyPendingLock(state, state.pendingLock);
@@ -537,7 +565,7 @@ const actionHandlers: ActionHandlerMap = {
   },
 
   CreateGarbageRow: (state, action) => {
-    const newCells = new Uint8Array(200);
+    const newCells = createBoardCells();
 
     // Shift all existing rows up by one
     for (let y = 0; y < 19; y++) {
@@ -556,7 +584,10 @@ const actionHandlers: ActionHandlerMap = {
 
     // Update active piece position if it exists (move it up)
     const newActive = state.active
-      ? { ...state.active, y: state.active.y - 1 }
+      ? {
+          ...state.active,
+          y: createGridCoord(gridCoordAsNumber(state.active.y) - 1),
+        }
       : undefined;
 
     return {
@@ -569,10 +600,7 @@ const actionHandlers: ActionHandlerMap = {
   HardDrop: (state, action) => {
     if (!state.active) return state;
 
-    const stateWithHardDrop = {
-      ...state,
-      processedInputLog: [...state.processedInputLog, action],
-    };
+    const stateWithHardDrop = state;
 
     const pending = createPendingLock(
       state.board,
@@ -614,7 +642,12 @@ const actionHandlers: ActionHandlerMap = {
     }
 
     if (!canSpawnPiece(state.board, newActive.id)) {
-      return { ...state, status: "topOut" };
+      const topOutState: TopOutState = {
+        ...state,
+        pendingLock: null,
+        status: "topOut" as const,
+      };
+      return topOutState;
     }
 
     return {
@@ -653,7 +686,6 @@ const actionHandlers: ActionHandlerMap = {
       ...state,
       active: stepped,
       physics: newPhysics,
-      processedInputLog: [...state.processedInputLog, action],
     };
   },
 
@@ -662,7 +694,7 @@ const actionHandlers: ActionHandlerMap = {
 
   // Core game actions
   Init: (state, action) =>
-    createInitialState(action.seed, {
+    createInitialState(action.seed, action.timestampMs, {
       customRng: action.rng,
       gameplay: action.gameplay,
       mode: action.mode,
@@ -756,7 +788,6 @@ const actionHandlers: ActionHandlerMap = {
       ...state,
       active: stepped,
       physics: newPhysics,
-      processedInputLog: [...state.processedInputLog, action],
     };
   },
 
@@ -768,7 +799,7 @@ const actionHandlers: ActionHandlerMap = {
   }),
 
   RetryPendingLock: (state, _action) => {
-    if (!state.pendingLock || state.status !== "resolvingLock") {
+    if (state.status !== "resolvingLock") {
       return state;
     }
 
@@ -814,7 +845,6 @@ const actionHandlers: ActionHandlerMap = {
       ...state,
       active: rotatedPiece,
       physics: newPhysicsRotate,
-      processedInputLog: [...state.processedInputLog, action],
     };
   },
 
@@ -836,7 +866,6 @@ const actionHandlers: ActionHandlerMap = {
           ...state,
           active: toBottom,
           physics: { ...state.physics, isSoftDropping: true },
-          processedInputLog: [...state.processedInputLog, action],
         };
       }
 
@@ -851,7 +880,6 @@ const actionHandlers: ActionHandlerMap = {
             ? null
             : state.physics.lockDelayStartTime,
         },
-        processedInputLog: [...state.processedInputLog, action],
       };
     }
 
@@ -879,7 +907,12 @@ const actionHandlers: ActionHandlerMap = {
     }
 
     if (isTopOut(state.board, pieceToSpawn)) {
-      return { ...state, status: "topOut" };
+      const topOutState: TopOutState = {
+        ...state,
+        pendingLock: null,
+        status: "topOut" as const,
+      };
+      return topOutState;
     }
 
     const newPiece = createActivePiece(pieceToSpawn);
@@ -896,15 +929,19 @@ const actionHandlers: ActionHandlerMap = {
   },
 
   // Line clear actions
-  StartLineClear: (state, action) => ({
-    ...state,
-    physics: {
-      ...state.physics,
-      lineClearLines: action.lines,
-      lineClearStartTime: action.timestampMs,
-    },
-    status: "lineClear",
-  }),
+  StartLineClear: (state, action) => {
+    const lineClearState: LineClearState = {
+      ...state,
+      pendingLock: null,
+      physics: {
+        ...state.physics,
+        lineClearLines: action.lines,
+        lineClearStartTime: action.timestampMs,
+      },
+      status: "lineClear" as const,
+    };
+    return lineClearState;
+  },
 
   // Physics actions
   StartLockDelay: (state, action) => ({
@@ -941,7 +978,6 @@ const actionHandlers: ActionHandlerMap = {
       ...state,
       active: stepped,
       physics: newPhysics,
-      processedInputLog: [...state.processedInputLog, action],
     };
   },
 
@@ -1007,7 +1043,7 @@ export const reducer: (
   // Handle initialization
   if (state === undefined) {
     if (action.type === "Init") {
-      return createInitialState(action.seed, {
+      return createInitialState(action.seed, action.timestampMs, {
         customRng: action.rng,
         gameplay: action.gameplay,
         mode: action.mode,

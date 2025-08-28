@@ -13,18 +13,17 @@ import {
   type TimingConfig,
   type GameplayConfig,
 } from "./state/types";
-import { createTimestamp } from "./types/timestamp";
+import { createSeed, createDurationMs, type Seed } from "./types/brands";
+import { createTimestamp, fromNow } from "./types/timestamp";
+import { getSettingsModal } from "./ui/utils/dom";
 
-import type {
-  GameSettings,
-  SettingsModal,
-} from "./ui/components/settings-modal";
+import type { GameSettings } from "./ui/components/settings-modal";
 
 export class FinessimoApp {
   private gameState: GameState;
   private keyboardInputHandler: KeyboardInputHandler;
   private touchInputHandler?: TouchInputHandler;
-  private settingsModal: SettingsModal | null = null;
+  private settingsModal: ReturnType<typeof getSettingsModal> = null;
   private isRunning = false;
   private isPaused = false;
   private lastFrameTime = 0;
@@ -98,8 +97,10 @@ export class FinessimoApp {
     }
   }
 
-  private randomSeed(): string {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  private randomSeed(): Seed {
+    return createSeed(
+      Date.now().toString(36) + Math.random().toString(36).slice(2),
+    );
   }
 
   private initializeState(): GameState {
@@ -110,6 +111,7 @@ export class FinessimoApp {
     let initAction: Extract<Action, { type: "Init" }> = {
       mode: defaultMode?.name ?? "freePlay",
       seed,
+      timestampMs: fromNow(),
       type: "Init",
     };
     if (rng) {
@@ -152,7 +154,6 @@ export class FinessimoApp {
 
   start(): void {
     if (this.isRunning) {
-      console.warn("Application is already running");
       return;
     }
 
@@ -246,6 +247,7 @@ export class FinessimoApp {
         mode: currentMode,
         retainStats: true,
         seed: this.randomSeed(),
+        timestampMs: fromNow(),
         timing,
         type: "Init",
       });
@@ -365,7 +367,7 @@ export class FinessimoApp {
 
   // Initialize settings modal and event handling
   private initializeSettingsModal(): void {
-    this.settingsModal = document.querySelector("settings-modal");
+    this.settingsModal = getSettingsModal();
     if (this.settingsModal) {
       this.settingsModal.addEventListener(
         "settings-change",
@@ -456,16 +458,18 @@ export class FinessimoApp {
 
   private updateTimingSettings(newSettings: Partial<GameSettings>): void {
     const timing: Partial<TimingConfig> = {};
-    if (newSettings.dasMs !== undefined) timing.dasMs = newSettings.dasMs;
-    if (newSettings.arrMs !== undefined) timing.arrMs = newSettings.arrMs;
+    if (newSettings.dasMs !== undefined)
+      timing.dasMs = createDurationMs(newSettings.dasMs);
+    if (newSettings.arrMs !== undefined)
+      timing.arrMs = createDurationMs(newSettings.arrMs);
     if (newSettings.softDrop !== undefined)
       timing.softDrop = newSettings.softDrop as TimingConfig["softDrop"];
     if (newSettings.lockDelayMs !== undefined)
-      timing.lockDelayMs = newSettings.lockDelayMs;
+      timing.lockDelayMs = createDurationMs(newSettings.lockDelayMs);
     if (newSettings.lineClearDelayMs !== undefined)
-      timing.lineClearDelayMs = newSettings.lineClearDelayMs;
+      timing.lineClearDelayMs = createDurationMs(newSettings.lineClearDelayMs);
     if (newSettings.gravityMs !== undefined)
-      timing.gravityMs = newSettings.gravityMs;
+      timing.gravityMs = createDurationMs(newSettings.gravityMs);
     if (newSettings.gravityEnabled !== undefined)
       timing.gravityEnabled = newSettings.gravityEnabled;
 
@@ -477,7 +481,7 @@ export class FinessimoApp {
   private updateGameplaySettings(newSettings: Partial<GameSettings>): void {
     const gameplay: Partial<GameplayConfig> = {};
     if (newSettings.finesseCancelMs !== undefined)
-      gameplay.finesseCancelMs = newSettings.finesseCancelMs;
+      gameplay.finesseCancelMs = createDurationMs(newSettings.finesseCancelMs);
     if (newSettings.ghostPieceEnabled !== undefined)
       gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
     if (newSettings.nextPieceCount !== undefined)

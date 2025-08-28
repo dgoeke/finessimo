@@ -7,6 +7,7 @@ import {
 } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
 import { type Action, type GameState } from "../../src/state/types";
+import { createDurationMs } from "../../src/types/brands";
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -20,7 +21,7 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
 });
 
-// TinyKeys is mocked above to isolate from real DOM listeners
+// KeyBindingManager is mocked above to isolate from real DOM listeners
 
 describe("StateMachineInputHandler", () => {
   let handler: StateMachineInputHandler;
@@ -87,14 +88,18 @@ describe("StateMachineInputHandler", () => {
       // Provide GameState for StateMachineInputHandler - it needs status: 'playing' to dispatch inputs
       const mockGameState = {
         status: "playing",
-        timing: { arrMs: 30, dasMs: 100, softDrop: 10 },
+        timing: {
+          arrMs: createDurationMs(30),
+          dasMs: createDurationMs(100),
+          softDrop: 10,
+        },
       } as GameState;
       handler.update(mockGameState, 1000);
     });
 
     it("should dispatch input event immediately on key down (optimistic movement)", () => {
       handler.start();
-      // Simulate via public API (independent of TinyKeys mock)
+      // Simulate via public API (independent of KeyBindingManager mock)
       handler.handleMovement("LeftDown", 1000);
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.objectContaining({ dir: -1, type: "TapMove" }),

@@ -121,7 +121,7 @@ export class PiecePreview extends SignalWatcher(LitElement) {
   }
 
   private renderPreviews(
-    nextQueue: Array<PieceId>,
+    nextQueue: ReadonlyArray<PieceId>,
     displayCount: number,
   ): void {
     const actualDisplayCount = Math.max(

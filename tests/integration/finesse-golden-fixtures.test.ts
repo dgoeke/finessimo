@@ -1,16 +1,22 @@
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 import { PIECES } from "../../src/core/pieces";
 import { finesseCalculator } from "../../src/finesse/calculator";
+import { createDurationMs, createGridCoord } from "../../src/types/brands";
 
 import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
 
-const cfg: GameplayConfig = { finesseCancelMs: 50 };
+const cfg: GameplayConfig = { finesseCancelMs: createDurationMs(50) };
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   const topLeft = PIECES[id].spawnTopLeft;
-  return { id, rot: "spawn", x: topLeft[0], y: topLeft[1] };
+  return {
+    id,
+    rot: "spawn",
+    x: createGridCoord(topLeft[0]),
+    y: createGridCoord(topLeft[1]),
+  };
 }
 
 type GoldenEntry = {

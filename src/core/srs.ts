@@ -12,6 +12,7 @@
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
 import { type ActivePiece, type Board, type Rot } from "../state/types";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import { canPlacePiece } from "./board";
 
@@ -212,8 +213,8 @@ export function canRotate(
     const appliedDy = -dy;
     const kickedPiece = {
       ...testPiece,
-      x: piece.x + dx,
-      y: piece.y + appliedDy,
+      x: createGridCoord(gridCoordAsNumber(piece.x) + dx),
+      y: createGridCoord(gridCoordAsNumber(piece.y) + appliedDy),
     };
 
     if (canPlacePiece(board, kickedPiece)) {
@@ -252,8 +253,8 @@ export function tryRotate(
     const appliedDy = -dy;
     const kickedPiece = {
       ...testPiece,
-      x: piece.x + dx,
-      y: piece.y + appliedDy,
+      x: createGridCoord(gridCoordAsNumber(piece.x) + dx),
+      y: createGridCoord(gridCoordAsNumber(piece.y) + appliedDy),
     };
 
     if (canPlacePiece(board, kickedPiece)) {

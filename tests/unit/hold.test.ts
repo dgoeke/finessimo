@@ -1,13 +1,18 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { type GameState } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import { createSeed } from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
-  return reducer(undefined, { seed: "test", type: "Init" });
+  return reducer(undefined, {
+    seed: createSeed("test"),
+    timestampMs: fromNow(),
+    type: "Init",
+  });
 }
 
 // Helper to create state with active piece and next queue
@@ -50,8 +55,8 @@ describe("hold system", () => {
         ...state,
         physics: {
           ...state.physics,
-          lastGravityTime: 500,
-          lockDelayStartTime: 1000,
+          lastGravityTime: createTimestamp(500),
+          lockDelayStartTime: createTimestamp(1000),
         },
       };
 

@@ -1,4 +1,5 @@
 import { FinessimoApp } from "./app";
+import { getFinessimoShell } from "./ui/utils/dom";
 
 // Import components to register them
 import "./ui/components/finessimo-shell.tsx";
@@ -29,7 +30,7 @@ function main(): void {
 
 async function initializeApp(app: FinessimoApp): Promise<void> {
   // Wait for the finessimo-shell custom element to render its content
-  const shell = document.querySelector("finessimo-shell");
+  const shell = getFinessimoShell();
   if (shell && "updateComplete" in shell) {
     await (shell as { updateComplete: Promise<boolean> }).updateComplete;
   }

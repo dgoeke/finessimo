@@ -3,15 +3,17 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { createTimestamp } from "../../src/types/timestamp";
+import { createSeed, createDurationMs } from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Line Clear Integration", () => {
   it("should complete line clearing through the app update loop", () => {
     // Initialize game state with 300ms delay (like real gameplay)
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 300 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(300) },
       type: "Init",
     });
 
@@ -64,11 +66,15 @@ describe("Line Clear Integration", () => {
 
   it("should handle the default UI settings scenario", () => {
     // This simulates what happens when the app starts with UI settings
-    let state = reducer(undefined, { seed: "test", type: "Init" }); // Default 0ms delay
+    let state = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    }); // Default 0ms delay
 
     // Apply settings change to 300ms (like UI default)
     state = reducer(state, {
-      timing: { lineClearDelayMs: 300 },
+      timing: { lineClearDelayMs: createDurationMs(300) },
       type: "UpdateTiming",
     });
 
@@ -99,8 +105,9 @@ describe("Line Clear Integration", () => {
 
   it("should prevent piece spawning during line clear delay", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 200 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(200) },
       type: "Init",
     });
 

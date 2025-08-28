@@ -4,9 +4,11 @@
  */
 
 import { FinessimoApp } from "../../src/app";
-import { OnePieceRng } from "../../src/core/test-rng";
+import { OnePieceRng } from "../../src/core/other-rngs";
 import { gameStateSignal } from "../../src/state/signals";
-import { type GameState } from "../../src/state/types";
+import { type Action, type GameState } from "../../src/state/types";
+import { createSeed, createDurationMs } from "../../src/types/brands";
+import { fromNow } from "../../src/types/timestamp";
 
 import {
   AppTestWrapper,
@@ -20,7 +22,6 @@ type TestContext = {
   element: HTMLElement;
   originalPerformanceNow: () => number;
   originalRAF: typeof requestAnimationFrame;
-  originalQuerySelector: Document["querySelector"];
   currentFrameCallbacks: Array<FrameRequestCallback>;
   nextFrameCallbacks: Array<FrameRequestCallback>;
   timeManager: TimeManager;
@@ -79,19 +80,6 @@ function createTestContext(): TestContext {
   );
   global.performance.now = (): number => timeManager.currentTime;
 
-  // Mock document.querySelector to return our mock settings modal
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  const originalQuerySelector = document.querySelector.bind(document);
-
-  const settingsModal = element.querySelector("#mock-settings-modal");
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  document.querySelector = jest.fn((selector: string) => {
-    if (selector === "settings-modal") {
-      return settingsModal;
-    }
-    return originalQuerySelector(selector);
-  });
-
   // Initialize and start the app
   app.initialize();
   app.start();
@@ -108,7 +96,6 @@ function createTestContext(): TestContext {
     element,
     nextFrameCallbacks,
     originalPerformanceNow,
-    originalQuerySelector,
     originalRAF,
     timeManager,
   };
@@ -124,8 +111,6 @@ function cleanupTestContext(ctx: TestContext): void {
   // Restore mocks and verify they're properly restored
   global.requestAnimationFrame = ctx.originalRAF;
   global.performance.now = ctx.originalPerformanceNow;
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  document.querySelector = ctx.originalQuerySelector;
 
   // Verify RAF mock is restored
   expect(global.requestAnimationFrame).toBe(ctx.originalRAF);
@@ -196,6 +181,15 @@ function simulateKeyEvent(
  */
 function tapKey(code: string): void {
   simulateKeyEvent("keydown", code);
+  simulateKeyEvent("keyup", code);
+}
+
+/**
+ * Simulates pressing and releasing a key with proper timing
+ */
+function tapKeyWithTiming(code: string, ctx: TestContext): void {
+  simulateKeyEvent("keydown", code);
+  advanceFrame(ctx); // Allow DAS machine to process keydown
   simulateKeyEvent("keyup", code);
 }
 
@@ -321,7 +315,8 @@ describe("FinessimoApp End-to-End Integration", () => {
       const testRng = new OnePieceRng("T");
       ctx.app.dispatch({
         rng: testRng,
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         type: "Init",
       });
 
@@ -330,7 +325,7 @@ describe("FinessimoApp End-to-End Integration", () => {
 
       // Increase soft drop rate for more reliable pulses
       ctx.app.dispatch({
-        timing: { gravityMs: 200, softDrop: 20 },
+        timing: { gravityMs: createDurationMs(200), softDrop: 20 },
         type: "UpdateTiming",
       });
 
@@ -499,7 +494,7 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       // Update timing to slower ARR for easier testing
       ctx.app.setGameMode("freePlay");
       ctx.app.dispatch({
-        timing: { arrMs: 50, dasMs: 100 },
+        timing: { arrMs: createDurationMs(50), dasMs: createDurationMs(100) },
         type: "UpdateTiming",
       });
 
@@ -769,11 +764,11 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       // Make a deliberately non-optimal placement
       // (move piece far then back, wasting moves)
       for (let i = 0; i < 4; i++) {
-        tapKey("ArrowRight");
+        tapKeyWithTiming("ArrowRight", ctx);
         advanceFrame(ctx);
       }
       for (let i = 0; i < 4; i++) {
-        tapKey("ArrowLeft");
+        tapKeyWithTiming("ArrowLeft", ctx);
         advanceFrame(ctx);
       }
 
@@ -849,7 +844,10 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
     it("should handle gravity and lock delay", () => {
       // Set up slower gravity for testing
       ctx.app.dispatch({
-        timing: { gravityMs: 100, lockDelayMs: 500 },
+        timing: {
+          gravityMs: createDurationMs(100),
+          lockDelayMs: createDurationMs(500),
+        },
         type: "UpdateTiming",
       });
 
@@ -871,18 +869,40 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
   describe("Top-out and Auto-restart", () => {
     it("should handle top-out scenario", () => {
       // Fill most of the board to test high-fill scenario
-      const state = getState(ctx);
-      for (let y = 10; y < 20; y++) {
-        for (let x = 0; x < 10; x++) {
-          state.board.cells[y * 10 + x] = 1;
-        }
+      // Create 10 rows of filled garbage (rows 10-19)
+      const filledRow: readonly [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
+      for (let i = 0; i < 10; i++) {
+        ctx.app.dispatch({ row: filledRow, type: "CreateGarbageRow" });
       }
 
-      // Clear spawn area to allow one more piece
-      for (let x = 3; x < 7; x++) {
-        for (let y = 0; y < 5; y++) {
-          state.board.cells[y * 10 + x] = 0;
-        }
+      // Clear spawn area (rows 0-4, x=3-6) by creating partial rows
+      const partialRow: readonly [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+      ] = [1, 1, 1, 0, 0, 0, 0, 1, 1, 1];
+
+      for (let i = 0; i < 5; i++) {
+        ctx.app.dispatch({ row: partialRow, type: "CreateGarbageRow" });
       }
 
       // Trigger spawn
@@ -938,10 +958,8 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       try {
         // Test with incomplete Tick action (missing timestampMs)
         // This should be handled gracefully by the reducer
-        ctx.app.dispatch({ type: "Tick" } as {
-          type: "Tick";
-          timestampMs: any;
-        });
+        // Cast through unknown to avoid explicit `any` in tests while still simulating a bad action
+        ctx.app.dispatch({ type: "Tick" } as unknown as Action);
         advanceFrame(ctx);
       } catch {
         // Should not throw, but if it does, test should continue

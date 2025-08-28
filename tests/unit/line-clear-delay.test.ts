@@ -1,27 +1,39 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { type GameState, type Board, idx } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  type GameState,
+  type Board,
+  idx,
+  createBoardCells,
+} from "../../src/state/types";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline } from "../helpers/reducer-with-pipeline";
 
 function createStateWithDelay(delayMs: number): GameState {
   return reducerWithPipeline(undefined, {
-    seed: "lc-delay-test",
+    seed: createSeed("lc-delay-test"),
+    timestampMs: fromNow(),
     timing: {
       gravityEnabled: false,
-      gravityMs: 1000,
-      lineClearDelayMs: delayMs,
-      lockDelayMs: 500,
+      gravityMs: createDurationMs(1000),
+      lineClearDelayMs: createDurationMs(delayMs),
+      lockDelayMs: createDurationMs(500),
     },
     type: "Init",
   });
 }
 
 function boardWithBottomGaps(): Board {
-  const cells = new Uint8Array(200);
+  const cells = createBoardCells();
   for (let x = 0; x < 10; x++) {
-    if (x !== 4 && x !== 5) cells[idx(x, 19)] = 1;
+    if (x !== 4 && x !== 5)
+      cells[idx(createGridCoord(x), createGridCoord(19), 10)] = 1;
   }
   return { cells, height: 20, width: 10 };
 }
@@ -31,7 +43,12 @@ describe("line clear with non-zero delay", () => {
     const state = createStateWithDelay(200);
     const s1: GameState = {
       ...state,
-      active: { id: "O", rot: "spawn", x: 3, y: 10 },
+      active: {
+        id: "O",
+        rot: "spawn",
+        x: createGridCoord(3),
+        y: createGridCoord(10),
+      },
       board: boardWithBottomGaps(),
       // lastGravityTime remains 0 since gravity is disabled
     };
@@ -63,9 +80,17 @@ describe("line clear with non-zero delay", () => {
     // Bottom row should only contain the O remnant at x=4,5
     for (let x = 0; x < 10; x++) {
       if (x === 4 || x === 5) {
-        expect(completed.board.cells[idx(x, 19)]).toBeGreaterThan(0);
+        expect(
+          completed.board.cells[
+            idx(createGridCoord(x), createGridCoord(19), 10)
+          ],
+        ).toBeGreaterThan(0);
       } else {
-        expect(completed.board.cells[idx(x, 19)]).toBe(0);
+        expect(
+          completed.board.cells[
+            idx(createGridCoord(x), createGridCoord(19), 10)
+          ],
+        ).toBe(0);
       }
     }
   });

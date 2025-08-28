@@ -205,12 +205,18 @@ export default tseslint.config(
     files: [
       "**/*.test.{ts,tsx}",
       "**/__tests__/**/*.{ts,tsx}",
-      "**/__tests__/**/*.{ts,tsx}",
     ],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "no-console": "off",
+      "@typescript-eslint/no-explicit-any": [
+        "error",
+        { fixToUnknown: true, ignoreRestArgs: false },
+      ],
+      "no-console": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        { "ts-ignore": false },
+      ],
       // If using Vitest/Jest, consider eslint-plugin-jest and its flat config here.
     },
   },

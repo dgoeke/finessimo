@@ -11,6 +11,7 @@ import {
   type DASEvent,
 } from "../../src/input/machines/das";
 import { type Action } from "../../src/state/types";
+import { createDurationMs } from "../../src/types/brands";
 
 // Helper functions to check action types
 const isTapMoveAction = (
@@ -84,8 +85,8 @@ describe("DAS State Machine", () => {
       const defaultContext = createDefaultDASContext();
       expect(defaultContext).toEqual({
         arrLastTime: undefined,
-        arrMs: 2,
-        dasMs: 133,
+        arrMs: createDurationMs(2),
+        dasMs: createDurationMs(133),
         dasStartTime: undefined,
         direction: undefined,
         optimisticMoveEmitted: false,
@@ -1020,7 +1021,11 @@ describe("DAS State Machine", () => {
 
       // Test updateContextKeyDown return branch (line 89)
       // This happens when event.type !== "KEY_DOWN"
-      service.send({ arrMs: 20, dasMs: 100, type: "UPDATE_CONFIG" });
+      service.send({
+        arrMs: createDurationMs(20),
+        dasMs: createDurationMs(100),
+        type: "UPDATE_CONFIG",
+      });
       expect(service.getState().context.direction).toBeUndefined(); // Should remain unchanged
 
       // Test updateContextHoldStart return branch (line 127)
@@ -1328,7 +1333,11 @@ describe("DAS State Machine", () => {
       service.send({ direction: 1, timestamp: 2200, type: "KEY_UP" });
 
       // 7. Update configuration
-      service.send({ arrMs: 30, dasMs: 200, type: "UPDATE_CONFIG" });
+      service.send({
+        arrMs: createDurationMs(30),
+        dasMs: createDurationMs(200),
+        type: "UPDATE_CONFIG",
+      });
 
       // Verify the service handled all transitions
       expect(service).toBeDefined();

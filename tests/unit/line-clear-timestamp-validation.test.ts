@@ -1,27 +1,38 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { type GameState, type Board, idx } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  type GameState,
+  type Board,
+  idx,
+  createBoardCells,
+} from "../../src/state/types";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 function createStateWithDelay(delayMs: number): GameState {
   return reducer(undefined, {
-    seed: "timestamp-validation-test",
+    seed: createSeed("timestamp-validation-test"),
+    timestampMs: fromNow(),
     timing: {
       gravityEnabled: false,
-      lineClearDelayMs: delayMs,
+      lineClearDelayMs: createDurationMs(delayMs),
     },
     type: "Init",
   });
 }
 
 function boardWithBottomGaps(): Board {
-  const cells = new Uint8Array(200);
+  const cells = createBoardCells();
   // Fill bottom row except gaps at x=4,5 (where O piece at x=3 will land)
   for (let x = 0; x < 10; x++) {
     if (x !== 4 && x !== 5) {
-      cells[idx(x, 19)] = 1; // bottom row
+      cells[idx(createGridCoord(x), createGridCoord(19), 10)] = 1; // bottom row
     }
   }
   return { cells, height: 20, width: 10 };
@@ -55,7 +66,12 @@ describe("timestamp validation in line clear scenarios", () => {
     const state = createStateWithDelay(200);
     const s1: GameState = {
       ...state,
-      active: { id: "O", rot: "spawn", x: 3, y: 10 },
+      active: {
+        id: "O",
+        rot: "spawn",
+        x: createGridCoord(3),
+        y: createGridCoord(10),
+      },
       board: boardWithBottomGaps(),
     };
 
@@ -72,17 +88,22 @@ describe("timestamp validation in line clear scenarios", () => {
     const state = createStateWithDelay(150);
     const s1: GameState = {
       ...state,
-      active: { id: "O", rot: "spawn", x: 3, y: 18 }, // One row above bottom
+      active: {
+        id: "O",
+        rot: "spawn",
+        x: createGridCoord(3),
+        y: createGridCoord(18),
+      }, // One row above bottom
       board: boardWithBottomGaps(),
       physics: {
         ...state.physics,
-        lastGravityTime: 1000,
-        lockDelayStartTime: 1000,
+        lastGravityTime: createTimestamp(1000),
+        lockDelayStartTime: createTimestamp(1000),
       },
       timing: {
         ...state.timing,
         gravityEnabled: true,
-        lockDelayMs: 100,
+        lockDelayMs: createDurationMs(100),
       },
     };
 
@@ -100,6 +121,7 @@ describe("timestamp validation in line clear scenarios", () => {
     const state = createStateWithDelay(300);
     const s1: GameState = {
       ...state,
+      pendingLock: null,
       physics: {
         ...state.physics,
         lineClearLines: [19],
@@ -122,7 +144,12 @@ describe("timestamp validation in line clear scenarios", () => {
     const state = createStateWithDelay(100);
     const s1: GameState = {
       ...state,
-      active: { id: "O", rot: "spawn", x: 3, y: 10 },
+      active: {
+        id: "O",
+        rot: "spawn",
+        x: createGridCoord(3),
+        y: createGridCoord(10),
+      },
       board: boardWithBottomGaps(),
     };
 

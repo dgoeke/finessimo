@@ -4,50 +4,60 @@ import { createSevenBagRng } from "../../src/core/rng";
 import { type FinesseResult } from "../../src/finesse/calculator";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
-import { type GameState, type ActivePiece } from "../../src/state/types";
+import {
+  type GameState,
+  type ActivePiece,
+  createBoardCells,
+} from "../../src/state/types";
+import {
+  createDurationMs,
+  createSeed,
+  createGridCoord,
+} from "../../src/types/brands";
+import { createTimestamp } from "../../src/types/timestamp";
 
 const mockGameState: GameState = {
   active: undefined,
-  board: { cells: new Uint8Array(200), height: 20, width: 10 },
+  board: { cells: createBoardCells(), height: 20, width: 10 },
   canHold: true,
   currentMode: "freePlay",
   finesseFeedback: null,
-  gameplay: { finesseCancelMs: 50 },
+  gameplay: { finesseCancelMs: createDurationMs(50) },
   hold: undefined,
   modePrompt: null,
   nextQueue: [],
   pendingLock: null,
   physics: {
     isSoftDropping: false,
-    lastGravityTime: 0,
+    lastGravityTime: createTimestamp(1),
     lineClearLines: [],
     lineClearStartTime: null,
     lockDelayStartTime: null,
   },
   processedInputLog: [],
-  rng: createSevenBagRng("test"),
+  rng: createSevenBagRng(createSeed("test")),
   stats: {
     accuracyPercentage: 0,
     attempts: 0,
     averageInputsPerPiece: 0,
     doubleLines: 0,
     faultsByType: {},
-    finesseAccuracy: 0,
+    finesseAccuracy: createGridCoord(0),
     incorrectPlacements: 0,
     linesCleared: 0,
     linesPerMinute: 0,
-    longestSessionMs: 0,
+    longestSessionMs: createDurationMs(0),
     optimalInputs: 0,
     optimalPlacements: 0,
     piecesPerMinute: 0,
     piecesPlaced: 0,
     sessionLinesCleared: 0,
     sessionPiecesPlaced: 0,
-    sessionStartMs: 0,
+    sessionStartMs: createTimestamp(0.1),
     singleLines: 0,
-    startedAtMs: 0,
+    startedAtMs: createTimestamp(0.1),
     tetrisLines: 0,
-    timePlayedMs: 0,
+    timePlayedMs: createDurationMs(0),
     totalFaults: 0,
     totalInputs: 0,
     totalSessions: 1,
@@ -56,12 +66,12 @@ const mockGameState: GameState = {
   status: "playing",
   tick: 0,
   timing: {
-    arrMs: 2,
-    dasMs: 133,
+    arrMs: createDurationMs(2),
+    dasMs: createDurationMs(133),
     gravityEnabled: false,
-    gravityMs: 1000,
-    lineClearDelayMs: 0,
-    lockDelayMs: 500,
+    gravityMs: createDurationMs(1000),
+    lineClearDelayMs: createDurationMs(0),
+    lockDelayMs: createDurationMs(500),
     softDrop: 10,
     tickHz: 60,
   },
@@ -70,8 +80,8 @@ const mockGameState: GameState = {
 const mockPiece: ActivePiece = {
   id: "T",
   rot: "spawn",
-  x: 4,
-  y: 0,
+  x: createGridCoord(4),
+  y: createGridCoord(0),
 };
 
 const mockOptimalResult: FinesseResult = {
@@ -146,8 +156,18 @@ describe("GuidedMode", () => {
 
   test("advances drill and provides next prompt on optimal finesse", () => {
     // Match current drill (T at x=0, rot=spawn)
-    const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
-    const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
+    const locked: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(4),
+      y: createGridCoord(0),
+    };
+    const finalPos: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(0),
+      y: createGridCoord(0),
+    };
     const result = mode.onPieceLocked(
       state,
       mockOptimalResult,
@@ -161,8 +181,18 @@ describe("GuidedMode", () => {
   });
 
   test("does not advance drill on suboptimal finesse", () => {
-    const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
-    const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
+    const locked: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(4),
+      y: createGridCoord(0),
+    };
+    const finalPos: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(0),
+      y: createGridCoord(0),
+    };
     const result = mode.onPieceLocked(
       state,
       mockSuboptimalResult,
@@ -176,8 +206,18 @@ describe("GuidedMode", () => {
 
   test("tracks attempts across suboptimal tries", () => {
     // First attempt - suboptimal
-    const locked: ActivePiece = { id: "T", rot: "spawn", x: 4, y: 0 };
-    const finalPos: ActivePiece = { id: "T", rot: "spawn", x: 0, y: 0 };
+    const locked: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(4),
+      y: createGridCoord(0),
+    };
+    const finalPos: ActivePiece = {
+      id: "T",
+      rot: "spawn",
+      x: createGridCoord(0),
+      y: createGridCoord(0),
+    };
     let result = mode.onPieceLocked(
       state,
       mockSuboptimalResult,
@@ -217,12 +257,17 @@ describe("GuidedMode", () => {
       const expected = mode.getExpectedPiece(state);
       expect(expected).toBeDefined();
       if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
+      const locked: ActivePiece = {
+        id: expected,
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
       const finalPos: ActivePiece = {
         id: locked.id,
         rot: guidance.target.rot,
         x: guidance.target.x,
-        y: 0,
+        y: createGridCoord(0),
       };
       const result = mode.onPieceLocked(
         state,
@@ -251,12 +296,17 @@ describe("GuidedMode", () => {
       const expected = mode.getExpectedPiece(state);
       expect(expected).toBeDefined();
       if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
+      const locked: ActivePiece = {
+        id: expected,
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
       const finalPos: ActivePiece = {
         id: locked.id,
         rot: guidance.target.rot,
         x: guidance.target.x,
-        y: 0,
+        y: createGridCoord(0),
       };
       const res = mode.onPieceLocked(
         state,
@@ -281,12 +331,17 @@ describe("GuidedMode", () => {
       expect(guidance?.target).toBeDefined();
       expect(expected).toBeDefined();
       if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
+      const locked: ActivePiece = {
+        id: expected,
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
       const finalPos: ActivePiece = {
         id: locked.id,
         rot: guidance.target.rot,
         x: guidance.target.x,
-        y: 0,
+        y: createGridCoord(0),
       };
       const res = mode.onPieceLocked(
         state,
@@ -303,12 +358,17 @@ describe("GuidedMode", () => {
       expect(guidance?.target).toBeDefined();
       expect(expected).toBeDefined();
       if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = { id: expected, rot: "spawn", x: 4, y: 0 };
+      const locked: ActivePiece = {
+        id: expected,
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
       const finalPos: ActivePiece = {
         id: locked.id,
         rot: guidance.target.rot,
         x: guidance.target.x,
-        y: 0,
+        y: createGridCoord(0),
       };
       const res = mode.onPieceLocked(
         state,

@@ -1,16 +1,27 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState, type Board, idx } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  type GameState,
+  type Board,
+  idx,
+  createBoardCells,
+} from "../../src/state/types";
+import {
+  createSeed,
+  createGridCoord,
+  createDurationMs,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 function createTestState(): GameState {
   return reducer(undefined, {
-    seed: "test",
+    seed: createSeed("test"),
+    timestampMs: fromNow(),
     timing: {
       gravityEnabled: true,
-      gravityMs: 1000,
-      lockDelayMs: 500,
+      gravityMs: createDurationMs(1000),
+      lockDelayMs: createDurationMs(500),
     },
     type: "Init",
   });
@@ -18,7 +29,7 @@ function createTestState(): GameState {
 
 // Create a board that prevents piece from moving down from negative y position
 function createAlmostFullBoard(): Board {
-  const cells = new Uint8Array(200);
+  const cells = createBoardCells();
 
   // Fill the board completely from row 0 down, except for exactly the T piece spawn footprint
   // T piece at (4, -1) with spawn rotation has cells: [1,0],[0,1],[1,1],[2,1]
@@ -29,9 +40,9 @@ function createAlmostFullBoard(): Board {
       // Leave spaces for the T piece footprint at y=0, but fill everything below
       if (y === 0 && (x === 4 || x === 5 || x === 6)) {
         // Block these positions so piece can't move down
-        cells[idx(x, y)] = 1;
+        cells[idx(createGridCoord(x), createGridCoord(y), 10)] = 1;
       } else if (y > 0) {
-        cells[idx(x, y)] = 1;
+        cells[idx(createGridCoord(x), createGridCoord(y), 10)] = 1;
       }
     }
   }
@@ -53,14 +64,14 @@ describe("top-out detection", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: -1, // Piece position above visible board
+        x: createGridCoord(4),
+        y: createGridCoord(-1), // Piece position above visible board
       },
       board: createAlmostFullBoard(),
       physics: {
         ...state.physics,
-        lastGravityTime: 0,
-        lockDelayStartTime: 1000,
+        lastGravityTime: createTimestamp(1000),
+        lockDelayStartTime: createTimestamp(1000),
       },
     };
 
@@ -83,8 +94,8 @@ describe("top-out detection", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: -2, // T-piece high above board
+        x: createGridCoord(4),
+        y: createGridCoord(-2), // T-piece high above board
       },
       board: createAlmostFullBoard(),
     };
@@ -107,13 +118,13 @@ describe("top-out detection", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 18, // Safe position within board
+        x: createGridCoord(4),
+        y: createGridCoord(18), // Safe position within board
       },
       physics: {
         ...state.physics,
-        lastGravityTime: 0,
-        lockDelayStartTime: 1000,
+        lastGravityTime: createTimestamp(1000),
+        lockDelayStartTime: createTimestamp(1000),
       },
     };
 

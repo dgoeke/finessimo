@@ -1,7 +1,12 @@
 import { gameModeRegistry } from "../../src/modes";
 import { runLockPipeline } from "../../src/modes/lock-pipeline";
 import { reducer } from "../../src/state/reducer";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  createSeed,
+  createGridCoord,
+  createDurationMs,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, Action } from "../../src/state/types";
@@ -12,11 +17,12 @@ describe("Retry on finesse error", () => {
   beforeEach(() => {
     initialState = reducer(undefined, {
       gameplay: {
-        finesseCancelMs: 50,
+        finesseCancelMs: createDurationMs(50),
         retryOnFinesseError: true, // Enable retry functionality
       },
       mode: "freePlay",
-      seed: "test-seed-retry",
+      seed: createSeed("test-seed-retry"),
+      timestampMs: fromNow(),
       type: "Init",
     });
   });
@@ -260,6 +266,9 @@ describe("Retry on finesse error", () => {
             optimalInputCount: 2,
             type: "RecordPieceLock",
           },
+          {
+            type: "ClearInputLog",
+          },
         ] as Array<Action>,
         result: {
           faults: [],
@@ -280,10 +289,11 @@ describe("Retry on finesse error", () => {
       );
 
       // Check that finesse actions were dispatched before retry
-      expect(dispatchedActions).toHaveLength(3); // 2 finesse actions + 1 retry action
+      expect(dispatchedActions).toHaveLength(4); // finesse actions (including ClearInputLog) + retry action
       expect(dispatchedActions[0]?.type).toBe("UpdateFinesseFeedback");
       expect(dispatchedActions[1]?.type).toBe("RecordPieceLock");
-      expect(dispatchedActions[2]?.type).toBe("RetryPendingLock");
+      expect(dispatchedActions[2]?.type).toBe("ClearInputLog");
+      expect(dispatchedActions[3]?.type).toBe("RetryPendingLock");
 
       // Final state should be retried
       expect(resultState.status).toBe("playing");
@@ -323,16 +333,16 @@ describe("Retry on finesse error", () => {
       expect(result).toBe(normalState);
     });
 
-    it("should not retry when pendingLock is null", () => {
+    it("should not retry when in playing state (pendingLock is null)", () => {
       const stateWithoutPending = {
         ...initialState,
         pendingLock: null,
-        status: "resolvingLock" as const,
-      };
+        status: "playing" as const,
+      } as GameState;
 
       const result = reducer(stateWithoutPending, { type: "RetryPendingLock" });
 
-      // Should be unchanged
+      // Should be unchanged since not in resolvingLock state
       expect(result).toBe(stateWithoutPending);
     });
   });
@@ -356,7 +366,12 @@ describe("Retry on finesse error", () => {
         },
         pending: {
           completedLines: [],
-          finalPos: { id: "T" as const, rot: "spawn" as const, x: 3, y: 18 },
+          finalPos: {
+            id: "T" as const,
+            rot: "spawn" as const,
+            x: createGridCoord(3),
+            y: createGridCoord(18),
+          },
           pieceId: "T" as const,
           source: "hardDrop" as const,
           timestampMs: createTimestamp(100),

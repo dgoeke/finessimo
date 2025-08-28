@@ -1,15 +1,21 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import { type GameState, createBoardCells } from "../../src/state/types";
+import {
+  createSeed,
+  createGridCoord,
+  createDurationMs,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
   return reducer(undefined, {
-    seed: "test",
-    timing: { gravityEnabled: true, gravityMs: 1000 },
+    seed: createSeed("test"),
+    timestampMs: fromNow(),
+    timing: { gravityEnabled: true, gravityMs: createDurationMs(1000) },
     type: "Init",
   });
 }
@@ -23,10 +29,16 @@ function createStateWithPiece(): GameState {
 describe("physics system", () => {
   describe("gravity", () => {
     it("should initialize physics state", () => {
-      const state = createTestState();
+      const timestamp = fromNow();
+      const state = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: timestamp,
+        timing: { gravityEnabled: true, gravityMs: createDurationMs(1000) },
+        type: "Init",
+      });
 
       expect(state.physics).toBeDefined();
-      expect(state.physics.lastGravityTime).toBe(0);
+      expect(state.physics.lastGravityTime).toBe(timestamp);
       expect(state.physics.lockDelayStartTime).toBeNull();
       expect(state.physics.isSoftDropping).toBe(false);
       expect(state.physics.lineClearStartTime).toBeNull();
@@ -84,12 +96,13 @@ describe("physics system", () => {
       assertActivePiece(state);
       state = {
         ...state,
-        active: { ...state.active, y: 18 }, // Near bottom
-        physics: { ...state.physics, lastGravityTime: 1000 },
+        active: { ...state.active, y: createGridCoord(18) }, // Near bottom
+        physics: { ...state.physics, lastGravityTime: createTimestamp(1000) },
       };
 
       // Add some blocks below to prevent further movement
-      const cells = new Uint8Array(state.board.cells);
+      const cells = createBoardCells();
+      cells.set(state.board.cells);
       cells[19 * 10 + 3] = 1; // Block below T piece center
       cells[19 * 10 + 4] = 1;
       cells[19 * 10 + 5] = 1;
@@ -112,8 +125,11 @@ describe("physics system", () => {
       assertActivePiece(state);
       state = {
         ...state,
-        active: { ...state.active, y: 18 }, // Near bottom
-        physics: { ...state.physics, lockDelayStartTime: 1000 },
+        active: { ...state.active, y: createGridCoord(18) }, // Near bottom
+        physics: {
+          ...state.physics,
+          lockDelayStartTime: createTimestamp(1000),
+        },
       };
 
       // Trigger lock delay expiration
@@ -187,7 +203,10 @@ describe("physics system", () => {
       let state = createStateWithPiece();
       state = {
         ...state,
-        physics: { ...state.physics, lockDelayStartTime: 1000 },
+        physics: {
+          ...state.physics,
+          lockDelayStartTime: createTimestamp(1000),
+        },
       };
 
       const newState = reducer(state, {
@@ -203,7 +222,10 @@ describe("physics system", () => {
       let state = createStateWithPiece();
       state = {
         ...state,
-        physics: { ...state.physics, lockDelayStartTime: 1000 },
+        physics: {
+          ...state.physics,
+          lockDelayStartTime: createTimestamp(1000),
+        },
       };
 
       const newState = reducer(state, { dir: "CW", type: "Rotate" });
@@ -227,7 +249,10 @@ describe("physics system", () => {
       let state = createStateWithPiece();
       state = {
         ...state,
-        physics: { ...state.physics, lockDelayStartTime: 1000 },
+        physics: {
+          ...state.physics,
+          lockDelayStartTime: createTimestamp(1000),
+        },
       };
 
       const newState = reducer(state, { type: "CancelLockDelay" });
@@ -257,7 +282,7 @@ describe("physics system", () => {
       let state = createTestState();
 
       // Set up a board with completed lines
-      const cells = new Uint8Array(200);
+      const cells = createBoardCells();
       // Fill bottom two lines
       for (let x = 0; x < 10; x++) {
         cells[18 * 10 + x] = 1;
@@ -266,13 +291,14 @@ describe("physics system", () => {
       state = {
         ...state,
         board: { ...state.board, cells },
+        pendingLock: null,
         physics: {
           ...state.physics,
           lineClearLines: [18, 19],
           lineClearStartTime: createTimestamp(1000),
         },
         status: "lineClear",
-      };
+      } as GameState;
 
       const newState = reducer(state, { type: "CompleteLineClear" });
 

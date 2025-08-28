@@ -1,12 +1,17 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { calculateGhostPosition } from "../../src/core/board";
-import { type Board, type ActivePiece } from "../../src/state/types";
+import {
+  type Board,
+  type ActivePiece,
+  createBoardCells,
+} from "../../src/state/types";
+import { createGridCoord } from "../../src/types/brands";
 
 // Helper to create a test board
 function createTestBoard(): Board {
   return {
-    cells: new Uint8Array(200),
+    cells: createBoardCells(),
     height: 20,
     width: 10,
   };
@@ -19,8 +24,8 @@ describe("ghost piece", () => {
       const piece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 3,
-        y: -2,
+        x: createGridCoord(3),
+        y: createGridCoord(-2),
       };
 
       const ghostPosition = calculateGhostPosition(board, piece);
@@ -43,8 +48,8 @@ describe("ghost piece", () => {
       const piece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 3,
-        y: 5,
+        x: createGridCoord(3),
+        y: createGridCoord(5),
       };
 
       const ghostPosition = calculateGhostPosition(board, piece);
@@ -58,8 +63,8 @@ describe("ghost piece", () => {
       const piece: ActivePiece = {
         id: "O", // O piece is 2x2
         rot: "spawn",
-        x: 4,
-        y: 18, // Already at bottom
+        x: createGridCoord(4),
+        y: createGridCoord(18), // Already at bottom
       };
 
       const ghostPosition = calculateGhostPosition(board, piece);
@@ -73,8 +78,8 @@ describe("ghost piece", () => {
       const piece: ActivePiece = {
         id: "I",
         rot: "right", // Vertical I piece
-        x: 5,
-        y: 0,
+        x: createGridCoord(5),
+        y: createGridCoord(0),
       };
 
       const ghostPosition = calculateGhostPosition(board, piece);
@@ -99,8 +104,8 @@ describe("ghost piece", () => {
       const piece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 3,
-        y: 5,
+        x: createGridCoord(3),
+        y: createGridCoord(5),
       };
 
       const ghostPosition = calculateGhostPosition(board, piece);

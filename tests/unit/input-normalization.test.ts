@@ -1,11 +1,13 @@
 import { normalizeInputSequence } from "../../src/input/handler";
 import { type InputEvent, type KeyAction } from "../../src/state/types";
+import { createFrame } from "../../src/types/brands";
+import { createTimestamp } from "../../src/types/timestamp";
 
 describe("Input Normalization", () => {
   const createInputEvent = (action: KeyAction, tMs: number): InputEvent => ({
     action,
-    frame: Math.floor(tMs / 16.67), // Approximate frame based on timestamp
-    tMs,
+    frame: createFrame(Math.floor(tMs / 16.67)), // Approximate frame based on timestamp
+    tMs: createTimestamp(tMs),
   });
 
   describe("normalizeInputSequence", () => {

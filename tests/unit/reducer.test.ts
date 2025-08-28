@@ -4,7 +4,12 @@ import {
   type GameplayConfig,
   type Action,
 } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  createSeed,
+  createGridCoord,
+  createDurationMs,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
@@ -12,12 +17,20 @@ describe("Reducer", () => {
   let initialState: GameState;
 
   beforeEach(() => {
-    initialState = reducer(undefined, { seed: "test", type: "Init" });
+    initialState = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
   });
 
   describe("Init action", () => {
     it("should create initial state with default values", () => {
-      const state = reducer(undefined, { seed: "test", type: "Init" });
+      const state = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
+        type: "Init",
+      });
 
       expect(state.board).toBeDefined();
       expect(state.board.width).toBe(10);
@@ -35,7 +48,11 @@ describe("Reducer", () => {
 
     it("should accept custom seed", () => {
       const customSeed = "test-seed-123";
-      const state = reducer(undefined, { seed: customSeed, type: "Init" });
+      const state = reducer(undefined, {
+        seed: createSeed(customSeed),
+        timestampMs: fromNow(),
+        type: "Init",
+      });
 
       // Check that RNG state is created
       expect(state.rng).toBeDefined();
@@ -44,11 +61,12 @@ describe("Reducer", () => {
 
     it("should accept custom timing config", () => {
       const customTiming: Partial<TimingConfig> = {
-        arrMs: 5,
-        dasMs: 200,
+        arrMs: createDurationMs(5),
+        dasMs: createDurationMs(200),
       };
       const state = reducer(undefined, {
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         timing: customTiming,
         type: "Init",
       });
@@ -60,11 +78,12 @@ describe("Reducer", () => {
 
     it("should accept custom gameplay config", () => {
       const customGameplay: Partial<GameplayConfig> = {
-        finesseCancelMs: 100,
+        finesseCancelMs: createDurationMs(100),
       };
       const state = reducer(undefined, {
         gameplay: customGameplay,
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         type: "Init",
       });
 
@@ -77,12 +96,14 @@ describe("Reducer", () => {
       // Set up state with an active piece and used hold
       const stateWithActivePiece: GameState = {
         ...initialState,
-        active: { id: "T", rot: "spawn", x: 4, y: 0 },
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
         canHold: false,
-        processedInputLog: [
-          { dir: "CW", type: "Rotate" },
-          { timestampMs: createTimestamp(1100), type: "HardDrop" },
-        ],
+        processedInputLog: [],
       };
 
       const newState = reducer(stateWithActivePiece, {
@@ -100,7 +121,12 @@ describe("Reducer", () => {
     it("should not mutate the original state", () => {
       const originalState = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
         tick: 5,
       };
       const newState = reducer(originalState, {
@@ -119,7 +145,7 @@ describe("Reducer", () => {
         hold: "I",
         nextQueue: ["T", "S", "Z"],
         status: "playing",
-      };
+      } as GameState;
 
       const newState = reducer(stateWithData, {
         timestampMs: createTimestamp(performance.now()),
@@ -162,7 +188,12 @@ describe("Reducer", () => {
     it("should preserve most properties but may move active piece with gravity", () => {
       const stateWithData: GameState = {
         ...initialState,
-        active: { id: "T", rot: "spawn", x: 4, y: 0 },
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
         canHold: false,
         hold: "I",
       };
@@ -201,7 +232,12 @@ describe("Reducer", () => {
       // Try various actions that might mutate state
       const stateWithActive = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
       reducer(stateWithActive, {
         timestampMs: createTimestamp(performance.now()),
@@ -227,7 +263,12 @@ describe("Reducer", () => {
       });
       const stateWithActive = {
         ...newState1,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
       const newState2 = reducer(stateWithActive, {
         timestampMs: createTimestamp(performance.now()),
@@ -240,97 +281,35 @@ describe("Reducer", () => {
     });
   });
 
-  describe("processedInputLog", () => {
-    it("should append TapMove, HoldMove, RepeatMove actions to processedInputLog", () => {
+  describe("processedInputLog management", () => {
+    it("should keep processedInputLog unchanged - managed externally for finesse analysis", () => {
+      // The reducer should NOT modify processedInputLog
+      // This is managed at the app/input handler level for finesse analysis
       const timestamp = createTimestamp(1000);
 
-      // Start with empty log
-      expect(initialState.processedInputLog).toEqual([]);
-
-      // Add an active piece first
       const stateWithPiece = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
+        processedInputLog: [] as const, // Empty log
       };
 
-      // Dispatch TapMove action
-      const stateAfterTap = reducer(stateWithPiece, {
+      const stateAfterAction = reducer(stateWithPiece, {
         dir: -1,
         optimistic: false,
         timestampMs: timestamp,
         type: "TapMove",
       });
 
-      expect(stateAfterTap.processedInputLog).toHaveLength(1);
-      expect(stateAfterTap.processedInputLog[0]).toEqual({
-        dir: -1,
-        optimistic: false,
-        timestampMs: timestamp,
-        type: "TapMove",
-      });
-
-      // Dispatch RepeatMove action
-      const stateAfterRepeat = reducer(stateAfterTap, {
-        dir: 1,
-        timestampMs: timestamp,
-        type: "RepeatMove",
-      });
-
-      expect(stateAfterRepeat.processedInputLog).toHaveLength(2);
-      expect(stateAfterRepeat.processedInputLog[1]).toEqual({
-        dir: 1,
-        timestampMs: timestamp,
-        type: "RepeatMove",
-      });
-
-      // Dispatch HoldMove action
-      const stateAfterHold = reducer(stateAfterRepeat, {
-        dir: -1,
-        timestampMs: timestamp,
-        type: "HoldMove",
-      });
-
-      expect(stateAfterHold.processedInputLog).toHaveLength(3);
-      expect(stateAfterHold.processedInputLog[2]).toEqual({
-        dir: -1,
-        timestampMs: timestamp,
-        type: "HoldMove",
-      });
-    });
-
-    it("should preserve timestamps in processedInputLog", () => {
-      const timestamp1 = createTimestamp(1000);
-      const timestamp2 = createTimestamp(2000);
-
-      // Add an active piece first
-      let state: GameState = {
-        ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
-      };
-
-      // Dispatch actions with different timestamps
-      state = reducer(state, {
-        dir: -1,
-        optimistic: false,
-        timestampMs: timestamp1,
-        type: "TapMove",
-      });
-
-      state = reducer(state, {
-        dir: 1,
-        timestampMs: timestamp2,
-        type: "RepeatMove",
-      });
-
-      expect(state.processedInputLog).toHaveLength(2);
-      const firstAction = state.processedInputLog[0];
-      const secondAction = state.processedInputLog[1];
-      if (firstAction?.type === "TapMove") {
-        expect(firstAction.timestampMs).toBe(timestamp1);
-      }
-      if (secondAction?.type === "RepeatMove") {
-        expect(secondAction.timestampMs).toBe(timestamp2);
-      }
+      // processedInputLog should remain unchanged - the reducer doesn't manage it
+      expect(stateAfterAction.processedInputLog).toEqual([]);
+      expect(stateAfterAction.processedInputLog).toBe(
+        stateWithPiece.processedInputLog,
+      );
     });
   });
 });

@@ -1,4 +1,6 @@
 import { type GameState } from "../../src/state/types";
+import { createSeed, createGridCoord } from "../../src/types/brands";
+import { fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 
@@ -6,13 +8,22 @@ describe("Reducer success paths: Rotate and Hold", () => {
   let base: GameState;
 
   beforeEach(() => {
-    base = reducer(undefined, { seed: "test", type: "Init" });
+    base = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
   });
 
   it("applies a successful Rotate and updates active piece", () => {
     const withPiece: GameState = {
       ...base,
-      active: { id: "T", rot: "spawn", x: 4, y: 2 },
+      active: {
+        id: "T",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(2),
+      },
     };
 
     const rotated = reducer(withPiece, { dir: "CW", type: "Rotate" });
@@ -25,7 +36,12 @@ describe("Reducer success paths: Rotate and Hold", () => {
   it("Hold stores current piece id and spawns next piece when allowed", () => {
     const withPiece: GameState = {
       ...base,
-      active: { id: "S", rot: "spawn", x: 4, y: 2 },
+      active: {
+        id: "S",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(2),
+      },
       canHold: true,
     };
 

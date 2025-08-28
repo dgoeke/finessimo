@@ -3,14 +3,16 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { createTimestamp } from "../../src/types/timestamp";
+import { createSeed, createDurationMs } from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 300 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(300) },
       type: "Init",
     });
 
@@ -61,8 +63,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle line clear when next piece spawning is attempted", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 250 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(250) },
       type: "Init",
     });
 
@@ -99,8 +102,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle piece movement attempts during line clear", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 200 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(200) },
       type: "Init",
     });
 
@@ -135,8 +139,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle line clear completion timing edge case", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 100 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(100) },
       type: "Init",
     });
 
@@ -172,8 +177,9 @@ describe("Line Clear Edge Cases", () => {
 
   it("should handle multiple successive line clears", () => {
     let state = reducer(undefined, {
-      seed: "test",
-      timing: { lineClearDelayMs: 150 },
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: { lineClearDelayMs: createDurationMs(150) },
       type: "Init",
     });
 

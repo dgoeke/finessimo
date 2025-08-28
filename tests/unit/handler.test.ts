@@ -5,6 +5,7 @@ import {
   type InputHandlerState,
 } from "../../src/input/handler";
 import { defaultKeyBindings, type KeyBindings } from "../../src/input/keyboard";
+import { createFrame } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 
 import type { Action, GameState, InputEvent } from "../../src/state/types";
@@ -530,7 +531,11 @@ describe("handler.ts", () => {
 
     test("handles single input", () => {
       const events: Array<InputEvent> = [
-        { action: "LeftDown", frame: 1, tMs: 1000 },
+        {
+          action: "LeftDown",
+          frame: createFrame(1),
+          tMs: createTimestamp(1000),
+        },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -540,9 +545,9 @@ describe("handler.ts", () => {
     test("handles inputs with same timestamp", () => {
       const t = 1000;
       const events: Array<InputEvent> = [
-        { action: "LeftDown", frame: 1, tMs: t },
-        { action: "RightDown", frame: 1, tMs: t }, // Same timestamp
-        { action: "RotateCW", frame: 1, tMs: t },
+        { action: "LeftDown", frame: createFrame(1), tMs: createTimestamp(t) },
+        { action: "RightDown", frame: createFrame(1), tMs: createTimestamp(t) }, // Same timestamp
+        { action: "RotateCW", frame: createFrame(1), tMs: createTimestamp(t) },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -552,8 +557,12 @@ describe("handler.ts", () => {
     test("handles very large cancel window", () => {
       const t = 1000;
       const events: Array<InputEvent> = [
-        { action: "LeftDown", frame: 1, tMs: t },
-        { action: "RightDown", frame: 2, tMs: t + 500 }, // 500ms apart
+        { action: "LeftDown", frame: createFrame(1), tMs: createTimestamp(t) },
+        {
+          action: "RightDown",
+          frame: createFrame(2),
+          tMs: createTimestamp(t + 500),
+        }, // 500ms apart
       ];
 
       const result = normalizeInputSequence(events, 1000); // 1000ms window
@@ -563,8 +572,12 @@ describe("handler.ts", () => {
     test("handles zero cancel window", () => {
       const t = 1000;
       const events: Array<InputEvent> = [
-        { action: "LeftDown", frame: 1, tMs: t },
-        { action: "RightDown", frame: 2, tMs: t + 1 }, // 1ms apart
+        { action: "LeftDown", frame: createFrame(1), tMs: createTimestamp(t) },
+        {
+          action: "RightDown",
+          frame: createFrame(2),
+          tMs: createTimestamp(t + 1),
+        }, // 1ms apart
       ];
 
       const result = normalizeInputSequence(events, 0); // No cancellation
@@ -574,10 +587,22 @@ describe("handler.ts", () => {
     test("preserves input order after cancellation", () => {
       const t = 1000;
       const events: Array<InputEvent> = [
-        { action: "RotateCW", frame: 1, tMs: t },
-        { action: "LeftDown", frame: 2, tMs: t + 10 },
-        { action: "RightDown", frame: 3, tMs: t + 20 }, // Cancels LeftDown
-        { action: "Hold", frame: 4, tMs: t + 100 },
+        { action: "RotateCW", frame: createFrame(1), tMs: createTimestamp(t) },
+        {
+          action: "LeftDown",
+          frame: createFrame(2),
+          tMs: createTimestamp(t + 10),
+        },
+        {
+          action: "RightDown",
+          frame: createFrame(3),
+          tMs: createTimestamp(t + 20),
+        }, // Cancels LeftDown
+        {
+          action: "Hold",
+          frame: createFrame(4),
+          tMs: createTimestamp(t + 100),
+        },
       ];
 
       const result = normalizeInputSequence(events, 50);
@@ -586,9 +611,17 @@ describe("handler.ts", () => {
 
     test("handles malformed events gracefully", () => {
       const events: Array<InputEvent> = [
-        { action: "LeftDown", frame: 1, tMs: 1000 },
+        {
+          action: "LeftDown",
+          frame: createFrame(1),
+          tMs: createTimestamp(1000),
+        },
         // Test with undefined/null values filtered out
-        { action: "RotateCW", frame: 2, tMs: 1100 },
+        {
+          action: "RotateCW",
+          frame: createFrame(2),
+          tMs: createTimestamp(1100),
+        },
       ];
 
       const result = normalizeInputSequence(events, 50);

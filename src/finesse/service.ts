@@ -7,10 +7,11 @@ import {
   type ActivePiece,
   type Rot,
 } from "../state/types";
+import { createGridCoord } from "../types/brands";
 
 import {
   finesseCalculator,
-  extractFinesseActions,
+  extractFinesseActionsFromProcessed,
   assertNever,
   type Fault,
   type FinesseResult,
@@ -40,7 +41,9 @@ export class DefaultFinesseService implements FinesseService {
       finalPosition,
     );
     const spawnPiece = this.createSpawnPiece(lockedPiece);
-    const playerInputs = extractFinesseActions(state.processedInputLog);
+    const playerInputs = extractFinesseActionsFromProcessed(
+      state.processedInputLog,
+    );
 
     // Short-circuit: if no player inputs, emit optimal empty feedback and stats
     if (playerInputs.length === 0) {
@@ -131,8 +134,8 @@ export class DefaultFinesseService implements FinesseService {
     return {
       id: lockedPiece.id,
       rot: "spawn",
-      x: spawnTopLeft[0],
-      y: spawnTopLeft[1],
+      x: createGridCoord(spawnTopLeft[0]),
+      y: createGridCoord(spawnTopLeft[1]),
     };
   }
 

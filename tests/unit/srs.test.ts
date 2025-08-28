@@ -1,6 +1,7 @@
 import { createEmptyBoard } from "../../src/core/board";
 import { canRotate, tryRotate, getNextRotation } from "../../src/core/srs";
 import { type ActivePiece, type Board, type Rot } from "../../src/state/types";
+import { createGridCoord } from "../../src/types/brands";
 import { assertDefined } from "../test-helpers";
 
 import type * as SRSModule from "../../src/core/srs";
@@ -33,8 +34,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // Test full CW rotation cycle
@@ -65,8 +66,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // Direct rotation to 'two' state should NOT be allowed in SRS
@@ -88,8 +89,8 @@ describe("SRS Rotation Logic", () => {
       const tPieceTwo: ActivePiece = {
         id: "T",
         rot: "two",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // Direct rotation back to spawn should NOT be allowed
@@ -113,8 +114,8 @@ describe("SRS Rotation Logic", () => {
     const oPiece: ActivePiece = {
       id: "O",
       rot: "spawn",
-      x: 4,
-      y: 0,
+      x: createGridCoord(4),
+      y: createGridCoord(0),
     };
 
     it("should not allow O piece to change rotation", () => {
@@ -136,8 +137,8 @@ describe("SRS Rotation Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should allow valid adjacent rotations on empty board", () => {
@@ -176,8 +177,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 3,
-        y: 4,
+        x: createGridCoord(3),
+        y: createGridCoord(4),
       };
 
       // Should still be able to rotate due to wall kicks
@@ -204,8 +205,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       const rotated = tryRotate(tPiece, "right", fullyBlockedBoard);
@@ -217,8 +218,8 @@ describe("SRS Rotation Logic", () => {
     const iPiece: ActivePiece = {
       id: "I",
       rot: "spawn",
-      x: 3,
-      y: 1,
+      x: createGridCoord(3),
+      y: createGridCoord(1),
     };
 
     it("should use I piece kick table for I piece", () => {
@@ -239,8 +240,8 @@ describe("SRS Rotation Logic", () => {
       const leftEdgePiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 1,
-        y: 2,
+        x: createGridCoord(1),
+        y: createGridCoord(2),
       };
 
       expect(canRotate(leftEdgePiece, "right", emptyBoard)).toBe(true);
@@ -249,8 +250,8 @@ describe("SRS Rotation Logic", () => {
       const rightEdgePiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 8,
-        y: 2,
+        x: createGridCoord(8),
+        y: createGridCoord(2),
       };
 
       expect(canRotate(rightEdgePiece, "left", emptyBoard)).toBe(true);
@@ -260,8 +261,8 @@ describe("SRS Rotation Logic", () => {
       const highPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: -1,
+        x: createGridCoord(4),
+        y: createGridCoord(-1),
       };
 
       // Should still work with negative y coordinates
@@ -280,8 +281,8 @@ describe("SRS Rotation Logic", () => {
       const edgePiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // This should work normally
@@ -293,8 +294,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // Mock getKickTable to return an empty object to test missing kick data
@@ -333,8 +334,8 @@ describe("SRS Rotation Logic", () => {
       const tPiece: ActivePiece = {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       };
 
       // Block all possible positions that kicks could place the piece

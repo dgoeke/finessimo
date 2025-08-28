@@ -8,13 +8,14 @@ import {
   isTopOut,
   spawnWithHold,
 } from "../../src/core/spawning";
-import { type Board } from "../../src/state/types";
+import { type Board, createBoardCells } from "../../src/state/types";
+import { createGridCoord } from "../../src/types/brands";
 import { assertDefined } from "../test-helpers";
 
 // Helper to create a test board
 function createTestBoard(): Board {
   return {
-    cells: new Uint8Array(200),
+    cells: createBoardCells(),
     height: 20,
     width: 10,
   };
@@ -78,8 +79,8 @@ describe("spawning", () => {
       const blockedPiece = {
         id: "T" as const,
         rot: "spawn" as const,
-        x: 3,
-        y: -1,
+        x: createGridCoord(3),
+        y: createGridCoord(-1),
       };
       expect(canPlacePiece(board, blockedPiece)).toBe(false);
     });
@@ -134,7 +135,7 @@ describe("spawning", () => {
       }
 
       // Test with a piece that spawns lower
-      const lowPiece = { ...testPiece, y: 0 }; // Force to spawn at visible board
+      const lowPiece = { ...testPiece, y: createGridCoord(0) }; // Force to spawn at visible board
       expect(canPlacePiece(board, lowPiece)).toBe(false);
     });
   });

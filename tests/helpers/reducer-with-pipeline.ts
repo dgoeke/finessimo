@@ -28,7 +28,7 @@ export function reducerWithPipeline(
   let currentState = reducer(state, action);
 
   // When a pending lock is staged, run the pure lock pipeline to decide
-  if (currentState.status === "resolvingLock" && currentState.pendingLock) {
+  if (currentState.status === "resolvingLock") {
     const analyze = (
       s: GameState,
     ): { result: FinesseResult; actions: Array<Action> } => {

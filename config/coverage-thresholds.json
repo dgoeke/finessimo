@@ -1,0 +1,176 @@
+{
+  "src/app.ts": {
+    "statements": 85,
+    "branches": 70,
+    "functions": 80,
+    "lines": 86
+  },
+  "src/core/board.ts": {
+    "statements": 97,
+    "branches": 87,
+    "functions": 100,
+    "lines": 97
+  },
+  "src/core/other-rngs.ts": {
+    "statements": 95,
+    "branches": 85,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/core/pieces.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/core/rng.ts": {
+    "statements": 94,
+    "branches": 80,
+    "functions": 81,
+    "lines": 94
+  },
+  "src/core/spawning.ts": {
+    "statements": 90,
+    "branches": 66,
+    "functions": 100,
+    "lines": 90
+  },
+  "src/core/srs.ts": {
+    "statements": 95,
+    "branches": 92,
+    "functions": 100,
+    "lines": 95
+  },
+  "src/finesse/calculator.ts": {
+    "statements": 94,
+    "branches": 90,
+    "functions": 86,
+    "lines": 95
+  },
+  "src/finesse/log.ts": {
+    "statements": 89,
+    "branches": 100,
+    "functions": 76,
+    "lines": 89
+  },
+  "src/finesse/service.ts": {
+    "statements": 81,
+    "branches": 56,
+    "functions": 100,
+    "lines": 81
+  },
+  "src/input/StateMachineInputHandler.ts": {
+    "statements": 85,
+    "branches": 72,
+    "functions": 91,
+    "lines": 87
+  },
+  "src/input/handler.ts": {
+    "statements": 95,
+    "branches": 86,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/input/keyboard.ts": {
+    "statements": 90,
+    "branches": 80,
+    "functions": 90,
+    "lines": 96
+  },
+  "src/input/touch.ts": {
+    "statements": 46,
+    "branches": 29,
+    "functions": 63,
+    "lines": 50
+  },
+  "src/input/machines/das.ts": {
+    "statements": 94,
+    "branches": 80,
+    "functions": 100,
+    "lines": 98
+  },
+  "src/input/utils/key-binding-manager.ts": {
+    "statements": 100,
+    "branches": 96,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/modes/freePlay.ts": {
+    "statements": 90,
+    "branches": 100,
+    "functions": 84,
+    "lines": 90
+  },
+  "src/modes/guided.ts": {
+    "statements": 73,
+    "branches": 65,
+    "functions": 75,
+    "lines": 76
+  },
+  "src/modes/index.ts": {
+    "statements": 88,
+    "branches": 100,
+    "functions": 75,
+    "lines": 88
+  },
+  "src/modes/lock-pipeline.ts": {
+    "statements": 82,
+    "branches": 62,
+    "functions": 100,
+    "lines": 81
+  },
+  "src/modes/spawn-service.ts": {
+    "statements": 66,
+    "branches": 50,
+    "functions": 75,
+    "lines": 70
+  },
+  "src/state/reducer.ts": {
+    "statements": 91,
+    "branches": 82,
+    "functions": 95,
+    "lines": 93
+  },
+  "src/state/signals.ts": {
+    "statements": 86,
+    "branches": 100,
+    "functions": 71,
+    "lines": 86
+  },
+  "src/state/types.ts": {
+    "statements": 94,
+    "branches": 100,
+    "functions": 75,
+    "lines": 92
+  },
+  "src/types/brands.ts": {
+    "statements": 98,
+    "branches": 100,
+    "functions": 96,
+    "lines": 98
+  },
+  "src/types/timestamp.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/audio.ts": {
+    "statements": 80,
+    "branches": 66,
+    "functions": 66,
+    "lines": 83
+  },
+  "src/ui/utils/colors.ts": {
+    "statements": 0,
+    "branches": 100,
+    "functions": 0,
+    "lines": 0
+  },
+  "src/ui/utils/dom.ts": {
+    "statements": 53,
+    "branches": 0,
+    "functions": 40,
+    "lines": 53
+  }
+}

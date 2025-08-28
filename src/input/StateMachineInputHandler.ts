@@ -1,4 +1,20 @@
-import { fromNow, createTimestamp } from "../types/timestamp";
+import {
+  shouldProcessInCurrentState,
+  shouldProcessTapMove,
+  shouldProcessHoldMove,
+  shouldProcessRepeatMove,
+  shouldProcessRotate,
+  shouldProcessHardDrop,
+  shouldProcessSoftDrop,
+  createSoftDropState,
+  createProcessedTapMove,
+  createProcessedHoldMove,
+  createProcessedRotate,
+  createProcessedSoftDrop,
+  createProcessedHardDrop,
+  type SoftDropState,
+} from "../finesse/log";
+import { fromNow, createTimestamp, type Timestamp } from "../types/timestamp";
 
 import {
   defaultKeyBindings,
@@ -10,7 +26,59 @@ import { keyBindingManager } from "./utils/key-binding-manager";
 
 import type { InputHandler, InputHandlerState } from "./handler";
 import type { KeyBindings, BindableAction } from "./keyboard";
-import type { Action, GameState } from "../state/types";
+import type { DASContext } from "./machines/das";
+import type { ProcessedAction, Action, GameState } from "../state/types";
+
+/*
+ * MOVEMENT KEYS: Responsibilities and Finesse Logging Flow
+ *
+ * Intent
+ * - Convert DOM key events (keyboard/touch) into precise, device-agnostic engine Actions
+ *   using the DAS state machine, and emit clean finesse ProcessedAction entries.
+ * - Keep reducer/service pure: reducer only persists via { type: "AppendProcessed" } and clears via
+ *   { type: "ClearInputLog" }; finesse service is stateless and consumes the log.
+ *
+ * Responsibilities (movement keys Left/Right)
+ * - Drive DASMachineService with KEY_DOWN/KEY_UP/TIMER_TICK.
+ * - Dispatch engine Actions produced by DAS immediately.
+ * - Emit finesse ProcessedAction with these rules:
+ *   - Tap: log exactly one TapMove, finalized on KEY_UP (ignore KEY_DOWN optimistic tap).
+ *   - Hold (DAS): log exactly one HoldMove at HoldStart; never log RepeatMove.
+ *   - Rotate/HardDrop: always log once per key press.
+ *   - SoftDrop: log transitions only (on/off), dedupe periodic pulses.
+ *
+ * Data flow for (Left/Right) presses
+ *
+ * KeyDown(dir)
+ *   DOM keydown
+ *     -> handleMovementDown(dir,t)
+ *       -> DAS.send(KEY_DOWN, dir, t)
+ *         -> emits TapMove{optimistic:true, t}
+ *            handler: pendingTap = { dir, t }; dispatch(engine TapMove); (not processed yet)
+ *         -> later (TIMER_TICK) if DAS expires
+ *            emits HoldStart{dir,t}
+ *              handler: pendingTap = null; dispatch(AppendProcessed(HoldMove));
+ *            emits HoldMove/RepeatMove
+ *              handler: dispatch(engine), never processed for repeats
+ *
+ * KeyUp(dir)
+ *   DOM keyup
+ *     -> handleMovementUp(dir,t)
+ *       -> DAS.send(KEY_UP, dir, t)
+ *       -> if pendingTap for dir exists (no hold occurred)
+ *            handler: dispatch(AppendProcessed(TapMove{dir,t}))
+ *       -> if opposite key is still held
+ *            start DAS for the opposite direction
+ *
+ * Rotate/HardDrop
+ *   DOM keydown
+ *     -> dispatch engine Action and AppendProcessed(rotate/hardDrop)
+ *
+ * SoftDrop
+ *   DOM down/up (and pulses when held)
+ *     -> dispatch engine SoftDrop; AppendProcessed only on transitions (on/off)
+ *        using a small SoftDropState to dedupe repeated "on" pulses.
+ */
 
 export class StateMachineInputHandler implements InputHandler {
   private dispatch: ((action: Action) => void) | null = null;
@@ -22,6 +90,8 @@ export class StateMachineInputHandler implements InputHandler {
   private currentGameState?: GameState;
   private lastDasMs?: number;
   private lastArrMs?: number;
+  private softDropState: SoftDropState = createSoftDropState();
+  private pendingTap: { dir: -1 | 1; t: Timestamp } | null = null;
 
   // KeyBindingManager unsubscribe functions
   private keyBindingsUnsubDown?: (() => void) | undefined;
@@ -40,6 +110,37 @@ export class StateMachineInputHandler implements InputHandler {
       direction: undefined,
       repeats: 0,
     });
+  }
+
+  private emitArrCatchUp(
+    gameState: GameState,
+    nowMs: number,
+    preCtx: DASContext,
+  ): void {
+    try {
+      const arrMs = Math.max(1, gameState.timing.arrMs as number);
+      const baseTime =
+        preCtx.arrLastTime ??
+        (preCtx.dasStartTime !== undefined
+          ? preCtx.dasStartTime + preCtx.dasMs
+          : undefined);
+      if (baseTime === undefined || preCtx.direction === undefined) return;
+
+      const elapsed = Math.max(0, nowMs - baseTime);
+      const totalRepeats = Math.floor(elapsed / arrMs);
+      // At most, horizontal repeats can move across the board width minus 1 cells in a single update
+      const MAX_EXTRA = gameState.board.width - 1;
+      const extra = Math.min(Math.max(0, totalRepeats - 1), MAX_EXTRA);
+      for (let i = 0; i < extra; i++) {
+        this.dispatch?.({
+          dir: preCtx.direction,
+          timestampMs: createTimestamp(nowMs),
+          type: "RepeatMove",
+        });
+      }
+    } catch {
+      // Best-effort catch-up; ignore errors in malformed contexts
+    }
   }
 
   init(dispatch: (action: Action) => void): void {
@@ -83,6 +184,75 @@ export class StateMachineInputHandler implements InputHandler {
     this.dasService.reset();
   }
 
+  /**
+   * Helper to conditionally emit ProcessedAction alongside engine action
+   */
+  private dispatchWithOptionalProcessed(
+    engineAction: Action,
+    timestampMs?: Timestamp,
+  ): void {
+    if (!this.dispatch) {
+      return;
+    }
+
+    // Always dispatch the engine action
+    this.dispatch(engineAction);
+
+    // Check if we should also emit a ProcessedAction
+    if (this.shouldEmitProcessedAction(engineAction, timestampMs)) {
+      const processedAction = this.createProcessedActionFromEngineAction(
+        engineAction,
+        timestampMs,
+      );
+      if (processedAction) {
+        this.dispatch({ entry: processedAction, type: "AppendProcessed" });
+      }
+    }
+  }
+
+  private shouldEmitProcessedAction(
+    action: Action,
+    _timestampMs?: Timestamp,
+  ): boolean {
+    if (!this.currentGameState) return false;
+    const hasActivePiece = Boolean(this.currentGameState.active);
+    const status = this.currentGameState.status;
+    if (!shouldProcessInCurrentState(hasActivePiece, status)) return false;
+
+    if (action.type === "TapMove")
+      return shouldProcessTapMove(action.optimistic);
+    if (action.type === "HoldMove") return shouldProcessHoldMove(false); // handled on HoldStart
+    if (action.type === "RepeatMove") return shouldProcessRepeatMove();
+    if (action.type === "Rotate") return shouldProcessRotate();
+    if (action.type === "HardDrop") return shouldProcessHardDrop();
+    if (action.type === "SoftDrop") {
+      const [shouldProcess, newState] = shouldProcessSoftDrop(
+        action.on,
+        this.softDropState,
+      );
+      this.softDropState = newState;
+      return shouldProcess;
+    }
+    return false;
+  }
+
+  private createProcessedActionFromEngineAction(
+    action: Action,
+    timestampMs?: Timestamp,
+  ): ProcessedAction | null {
+    const timestamp = timestampMs ?? fromNow();
+    if (action.type === "TapMove")
+      return createProcessedTapMove(action.dir, timestamp);
+    if (action.type === "HoldMove")
+      return createProcessedHoldMove(action.dir, timestamp);
+    if (action.type === "Rotate")
+      return createProcessedRotate(action.dir, timestamp);
+    if (action.type === "HardDrop") return createProcessedHardDrop(timestamp);
+    if (action.type === "SoftDrop")
+      return createProcessedSoftDrop(action.on, timestamp);
+    return null;
+  }
+
   update(gameState: GameState, nowMs: number): void {
     if (!this.dispatch) return;
 
@@ -102,13 +272,16 @@ export class StateMachineInputHandler implements InputHandler {
     }
 
     // Send timer tick to DAS machine if a direction is active
-    if (this.dasService.getState().context.direction !== undefined) {
+    const preCtx = this.dasService.getState().context;
+    if (preCtx.direction !== undefined) {
       const actions = this.dasService.send({
         timestamp: nowMs,
         type: "TIMER_TICK",
       });
-
       this.processActions(actions);
+
+      // ARR catch-up: if ARR < frame interval, simulate additional repeats this update
+      this.emitArrCatchUp(gameState, nowMs, preCtx);
     }
 
     // Handle soft drop repeat pulses
@@ -133,7 +306,7 @@ export class StateMachineInputHandler implements InputHandler {
       const MAX_PULSES_PER_UPDATE = 200;
 
       while (nextTime <= nowMs && pulses < MAX_PULSES_PER_UPDATE) {
-        this.dispatch({ on: true, type: "SoftDrop" });
+        this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
 
         this.softDropLastTime = nextTime;
         nextTime += interval;
@@ -226,9 +399,9 @@ export class StateMachineInputHandler implements InputHandler {
     this.isSoftDropDown = isDown;
     if (isDown) {
       this.softDropLastTime = tMs;
-      this.dispatch({ on: true, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
     } else {
-      this.dispatch({ on: false, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
     }
   }
 
@@ -383,7 +556,7 @@ export class StateMachineInputHandler implements InputHandler {
       this.handleMovementUp(binding, timestamp);
     }
     if (binding === "SoftDrop" && this.dispatch) {
-      this.dispatch({ on: false, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
       this.isSoftDropDown = false;
     }
   }
@@ -407,22 +580,25 @@ export class StateMachineInputHandler implements InputHandler {
         break;
       }
       case "RotateCW":
-        this.dispatch({ dir: "CW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({ dir: "CW", type: "Rotate" });
         break;
       case "RotateCCW":
-        this.dispatch({ dir: "CCW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({ dir: "CCW", type: "Rotate" });
         break;
       case "HardDrop":
-        this.dispatch({
-          timestampMs: createTimestamp(timestamp),
-          type: "HardDrop",
-        });
+        this.dispatchWithOptionalProcessed(
+          {
+            timestampMs: createTimestamp(timestamp),
+            type: "HardDrop",
+          },
+          createTimestamp(timestamp),
+        );
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
         break;
       case "SoftDrop":
-        this.dispatch({ on: true, type: "SoftDrop" });
+        this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
         this.isSoftDropDown = true;
         this.softDropLastTime = timestamp;
         this.keyStates.set(event.code, true);
@@ -445,7 +621,7 @@ export class StateMachineInputHandler implements InputHandler {
         break;
       case "SoftDrop":
         if (this.dispatch) {
-          this.dispatch({ on: false, type: "SoftDrop" });
+          this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
           this.isSoftDropDown = false;
         }
         break;
@@ -549,6 +725,24 @@ export class StateMachineInputHandler implements InputHandler {
         this.checkAndHandleOppositeKey(dir, tMs);
       }
     }
+
+    // Finalize a pending optimistic tap on key release (if still applicable)
+    if (
+      this.pendingTap !== null &&
+      this.pendingTap.dir === dir &&
+      this.dispatch &&
+      this.currentGameState &&
+      shouldProcessInCurrentState(
+        Boolean(this.currentGameState.active),
+        this.currentGameState.status,
+      )
+    ) {
+      const processed = createProcessedTapMove(dir, this.pendingTap.t);
+      this.dispatch({ entry: processed, type: "AppendProcessed" });
+    }
+    if (this.pendingTap !== null && this.pendingTap.dir === dir) {
+      this.pendingTap = null;
+    }
   }
 
   private checkAndHandleOppositeKey(dir: -1 | 1, tMs: number): void {
@@ -574,18 +768,34 @@ export class StateMachineInputHandler implements InputHandler {
     if (!this.dispatch) return;
 
     for (const action of actions) {
-      // For TapMove/HoldMove/RepeatMove: dispatch directly
-      if (
-        action.type === "TapMove" ||
-        action.type === "HoldMove" ||
-        action.type === "RepeatMove"
-      ) {
-        // Actions already have timestamps from DAS machine
+      if (action.type === "TapMove") {
+        if (action.optimistic) {
+          // Tentatively track pending tap; finalize on key-up unless hold starts
+          this.pendingTap = {
+            dir: action.dir,
+            t: action.timestampMs ?? createTimestamp(fromNow() as number),
+          };
+          this.dispatch(action);
+        } else {
+          // Non-optimistic TapMove (rare) - emit processed immediately
+          this.dispatchWithOptionalProcessed(action, action.timestampMs);
+        }
+      } else if (action.type === "HoldMove") {
+        // Do not log HoldMove here; we log once on HoldStart
+        this.dispatch(action);
+      } else if (action.type === "RepeatMove") {
+        // Never log RepeatMove for finesse
         this.dispatch(action);
       } else if (action.type === "HoldStart") {
-        // HoldStart is currently ignored and will be handled in a future phase
+        // Clear any pending tap since this became a hold
+        this.pendingTap = null;
+        const processed = createProcessedHoldMove(
+          action.dir,
+          action.timestampMs ?? fromNow(),
+        );
+        this.dispatch({ entry: processed, type: "AppendProcessed" });
       } else {
-        // Dispatch other actions directly
+        // Dispatch other actions directly (Rotate/HardDrop/SoftDrop/etc.)
         this.dispatch(action);
       }
     }

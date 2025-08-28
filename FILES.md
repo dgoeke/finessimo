@@ -15,7 +15,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## State
 
 - src/state/types.ts: Core types and interfaces. GameState, Action union (including TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions. `retryOnFinesseError` in GameplayConfig.
-- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Manages processedInputLog for finesse analysis. Implements `RetryPendingLock` logic for piece restoration. Supports `RefillPreview`/`ReplacePreview` for mode-owned RNG/preview.
+- src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Appends to `processedInputLog` only via explicit `AppendProcessed` actions from input handlers, and clears it via `ClearInputLog`. Implements `RetryPendingLock` logic for piece restoration. Supports `RefillPreview`/`ReplacePreview` for mode-owned RNG/preview.
 - src/state/signals.ts: Reactive state management using Lit signals. Global gameStateSignal with dispatch wrapper and selector helpers for efficient component updates.
 
 ## Types
@@ -45,6 +45,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 - src/finesse/calculator.ts: BFS-based finesse calculation with FinesseAction enum. Computes optimal sequences using abstract moves (MoveLeft/DASLeft/RotateCW/etc). Includes converter functions between ProcessedActions and FinesseActions. Reports faults and analysis.
 - src/finesse/service.ts: Finesse integration service. Operates on processedInputLog for analysis. Target derivation, input analysis using FinesseActions, fault injection, UI feedback actions. Statistics tracking integration with performance metrics.
+- src/finesse/log.ts: Pure helpers for processed input logging and emission rules (Tap vs Hold vs Repeat, SoftDrop transition dedupe). Used by input handlers to emit `ProcessedAction`s with explicit timestamps. Narrowed status parameter accepts discriminated GameState status union for type safety.
 
 ## Modes
 
@@ -69,6 +70,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ### UI Utilities
 
 - src/ui/utils/colors.ts: Shared color manipulation utilities. Functions for lightening and darkening hex colors used across canvas components for gradient piece styling.
+- src/ui/utils/dom.ts: Typed DOM query utilities. Centralizes and type-safes document.querySelector calls for custom elements. Provides specific helpers for settings modal, shell, and board frame elements.
 - src/ui/audio.ts: Minimal audio helper for UI sound effects. WebAudio-based boop sound with browser compatibility and graceful fallback handling.
 
 ### Input Utilities
@@ -86,7 +88,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## Test Utilities
 
 - tests/test-types.ts: Type utilities for testing. InvalidGameState, MalformedAction types, type guards, helpers for creating test scenarios with invalid data.
-- tests/test-helpers.ts: Runtime assertion helpers. Type narrowing functions, safe array access, validation utilities for type-safe test code.
+- tests/test-helpers.ts: Runtime assertion helpers. Type narrowing functions, safe array access, validation utilities for type-safe test code. Includes createTestInitAction helper for consistent test Init actions.
 - tests/helpers/assert.ts: Additional test assertion utilities and custom matchers.
 - tests/helpers/reducer-with-pipeline.ts: Pipeline-aware reducer wrapper for tests. Automatically runs the lock pipeline on staged pending locks and mirrors preview refill behavior.
 - tests/unit/key-binding-manager.test.ts: Unit tests for KeyBindingManager utility. Tests handler storage, listener management, cleanup logic, and edge cases using mock DOM elements.
+- tests/types/invariants.test.ts: Compile-time type tests for critical invariants. Tests GameState status union exhaustiveness, board dimensions, readonly constraints, and other type-level guarantees without runtime execution.

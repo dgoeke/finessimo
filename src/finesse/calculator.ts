@@ -6,8 +6,10 @@ import {
   type Rot,
   type FinesseAction,
   type Action,
+  type ProcessedAction,
   type Board,
 } from "../state/types";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 // Finesse calculation result - discriminated union for type safety
 export type FinesseResult =
@@ -54,6 +56,30 @@ export const isFaultyResult = (
 ): r is Extract<FinesseResult, { kind: "faulty" }> => r.kind === "faulty";
 
 // Convert Actions to FinesseActions for analysis (with optimistic move filtering)
+// Convert ProcessedActions to FinesseActions - simpler since ProcessedActions are already normalized
+export function extractFinesseActionsFromProcessed(
+  actions: ReadonlyArray<ProcessedAction>,
+): Array<FinesseAction> {
+  return actions
+    .map((action): FinesseAction | undefined => {
+      switch (action.kind) {
+        case "TapMove":
+        case "HoldMove":
+        case "RepeatMove":
+          return action.dir === -1 ? "MoveLeft" : "MoveRight";
+        case "Rotate":
+          return action.dir === "CW" ? "RotateCW" : "RotateCCW";
+        case "SoftDrop":
+          return action.on ? "SoftDrop" : undefined;
+        case "HardDrop":
+          return "HardDrop";
+        default:
+          return undefined;
+      }
+    })
+    .filter((action): action is FinesseAction => action !== undefined);
+}
+
 export function extractFinesseActions(
   actions: Array<Action>,
 ): Array<FinesseAction> {
@@ -250,7 +276,10 @@ export class BfsFinesseCalculator implements FinesseCalculator {
     dir: -1 | 1,
   ): void {
     if (canMove(board, cur, dir, 0)) {
-      const next: ActivePiece = { ...cur, x: cur.x + dir };
+      const next: ActivePiece = {
+        ...cur,
+        x: createGridCoord(gridCoordAsNumber(cur.x) + dir),
+      };
       const k = context.keyOf(next);
       if (!context.visited.has(k)) {
         context.visited.add(k);

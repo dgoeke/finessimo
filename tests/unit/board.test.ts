@@ -11,6 +11,7 @@ import {
   clearLines,
 } from "../../src/core/board";
 import { type ActivePiece, type Board } from "../../src/state/types";
+import { createGridCoord } from "../../src/types/brands";
 import { assertDefined } from "../test-helpers";
 
 describe("Board Logic", () => {
@@ -33,8 +34,8 @@ describe("Board Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should allow placement on empty board", () => {
@@ -49,9 +50,9 @@ describe("Board Logic", () => {
     });
 
     it("should prevent placement outside board boundaries", () => {
-      const leftPiece: ActivePiece = { ...tPiece, x: -2 };
-      const rightPiece: ActivePiece = { ...tPiece, x: 9 };
-      const bottomPiece: ActivePiece = { ...tPiece, y: 19 };
+      const leftPiece: ActivePiece = { ...tPiece, x: createGridCoord(-2) };
+      const rightPiece: ActivePiece = { ...tPiece, x: createGridCoord(9) };
+      const bottomPiece: ActivePiece = { ...tPiece, y: createGridCoord(19) };
 
       expect(canPlacePiece(emptyBoard, leftPiece)).toBe(false);
       expect(canPlacePiece(emptyBoard, rightPiece)).toBe(false);
@@ -59,7 +60,7 @@ describe("Board Logic", () => {
     });
 
     it("should allow placement with negative y (above board)", () => {
-      const highPiece: ActivePiece = { ...tPiece, y: -1 };
+      const highPiece: ActivePiece = { ...tPiece, y: createGridCoord(-1) };
       expect(canPlacePiece(emptyBoard, highPiece)).toBe(true);
     });
   });
@@ -68,8 +69,8 @@ describe("Board Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should allow valid moves", () => {
@@ -80,9 +81,9 @@ describe("Board Logic", () => {
     });
 
     it("should prevent invalid moves", () => {
-      const leftEdgePiece: ActivePiece = { ...tPiece, x: 0 }; // T-piece leftmost cell would be at x=-1
-      const rightEdgePiece: ActivePiece = { ...tPiece, x: 7 }; // T-piece rightmost cell would be at x=9
-      const bottomPiece: ActivePiece = { ...tPiece, y: 18 }; // T-piece bottom cell would be at y=19 (outside board)
+      const leftEdgePiece: ActivePiece = { ...tPiece, x: createGridCoord(0) }; // T-piece leftmost cell would be at x=-1
+      const rightEdgePiece: ActivePiece = { ...tPiece, x: createGridCoord(7) }; // T-piece rightmost cell would be at x=9
+      const bottomPiece: ActivePiece = { ...tPiece, y: createGridCoord(18) }; // T-piece bottom cell would be at y=19 (outside board)
 
       expect(canMove(emptyBoard, leftEdgePiece, -1, 0)).toBe(false);
       expect(canMove(emptyBoard, rightEdgePiece, 1, 0)).toBe(false);
@@ -99,7 +100,7 @@ describe("Board Logic", () => {
     });
 
     it("should return null for invalid moves", () => {
-      const leftEdgePiece: ActivePiece = { ...tPiece, x: 0 };
+      const leftEdgePiece: ActivePiece = { ...tPiece, x: createGridCoord(0) };
       const movedLeft = tryMove(emptyBoard, leftEdgePiece, -1, 0);
       expect(movedLeft).toBeNull();
     });
@@ -109,8 +110,8 @@ describe("Board Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should move piece to left wall", () => {
@@ -124,7 +125,7 @@ describe("Board Logic", () => {
     });
 
     it("should not move if already at wall", () => {
-      const leftWallPiece: ActivePiece = { ...tPiece, x: 0 };
+      const leftWallPiece: ActivePiece = { ...tPiece, x: createGridCoord(0) };
       const stillAtWall = moveToWall(emptyBoard, leftWallPiece, -1);
       expect(stillAtWall.x).toBe(0);
     });
@@ -142,8 +143,8 @@ describe("Board Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should drop piece to bottom of empty board", () => {
@@ -152,7 +153,7 @@ describe("Board Logic", () => {
     });
 
     it("should detect when piece is at bottom", () => {
-      const bottomPiece: ActivePiece = { ...tPiece, y: 18 };
+      const bottomPiece: ActivePiece = { ...tPiece, y: createGridCoord(18) };
       expect(isAtBottom(emptyBoard, bottomPiece)).toBe(true);
       expect(isAtBottom(emptyBoard, tPiece)).toBe(false);
     });
@@ -170,8 +171,8 @@ describe("Board Logic", () => {
     const tPiece: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 2,
+      x: createGridCoord(4),
+      y: createGridCoord(2),
     };
 
     it("should place piece cells on board", () => {
@@ -185,7 +186,7 @@ describe("Board Logic", () => {
     });
 
     it("should not modify cells outside board boundaries", () => {
-      const highPiece: ActivePiece = { ...tPiece, y: -1 };
+      const highPiece: ActivePiece = { ...tPiece, y: createGridCoord(-1) };
       const lockedBoard = lockPiece(emptyBoard, highPiece);
 
       // T piece at y=-1 has cells at y=-1 and y=0. Only y=0 cells should be locked.

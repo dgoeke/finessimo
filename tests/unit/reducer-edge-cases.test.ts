@@ -1,5 +1,10 @@
-import { type GameState, type Action } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  type GameState,
+  type Action,
+  createBoardCells,
+} from "../../src/state/types";
+import { createSeed, createGridCoord } from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { assertActivePiece } from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
@@ -9,7 +14,11 @@ describe("Reducer Edge Cases and Error Conditions", () => {
   let stateWithActivePiece: GameState;
 
   beforeEach(() => {
-    validState = reducer(undefined, { seed: "test", type: "Init" });
+    validState = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
 
     // Create state with an active piece for testing actions that require one
     stateWithActivePiece = {
@@ -17,8 +26,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 2,
+        x: createGridCoord(4),
+        y: createGridCoord(2),
       },
     };
   });
@@ -90,8 +99,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
-          x: 0, // At left edge, can't move further left
-          y: 2,
+          x: createGridCoord(0), // At left edge, can't move further left
+          y: createGridCoord(2),
         },
       };
 
@@ -105,7 +114,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     it("should handle blocked rotation", () => {
       // Create a board with blocks that prevent rotation
       const blockedBoard = { ...validState.board };
-      blockedBoard.cells = new Uint8Array(200);
+      blockedBoard.cells = createBoardCells();
 
       // Fill area around piece to block rotation
       for (let x = 3; x <= 6; x++) {
@@ -139,8 +148,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
-          x: 4,
-          y: 18, // At bottom
+          x: createGridCoord(4),
+          y: createGridCoord(18), // At bottom
         },
       };
 
@@ -166,7 +175,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     it("should handle hard drop that completes lines", () => {
       // Create a board with almost complete lines
       const boardWithAlmostCompleteLine = { ...validState.board };
-      boardWithAlmostCompleteLine.cells = new Uint8Array(200);
+      boardWithAlmostCompleteLine.cells = createBoardCells();
 
       // Fill bottom row except for one column where T-piece will land
       for (let x = 0; x < 10; x++) {
@@ -181,8 +190,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
-          x: 4,
-          y: 0, // High up so it drops
+          x: createGridCoord(4),
+          y: createGridCoord(0), // High up so it drops
         },
         board: boardWithAlmostCompleteLine,
       };
@@ -233,7 +242,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     it("should clear specified lines from board", () => {
       // Create a board with some content
       const boardWithContent = { ...validState.board };
-      boardWithContent.cells = new Uint8Array(200);
+      boardWithContent.cells = createBoardCells();
 
       // Fill some rows
       for (let x = 0; x < 10; x++) {

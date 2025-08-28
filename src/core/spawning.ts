@@ -1,4 +1,5 @@
 import { type Board, type ActivePiece, type PieceId } from "../state/types";
+import { createGridCoord } from "../types/brands";
 
 import { canPlacePiece } from "./board";
 import { PIECES } from "./pieces";
@@ -13,8 +14,8 @@ export function createActivePiece(pieceId: PieceId): ActivePiece {
   return {
     id: pieceId,
     rot: "spawn",
-    x: spawnX,
-    y: spawnY,
+    x: createGridCoord(spawnX),
+    y: createGridCoord(spawnY),
   };
 }
 

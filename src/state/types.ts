@@ -1,24 +1,45 @@
 // Game state
+import { gridCoordAsNumber } from "../types/brands";
+
 import type { PieceRandomGenerator } from "../core/rng-interface";
 import type { FaultType, FinesseResult } from "../finesse/calculator";
+import type { GridCoord, DurationMs, Frame, Seed } from "../types/brands";
 import type { Timestamp } from "../types/timestamp";
 
-// Board representation (dense array)
+// Board representation with enforced dimensions
+declare const BoardCellsBrand: unique symbol;
+export type BoardCells = Uint8Array & { readonly length: 200 } & {
+  readonly [BoardCellsBrand]: true;
+};
+
+// BoardCells constructor
+export function createBoardCells(): BoardCells {
+  return new Uint8Array(200) as BoardCells;
+}
+
 export type Board = {
   readonly width: 10;
   readonly height: 20;
-  readonly cells: Uint8Array; // length = 200, values: 0..7 (0=empty)
+  readonly cells: BoardCells; // exactly 200 cells, values: 0..8 (0=empty, 1-7=tetrominos, 8=garbage)
 };
 
-// Helper for array indexing
-export const idx = (x: number, y: number, width = 10): number => y * width + x;
+// Helper for array indexing with explicit width parameter
+export const idx = (x: GridCoord, y: GridCoord, width: 10): number =>
+  gridCoordAsNumber(y) * width + gridCoordAsNumber(x);
 
-// Collision check with negative y handling
-export function isCellBlocked(board: Board, x: number, y: number): boolean {
-  if (x < 0 || x >= board.width) return true;
-  if (y >= board.height) return true;
-  if (y < 0) return false; // above the board = empty for collision
-  return board.cells[idx(x, y)] !== 0;
+// Collision check with negative y handling and branded coordinates
+export function isCellBlocked(
+  board: Board,
+  x: GridCoord,
+  y: GridCoord,
+): boolean {
+  const xNum = gridCoordAsNumber(x);
+  const yNum = gridCoordAsNumber(y);
+
+  if (xNum < 0 || xNum >= board.width) return true;
+  if (yNum >= board.height) return true;
+  if (yNum < 0) return false; // above the board = empty for collision
+  return board.cells[idx(x, y, board.width)] !== 0;
 }
 
 // Pieces and rotation
@@ -35,13 +56,13 @@ export type TetrominoShape = {
 export type ActivePiece = {
   id: PieceId;
   rot: Rot;
-  x: number;
-  y: number;
+  x: GridCoord;
+  y: GridCoord;
 };
 
 // Config
 export type GameplayConfig = {
-  finesseCancelMs: number; // default: 50
+  finesseCancelMs: DurationMs; // default: 50ms
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
   nextPieceCount?: number; // default 5 (preview count)
@@ -55,14 +76,14 @@ export type SoftDropSpeed = number | "infinite";
 
 export type TimingConfig = {
   tickHz: 60;
-  dasMs: number;
-  arrMs: number;
+  dasMs: DurationMs;
+  arrMs: DurationMs;
   // Soft drop: multiplier of gravity (number) or 'infinite' for instant drop without lock
   softDrop: SoftDropSpeed;
-  lockDelayMs: number;
-  lineClearDelayMs: number;
+  lockDelayMs: DurationMs;
+  lineClearDelayMs: DurationMs;
   gravityEnabled: boolean;
-  gravityMs: number; // Milliseconds between gravity drops
+  gravityMs: DurationMs; // Milliseconds between gravity drops
 };
 
 // Raw input events from keyboard/touch handlers
@@ -79,8 +100,8 @@ export type KeyAction =
   | "Hold";
 
 export type InputEvent = {
-  tMs: number;
-  frame: number;
+  tMs: Timestamp;
+  frame: Frame;
   action: KeyAction;
 };
 
@@ -103,18 +124,18 @@ export type FinesseAction =
 
 // Generic guidance provided by game modes for UI and engine policies
 export type ModeGuidance = {
-  target?: { x: number; rot: Rot };
+  target?: { x: GridCoord; rot: Rot };
   label?: string; // prompt/description
   visual?: { highlightTarget?: boolean; showPath?: boolean };
 };
 
 // Physics timing state
 export type PhysicsState = {
-  lastGravityTime: number;
-  lockDelayStartTime: number | null;
+  lastGravityTime: Timestamp;
+  lockDelayStartTime: Timestamp | null;
   isSoftDropping: boolean;
   lineClearStartTime: Timestamp | null;
-  lineClearLines: Array<number>;
+  lineClearLines: ReadonlyArray<number>;
 };
 
 export type Stats = {
@@ -124,8 +145,8 @@ export type Stats = {
   optimalPlacements: number;
   incorrectPlacements: number;
   attempts: number;
-  startedAtMs: number;
-  timePlayedMs: number;
+  startedAtMs: Timestamp;
+  timePlayedMs: DurationMs;
 
   // Session-specific counters for accurate rate calculations
   sessionPiecesPlaced: number;
@@ -137,9 +158,9 @@ export type Stats = {
   averageInputsPerPiece: number; // totalInputs / piecesPlaced
 
   // Session tracking
-  sessionStartMs: number;
+  sessionStartMs: Timestamp;
   totalSessions: number;
-  longestSessionMs: number;
+  longestSessionMs: DurationMs;
 
   // Performance data
   piecesPerMinute: number;
@@ -164,29 +185,26 @@ export type LockSource = "hardDrop" | "softDrop" | "gravity" | "force";
 export type PendingLock = {
   finalPos: ActivePiece; // result of dropToBottom or last grounded pos
   source: LockSource; // origin of lock condition
-  completedLines: Array<number>; // lines that would be cleared if committed
+  completedLines: ReadonlyArray<number>; // lines that would be cleared if committed
   pieceId: PieceId; // convenience for respawn/retry
   timestampMs: Timestamp; // preserve original timestamp for lockCurrentPiece
 };
 
-export type GameState = {
+// Shared fields common to all game states
+type SharedGameFields = {
   board: Board;
   active: ActivePiece | undefined;
   hold: PieceId | undefined;
   canHold: boolean;
-  nextQueue: Array<PieceId>;
+  nextQueue: ReadonlyArray<PieceId>;
   rng: PieceRandomGenerator; // Generic RNG interface for testability
   timing: TimingConfig;
   gameplay: GameplayConfig;
   tick: number;
-  status: "playing" | "lineClear" | "topOut" | "resolvingLock";
-  // Invariant: When status === "resolvingLock", pendingLock MUST be non-null
-  // When status !== "resolvingLock", pendingLock MUST be null
-  pendingLock: PendingLock | null;
-  stats: Stats; // Basic stats; extended in Iteration 6
+  stats: Stats;
   physics: PhysicsState;
   // Processed actions log for finesse analysis - contains structured actions with tap/das distinction
-  processedInputLog: Array<Action>;
+  processedInputLog: ReadonlyArray<ProcessedAction>;
   // Game mode and finesse feedback
   currentMode: string;
   modeData?: unknown;
@@ -196,11 +214,57 @@ export type GameState = {
   guidance?: ModeGuidance | null;
 };
 
+// Playing state - normal gameplay
+export type PlayingState = SharedGameFields & {
+  status: "playing";
+  pendingLock: null;
+};
+
+// Resolving lock state - piece is staged for lock resolution
+export type ResolvingLockState = SharedGameFields & {
+  status: "resolvingLock";
+  pendingLock: PendingLock;
+};
+
+// Line clear state - lines are being cleared with delay
+export type LineClearState = SharedGameFields & {
+  status: "lineClear";
+  pendingLock: null;
+};
+
+// Top out state - game over
+export type TopOutState = SharedGameFields & {
+  status: "topOut";
+  pendingLock: null;
+};
+
+// Discriminated union of all game states
+export type GameState =
+  | PlayingState
+  | ResolvingLockState
+  | LineClearState
+  | TopOutState;
+
+// Utility function for exhaustiveness checking
+export function assertNever(x: never): never {
+  throw new Error(`Unexpected value: ${String(x)}`);
+}
+
+// ProcessedAction - normalized actions from input handler for finesse analysis
+export type ProcessedAction =
+  | { kind: "TapMove"; dir: -1 | 1; t: Timestamp }
+  | { kind: "HoldMove"; dir: -1 | 1; t: Timestamp }
+  | { kind: "RepeatMove"; dir: -1 | 1; t: Timestamp }
+  | { kind: "Rotate"; dir: "CW" | "CCW"; t: Timestamp }
+  | { kind: "SoftDrop"; on: boolean; t: Timestamp }
+  | { kind: "HardDrop"; t: Timestamp };
+
 // State transitions
 export type Action =
   | {
       type: "Init";
-      seed: string;
+      seed: Seed;
+      timestampMs: Timestamp;
       timing?: Partial<TimingConfig>;
       gameplay?: Partial<GameplayConfig>;
       mode?: string;
@@ -225,21 +289,25 @@ export type Action =
   | { type: "Lock"; timestampMs: Timestamp }
   | { type: "StartLockDelay"; timestampMs: Timestamp }
   | { type: "CancelLockDelay" }
-  | { type: "StartLineClear"; lines: Array<number>; timestampMs: Timestamp }
+  | {
+      type: "StartLineClear";
+      lines: ReadonlyArray<number>;
+      timestampMs: Timestamp;
+    }
   | { type: "CompleteLineClear" }
-  | { type: "ClearLines"; lines: Array<number> }
+  | { type: "ClearLines"; lines: ReadonlyArray<number> }
   | { type: "SetMode"; mode: string }
   | { type: "UpdateFinesseFeedback"; feedback: FinesseResult | null }
   | { type: "UpdateModePrompt"; prompt: string | null }
   // Externalized preview refill (mode-owned RNG)
   | {
       type: "RefillPreview";
-      pieces: Array<PieceId>;
+      pieces: ReadonlyArray<PieceId>;
       rng: PieceRandomGenerator;
     }
   | {
       type: "ReplacePreview";
-      pieces: Array<PieceId>;
+      pieces: ReadonlyArray<PieceId>;
       rng: PieceRandomGenerator;
     }
   // Settings updates
@@ -254,9 +322,10 @@ export type Action =
       isOptimal: boolean;
       inputCount: number;
       optimalInputCount: number;
-      faults: Array<FaultType>;
+      faults: ReadonlyArray<FaultType>;
     }
   | { type: "ClearInputLog" }
+  | { type: "AppendProcessed"; entry: ProcessedAction }
   | {
       type: "CreateGarbageRow";
       row: readonly [
@@ -275,6 +344,7 @@ export type Action =
   // Pending lock system actions
   | { type: "CommitLock" }
   | { type: "RetryPendingLock" };
+// Input log management
 
 export type Reducer = (
   s: Readonly<GameState> | undefined,

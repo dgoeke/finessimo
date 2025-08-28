@@ -6,6 +6,7 @@ import {
   type ActivePiece,
   type ModeGuidance,
 } from "../state/types";
+import { createGridCoord } from "../types/brands";
 
 import { type GameMode, type GameModeResult } from "./index";
 
@@ -98,7 +99,7 @@ export class GuidedMode implements GameMode {
     if (!drill) return null;
     return {
       label: `Drill ${String(data.currentDrillIndex + 1)}/${String(this.drills.length)}: ${drill.description}`,
-      target: { rot: drill.targetRot, x: drill.targetX },
+      target: { rot: drill.targetRot, x: createGridCoord(drill.targetX) },
       visual: { highlightTarget: true, showPath: true },
     };
   }

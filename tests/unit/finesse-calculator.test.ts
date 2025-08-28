@@ -13,6 +13,7 @@ import {
   type Rot,
   type Action,
 } from "../../src/state/types";
+import { createDurationMs, createGridCoord } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 import {
   MoveLeft,
@@ -26,11 +27,16 @@ import {
 } from "../helpers/actions";
 import { assertDefined } from "../test-helpers";
 
-const cfg: GameplayConfig = { finesseCancelMs: 50 };
+const cfg: GameplayConfig = { finesseCancelMs: createDurationMs(50) };
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   const topLeft = PIECES[id].spawnTopLeft;
-  return { id, rot: "spawn", x: topLeft[0], y: topLeft[1] };
+  return {
+    id,
+    rot: "spawn",
+    x: createGridCoord(topLeft[0]),
+    y: createGridCoord(topLeft[1]),
+  };
 }
 
 describe("Finesse Calculator (BFS minimality)", () => {

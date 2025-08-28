@@ -3,8 +3,14 @@ import {
   type Action,
   type Board,
   idx,
+  createBoardCells,
 } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  createSeed,
+  createGridCoord,
+  createDurationMs,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { type InvalidGameState } from "../test-types";
 
@@ -12,7 +18,11 @@ describe("Reducer - Extended Coverage", () => {
   let initialState: GameState;
 
   beforeEach(() => {
-    initialState = reducer(undefined, { seed: "test", type: "Init" });
+    initialState = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
   });
 
   describe("Action type coverage", () => {
@@ -63,8 +73,18 @@ describe("Reducer - Extended Coverage", () => {
 
   describe("Init action comprehensive testing", () => {
     it("should create completely fresh state each time", () => {
-      const state1 = reducer(undefined, { seed: "test", type: "Init" });
-      const state2 = reducer(undefined, { seed: "test", type: "Init" });
+      const timestamp1 = fromNow();
+      const timestamp2 = fromNow();
+      const state1 = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: timestamp1,
+        type: "Init",
+      });
+      const state2 = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: timestamp2,
+        type: "Init",
+      });
 
       expect(state1).not.toBe(state2); // Different objects
       expect(state1.board.cells).not.toBe(state2.board.cells); // Different arrays
@@ -76,15 +96,19 @@ describe("Reducer - Extended Coverage", () => {
       expect(state1.board.height).toEqual(state2.board.height);
       expect(state1.stats.piecesPlaced).toEqual(state2.stats.piecesPlaced);
       expect(state1.stats.totalSessions).toEqual(state2.stats.totalSessions);
-      // startedAtMs is now initialized to 0 and set on first Tick
+      // Stats timestamps should be set to the Init timestamp
       expect(typeof state1.stats.startedAtMs).toBe("number");
       expect(typeof state2.stats.startedAtMs).toBe("number");
-      expect(state1.stats.startedAtMs).toBe(0);
-      expect(state2.stats.startedAtMs).toBe(0);
+      expect(state1.stats.startedAtMs).toBe(timestamp1);
+      expect(state2.stats.startedAtMs).toBe(timestamp2);
     });
 
     it("should create empty board with all zeros", () => {
-      const state = reducer(undefined, { seed: "test", type: "Init" });
+      const state = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
+        type: "Init",
+      });
 
       for (const cell of state.board.cells) {
         expect(cell).toBe(0);
@@ -92,9 +116,10 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should merge partial timing config correctly", () => {
-      const partialTiming = { dasMs: 100 };
+      const partialTiming = { dasMs: createDurationMs(100) };
       const state = reducer(undefined, {
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         timing: partialTiming,
         type: "Init",
       });
@@ -106,10 +131,11 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should merge partial gameplay config correctly", () => {
-      const partialGameplay = { finesseCancelMs: 75 };
+      const partialGameplay = { finesseCancelMs: createDurationMs(75) };
       const state = reducer(undefined, {
         gameplay: partialGameplay,
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         type: "Init",
       });
 
@@ -119,7 +145,8 @@ describe("Reducer - Extended Coverage", () => {
     it("should handle empty partial configs", () => {
       const state = reducer(undefined, {
         gameplay: {},
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         timing: {},
         type: "Init",
       });
@@ -131,8 +158,16 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should create valid RNG state", () => {
-      const state1 = reducer(undefined, { seed: "test", type: "Init" });
-      const state2 = reducer(undefined, { seed: "custom", type: "Init" });
+      const state1 = reducer(undefined, {
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
+        type: "Init",
+      });
+      const state2 = reducer(undefined, {
+        seed: createSeed("custom"),
+        timestampMs: fromNow(),
+        type: "Init",
+      });
 
       // Check that RNG states are different (based on different seeds)
       expect(state1.rng).toBeDefined();
@@ -160,14 +195,19 @@ describe("Reducer - Extended Coverage", () => {
     it("should preserve all other state when ticking", () => {
       const complexState: GameState = {
         ...initialState,
-        active: { id: "T", rot: "spawn", x: 4, y: 0 },
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
         canHold: false,
         hold: "I",
         nextQueue: ["T", "S", "Z"],
-        processedInputLog: [{ dir: "CW", type: "Rotate" }],
+        processedInputLog: [],
         status: "lineClear",
         tick: 10,
-      };
+      } as GameState;
 
       const result = reducer(complexState, {
         timestampMs: createTimestamp(1),
@@ -188,12 +228,14 @@ describe("Reducer - Extended Coverage", () => {
     it("should reset piece-related state", () => {
       const stateWithPiece: GameState = {
         ...initialState,
-        active: { id: "T", rot: "right", x: 5, y: 10 },
+        active: {
+          id: "T",
+          rot: "right",
+          x: createGridCoord(5),
+          y: createGridCoord(10),
+        },
         canHold: false,
-        processedInputLog: [
-          { dir: "CW", type: "Rotate" },
-          { dir: 1, optimistic: false, type: "TapMove" },
-        ],
+        processedInputLog: [],
         tick: 42,
       };
 
@@ -211,19 +253,20 @@ describe("Reducer - Extended Coverage", () => {
 
     it("should preserve board and other state during lock", () => {
       const modifiedBoard: Board = {
-        cells: new Uint8Array(200),
+        cells: createBoardCells(),
         height: 20,
         width: 10,
       };
-      modifiedBoard.cells[idx(5, 19)] = 1; // Add a block
+      modifiedBoard.cells[idx(createGridCoord(5), createGridCoord(19), 10)] = 1; // Add a block
 
       const stateWithBoard: GameState = {
         ...initialState,
         board: modifiedBoard,
         hold: "S",
         nextQueue: ["I", "O", "T"],
+        pendingLock: null,
         status: "playing",
-      };
+      } as GameState;
 
       const result = reducer(stateWithBoard, {
         timestampMs: createTimestamp(performance.now()),
@@ -251,27 +294,26 @@ describe("Reducer - Extended Coverage", () => {
 
   describe("Action processing and state updates", () => {
     it("should append move actions to processedInputLog when there's an active piece", () => {
-      const existingActions: Array<Action> = [
-        { dir: -1, optimistic: false, type: "TapMove" },
-        { dir: "CW", type: "Rotate" },
-      ];
-
       const stateWithActions = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
-        processedInputLog: existingActions,
-      };
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
+        processedInputLog: [],
+      } as GameState;
       const newAction: Action = { dir: 1, optimistic: false, type: "TapMove" };
 
       const result = reducer(stateWithActions, newAction);
 
-      expect(result.processedInputLog).toHaveLength(3);
-      expect(result.processedInputLog[0]).toEqual(existingActions[0]);
-      expect(result.processedInputLog[1]).toEqual(existingActions[1]);
-      expect(result.processedInputLog[2]).toEqual(newAction);
+      // The reducer should preserve the processedInputLog (not modify it directly)
+      expect(result.processedInputLog).toHaveLength(0);
+      expect(result.processedInputLog).toEqual([]);
     });
 
-    it("should handle all movement action types", () => {
+    it("should handle all movement action types without modifying processedInputLog", () => {
       const moveActions: Array<Action> = [
         { dir: -1, optimistic: false, type: "TapMove" },
         { dir: 1, optimistic: false, type: "TapMove" },
@@ -283,20 +325,26 @@ describe("Reducer - Extended Coverage", () => {
 
       let currentState: GameState = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
+
+      const originalLogLength = currentState.processedInputLog.length;
 
       moveActions.forEach((action) => {
         currentState = reducer(currentState, action);
       });
 
-      expect(currentState.processedInputLog).toHaveLength(moveActions.length);
-      moveActions.forEach((action, index) => {
-        expect(currentState.processedInputLog[index]).toEqual(action);
-      });
+      // Reducer should NOT modify processedInputLog - it's managed externally
+      expect(currentState.processedInputLog).toHaveLength(originalLogLength);
+      expect(currentState.processedInputLog).toEqual([]);
     });
 
-    it("should preserve exact Action structure in processedInputLog", () => {
+    it("should not modify processedInputLog for any action type", () => {
       const complexAction: Action = {
         dir: -1,
         type: "HoldMove",
@@ -304,14 +352,19 @@ describe("Reducer - Extended Coverage", () => {
 
       const stateWithPiece = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
       const result = reducer(stateWithPiece, complexAction);
 
-      expect(result.processedInputLog).toHaveLength(1);
-      expect(result.processedInputLog[0]).toEqual(complexAction);
-      // Actions are not deep copied in the reducer, they're passed by reference
-      expect(result.processedInputLog[0]).toBe(complexAction);
+      // Reducer should NOT modify processedInputLog - it's managed externally
+      expect(result.processedInputLog).toHaveLength(0);
+      expect(result.processedInputLog).toEqual([]);
+      expect(result.processedInputLog).toBe(stateWithPiece.processedInputLog);
     });
   });
 
@@ -333,7 +386,12 @@ describe("Reducer - Extended Coverage", () => {
       });
       const stateWithPiece = {
         ...originalState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
       reducer(stateWithPiece, {
         dir: -1,
@@ -352,7 +410,12 @@ describe("Reducer - Extended Coverage", () => {
     it("should create new objects for nested state changes", () => {
       const stateWithPiece = {
         ...initialState,
-        active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+        active: {
+          id: "T" as const,
+          rot: "spawn" as const,
+          x: createGridCoord(4),
+          y: createGridCoord(0),
+        },
       };
       const result = reducer(stateWithPiece, {
         dir: -1,
@@ -361,9 +424,7 @@ describe("Reducer - Extended Coverage", () => {
       });
 
       expect(result).not.toBe(stateWithPiece);
-      expect(result.processedInputLog).not.toBe(
-        stateWithPiece.processedInputLog,
-      );
+      expect(result.processedInputLog).toBe(stateWithPiece.processedInputLog); // processedInputLog should maintain reference since reducer doesn't modify it
       expect(result.board).toBe(stateWithPiece.board); // Board unchanged, can share reference
     });
 
@@ -383,7 +444,12 @@ describe("Reducer - Extended Coverage", () => {
           // Add an active piece before attempting to move
           state = {
             ...state,
-            active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+            active: {
+              id: "T" as const,
+              rot: "spawn" as const,
+              x: createGridCoord(4),
+              y: createGridCoord(0),
+            },
           };
           state = reducer(state, {
             dir: -1,
@@ -395,7 +461,12 @@ describe("Reducer - Extended Coverage", () => {
           // Add an active piece before attempting to lock
           state = {
             ...state,
-            active: { id: "T" as const, rot: "spawn" as const, x: 4, y: 0 },
+            active: {
+              id: "T" as const,
+              rot: "spawn" as const,
+              x: createGridCoord(4),
+              y: createGridCoord(0),
+            },
           };
           state = reducer(state, {
             timestampMs: createTimestamp(performance.now()),

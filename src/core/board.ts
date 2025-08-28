@@ -4,14 +4,16 @@ import {
   type PieceId,
   idx,
   isCellBlocked,
+  createBoardCells,
 } from "../state/types";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import { PIECES } from "./pieces";
 
-// Create an empty board
+// Create an empty board with branded cells array
 export function createEmptyBoard(): Board {
   return {
-    cells: new Uint8Array(200),
+    cells: createBoardCells(),
     height: 20,
     width: 10,
   };
@@ -23,8 +25,8 @@ export function canPlacePiece(board: Board, piece: ActivePiece): boolean {
   const cells = shape.cells[piece.rot];
 
   for (const [dx, dy] of cells) {
-    const x = piece.x + dx;
-    const y = piece.y + dy;
+    const x = createGridCoord(gridCoordAsNumber(piece.x) + dx);
+    const y = createGridCoord(gridCoordAsNumber(piece.y) + dy);
 
     if (isCellBlocked(board, x, y)) {
       return false;
@@ -43,8 +45,8 @@ export function canMove(
 ): boolean {
   const newPiece = {
     ...piece,
-    x: piece.x + dx,
-    y: piece.y + dy,
+    x: createGridCoord(gridCoordAsNumber(piece.x) + dx),
+    y: createGridCoord(gridCoordAsNumber(piece.y) + dy),
   };
 
   return canPlacePiece(board, newPiece);
@@ -61,7 +63,7 @@ export function moveToWall(
   while (canMove(board, currentPiece, direction, 0)) {
     currentPiece = {
       ...currentPiece,
-      x: currentPiece.x + direction,
+      x: createGridCoord(gridCoordAsNumber(currentPiece.x) + direction),
     };
   }
 
@@ -75,7 +77,7 @@ export function dropToBottom(board: Board, piece: ActivePiece): ActivePiece {
   while (canMove(board, currentPiece, 0, 1)) {
     currentPiece = {
       ...currentPiece,
-      y: currentPiece.y + 1,
+      y: createGridCoord(gridCoordAsNumber(currentPiece.y) + 1),
     };
   }
 
@@ -105,8 +107,8 @@ export function tryMove(
   if (canMove(board, piece, dx, dy)) {
     return {
       ...piece,
-      x: piece.x + dx,
-      y: piece.y + dy,
+      x: createGridCoord(gridCoordAsNumber(piece.x) + dx),
+      y: createGridCoord(gridCoordAsNumber(piece.y) + dy),
     };
   }
   return null;
@@ -114,7 +116,11 @@ export function tryMove(
 
 // Lock a piece onto the board
 export function lockPiece(board: Board, piece: ActivePiece): Board {
-  const newCells = new Uint8Array(board.cells);
+  const newCells = createBoardCells();
+  // Copy existing board state
+  for (let i = 0; i < 200; i++) {
+    newCells[i] = board.cells[i] ?? 0;
+  }
   const shape = PIECES[piece.id];
   const cells = shape.cells[piece.rot];
 
@@ -122,12 +128,14 @@ export function lockPiece(board: Board, piece: ActivePiece): Board {
   const cellValue = getPieceValue(piece.id);
 
   for (const [dx, dy] of cells) {
-    const x = piece.x + dx;
-    const y = piece.y + dy;
+    const x = gridCoordAsNumber(piece.x) + dx;
+    const y = gridCoordAsNumber(piece.y) + dy;
 
     // Only lock cells that are within the visible board
     if (x >= 0 && x < board.width && y >= 0 && y < board.height) {
-      newCells[idx(x, y)] = cellValue;
+      const xCoord = createGridCoord(x);
+      const yCoord = createGridCoord(y);
+      newCells[idx(xCoord, yCoord, board.width)] = cellValue;
     }
   }
 
@@ -152,13 +160,15 @@ function getPieceValue(pieceId: PieceId): number {
 }
 
 // Check for completed lines
-export function getCompletedLines(board: Board): Array<number> {
+export function getCompletedLines(board: Board): ReadonlyArray<number> {
   const completedLines: Array<number> = [];
 
   for (let y = 0; y < board.height; y++) {
     let isComplete = true;
     for (let x = 0; x < board.width; x++) {
-      if (board.cells[idx(x, y)] === 0) {
+      const xCoord = createGridCoord(x);
+      const yCoord = createGridCoord(y);
+      if (board.cells[idx(xCoord, yCoord, board.width)] === 0) {
         isComplete = false;
         break;
       }
@@ -172,12 +182,15 @@ export function getCompletedLines(board: Board): Array<number> {
 }
 
 // Clear completed lines from the board
-export function clearLines(board: Board, linesToClear: Array<number>): Board {
+export function clearLines(
+  board: Board,
+  linesToClear: ReadonlyArray<number>,
+): Board {
   if (linesToClear.length === 0) {
     return board;
   }
 
-  const newCells = new Uint8Array(200);
+  const newCells = createBoardCells();
   let targetY = board.height - 1;
 
   for (let y = board.height - 1; y >= 0; y--) {
@@ -192,8 +205,11 @@ export function clearLines(board: Board, linesToClear: Array<number>): Board {
     }
 
     for (let x = 0; x < board.width; x++) {
-      const sourceIndex = idx(x, y);
-      const targetIndex = idx(x, targetY);
+      const xCoord = createGridCoord(x);
+      const sourceYCoord = createGridCoord(y);
+      const targetYCoord = createGridCoord(targetY);
+      const sourceIndex = idx(xCoord, sourceYCoord, board.width);
+      const targetIndex = idx(xCoord, targetYCoord, board.width);
       newCells[targetIndex] = board.cells[sourceIndex] ?? 0;
     }
     targetY--;

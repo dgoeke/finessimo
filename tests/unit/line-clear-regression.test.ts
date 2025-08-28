@@ -7,14 +7,16 @@
 
 import { shouldCompleteLineClear } from "../../src/app";
 import { type GameState } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import { createSeed, createDurationMs } from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 // Helper function to create a state with a line ready to clear
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
   let state = reducer(undefined, {
-    seed: "test",
-    timing: { lineClearDelayMs },
+    seed: createSeed("test"),
+    timestampMs: fromNow(),
+    timing: { lineClearDelayMs: createDurationMs(lineClearDelayMs) },
     type: "Init",
   });
 
@@ -172,8 +174,9 @@ describe("Line Clearing Regression Tests", () => {
   describe("Edge cases", () => {
     it("should not complete line clear if not in lineClear status", () => {
       const state = reducer(undefined, {
-        seed: "test",
-        timing: { lineClearDelayMs: 100 },
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
+        timing: { lineClearDelayMs: createDurationMs(100) },
         type: "Init",
       });
 
@@ -199,8 +202,9 @@ describe("Line Clearing Regression Tests", () => {
 
     it("should handle multiple line clears with delay", () => {
       let state = reducer(undefined, {
-        seed: "test",
-        timing: { lineClearDelayMs: 100 },
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
+        timing: { lineClearDelayMs: createDurationMs(100) },
         type: "Init",
       });
 

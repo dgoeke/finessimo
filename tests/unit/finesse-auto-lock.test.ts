@@ -1,7 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { type GameState } from "../../src/state/types";
-import { createTimestamp } from "../../src/types/timestamp";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
+import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("finesse analysis trigger logic", () => {
@@ -11,11 +16,12 @@ describe("finesse analysis trigger logic", () => {
 
     function createTestState(): GameState {
       return reducer(undefined, {
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         timing: {
           gravityEnabled: true,
-          gravityMs: 1000,
-          lockDelayMs: 500,
+          gravityMs: createDurationMs(1000),
+          lockDelayMs: createDurationMs(500),
         },
         type: "Init",
       });
@@ -29,13 +35,13 @@ describe("finesse analysis trigger logic", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 18,
+        x: createGridCoord(4),
+        y: createGridCoord(18),
       },
       physics: {
         ...state.physics,
-        lastGravityTime: 0,
-        lockDelayStartTime: 1000,
+        lastGravityTime: createTimestamp(1),
+        lockDelayStartTime: createTimestamp(1000),
       },
     };
 
@@ -57,11 +63,12 @@ describe("finesse analysis trigger logic", () => {
   it("should detect piece lock on HardDrop", () => {
     function createTestState(): GameState {
       return reducer(undefined, {
-        seed: "test",
+        seed: createSeed("test"),
+        timestampMs: fromNow(),
         timing: {
           gravityEnabled: true,
-          gravityMs: 1000,
-          lockDelayMs: 500,
+          gravityMs: createDurationMs(1000),
+          lockDelayMs: createDurationMs(500),
         },
         type: "Init",
       });
@@ -74,8 +81,8 @@ describe("finesse analysis trigger logic", () => {
       active: {
         id: "T",
         rot: "spawn",
-        x: 4,
-        y: 10, // High up
+        x: createGridCoord(4),
+        y: createGridCoord(10), // High up
       },
     };
 

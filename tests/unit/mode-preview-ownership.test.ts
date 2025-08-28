@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "@jest/globals";
 
 import { gameModeRegistry, type GameMode } from "../../src/modes";
 import { getActiveRng } from "../../src/modes/spawn-service";
+import { fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 import type { PieceRandomGenerator } from "../../src/core/rng-interface";
@@ -67,7 +68,11 @@ describe("Mode-owned RNG & preview (ReplacePreview)", () => {
 
   it("sets RNG and preview via ReplacePreview on SetMode", () => {
     // Init baseline state
-    const s0 = reducer(undefined, { seed: "seed", type: "Init" } as Action);
+    const s0 = reducer(undefined, {
+      seed: "seed",
+      timestampMs: fromNow(),
+      type: "Init",
+    } as Action);
 
     // Switch mode (reducer just updates currentMode)
     const s1 = reducer(s0, { mode: "mockPreview", type: "SetMode" });

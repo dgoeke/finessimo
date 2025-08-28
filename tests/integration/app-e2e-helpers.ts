@@ -58,9 +58,8 @@ type MockSettingsModal = {
 
 // Test utilities for DOM setup
 export function createMockSettingsModal(): HTMLElement {
-  // Create a regular div element to avoid JSDOM custom element teardown issues
-  const settingsModal = document.createElement("div");
-  settingsModal.id = "mock-settings-modal";
+  // Create a settings-modal element to match app queries without overriding DOM APIs
+  const settingsModal = document.createElement("settings-modal");
   settingsModal.className = "settings-modal-mock";
 
   // Cast once to avoid repeated unsafe casts

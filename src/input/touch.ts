@@ -1,10 +1,24 @@
 import {
+  shouldProcessInCurrentState,
+  shouldProcessRotate,
+  shouldProcessHardDrop,
+  shouldProcessSoftDrop,
+  createSoftDropState,
+  createProcessedRotate,
+  createProcessedHardDrop,
+  createProcessedSoftDrop,
+  type SoftDropState,
+} from "../finesse/log";
+import {
   type Action,
   type KeyAction,
   type InputEvent,
   type GameState,
+  type ProcessedAction,
 } from "../state/types";
-import { fromNow, createTimestamp } from "../types/timestamp";
+import { createFrame } from "../types/brands";
+import { fromNow, createTimestamp, type Timestamp } from "../types/timestamp";
+import { getBoardFrame } from "../ui/utils/dom";
 
 import { type InputHandler, type InputHandlerState } from "./handler";
 import { type KeyBindings, defaultKeyBindings } from "./keyboard";
@@ -24,6 +38,8 @@ export class TouchInputHandler implements InputHandler {
   private started = false;
   private keyBindings: KeyBindings = defaultKeyBindings();
   private stateMachineInputHandler?: StateMachineInputHandler;
+  private currentGameState?: GameState;
+  private softDropState: SoftDropState = createSoftDropState();
 
   // Pre-bound DOM handlers to ensure removeEventListener works reliably
   private onTouchStart = (e: TouchEvent): void => this.handleTouchStart(e);
@@ -75,11 +91,83 @@ export class TouchInputHandler implements InputHandler {
     if (!this.dispatch) return;
     this.frameCounter++;
 
+    // Store current game state for use in handlers
+    this.currentGameState = gameState;
+
     // Call state machine handler update for timing-based actions like DAS/ARR and soft drop pulses
     // Skip if keyboard handler is also present to avoid double-calls
     if (this.stateMachineInputHandler && !skipStateMachineUpdate) {
       this.stateMachineInputHandler.update(gameState, nowMs);
     }
+  }
+
+  /**
+   * Helper to conditionally emit ProcessedAction alongside engine action
+   */
+  private dispatchWithOptionalProcessed(
+    action: Action,
+    timestampMs?: Timestamp,
+  ): void {
+    if (!this.dispatch) {
+      return;
+    }
+
+    // Always dispatch the engine action
+    this.dispatch(action);
+
+    // Check if we should also emit a ProcessedAction
+    if (this.shouldEmitProcessedAction(action, timestampMs)) {
+      const processedAction = this.createProcessedActionFromEngineAction(
+        action,
+        timestampMs,
+      );
+      if (processedAction) {
+        this.dispatch({ entry: processedAction, type: "AppendProcessed" });
+      }
+    }
+  }
+
+  private shouldEmitProcessedAction(
+    action: Action,
+    _timestampMs?: Timestamp,
+  ): boolean {
+    // Only emit if we have current game state
+    if (!this.currentGameState) {
+      return false;
+    }
+
+    // Only emit when there's an active piece and status is "playing"
+    const hasActivePiece = Boolean(this.currentGameState.active);
+    const status = this.currentGameState.status;
+
+    if (!shouldProcessInCurrentState(hasActivePiece, status)) {
+      return false;
+    }
+
+    if (action.type === "Rotate") return shouldProcessRotate();
+    if (action.type === "HardDrop") return shouldProcessHardDrop();
+    if (action.type === "SoftDrop") {
+      const [shouldProcess, newState] = shouldProcessSoftDrop(
+        action.on,
+        this.softDropState,
+      );
+      this.softDropState = newState;
+      return shouldProcess;
+    }
+    return false;
+  }
+
+  private createProcessedActionFromEngineAction(
+    action: Action,
+    timestampMs?: Timestamp,
+  ): ProcessedAction | null {
+    const timestamp = timestampMs ?? fromNow();
+    if (action.type === "Rotate")
+      return createProcessedRotate(action.dir, timestamp);
+    if (action.type === "HardDrop") return createProcessedHardDrop(timestamp);
+    if (action.type === "SoftDrop")
+      return createProcessedSoftDrop(action.on, timestamp);
+    return null;
   }
 
   getState(): InputHandlerState {
@@ -150,7 +238,7 @@ export class TouchInputHandler implements InputHandler {
     `;
 
     // Attach to the game board frame so it doesn't cover header or other UI
-    const boardFrame = document.querySelector(".board-frame");
+    const boardFrame = getBoardFrame();
     this.container = overlay;
     if (boardFrame) {
       boardFrame.appendChild(overlay);
@@ -441,8 +529,8 @@ export class TouchInputHandler implements InputHandler {
   private handleNonMovementAction(eventAction: KeyAction): void {
     const inputEvent: InputEvent = {
       action: eventAction,
-      frame: this.frameCounter,
-      tMs: fromNow() as number,
+      frame: createFrame(this.frameCounter),
+      tMs: fromNow(),
     };
 
     this.dispatchGameplayAction(eventAction, inputEvent);
@@ -456,16 +544,19 @@ export class TouchInputHandler implements InputHandler {
 
     switch (eventAction) {
       case "RotateCW":
-        this.dispatch({ dir: "CW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({ dir: "CW", type: "Rotate" });
         break;
       case "RotateCCW":
-        this.dispatch({ dir: "CCW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({ dir: "CCW", type: "Rotate" });
         break;
       case "HardDrop":
-        this.dispatch({
-          timestampMs: createTimestamp(inputEvent.tMs),
-          type: "HardDrop",
-        });
+        this.dispatchWithOptionalProcessed(
+          {
+            timestampMs: createTimestamp(inputEvent.tMs),
+            type: "HardDrop",
+          },
+          createTimestamp(inputEvent.tMs),
+        );
         break;
       case "Hold":
         this.dispatch({ type: "Hold" });
@@ -495,7 +586,7 @@ export class TouchInputHandler implements InputHandler {
     if (this.stateMachineInputHandler) {
       this.stateMachineInputHandler.setSoftDrop(on, timestamp);
     } else if (this.dispatch) {
-      this.dispatch({ on, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({ on, type: "SoftDrop" });
     }
   }
 }

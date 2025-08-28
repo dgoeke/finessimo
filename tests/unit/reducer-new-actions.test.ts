@@ -1,8 +1,14 @@
+import { createSeed } from "../../src/types/brands";
+import { fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Reducer - new action branches", () => {
   it("handles SetMode", () => {
-    const init = reducer(undefined, { seed: "test", type: "Init" });
+    const init = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
     const state = reducer(init, { mode: "guided", type: "SetMode" });
     expect(state.currentMode).toBe("guided");
     expect(state.finesseFeedback).toBeNull();
@@ -10,7 +16,11 @@ describe("Reducer - new action branches", () => {
   });
 
   it("handles UpdateFinesseFeedback", () => {
-    const init = reducer(undefined, { seed: "test", type: "Init" });
+    const init = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
     const fb = {
       kind: "optimal" as const,
       optimalSequences: [],
@@ -24,7 +34,11 @@ describe("Reducer - new action branches", () => {
   });
 
   it("handles UpdateModePrompt", () => {
-    const init = reducer(undefined, { seed: "test", type: "Init" });
+    const init = reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      type: "Init",
+    });
     const state = reducer(init, {
       prompt: "Do this",
       type: "UpdateModePrompt",

@@ -33,7 +33,7 @@ export const runLockPipeline = (
   dispatch: (action: Action) => void,
   analyzeFinesse: PipelineAnalyzer,
 ): void => {
-  if (state.status !== "resolvingLock" || !state.pendingLock) {
+  if (state.status !== "resolvingLock") {
     return; // Not in resolution mode
   }
 
@@ -42,7 +42,7 @@ export const runLockPipeline = (
   // Step 1: Run finesse analysis
   const { actions: finesseActions, result: finesse } = analyzeFinesse(state);
 
-  // Step 2: Dispatch finesse feedback actions
+  // Step 2: Dispatch finesse feedback actions (includes ClearInputLog as final action)
   for (const action of finesseActions) {
     dispatch(action);
   }

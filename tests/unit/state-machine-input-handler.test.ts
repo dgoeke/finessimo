@@ -1,6 +1,9 @@
 import { createSevenBagRng } from "../../src/core/rng";
 import { defaultKeyBindings } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
+import { createBoardCells } from "../../src/state/types";
+import { createGridCoord, createDurationMs } from "../../src/types/brands";
+import { createTimestamp } from "../../src/types/timestamp";
 
 import type { PieceRandomGenerator } from "../../src/core/rng-interface";
 import type {
@@ -14,9 +17,6 @@ import type {
   PhysicsState,
 } from "../../src/state/types";
 
-// Use the active TinyKeys mock via Jest to share state with the module under test
-jest.mock("tinykeys");
-
 // Mock localStorage
 const mockLocalStorage = {
   clear: jest.fn(),
@@ -29,8 +29,6 @@ Object.defineProperty(window, "localStorage", {
   writable: true,
 });
 
-// TinyKeys is mocked above; __mockTinyKeys references the same instance used by handler
-
 describe("StateMachineInputHandler", () => {
   let handler: StateMachineInputHandler;
   let dispatchMock: jest.MockedFunction<(action: Action) => void>;
@@ -38,7 +36,7 @@ describe("StateMachineInputHandler", () => {
 
   const createGameState = (overrides: Partial<GameState> = {}): GameState => {
     const board: Board = {
-      cells: new Uint8Array(200),
+      cells: createBoardCells(),
       height: 20,
       width: 10,
     };
@@ -46,23 +44,23 @@ describe("StateMachineInputHandler", () => {
     const active: ActivePiece = {
       id: "T",
       rot: "spawn",
-      x: 4,
-      y: 0,
+      x: createGridCoord(4),
+      y: createGridCoord(0),
     };
 
     const timing: TimingConfig = {
-      arrMs: 2,
-      dasMs: 133,
+      arrMs: createDurationMs(2),
+      dasMs: createDurationMs(133),
       gravityEnabled: true,
-      gravityMs: 1000,
-      lineClearDelayMs: 400,
-      lockDelayMs: 500,
+      gravityMs: createDurationMs(1000),
+      lineClearDelayMs: createDurationMs(400),
+      lockDelayMs: createDurationMs(500),
       softDrop: 10,
       tickHz: 60,
     };
 
     const gameplay: GameplayConfig = {
-      finesseCancelMs: 50,
+      finesseCancelMs: createDurationMs(50),
       ghostPieceEnabled: true,
       nextPieceCount: 5,
     };
@@ -73,22 +71,22 @@ describe("StateMachineInputHandler", () => {
       averageInputsPerPiece: 0,
       doubleLines: 0,
       faultsByType: {},
-      finesseAccuracy: 0,
+      finesseAccuracy: createGridCoord(0),
       incorrectPlacements: 0,
       linesCleared: 0,
       linesPerMinute: 0,
-      longestSessionMs: 0,
+      longestSessionMs: createDurationMs(0),
       optimalInputs: 0,
       optimalPlacements: 0,
       piecesPerMinute: 0,
       piecesPlaced: 0,
       sessionLinesCleared: 0,
       sessionPiecesPlaced: 0,
-      sessionStartMs: 0,
+      sessionStartMs: createTimestamp(1000),
       singleLines: 0,
-      startedAtMs: 0,
+      startedAtMs: createTimestamp(1000),
       tetrisLines: 0,
-      timePlayedMs: 0,
+      timePlayedMs: createDurationMs(0),
       totalFaults: 0,
       totalInputs: 0,
       totalSessions: 0,
@@ -97,7 +95,7 @@ describe("StateMachineInputHandler", () => {
 
     const physics: PhysicsState = {
       isSoftDropping: false,
-      lastGravityTime: 0,
+      lastGravityTime: createTimestamp(1000),
       lineClearLines: [],
       lineClearStartTime: null,
       lockDelayStartTime: null,
@@ -126,7 +124,7 @@ describe("StateMachineInputHandler", () => {
       tick: 0,
       timing,
       ...overrides,
-    };
+    } as GameState;
   };
 
   beforeEach(() => {
@@ -305,7 +303,10 @@ describe("StateMachineInputHandler", () => {
     });
 
     test("applyTiming with timing object", () => {
-      handler.applyTiming({ arrMs: 4, dasMs: 150 });
+      handler.applyTiming({
+        arrMs: createDurationMs(4),
+        dasMs: createDurationMs(150),
+      });
 
       // Test by observing behavior rather than internal state
       handler.init(dispatchMock);
@@ -333,12 +334,12 @@ describe("StateMachineInputHandler", () => {
     test("update applies timing from game state", () => {
       const stateWithCustomTiming = createGameState({
         timing: {
-          arrMs: 5,
-          dasMs: 200,
+          arrMs: createDurationMs(5),
+          dasMs: createDurationMs(200),
           gravityEnabled: true,
-          gravityMs: 1000,
-          lineClearDelayMs: 400,
-          lockDelayMs: 500,
+          gravityMs: createDurationMs(1000),
+          lineClearDelayMs: createDurationMs(400),
+          lockDelayMs: createDurationMs(500),
           softDrop: 10,
           tickHz: 60,
         },
@@ -418,7 +419,7 @@ describe("StateMachineInputHandler", () => {
     });
   });
 
-  describe("modifier key bindings with TinyKeys", () => {
+  describe("modifier key bindings", () => {
     beforeEach(() => {
       handler.init(dispatchMock);
     });

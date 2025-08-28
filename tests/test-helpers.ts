@@ -1,5 +1,13 @@
+import { createSeed } from "../src/types/brands";
+import { fromNow } from "../src/types/timestamp";
+
 import type { SevenBagRng } from "../src/core/rng";
-import type { GameState, ActivePiece, PieceId } from "../src/state/types";
+import type {
+  GameState,
+  ActivePiece,
+  PieceId,
+  Action,
+} from "../src/state/types";
 
 // Assertion helper that provides runtime type narrowing
 export function assertDefined<T>(
@@ -119,4 +127,16 @@ export function assertType<T>(
   if (!validator(value)) {
     throw new Error(message ?? "Value does not match expected type");
   }
+}
+
+// Helper to create test Init actions with proper timestamp
+export function createTestInitAction(
+  overrides: Partial<Extract<Action, { type: "Init" }>> = {},
+): Extract<Action, { type: "Init" }> {
+  return {
+    seed: createSeed("test"),
+    timestampMs: fromNow(),
+    type: "Init",
+    ...overrides,
+  };
 }
