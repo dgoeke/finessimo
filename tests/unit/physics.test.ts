@@ -72,7 +72,7 @@ describe("physics system", () => {
       const originalY = state.active.y;
 
       const newState = reducer(state, {
-        timestampMs: createTimestamp(performance.now() + 2000),
+        timestampMs: createTimestamp(fromNow() + 2000),
         type: "Tick",
       });
 
@@ -235,7 +235,7 @@ describe("physics system", () => {
 
     it("should start lock delay manually", () => {
       const state = createStateWithPiece();
-      const timestamp = performance.now();
+      const timestamp = fromNow();
 
       const newState = reducer(state, {
         timestampMs: createTimestamp(timestamp),
@@ -264,7 +264,7 @@ describe("physics system", () => {
   describe("line clearing", () => {
     it("should start line clear animation", () => {
       const state = createTestState();
-      const timestamp = performance.now();
+      const timestamp = fromNow();
       const lines = [18, 19];
 
       const newState = reducer(state, {

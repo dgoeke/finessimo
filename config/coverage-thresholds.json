@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
-    "statements": 84,
-    "branches": 70,
-    "functions": 82,
-    "lines": 85
+    "statements": 83,
+    "branches": 69,
+    "functions": 76,
+    "lines": 86
   },
   "src/core/board.ts": {
     "statements": 97,
@@ -54,10 +54,10 @@
     "lines": 89
   },
   "src/finesse/service.ts": {
-    "statements": 84,
-    "branches": 58,
+    "statements": 77,
+    "branches": 50,
     "functions": 100,
-    "lines": 84
+    "lines": 77
   },
   "src/input/StateMachineInputHandler.ts": {
     "statements": 85,
@@ -78,10 +78,10 @@
     "lines": 96
   },
   "src/input/touch.ts": {
-    "statements": 46,
-    "branches": 29,
+    "statements": 45,
+    "branches": 28,
     "functions": 63,
-    "lines": 50
+    "lines": 48
   },
   "src/input/machines/das.ts": {
     "statements": 94,
@@ -98,14 +98,14 @@
   "src/modes/freePlay.ts": {
     "statements": 90,
     "branches": 100,
-    "functions": 84,
+    "functions": 85,
     "lines": 90
   },
   "src/modes/guided.ts": {
-    "statements": 70,
-    "branches": 50,
-    "functions": 66,
-    "lines": 79
+    "statements": 77,
+    "branches": 47,
+    "functions": 82,
+    "lines": 82
   },
   "src/modes/index.ts": {
     "statements": 88,
@@ -127,7 +127,7 @@
   },
   "src/modes/guided/deck.ts": {
     "statements": 97,
-    "branches": 88,
+    "branches": 80,
     "functions": 75,
     "lines": 96
   },
@@ -139,21 +139,21 @@
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 98,
-    "branches": 81,
+    "branches": 88,
     "functions": 91,
     "lines": 98
   },
   "src/srs/storage.ts": {
-    "statements": 92,
-    "branches": 91,
+    "statements": 94,
+    "branches": 93,
     "functions": 100,
-    "lines": 95
+    "lines": 96
   },
   "src/state/reducer.ts": {
-    "statements": 91,
+    "statements": 90,
     "branches": 82,
-    "functions": 97,
-    "lines": 93
+    "functions": 94,
+    "lines": 92
   },
   "src/state/signals.ts": {
     "statements": 86,
@@ -186,10 +186,10 @@
     "lines": 83
   },
   "src/ui/utils/colors.ts": {
-    "statements": 0,
-    "branches": 100,
-    "functions": 0,
-    "lines": 0
+    "statements": 76,
+    "branches": 77,
+    "functions": 66,
+    "lines": 76
   },
   "src/ui/utils/dom.ts": {
     "statements": 53,

@@ -3,7 +3,13 @@ import { gridCoordAsNumber } from "../types/brands";
 
 import type { PieceRandomGenerator } from "../core/rng-interface";
 import type { FaultType, FinesseResult } from "../finesse/calculator";
-import type { GridCoord, DurationMs, Frame, Seed } from "../types/brands";
+import type {
+  GridCoord,
+  DurationMs,
+  Frame,
+  Seed,
+  UiEffectId,
+} from "../types/brands";
 import type { Timestamp } from "../types/timestamp";
 
 // Board representation with enforced dimensions
@@ -140,6 +146,30 @@ export type BoardDecoration = Readonly<{
 }>;
 export type BoardDecorations = ReadonlyArray<BoardDecoration>;
 
+// UI Effects (overlay) — generic union, currently only FloatingText
+export type EffectAnchor =
+  | "topLeft"
+  | "topRight"
+  | "bottomLeft"
+  | "bottomRight";
+export type FloatingTextEffect = Readonly<{
+  kind: "floatingText";
+  id: UiEffectId;
+  text: string;
+  color: string;
+  fontPx: number;
+  fontWeight?: number | string;
+  anchor: EffectAnchor;
+  offsetX: number; // px from anchor corner (x)
+  offsetY: number; // px from anchor corner (y)
+  driftYPx: number; // upward drift in px over ttl
+  scaleFrom?: number;
+  scaleTo?: number;
+  ttlMs: DurationMs;
+  createdAt: Timestamp;
+}>;
+export type UiEffect = FloatingTextEffect;
+
 // Physics timing state
 export type PhysicsState = {
   lastGravityTime: Timestamp;
@@ -226,6 +256,8 @@ type SharedGameFields = {
   guidance?: ModeGuidance | null;
   // Optional: mode-provided board overlay (pure description of cells to decorate)
   boardDecorations?: BoardDecorations | null;
+  // Ephemeral UI effects rendered by overlay (optional for backward compatibility)
+  uiEffects?: ReadonlyArray<UiEffect>;
 };
 
 // Playing state - normal gameplay
@@ -333,6 +365,8 @@ export type Action =
   // Board overlay updates supplied by active mode
   | { type: "UpdateBoardDecorations"; decorations: BoardDecorations | null }
   | { type: "UpdateModeData"; data: unknown }
+  // UI overlay effects
+  | { type: "PushUiEffect"; effect: UiEffect }
   // Statistics tracking actions
   | {
       type: "RecordPieceLock";
@@ -357,7 +391,8 @@ export type Action =
         number,
         number,
       ]; // Exactly 10 cell values (0 = empty, 1-7 = pieces, 8 = garbage)
-    } // Adds a row to the bottom of the board
+    }
+  // Adds a row to the bottom of the board
   // Pending lock system actions
   | { type: "CommitLock" }
   | { type: "RetryPendingLock"; timestampMs: Timestamp };

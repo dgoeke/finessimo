@@ -39,7 +39,7 @@ describe("Reducer - Extended Coverage", () => {
         { dir: "CCW", type: "Rotate" },
         { timestampMs: createTimestamp(1000), type: "HardDrop" },
         { type: "Hold" },
-        { timestampMs: createTimestamp(performance.now()), type: "Lock" },
+        { timestampMs: fromNow(), type: "Lock" },
         { lines: [19], type: "ClearLines" },
         { dir: 1, optimistic: false, type: "TapMove" },
         {
@@ -241,7 +241,7 @@ describe("Reducer - Extended Coverage", () => {
       };
 
       const result = reducer(stateWithPiece, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -270,7 +270,7 @@ describe("Reducer - Extended Coverage", () => {
       } as GameState;
 
       const result = reducer(stateWithBoard, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -283,7 +283,7 @@ describe("Reducer - Extended Coverage", () => {
     it("should work when no active piece exists", () => {
       const stateNoPiece = { ...initialState, active: undefined };
       const result = reducer(stateNoPiece, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -382,7 +382,7 @@ describe("Reducer - Extended Coverage", () => {
         type: "Tick",
       });
       reducer(originalState, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
       const stateWithPiece = {
@@ -470,7 +470,7 @@ describe("Reducer - Extended Coverage", () => {
             },
           };
           state = reducer(state, {
-            timestampMs: createTimestamp(performance.now()),
+            timestampMs: fromNow(),
             type: "Lock",
           });
           tickCount++; // Lock also increments tick

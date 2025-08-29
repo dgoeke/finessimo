@@ -216,7 +216,11 @@ export class DefaultFinesseService implements FinesseService {
 
   private buildActionList(
     mergedResult: FinesseResult,
-    modeResult: { nextPrompt?: string; modeData?: unknown },
+    modeResult: {
+      nextPrompt?: string;
+      modeData?: unknown;
+      postActions?: ReadonlyArray<Action>;
+    },
     playerInputs: Array<string>,
   ): Array<Action> {
     const actions: Array<Action> = [];
@@ -260,6 +264,9 @@ export class DefaultFinesseService implements FinesseService {
     }
     if (modeResult.modeData !== undefined) {
       actions.push({ data: modeResult.modeData, type: "UpdateModeData" });
+    }
+    if (modeResult.postActions && modeResult.postActions.length > 0) {
+      actions.push(...modeResult.postActions);
     }
 
     // Clear the processed input log after analysis

@@ -35,6 +35,7 @@ import {
   type PendingLock,
   type LockSource,
   createBoardCells,
+  type UiEffect,
 } from "./types";
 
 import type { FaultType } from "../finesse/calculator";
@@ -241,6 +242,7 @@ function createInitialState(
     status: "playing" as const,
     tick: 0,
     timing: { ...defaultTimingConfig, ...timing },
+    uiEffects: [],
   };
 }
 
@@ -740,6 +742,12 @@ const actionHandlers: ActionHandlerMap = {
     };
   },
 
+  // UI overlay effects
+  PushUiEffect: (state, action) => ({
+    ...state,
+    uiEffects: [...(state.uiEffects ?? []), action.effect] as Array<UiEffect>,
+  }),
+
   // Statistics
   RecordPieceLock: (state, action) => {
     const faultCounts: Partial<Record<FaultType, number>> = {
@@ -1008,12 +1016,24 @@ const actionHandlers: ActionHandlerMap = {
     }
 
     const timestampMs = action.timestampMs;
+    const nowNum = timestampMs as number;
+    // Prune expired UI effects based on ttl
+    const prunedEffects: ReadonlyArray<UiEffect> = (
+      state.uiEffects ?? []
+    ).filter((e) => {
+      const created = e.createdAt as number;
+      const ttl = e.ttlMs as number;
+      return nowNum - created < ttl;
+    }) as ReadonlyArray<UiEffect>;
     const updatedStats = updateSessionStats(state.stats, timestampMs);
-    let newState = {
+    let newState: GameState = {
       ...state,
       stats: updatedStats,
       tick: state.tick + 1,
-    };
+    } as GameState;
+    if (state.uiEffects !== prunedEffects) {
+      newState = { ...newState, uiEffects: prunedEffects } as GameState;
+    }
 
     if (shouldApplyGravity(state)) {
       newState = applyGravityLogic(newState, timestampMs);

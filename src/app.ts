@@ -26,18 +26,121 @@ export class FinessimoApp {
   private touchInputHandler?: TouchInputHandler;
   private settingsModal: ReturnType<typeof getSettingsModal> = null;
   private isRunning = false;
-  private isPaused = false;
+  private isActive = true;
+  private rafId: number | null = null;
+  private watchdogId: number | null = null;
   private lastFrameTime = 0;
   private readonly targetFrameTime = 1000 / 60; // 60 FPS
+  private readonly INACTIVE_POLL_MS = 500;
+
+  // Compute if the game should be actively running
+  private computeActive(): boolean {
+    // Only run when the tab is visible AND the browser window is focused AND settings modal is closed
+    return (
+      document.visibilityState === "visible" &&
+      document.hasFocus() &&
+      !(this.settingsModal?.visible ?? false)
+    );
+  }
 
   // Event handlers for settings modal
   private handleSettingsOpened = (): void => {
-    this.pause();
+    this.updateActive();
   };
 
   private handleSettingsClosed = (): void => {
-    this.unpause();
+    this.updateActive();
   };
+
+  // Event handlers for visibility and focus changes
+  private handleVisibilityChange = (): void => {
+    this.updateActive();
+  };
+
+  private handleWindowFocus = (): void => {
+    this.updateActive();
+  };
+
+  private handleWindowBlur = (): void => {
+    this.updateActive();
+  };
+
+  private handlePageShow = (): void => {
+    this.updateActive();
+  };
+
+  private handlePageHide = (): void => {
+    this.stopLoop();
+    this.ensureWatchdogRunning();
+  };
+
+  // Start the game loop
+  private startLoop(): void {
+    if (this.rafId !== null) return;
+
+    const tick = (): void => {
+      if (!this.isRunning || !this.isActive) return;
+
+      const currentTime = fromNow();
+      const deltaTime = currentTime - this.lastFrameTime;
+
+      // Fixed time step for game logic (60 Hz)
+      if (deltaTime >= this.targetFrameTime) {
+        this.update();
+        this.render();
+        this.lastFrameTime = currentTime;
+      }
+
+      // Schedule next frame only while active
+      this.rafId = requestAnimationFrame(tick);
+    };
+
+    this.lastFrameTime = fromNow();
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  // Stop the game loop
+  private stopLoop(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
+  // Low-cost recovery for missed focus events (macOS/browser oddities)
+  private ensureWatchdogRunning(): void {
+    if (this.watchdogId !== null) return;
+
+    this.watchdogId = window.setInterval(() => {
+      const nowActive = this.computeActive();
+      if (nowActive !== this.isActive) {
+        this.updateActive();
+      }
+    }, this.INACTIVE_POLL_MS);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogId !== null) {
+      clearInterval(this.watchdogId);
+      this.watchdogId = null;
+    }
+  }
+
+  // Update active state and manage loop/watchdog accordingly
+  private updateActive(): void {
+    const next = this.computeActive();
+    if (next === this.isActive) return;
+
+    this.isActive = next;
+
+    if (this.isActive) {
+      this.stopWatchdog();
+      if (this.isRunning) this.startLoop();
+    } else {
+      this.stopLoop();
+      this.ensureWatchdogRunning();
+    }
+  }
 
   private createFinesseAnalyzer(): (state: GameState) => {
     result: FinesseResult;
@@ -147,6 +250,9 @@ export class FinessimoApp {
     // Setup settings button
     this.setupSettingsButton();
 
+    // Setup focus and visibility listeners
+    this.setupVisibilityListeners();
+
     // Spawn initial piece
     this.spawnNextPiece();
 
@@ -160,12 +266,19 @@ export class FinessimoApp {
     }
 
     this.isRunning = true;
-    this.lastFrameTime = performance.now();
-    this.gameLoop();
+    this.isActive = this.computeActive();
+
+    if (this.isActive) {
+      this.startLoop();
+    } else {
+      this.ensureWatchdogRunning();
+    }
   }
 
   stop(): void {
     this.isRunning = false;
+    this.stopLoop();
+    this.stopWatchdog();
     this.keyboardInputHandler.stop();
     if (this.touchInputHandler) {
       this.touchInputHandler.stop();
@@ -189,32 +302,19 @@ export class FinessimoApp {
         this.handleSettingsClosed,
       );
     }
-  }
-
-  private gameLoop(): void {
-    if (!this.isRunning) return;
-
-    const currentTime = performance.now();
-    const deltaTime = currentTime - this.lastFrameTime;
-
-    // Fixed time step for game logic (60 Hz)
-    if (deltaTime >= this.targetFrameTime) {
-      this.update();
-      this.render();
-      this.lastFrameTime = currentTime;
-    }
-
-    // Continue the loop
-    requestAnimationFrame(() => this.gameLoop());
+    // Remove visibility and focus event listeners
+    document.removeEventListener(
+      "visibilitychange",
+      this.handleVisibilityChange,
+    );
+    window.removeEventListener("focus", this.handleWindowFocus);
+    window.removeEventListener("blur", this.handleWindowBlur);
+    window.removeEventListener("pageshow", this.handlePageShow);
+    window.removeEventListener("pagehide", this.handlePageHide);
   }
 
   private update(): void {
-    // Skip game updates when paused (settings modal open)
-    if (this.isPaused) {
-      return;
-    }
-
-    const currentTime = performance.now();
+    const currentTime = fromNow();
     this.updateInputs(currentTime);
     this.handleTickAndPhysics(currentTime);
 
@@ -399,15 +499,13 @@ export class FinessimoApp {
     return gameModeRegistry.list();
   }
 
-  // Pause and unpause game methods
+  // Legacy pause methods (kept for external compatibility if needed)
   pause(): void {
-    this.isPaused = true;
+    this.updateActive();
   }
 
   unpause(): void {
-    this.isPaused = false;
-    // Reset frame time to avoid large time jumps
-    this.lastFrameTime = performance.now();
+    this.updateActive();
   }
 
   // Initialize settings modal and event handling
@@ -458,6 +556,19 @@ export class FinessimoApp {
         }
       });
     }
+  }
+
+  // Setup focus and visibility change listeners
+  private setupVisibilityListeners(): void {
+    // Initialize the state based on current activity
+    this.isActive = this.computeActive();
+
+    // Add all the event listeners for robust focus detection
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    window.addEventListener("focus", this.handleWindowFocus);
+    window.addEventListener("blur", this.handleWindowBlur);
+    window.addEventListener("pageshow", this.handlePageShow);
+    window.addEventListener("pagehide", this.handlePageHide);
   }
 
   // Event handler for settings-change events from the Lit component

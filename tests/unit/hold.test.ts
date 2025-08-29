@@ -135,7 +135,7 @@ describe("hold system", () => {
 
       // Lock piece (should re-enable hold)
       const newState = reducer(state, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
       expect(newState.canHold).toBe(true);

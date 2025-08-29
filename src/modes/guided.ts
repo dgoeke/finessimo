@@ -21,7 +21,12 @@ import {
   type BoardDecorations,
   type Board,
 } from "../state/types";
-import { createGridCoord, gridCoordAsNumber } from "../types/brands";
+import {
+  createGridCoord,
+  gridCoordAsNumber,
+  createDurationMs,
+  createUiEffectId,
+} from "../types/brands";
 import { createTimestamp, fromNow } from "../types/timestamp";
 
 import { makeDefaultDeck } from "./guided/deck";
@@ -191,7 +196,36 @@ export class GuidedMode implements GameMode {
     const newDeck = updateDeckRecord(deck, updated);
     // Persist updated deck
     saveGuidedDeck(newDeck);
-    return { modeData: { deck: newDeck, gradingConfig } };
+    // Map rating to a FloatingText UI effect (generic/string-based)
+    const color =
+      rating === "again"
+        ? "#ef4444"
+        : rating === "hard"
+          ? "#f59e0b"
+          : rating === "good"
+            ? "#10b981"
+            : "#60a5fa"; // easy
+    const createdAt = fromNow();
+    const effect = {
+      anchor: "bottomRight" as const,
+      color,
+      createdAt,
+      driftYPx: 120,
+      fontPx: 48,
+      fontWeight: 800,
+      id: createUiEffectId(createdAt as number),
+      kind: "floatingText" as const,
+      offsetX: -100,
+      offsetY: 12,
+      scaleFrom: 1,
+      scaleTo: 0.9,
+      text: rating,
+      ttlMs: createDurationMs(1200),
+    } as const;
+    return {
+      modeData: { deck: newDeck, gradingConfig },
+      postActions: [{ effect, type: "PushUiEffect" }],
+    };
   }
 
   // Compute absolute occupied cells for a piece within board bounds

@@ -32,6 +32,8 @@ export type GameModeResult = {
   nextPrompt?: string;
   // Optional: supply a new opaque mode data object to store in GameState
   modeData?: unknown;
+  // Optional: UI actions to dispatch (e.g., PushUiEffect)
+  postActions?: ReadonlyArray<Action>;
 };
 
 export type GameMode = {

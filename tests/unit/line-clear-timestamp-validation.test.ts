@@ -58,7 +58,7 @@ describe("timestamp validation in line clear scenarios", () => {
     const validTimestamp = createTimestamp(1000);
     expect(validTimestamp).toBe(1000);
 
-    const performanceTimestamp = createTimestamp(performance.now());
+    const performanceTimestamp = fromNow();
     expect(performanceTimestamp).toBeGreaterThan(0);
   });
 
@@ -182,7 +182,7 @@ describe("timestamp validation in line clear scenarios", () => {
     // This test ensures the type system is working by confirming
     // valid timestamps work correctly
     const state = createStateWithDelay(50);
-    const validTimestamp = createTimestamp(performance.now());
+    const validTimestamp = fromNow();
 
     expect(() => {
       reducer(state, { timestampMs: validTimestamp, type: "Tick" });

@@ -3,6 +3,7 @@ import { customElement } from "lit/decorators.js";
 
 import "./finesse-overlay";
 import "./game-board";
+import "./effects-overlay";
 import "./piece-hold";
 import "./piece-preview";
 import "./stats-panel";
@@ -25,6 +26,7 @@ export class FinessimoShell extends LitElement {
         <section class="board-column">
           <div class="board-frame">
             <game-board></game-board>
+            <effects-overlay></effects-overlay>
           </div>
         </section>
 

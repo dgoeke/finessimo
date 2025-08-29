@@ -107,7 +107,7 @@ describe("Reducer", () => {
       };
 
       const newState = reducer(stateWithActivePiece, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -130,7 +130,7 @@ describe("Reducer", () => {
         tick: 5,
       };
       const newState = reducer(originalState, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -148,7 +148,7 @@ describe("Reducer", () => {
       } as GameState;
 
       const newState = reducer(stateWithData, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 
@@ -199,7 +199,7 @@ describe("Reducer", () => {
       };
 
       const newState = reducer(stateWithData, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Tick",
       });
 
@@ -240,7 +240,7 @@ describe("Reducer", () => {
         },
       };
       reducer(stateWithActive, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
       reducer(initialState, {
@@ -271,7 +271,7 @@ describe("Reducer", () => {
         },
       };
       const newState2 = reducer(stateWithActive, {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       });
 

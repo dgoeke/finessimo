@@ -216,7 +216,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
       delete invalidState.tick;
 
       const action: Action = {
-        timestampMs: createTimestamp(performance.now()),
+        timestampMs: fromNow(),
         type: "Lock",
       };
       const result = reducer(invalidState as GameState, action);

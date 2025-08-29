@@ -180,6 +180,10 @@ export default tseslint.config(
           selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
           message: "Use fromNow() from '../types/timestamp' instead of Date.now() for consistent timing based on performance.now()",
         },
+        {
+          selector: "CallExpression[callee.object.name='performance'][callee.property.name='now']",
+          message: "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing. Only timestamp utilities should use performance.now() directly.",
+        },
       ],
 
       // Style & API clarity (tune to taste)
@@ -189,6 +193,20 @@ export default tseslint.config(
           allowExpressions: false,
           allowTypedFunctionExpressions: true,
           allowHigherOrderFunctions: true,
+        },
+      ],
+    },
+  },
+
+  // Allow performance.now() in timestamp utilities and their tests
+  {
+    files: ["**/types/timestamp.ts", "**/timestamp.test.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message: "Use performance.now() instead of Date.now() for consistent timing in timestamp utilities",
         },
       ],
     },

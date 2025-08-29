@@ -129,3 +129,11 @@ export function numberToFrame(n: number): Frame {
 export function stringToSeed(s: string): Seed {
   return createSeed(s);
 }
+
+// UI Effect Id brand for overlay effects
+declare const UiEffectIdBrand: unique symbol;
+export type UiEffectId = number & { readonly [UiEffectIdBrand]: true };
+
+export function createUiEffectId(n: number): UiEffectId {
+  return Math.trunc(n) as UiEffectId;
+}
