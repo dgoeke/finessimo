@@ -59,4 +59,4 @@ The architecture is functional, deterministic, and types‑first.
 
 ## License 📜
 
-MIT
+Apache-2.0
