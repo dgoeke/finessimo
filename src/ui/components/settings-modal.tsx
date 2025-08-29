@@ -309,6 +309,32 @@ export class SettingsModal extends LitElement {
     .button.secondary:hover {
       background: var(--hover-bg, #4b5563);
     }
+
+    .mode-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--text-dim, #9aa3b2);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--text-dim, #9aa3b2);
+      cursor: help;
+      position: relative;
+    }
+
+    .help-icon:hover {
+      border-color: var(--accent, #22d3ee);
+      color: var(--accent, #22d3ee);
+    }
   `;
 
   constructor() {
@@ -460,28 +486,45 @@ export class SettingsModal extends LitElement {
         <label>Game Mode</label>
         <div>
           <label style="margin-right: 1rem;">
-            <input
-              type="radio"
-              name="mode-select"
-              value="freePlay"
-              .checked=${this.currentSettings.mode === "freePlay"}
-              @change=${(): void => {
-                this.currentSettings.mode = "freePlay";
-              }}
-            />
-            Free Play
+            <div class="mode-option">
+              <input
+                type="radio"
+                name="mode-select"
+                value="freePlay"
+                .checked=${this.currentSettings.mode === "freePlay"}
+                @change=${(): void => {
+                  this.currentSettings.mode = "freePlay";
+                }}
+              />
+              Free Play
+              <span class="help-icon">
+                i
+                <div class="finessimo-tooltip">
+                  Play a standard game using your favorite settings
+                </div>
+              </span>
+            </div>
           </label>
           <label>
-            <input
-              type="radio"
-              name="mode-select"
-              value="guided"
-              .checked=${this.currentSettings.mode === "guided"}
-              @change=${(): void => {
-                this.currentSettings.mode = "guided";
-              }}
-            />
-            Guided (SRS)
+            <div class="mode-option">
+              <input
+                type="radio"
+                name="mode-select"
+                value="guided"
+                .checked=${this.currentSettings.mode === "guided"}
+                @change=${(): void => {
+                  this.currentSettings.mode = "guided";
+                }}
+              />
+              Guided (SRS)
+              <span class="help-icon">
+                i
+                <div class="finessimo-tooltip">
+                  Used a spaced repetitions system to learn<br />
+                  the optimal moves to reach your target.
+                </div>
+              </span>
+            </div>
           </label>
         </div>
       </div>
@@ -1022,7 +1065,7 @@ export class SettingsModal extends LitElement {
       gravityMs: 750,
       lineClearDelayMs: 125,
       lockDelayMs: 500,
-      mode: "freePlay",
+      mode: "guided",
       nextPieceCount: 5,
       retryOnFinesseError: false,
       softDrop: 20,
