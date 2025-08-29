@@ -22,7 +22,10 @@ const mockGameState: GameState = {
   canHold: true,
   currentMode: "freePlay",
   finesseFeedback: null,
-  gameplay: { finesseCancelMs: createDurationMs(50) },
+  gameplay: {
+    finesseCancelMs: createDurationMs(50),
+    holdEnabled: true,
+  },
   hold: undefined,
   modePrompt: null,
   nextQueue: [],

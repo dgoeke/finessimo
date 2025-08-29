@@ -37,7 +37,10 @@ describe("FinesseService", () => {
     ];
     state = {
       ...state,
-      gameplay: { finesseCancelMs: createDurationMs(50) },
+      gameplay: {
+        finesseCancelMs: createDurationMs(50),
+        holdEnabled: true,
+      },
       processedInputLog: processedActions,
     };
 
@@ -68,7 +71,10 @@ describe("FinesseService", () => {
     ];
     state = {
       ...state,
-      gameplay: { finesseCancelMs: createDurationMs(50) },
+      gameplay: {
+        finesseCancelMs: createDurationMs(50),
+        holdEnabled: true,
+      },
       processedInputLog: processedActions,
     };
 

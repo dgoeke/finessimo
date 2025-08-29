@@ -7,7 +7,10 @@ import { createDurationMs, createGridCoord } from "../../src/types/brands";
 
 import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
 
-const cfg: GameplayConfig = { finesseCancelMs: createDurationMs(50) };
+const cfg: GameplayConfig = {
+  finesseCancelMs: createDurationMs(50),
+  holdEnabled: true,
+};
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   const topLeft = PIECES[id].spawnTopLeft;

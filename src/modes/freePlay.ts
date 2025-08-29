@@ -19,6 +19,15 @@ import {
 export class FreePlayMode implements GameMode {
   readonly name = "freePlay";
 
+  // Enable hold functionality in free play mode
+  initialConfig(): { gameplay: { holdEnabled: boolean } } {
+    return {
+      gameplay: {
+        holdEnabled: true,
+      },
+    };
+  }
+
   onBeforeSpawn(_state: GameState): { piece?: PieceId } | null {
     void _state;
     return null; // no override

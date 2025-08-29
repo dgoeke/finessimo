@@ -26,7 +26,10 @@ import {
 import { createTimestamp } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
-const cfg: GameplayConfig = { finesseCancelMs: createDurationMs(50) };
+const cfg: GameplayConfig = {
+  finesseCancelMs: createDurationMs(50),
+  holdEnabled: true,
+};
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   const topLeft = PIECES[id].spawnTopLeft;
@@ -103,7 +106,10 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       canHold: true,
       currentMode: "freePlay",
       finesseFeedback: null,
-      gameplay: { finesseCancelMs: createDurationMs(50) },
+      gameplay: {
+        finesseCancelMs: createDurationMs(50),
+        holdEnabled: true,
+      },
       hold: undefined,
       modeData: null,
       modePrompt: null,

@@ -365,32 +365,6 @@ game-board canvas {
   }
 }
 
-.mode-prompt {
-  background: var(--bg-elev-2);
-  border: 2px solid var(--accent);
-  color: var(--text);
-  padding: 12px;
-  margin: 12px 0;
-  border-radius: var(--radius);
-  text-align: center;
-  max-width: 280px;
-  word-wrap: break-word;
-}
-
-.mode-prompt h3 {
-  margin: 0 0 8px 0;
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.mode-prompt .prompt-text {
-  font-size: 14px;
-  line-height: 1.4;
-}
-
 .finesse-feedback-overlay {
   position: fixed;
   top: 0;

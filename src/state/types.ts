@@ -66,6 +66,7 @@ export type GameplayConfig = {
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
   nextPieceCount?: number; // default 5 (preview count)
+  holdEnabled: boolean; // required - whether hold piece functionality is available
   // Finesse toggles
   finesseFeedbackEnabled?: boolean; // default true
   finesseBoopEnabled?: boolean; // default false

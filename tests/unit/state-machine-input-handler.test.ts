@@ -62,6 +62,7 @@ describe("StateMachineInputHandler", () => {
     const gameplay: GameplayConfig = {
       finesseCancelMs: createDurationMs(50),
       ghostPieceEnabled: true,
+      holdEnabled: true,
       nextPieceCount: 5,
     };
 

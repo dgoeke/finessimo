@@ -34,6 +34,15 @@ type GuidedSrsData = Readonly<{
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
+  // Disable hold functionality in guided mode for focused training
+  initialConfig(): { gameplay: { holdEnabled: boolean } } {
+    return {
+      gameplay: {
+        holdEnabled: false,
+      },
+    };
+  }
+
   initModeData(): GuidedSrsData {
     return { deck: makeDefaultDeck(createTimestamp(1)) };
   }

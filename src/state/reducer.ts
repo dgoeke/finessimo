@@ -67,6 +67,7 @@ const defaultGameplayConfig: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
   finesseFeedbackEnabled: true,
   ghostPieceEnabled: true,
+  holdEnabled: true,
   nextPieceCount: 5,
   retryOnFinesseError: false,
 };
@@ -216,14 +217,16 @@ function createInitialState(
   // Recalculate derived metrics to ensure they're correct
   const initialStats = applyStatsBaseUpdate(baseStats, {});
 
+  const finalGameplay = { ...defaultGameplayConfig, ...gameplay };
+
   return {
     active: undefined,
     board: createEmptyBoard(),
     boardDecorations: null,
-    canHold: true,
+    canHold: finalGameplay.holdEnabled,
     currentMode: mode ?? "freePlay",
     finesseFeedback: null,
-    gameplay: { ...defaultGameplayConfig, ...gameplay },
+    gameplay: finalGameplay,
     guidance: null,
     hold: undefined,
     modeData: null,
@@ -455,7 +458,7 @@ const applyPendingLock = (
     ...state,
     active: undefined,
     board: lockedBoard,
-    canHold: true,
+    canHold: state.gameplay.holdEnabled,
     physics: {
       ...state.physics,
       lockDelayStartTime: null,
@@ -822,7 +825,7 @@ const actionHandlers: ActionHandlerMap = {
       // Restore active piece at spawn position
       active: createActivePiece(pieceId),
       // Unlock hold so player can hold again if needed
-      canHold: true,
+      canHold: state.gameplay.holdEnabled,
       // Clear pending lock state
       pendingLock: null,
       // Reset physics state

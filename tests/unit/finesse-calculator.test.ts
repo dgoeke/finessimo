@@ -27,7 +27,10 @@ import {
 } from "../helpers/actions";
 import { assertDefined } from "../test-helpers";
 
-const cfg: GameplayConfig = { finesseCancelMs: createDurationMs(50) };
+const cfg: GameplayConfig = {
+  finesseCancelMs: createDurationMs(50),
+  holdEnabled: true,
+};
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
   const topLeft = PIECES[id].spawnTopLeft;

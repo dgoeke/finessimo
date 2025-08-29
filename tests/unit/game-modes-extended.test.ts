@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "@jest/globals";
+import { describe, test, expect, beforeEach, jest } from "@jest/globals";
 
 import { createSevenBagRng } from "../../src/core/rng";
 import { FreePlayMode } from "../../src/modes/freePlay";
@@ -20,7 +20,10 @@ const mockState = (): GameState => ({
   canHold: true,
   currentMode: "freePlay",
   finesseFeedback: null,
-  gameplay: { finesseCancelMs: createDurationMs(50) },
+  gameplay: {
+    finesseCancelMs: createDurationMs(50),
+    holdEnabled: true,
+  },
   hold: undefined,
   modePrompt: null,
   nextQueue: [],
@@ -128,32 +131,42 @@ describe("GuidedMode - extended (SRS)", () => {
   });
 
   test("wrong piece does not update deck", () => {
-    const guidance = mode.getGuidance(state);
-    expect(guidance?.target).toBeDefined();
-    const wrongPiece: ActivePiece = {
-      id: "J",
-      rot: "spawn",
-      x: createGridCoord(4),
-      y: createGridCoord(0),
-    };
-    if (guidance?.target === undefined) return;
-    const finalPos: ActivePiece = {
-      id: "J",
-      rot: guidance.target.rot,
-      x: guidance.target.x,
-      y: createGridCoord(0),
-    };
-    const result = mode.onPieceLocked(
-      state,
-      {
-        kind: "optimal",
-        optimalSequences: [["HardDrop"]],
-        playerSequence: ["HardDrop"],
-      },
-      wrongPiece,
-      finalPos,
-    );
-    expect(result.modeData).toBeUndefined();
+    // Mock console.error to suppress expected error message during test
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {
+      // Suppress expected console.error during test
+    });
+
+    try {
+      const guidance = mode.getGuidance(state);
+      expect(guidance?.target).toBeDefined();
+      const wrongPiece: ActivePiece = {
+        id: "J",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
+      if (guidance?.target === undefined) return;
+      const finalPos: ActivePiece = {
+        id: "J",
+        rot: guidance.target.rot,
+        x: guidance.target.x,
+        y: createGridCoord(0),
+      };
+      const result = mode.onPieceLocked(
+        state,
+        {
+          kind: "optimal",
+          optimalSequences: [["HardDrop"]],
+          playerSequence: ["HardDrop"],
+        },
+        wrongPiece,
+        finalPos,
+      );
+      expect(result.modeData).toBeUndefined();
+    } finally {
+      // Restore console.error
+      consoleSpy.mockRestore();
+    }
   });
 
   test("wrong target updates deck with 'again' rating", () => {

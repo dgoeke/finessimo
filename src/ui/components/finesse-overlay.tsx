@@ -240,22 +240,6 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     );
   }
 
-  private renderModePrompt(gameState: GameState): unknown {
-    const label = gameState.guidance?.label ?? gameState.modePrompt;
-    const show = Boolean(label);
-
-    if (!show) {
-      return null;
-    }
-
-    return html`
-      <div class="mode-prompt">
-        <h3>Current Challenge</h3>
-        <div class="prompt-text">${label ?? "No active prompt"}</div>
-      </div>
-    `;
-  }
-
   private renderFinesseFeedback(gameState: GameState): unknown {
     // Check if finesse feedback is enabled
     const feedbackEnabled = gameState.gameplay.finesseFeedbackEnabled ?? true;
@@ -291,10 +275,7 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
   protected render(): unknown {
     const gameState = gameStateSignal.get();
 
-    return html`
-      ${this.renderModePrompt(gameState)}
-      ${this.renderFinesseFeedback(gameState)}
-    `;
+    return html` ${this.renderFinesseFeedback(gameState)} `;
   }
 
   disconnectedCallback(): void {

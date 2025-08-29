@@ -16,6 +16,7 @@ export class PieceHold extends SignalWatcher(LitElement) {
   private lastRenderState?: {
     hold: GameState["hold"];
     canHold: GameState["canHold"];
+    holdEnabled: boolean;
   };
 
   // Use light DOM for consistent styling
@@ -48,11 +49,14 @@ export class PieceHold extends SignalWatcher(LitElement) {
 
     // Get current state from the signal (reactive subscription)
     const gameState = gameStateSignal.get();
-    const holdState = stateSelectors.getHoldState(gameState);
+    const holdState = {
+      ...stateSelectors.getHoldState(gameState),
+      holdEnabled: gameState.gameplay.holdEnabled,
+    };
 
     // Only re-render if the relevant state has actually changed
     if (this.hasStateChanged(holdState)) {
-      this.renderHold(holdState.hold, holdState.canHold);
+      this.renderHold(holdState.hold, holdState.canHold, holdState.holdEnabled);
       this.lastRenderState = holdState;
     }
   }
@@ -60,6 +64,7 @@ export class PieceHold extends SignalWatcher(LitElement) {
   private hasStateChanged(newState: {
     hold: GameState["hold"];
     canHold: GameState["canHold"];
+    holdEnabled: boolean;
   }): boolean {
     if (!this.lastRenderState) {
       return true;
@@ -72,6 +77,11 @@ export class PieceHold extends SignalWatcher(LitElement) {
 
     // Compare canHold flag
     if (this.lastRenderState.canHold !== newState.canHold) {
+      return true;
+    }
+
+    // Compare holdEnabled flag
+    if (this.lastRenderState.holdEnabled !== newState.holdEnabled) {
       return true;
     }
 
@@ -89,18 +99,28 @@ export class PieceHold extends SignalWatcher(LitElement) {
     `;
   }
 
-  private renderHold(holdPiece: PieceId | undefined, canHold: boolean): void {
+  private renderHold(
+    holdPiece: PieceId | undefined,
+    canHold: boolean,
+    holdEnabled: boolean,
+  ): void {
     if (!this.ctx) return;
 
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // If hold functionality is disabled entirely, show disabled state
+    if (!holdEnabled) {
+      this.drawDisabledSlash();
+      return;
+    }
 
     // Render hold piece if it exists
     if (holdPiece !== undefined) {
       this.renderHoldPiece(holdPiece);
     }
 
-    // Draw disabled slash when hold is not available
+    // Draw disabled slash when hold is temporarily not available (piece already held)
     if (!canHold) {
       this.drawDisabledSlash();
     }
