@@ -88,6 +88,7 @@ export type TimingConfig = {
   // Soft drop: multiplier of gravity (number) or 'infinite' for instant drop without lock
   softDrop: SoftDropSpeed;
   lockDelayMs: DurationMs;
+  lockDelayMaxResets: number; // Maximum number of lock delay resets before forced lock (default: 15)
   lineClearDelayMs: DurationMs;
   gravityEnabled: boolean;
   gravityMs: DurationMs; // Milliseconds between gravity drops
@@ -174,6 +175,7 @@ export type UiEffect = FloatingTextEffect;
 export type PhysicsState = {
   lastGravityTime: Timestamp;
   lockDelayStartTime: Timestamp | null;
+  lockDelayResetCount: number; // Track number of lock delay resets for current piece (0-15)
   isSoftDropping: boolean;
   lineClearStartTime: Timestamp | null;
   lineClearLines: ReadonlyArray<number>;
@@ -296,6 +298,58 @@ export function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${String(x)}`);
 }
 
+// Type-level validation helpers for edge cases
+export type ValidLockDelayState = {
+  /** Lock delay can only be active when piece is grounded */
+  readonly lockDelayStartTime: Timestamp | null;
+  /** Reset count must be valid when lock delay is active */
+  readonly lockDelayResetCount: number; // TODO: Use LockDelayResetCount when fully implemented
+};
+
+// Type guard to ensure lock delay state is valid
+export function isValidLockDelayState(physics: PhysicsState): boolean {
+  // Reset count must always be within valid range for the piece's lifetime
+  if (physics.lockDelayResetCount < 0 || physics.lockDelayResetCount > 15) {
+    return false;
+  }
+  // Allow nonzero reset count even when lock delay is temporarily inactive (airborne phase)
+  // This preserves the reset cap across off-ground transitions.
+  return true;
+}
+
+// Assertion function for lock delay state validation
+export function assertValidLockDelayState(
+  physics: PhysicsState,
+  context?: string,
+): asserts physics is PhysicsState & ValidLockDelayState {
+  if (!isValidLockDelayState(physics)) {
+    throw new Error(
+      `Invalid lock delay state${context !== undefined ? ` in ${context}` : ""}: ` +
+        `lockDelayStartTime=${physics.lockDelayStartTime?.toString() ?? "null"}, ` +
+        `lockDelayResetCount=${physics.lockDelayResetCount.toString()}`,
+    );
+  }
+}
+
+// Type predicate to ensure active piece exists when required
+export function hasActivePiece(
+  state: GameState,
+): state is GameState & { active: ActivePiece } {
+  return state.active !== undefined;
+}
+
+// Assertion for active piece requirement
+export function assertHasActivePiece(
+  state: GameState,
+  context?: string,
+): asserts state is GameState & { active: ActivePiece } {
+  if (!hasActivePiece(state)) {
+    throw new Error(
+      `Active piece required${context !== undefined ? ` for ${context}` : ""}`,
+    );
+  }
+}
+
 // ProcessedAction - normalized actions from input handler for finesse analysis
 export type ProcessedAction =
   | { kind: "TapMove"; dir: -1 | 1; t: Timestamp }
@@ -323,13 +377,13 @@ export type Action =
       type: "TapMove";
       dir: -1 | 1;
       optimistic: boolean;
-      timestampMs?: Timestamp;
+      timestampMs: Timestamp;
     }
-  | { type: "HoldMove"; dir: -1 | 1; timestampMs?: Timestamp }
-  | { type: "RepeatMove"; dir: -1 | 1; timestampMs?: Timestamp }
-  | { type: "HoldStart"; dir: -1 | 1; timestampMs?: Timestamp }
-  | { type: "SoftDrop"; on: boolean }
-  | { type: "Rotate"; dir: "CW" | "CCW" }
+  | { type: "HoldMove"; dir: -1 | 1; timestampMs: Timestamp }
+  | { type: "RepeatMove"; dir: -1 | 1; timestampMs: Timestamp }
+  | { type: "HoldStart"; dir: -1 | 1; timestampMs: Timestamp }
+  | { type: "SoftDrop"; on: boolean; timestampMs: Timestamp }
+  | { type: "Rotate"; dir: "CW" | "CCW"; timestampMs: Timestamp }
   | { type: "HardDrop"; timestampMs: Timestamp }
   | { type: "Hold" }
   | { type: "Lock"; timestampMs: Timestamp }

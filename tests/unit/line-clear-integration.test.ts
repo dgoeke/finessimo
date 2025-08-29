@@ -6,7 +6,10 @@ import { shouldCompleteLineClear } from "../../src/app";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { createTestSpawnAction } from "../test-helpers";
+import {
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 
 describe("Line Clear Integration", () => {
   it("should complete line clearing through the app update loop", () => {
@@ -25,9 +28,9 @@ describe("Line Clear Integration", () => {
 
     // Spawn I piece and position it
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
 
     // Hard drop to trigger line clear
     const startTime = 1000;
@@ -87,9 +90,9 @@ describe("Line Clear Integration", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(2000),
       type: "HardDrop",
@@ -118,9 +121,9 @@ describe("Line Clear Integration", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(3000),
       type: "HardDrop",

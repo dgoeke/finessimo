@@ -7,7 +7,11 @@ import {
   createDurationMs,
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
-import { createTestSpawnAction, createTestRetryAction } from "../test-helpers";
+import {
+  createTestRetryAction,
+  createTestSoftDropAction,
+  createTestSpawnAction,
+} from "../test-helpers";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, Action } from "../../src/state/types";
@@ -185,7 +189,7 @@ describe("Retry on finesse error", () => {
 
       // Move piece down to a lockable position
       for (let i = 0; i < 22; i++) {
-        const moved = reducer(state, { on: true, type: "SoftDrop" });
+        const moved = reducer(state, createTestSoftDropAction(true));
         if (moved.active) {
           state = moved;
         } else {
@@ -194,7 +198,7 @@ describe("Retry on finesse error", () => {
       }
 
       // Turn off soft drop
-      state = reducer(state, { on: false, type: "SoftDrop" });
+      state = reducer(state, createTestSoftDropAction(false));
 
       // Create a gravity lock (not hard drop)
       const lockState = reducer(state, {

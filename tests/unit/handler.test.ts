@@ -7,6 +7,10 @@ import {
 import { defaultKeyBindings, type KeyBindings } from "../../src/input/keyboard";
 import { createFrame } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
+import {
+  createTestRotateAction,
+  createTestSoftDropAction,
+} from "../test-helpers";
 
 import type { Action, GameState, InputEvent } from "../../src/state/types";
 
@@ -224,8 +228,8 @@ describe("handler.ts", () => {
 
         const actions: Array<Action> = [
           { type: "Hold" },
-          { dir: "CW", type: "Rotate" },
-          { on: true, type: "SoftDrop" },
+          createTestRotateAction("CW"),
+          createTestSoftDropAction(true),
           { timestampMs: createTimestamp(1000), type: "HardDrop" },
           {
             dir: -1,
@@ -441,33 +445,42 @@ describe("handler.ts", () => {
           isSoftDropDown: true,
           softDropLastTime: 1000,
         });
-        mockHandler.simulateAction({ on: true, type: "SoftDrop" });
+        mockHandler.simulateAction(createTestSoftDropAction(true));
 
         // Soft drop pulses
         mockHandler.setState({
           softDropLastTime: 1050,
         });
-        mockHandler.simulateAction({ on: true, type: "SoftDrop" });
+        mockHandler.simulateAction(createTestSoftDropAction(true));
 
         // Stop soft drop
         mockHandler.setState({
           isSoftDropDown: false,
         });
-        mockHandler.simulateAction({ on: false, type: "SoftDrop" });
+        mockHandler.simulateAction(createTestSoftDropAction(false));
 
         expect(dispatchMock).toHaveBeenCalledTimes(3);
-        expect(dispatchMock).toHaveBeenNthCalledWith(1, {
-          on: true,
-          type: "SoftDrop",
-        });
-        expect(dispatchMock).toHaveBeenNthCalledWith(2, {
-          on: true,
-          type: "SoftDrop",
-        });
-        expect(dispatchMock).toHaveBeenNthCalledWith(3, {
-          on: false,
-          type: "SoftDrop",
-        });
+        expect(dispatchMock).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({
+            on: true,
+            type: "SoftDrop",
+          }),
+        );
+        expect(dispatchMock).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({
+            on: true,
+            type: "SoftDrop",
+          }),
+        );
+        expect(dispatchMock).toHaveBeenNthCalledWith(
+          3,
+          expect.objectContaining({
+            on: false,
+            type: "SoftDrop",
+          }),
+        );
       });
     });
 

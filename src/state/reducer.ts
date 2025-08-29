@@ -5,6 +5,7 @@ import {
   lockPiece,
   getCompletedLines,
   clearLines,
+  isAtBottom,
 } from "../core/board";
 import { PIECES } from "../core/pieces";
 import { createSevenBagRng } from "../core/rng";
@@ -22,6 +23,7 @@ import { createTimestamp } from "../types/timestamp";
 
 import {
   type GameState,
+  assertValidLockDelayState,
   type PlayingState,
   type LineClearState,
   type TopOutState,
@@ -45,7 +47,7 @@ import type { Timestamp } from "../types/timestamp";
 type ActionHandlerMap = {
   [K in Action["type"]]: (
     state: GameState,
-    action: Extract<Action, { type: K }>,
+    action: Extract<Action, { type: K }>
   ) => GameState;
 };
 
@@ -56,6 +58,7 @@ const defaultTimingConfig: TimingConfig = {
   gravityEnabled: false, // Gravity OFF by default per DESIGN.md
   gravityMs: createDurationMs(500), // 500ms gravity for visibility
   lineClearDelayMs: createDurationMs(0),
+  lockDelayMaxResets: 15, // Standard Tetris Guideline limit
   lockDelayMs: createDurationMs(500),
   // Default soft drop multiplier relative to gravity
   softDrop: 10,
@@ -81,13 +84,14 @@ function createInitialPhysics(timestampMs: Timestamp): PhysicsState {
     lastGravityTime: timestampMs,
     lineClearLines: [],
     lineClearStartTime: null,
+    lockDelayResetCount: 0,
     lockDelayStartTime: null,
   };
 }
 
 // Helper to calculate derived stats
 function calculateDerivedStats(
-  stats: GameState["stats"],
+  stats: GameState["stats"]
 ): Partial<GameState["stats"]> {
   const {
     attempts,
@@ -128,7 +132,7 @@ function calculateDerivedStats(
 // Helper to apply stats base updates and recalculate derived stats
 function applyStatsBaseUpdate(
   prevStats: GameState["stats"],
-  delta: Partial<GameState["stats"]>,
+  delta: Partial<GameState["stats"]>
 ): GameState["stats"] {
   const mergedStats = {
     ...prevStats,
@@ -151,7 +155,7 @@ function createInitialState(
     mode?: string | undefined;
     previousStats?: Stats | undefined;
     customRng?: PieceRandomGenerator | undefined;
-  } = {},
+  } = {}
 ): PlayingState {
   const { customRng, gameplay, mode, previousStats, timing } = config;
   const rng = customRng ?? createSevenBagRng(seed);
@@ -212,7 +216,7 @@ function createInitialState(
           timePlayedMs: createDurationMs(0),
           totalSessions: previousStats.totalSessions + 1,
         },
-        {},
+        {}
       )
     : applyStatsBaseUpdate(defaults, {});
 
@@ -261,7 +265,7 @@ const wouldTopOut = (piece: ActivePiece): boolean => {
 };
 
 const getNextPieceFromQueue = (
-  holdQueue: Array<PieceId>,
+  holdQueue: Array<PieceId>
 ): {
   newActive: ActivePiece;
 } | null => {
@@ -278,7 +282,7 @@ const createPendingLock = (
   board: GameState["board"],
   piece: ActivePiece,
   source: LockSource,
-  timestampMs: Timestamp,
+  timestampMs: Timestamp
 ): PendingLock => {
   const finalPos = source === "hardDrop" ? dropToBottom(board, piece) : piece;
   const simulatedBoard = lockPiece(board, finalPos);
@@ -301,7 +305,7 @@ const updateSessionStats = (stats: Stats, timestampMs: Timestamp): Stats => {
 
   return applyStatsBaseUpdate(stats, {
     longestSessionMs: createDurationMs(
-      Math.max(stats.longestSessionMs as number, updatedTimeMs),
+      Math.max(stats.longestSessionMs as number, updatedTimeMs)
     ),
     timePlayedMs: createDurationMs(updatedTimeMs),
   });
@@ -325,7 +329,7 @@ const calculateGravityInterval = (currentState: GameState): number => {
       const m = Math.max(1, currentState.timing.softDrop);
       gravityInterval = Math.max(
         1,
-        Math.floor(durationMsAsNumber(currentState.timing.gravityMs) / m),
+        Math.floor(durationMsAsNumber(currentState.timing.gravityMs) / m)
       );
     }
   }
@@ -335,13 +339,14 @@ const calculateGravityInterval = (currentState: GameState): number => {
 
 const processGravityDrop = (
   currentState: GameState,
-  timestampMs: Timestamp,
+  timestampMs: Timestamp
 ): GameState => {
   if (!currentState.active) return currentState;
 
   const movedPiece = tryMove(currentState.board, currentState.active, 0, 1);
 
   if (movedPiece) {
+    // Piece moved down due to gravity
     return {
       ...currentState,
       active: movedPiece,
@@ -350,29 +355,56 @@ const processGravityDrop = (
         lastGravityTime: timestampMs,
       },
     };
-  } else if (currentState.physics.lockDelayStartTime === null) {
-    return {
+  }
+
+  // Piece can't move down due to gravity - this means it just became grounded
+  // Start lock delay if not already started
+  let newState = currentState;
+  if (currentState.physics.lockDelayStartTime === null) {
+    // First time grounded - start lock delay
+    newState = {
       ...currentState,
       physics: {
         ...currentState.physics,
+        lockDelayResetCount: 0,
         lockDelayStartTime: timestampMs,
       },
     };
   }
 
-  return checkLockDelayTimeout(currentState, timestampMs);
+  // Check for lock delay timeout
+  return checkLockDelayTimeout(newState, timestampMs);
 };
 
 const checkLockDelayTimeout = (
   currentState: GameState,
-  timestampMs: Timestamp,
+  timestampMs: Timestamp
 ): GameState => {
-  if (
-    currentState.physics.lockDelayStartTime !== null &&
+  if (currentState.physics.lockDelayStartTime === null) {
+    return currentState;
+  }
+
+  const elapsed =
     (timestampMs as number) -
-      (currentState.physics.lockDelayStartTime as number) >=
-      durationMsAsNumber(currentState.timing.lockDelayMs)
-  ) {
+    (currentState.physics.lockDelayStartTime as number);
+  const lockDelayDuration = durationMsAsNumber(currentState.timing.lockDelayMs);
+  const atResetLimit =
+    currentState.physics.lockDelayResetCount >=
+    currentState.timing.lockDelayMaxResets;
+
+  // Lock immediately if at reset limit, or after full delay duration
+  const shouldLock = atResetLimit || elapsed >= lockDelayDuration;
+
+  // console.log(
+  //   "elapsed:",
+  //   elapsed,
+  //   "resetCount:",
+  //   currentState.physics.lockDelayResetCount,
+  //   "maxResets:",
+  //   currentState.timing.lockDelayMaxResets
+  // );
+
+  if (shouldLock) {
     if (currentState.active) {
       // Use pending lock seam for consistent lock flow
       const lockSource: LockSource = currentState.physics.isSoftDropping
@@ -382,7 +414,7 @@ const checkLockDelayTimeout = (
         currentState.board,
         currentState.active,
         lockSource,
-        createTimestamp(timestampMs as number),
+        createTimestamp(timestampMs as number)
       );
 
       return {
@@ -403,7 +435,7 @@ const checkLockDelayTimeout = (
 
 const applyGravityLogic = (
   currentState: GameState,
-  timestampMs: Timestamp,
+  timestampMs: Timestamp
 ): GameState => {
   if (!currentState.active) return currentState;
 
@@ -426,7 +458,7 @@ const applyGravityLogic = (
  */
 const applyPendingLock = (
   state: GameState,
-  pendingLock: PendingLock,
+  pendingLock: PendingLock
 ): GameState => {
   const { finalPos, timestampMs } = pendingLock;
   const lockedBoard = lockPiece(state.board, finalPos);
@@ -532,6 +564,7 @@ const actionHandlers: ActionHandlerMap = {
     ...state,
     physics: {
       ...state.physics,
+      lockDelayResetCount: 0,
       lockDelayStartTime: null,
     },
   }),
@@ -615,7 +648,7 @@ const actionHandlers: ActionHandlerMap = {
       state.board,
       state.active,
       "hardDrop",
-      action.timestampMs,
+      action.timestampMs
     );
 
     return {
@@ -668,6 +701,7 @@ const actionHandlers: ActionHandlerMap = {
       nextQueue: holdQueue,
       physics: {
         ...state.physics,
+        lockDelayResetCount: 0,
         lockDelayStartTime: null,
       },
     };
@@ -684,18 +718,10 @@ const actionHandlers: ActionHandlerMap = {
       return state;
     }
 
-    const newPhysics =
-      state.physics.lockDelayStartTime !== null
-        ? {
-            ...state.physics,
-            lockDelayStartTime: null,
-          }
-        : state.physics;
-
+    // Update state with new piece position
     return {
       ...state,
       active: stepped,
-      physics: newPhysics,
     };
   },
 
@@ -725,7 +751,7 @@ const actionHandlers: ActionHandlerMap = {
       state.board,
       state.active,
       lockSource,
-      action.timestampMs,
+      action.timestampMs
     );
 
     return {
@@ -793,18 +819,10 @@ const actionHandlers: ActionHandlerMap = {
       return state;
     }
 
-    const newPhysics =
-      state.physics.lockDelayStartTime !== null
-        ? {
-            ...state.physics,
-            lockDelayStartTime: null,
-          }
-        : state.physics;
-
+    // Update state with new piece position
     return {
       ...state,
       active: stepped,
-      physics: newPhysics,
     };
   },
 
@@ -847,6 +865,7 @@ const actionHandlers: ActionHandlerMap = {
         activePieceSpawnedAt: action.timestampMs,
         lineClearLines: [],
         lineClearStartTime: null,
+        lockDelayResetCount: 0,
         lockDelayStartTime: null,
       },
       // Return to playing status
@@ -864,15 +883,10 @@ const actionHandlers: ActionHandlerMap = {
 
     if (!rotatedPiece) return state;
 
-    const newPhysicsRotate =
-      state.physics.lockDelayStartTime !== null
-        ? { ...state.physics, lockDelayStartTime: null }
-        : state.physics;
-
+    // Just update the piece position - lock delay reset will be handled by post-processing
     return {
       ...state,
       active: rotatedPiece,
-      physics: newPhysicsRotate,
     };
   },
 
@@ -901,13 +915,7 @@ const actionHandlers: ActionHandlerMap = {
       return {
         ...state,
         active: softDroppedPiece ?? state.active,
-        physics: {
-          ...state.physics,
-          isSoftDropping: true,
-          lockDelayStartTime: softDroppedPiece
-            ? null
-            : state.physics.lockDelayStartTime,
-        },
+        physics: { ...state.physics, isSoftDropping: true },
       };
     }
 
@@ -952,6 +960,7 @@ const actionHandlers: ActionHandlerMap = {
         ...state.physics,
         activePieceSpawnedAt: action.timestampMs,
         lastGravityTime: state.physics.lastGravityTime,
+        lockDelayResetCount: 0,
         lockDelayStartTime: null,
       },
     };
@@ -994,19 +1003,10 @@ const actionHandlers: ActionHandlerMap = {
       return state; // Can't move
     }
 
-    // Cancel lock delay if piece moves
-    const newPhysics =
-      state.physics.lockDelayStartTime !== null
-        ? {
-            ...state.physics,
-            lockDelayStartTime: null,
-          }
-        : state.physics;
-
+    // Update state with new piece position
     return {
       ...state,
       active: stepped,
-      physics: newPhysics,
     };
   },
 
@@ -1037,6 +1037,9 @@ const actionHandlers: ActionHandlerMap = {
 
     if (shouldApplyGravity(state)) {
       newState = applyGravityLogic(newState, timestampMs);
+    } else {
+      // Even without gravity, we need to check lock delay timeout
+      newState = checkLockDelayTimeout(newState, timestampMs);
     }
 
     return newState;
@@ -1073,12 +1076,253 @@ const actionHandlers: ActionHandlerMap = {
   }),
 };
 
+// Helper function to check if piece actually changed position or rotation
+function pieceChanged(
+  prev: ActivePiece | undefined,
+  next: ActivePiece | undefined
+): boolean {
+  if (!prev || !next) return prev !== next;
+  return prev.x !== next.x || prev.y !== next.y || prev.rot !== next.rot;
+}
+
+// Helper function to determine if action can start lock delay
+function canActionStartLockDelay(actionType: Action["type"]): boolean {
+  return [
+    "TapMove",
+    "HoldMove",
+    "RepeatMove",
+    "Rotate",
+    "SoftDrop",
+    "Spawn",
+    "Hold",
+    "RetryPendingLock",
+    "Tick", // Tick can start lock delay via gravity landing
+  ].includes(actionType);
+}
+
+// Helper function to determine if action can reset lock delay
+function canActionResetLockDelay(actionType: Action["type"]): boolean {
+  return ["TapMove", "HoldMove", "RepeatMove", "Rotate", "SoftDrop"].includes(
+    actionType
+  );
+}
+
+// Helper function to start lock delay for newly grounded piece
+function startLockDelay(state: GameState, timestamp: Timestamp): GameState {
+  return {
+    ...state,
+    physics: {
+      ...state.physics,
+      // Preserve existing reset count across airborne → grounded transitions
+      lockDelayResetCount: state.physics.lockDelayResetCount,
+      lockDelayStartTime: timestamp,
+    },
+  };
+}
+
+// Helper function to reset lock delay for grounded piece
+function resetLockDelay(
+  state: GameState,
+  timestamp: Timestamp,
+  previousResetCount: number
+): GameState {
+  return {
+    ...state,
+    physics: {
+      ...state.physics,
+      lockDelayResetCount: previousResetCount + 1,
+      lockDelayStartTime: timestamp,
+    },
+  };
+}
+
+// Helper function to cancel lock delay when piece moves off ground
+function cancelLockDelay(state: GameState): GameState {
+  return {
+    ...state,
+    physics: {
+      ...state.physics,
+      // Keep reset count so reset cap persists across airborne phases
+      lockDelayResetCount: state.physics.lockDelayResetCount,
+      lockDelayStartTime: null,
+    },
+  };
+}
+
+// Check if soft drop should reset lock delay (only if piece moved down)
+function isSoftDropResetValid(
+  action: Action,
+  previousState: GameState,
+  newState: GameState
+): boolean {
+  if (action.type !== "SoftDrop" || !action.on || !newState.active) return true;
+  return newState.active.y > (previousState.active?.y ?? 0);
+}
+
+// Calculate ground contact state for lock delay processing
+function calculateGroundState(
+  previousState: GameState,
+  newState: GameState
+): {
+  wasGrounded: boolean;
+  isNowGrounded: boolean;
+  hadLockDelay: boolean;
+  actuallyMoved: boolean;
+} {
+  const wasGrounded = previousState.active
+    ? isAtBottom(previousState.board, previousState.active)
+    : false;
+  const isNowGrounded = newState.active
+    ? isAtBottom(newState.board, newState.active)
+    : false;
+  const hadLockDelay = previousState.physics.lockDelayStartTime !== null;
+  const actuallyMoved = pieceChanged(previousState.active, newState.active);
+
+  return { actuallyMoved, hadLockDelay, isNowGrounded, wasGrounded };
+}
+
+// Handle lock delay reset conditions and validation
+function handleLockDelayReset(
+  previousState: GameState,
+  newState: GameState,
+  action: Action,
+  timestamp: Timestamp
+): GameState {
+  // Check soft drop movement validity
+  if (!isSoftDropResetValid(action, previousState, newState)) {
+    return newState;
+  }
+
+  // Check reset limit
+  if (
+    previousState.physics.lockDelayResetCount >=
+    previousState.timing.lockDelayMaxResets
+  ) {
+    return newState;
+  }
+
+  // All conditions met - reset the lock delay
+  return resetLockDelay(
+    newState,
+    timestamp,
+    previousState.physics.lockDelayResetCount
+  );
+}
+
+// Check if action should be processed for lock delay
+function shouldProcessLockDelay(
+  action: Action,
+  newState: GameState
+): { shouldProcess: boolean; timestamp: Timestamp | null } {
+  if (!canActionStartLockDelay(action.type) || !newState.active) {
+    return { shouldProcess: false, timestamp: null };
+  }
+
+  const timestamp = "timestampMs" in action ? action.timestampMs : null;
+  if (!timestamp && action.type !== "Hold" && action.type !== "Spawn") {
+    return { shouldProcess: false, timestamp: null };
+  }
+  if (!timestamp) {
+    return { shouldProcess: false, timestamp: null };
+  }
+
+  return { shouldProcess: true, timestamp };
+}
+
+// Handle lock delay state transitions based on ground contact
+function processLockDelayTransition(
+  previousState: GameState,
+  newState: GameState,
+  action: Action,
+  timestamp: Timestamp
+): GameState {
+  const { actuallyMoved, hadLockDelay, isNowGrounded, wasGrounded } =
+    calculateGroundState(previousState, newState);
+
+  // First ground contact - start lock delay
+  if (isNowGrounded && !wasGrounded) {
+    return startLockDelay(newState, timestamp);
+  }
+
+  // Piece moved off ground — treat as a reset if the action qualifies,
+  // then cancel lock delay since we are no longer grounded. This ensures
+  // kicks that lift the piece off the ground advance the reset count.
+  if (!isNowGrounded && hadLockDelay) {
+    if (canActionResetLockDelay(action.type) && actuallyMoved) {
+      const afterReset = resetLockDelay(
+        newState,
+        timestamp,
+        previousState.physics.lockDelayResetCount
+      );
+      return cancelLockDelay(afterReset);
+    }
+    if (action.type === "Tick" || actuallyMoved) {
+      return cancelLockDelay(newState);
+    }
+  }
+
+  // Reset lock delay for valid grounded movement
+  if (
+    isNowGrounded &&
+    wasGrounded &&
+    hadLockDelay &&
+    canActionResetLockDelay(action.type) &&
+    actuallyMoved
+  ) {
+    return handleLockDelayReset(previousState, newState, action, timestamp);
+  }
+
+  return newState;
+}
+
+// Post-process actions that could affect piece position to manage lock delay
+function postProcessLockDelay(
+  previousState: GameState,
+  newState: GameState,
+  action: Action
+): GameState {
+  const { shouldProcess, timestamp } = shouldProcessLockDelay(action, newState);
+  if (!shouldProcess || !timestamp) {
+    return newState;
+  }
+
+  const result = processLockDelayTransition(
+    previousState,
+    newState,
+    action,
+    timestamp
+  );
+  return validateAndReturn(result, action.type);
+}
+
+// Helper for validation in development
+function validateAndReturn(
+  state: GameState,
+  actionType: Action["type"]
+): GameState {
+  const isDev =
+    typeof process !== "undefined" &&
+    typeof process.env !== "undefined" &&
+    process.env["NODE_ENV"] === "development";
+  if (isDev) {
+    try {
+      assertValidLockDelayState(
+        state.physics,
+        `postProcessLockDelay after ${actionType}`
+      );
+    } catch (error: unknown) {
+      console.warn("Lock delay validation failed:", error);
+    }
+  }
+  return state;
+}
+
 export const reducer: (
   state: Readonly<GameState> | undefined,
-  action: Action,
+  action: Action
 ) => GameState = (
   state: Readonly<GameState> | undefined,
-  action: Action,
+  action: Action
 ): GameState => {
   // Defensive: if action is malformed, throw error
   const isValidAction = typeof action === "object" && "type" in action;
@@ -1105,11 +1349,14 @@ export const reducer: (
   const dispatch = <T extends Action["type"]>(
     actionType: T,
     state: GameState,
-    action: Extract<Action, { type: T }>,
+    action: Extract<Action, { type: T }>
   ): GameState => {
     const handler = actionHandlers[actionType];
     return handler(state, action);
   };
 
-  return dispatch(action.type, state, action);
+  const newState = dispatch(action.type, state, action);
+
+  // Post-process for lock delay management
+  return postProcessLockDelay(state, newState, action);
 };

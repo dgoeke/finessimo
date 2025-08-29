@@ -11,7 +11,7 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece } from "../test-helpers";
+import { assertActivePiece, createTestTapMoveAction } from "../test-helpers";
 
 describe("Reducer", () => {
   let initialState: GameState;
@@ -247,11 +247,7 @@ describe("Reducer", () => {
         timestampMs: createTimestamp(1),
         type: "Tick",
       });
-      reducer(initialState, {
-        dir: 1,
-        optimistic: false,
-        type: "TapMove",
-      });
+      reducer(initialState, createTestTapMoveAction(1, false));
 
       expect(initialState.board.cells).toEqual(originalCells);
     });

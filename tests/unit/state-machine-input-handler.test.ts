@@ -4,7 +4,10 @@ import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandl
 import { createBoardCells } from "../../src/state/types";
 import { createGridCoord, createDurationMs } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
-import { createTestPhysicsState } from "../test-helpers";
+import {
+  createTestPhysicsState,
+  createTestTimingConfig,
+} from "../test-helpers";
 
 import type { PieceRandomGenerator } from "../../src/core/rng-interface";
 import type {
@@ -49,16 +52,11 @@ describe("StateMachineInputHandler", () => {
       y: createGridCoord(0),
     };
 
-    const timing: TimingConfig = {
-      arrMs: createDurationMs(2),
-      dasMs: createDurationMs(133),
+    const timing: TimingConfig = createTestTimingConfig({
       gravityEnabled: true,
       gravityMs: createDurationMs(1000),
       lineClearDelayMs: createDurationMs(400),
-      lockDelayMs: createDurationMs(500),
-      softDrop: 10,
-      tickHz: 60,
-    };
+    });
 
     const gameplay: GameplayConfig = {
       finesseCancelMs: createDurationMs(50),
@@ -253,15 +251,22 @@ describe("StateMachineInputHandler", () => {
       handler.setSoftDrop(true, 1000);
 
       expect(handler.getState().isSoftDropDown).toBe(true);
-      expect(dispatchMock).toHaveBeenCalledWith({ on: true, type: "SoftDrop" });
+      expect(dispatchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          on: true,
+          type: "SoftDrop",
+        }),
+      );
 
       handler.setSoftDrop(false, 1100);
 
       expect(handler.getState().isSoftDropDown).toBe(false);
-      expect(dispatchMock).toHaveBeenCalledWith({
-        on: false,
-        type: "SoftDrop",
-      });
+      expect(dispatchMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          on: false,
+          type: "SoftDrop",
+        }),
+      );
     });
   });
 
@@ -335,7 +340,7 @@ describe("StateMachineInputHandler", () => {
 
     test("update applies timing from game state", () => {
       const stateWithCustomTiming = createGameState({
-        timing: {
+        timing: createTestTimingConfig({
           arrMs: createDurationMs(5),
           dasMs: createDurationMs(200),
           gravityEnabled: true,
@@ -343,8 +348,7 @@ describe("StateMachineInputHandler", () => {
           lineClearDelayMs: createDurationMs(400),
           lockDelayMs: createDurationMs(500),
           softDrop: 10,
-          tickHz: 60,
-        },
+        }),
       });
 
       expect(() => handler.update(stateWithCustomTiming, 1000)).not.toThrow();

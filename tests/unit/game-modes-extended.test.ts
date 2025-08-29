@@ -10,7 +10,10 @@ import {
   createGridCoord,
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
-import { createTestPhysicsState } from "../test-helpers";
+import {
+  createTestPhysicsState,
+  createTestTimingConfig,
+} from "../test-helpers";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, ActivePiece, Rot } from "../../src/state/types";
@@ -67,16 +70,10 @@ const mockState = (): GameState => ({
   },
   status: "playing",
   tick: 0,
-  timing: {
-    arrMs: createDurationMs(2),
-    dasMs: createDurationMs(133),
+  timing: createTestTimingConfig({
     gravityEnabled: false,
     gravityMs: createDurationMs(1000),
-    lineClearDelayMs: createDurationMs(0),
-    lockDelayMs: createDurationMs(500),
-    softDrop: 10,
-    tickHz: 60,
-  },
+  }),
 });
 
 describe("FreePlayMode - extended", () => {

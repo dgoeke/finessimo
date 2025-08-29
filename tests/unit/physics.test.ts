@@ -8,7 +8,13 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece, createTestSpawnAction } from "../test-helpers";
+import {
+  assertActivePiece,
+  createTestRotateAction,
+  createTestSoftDropAction,
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
@@ -148,16 +154,16 @@ describe("physics system", () => {
     it("should enable soft dropping", () => {
       const state = createStateWithPiece();
 
-      const newState = reducer(state, { on: true, type: "SoftDrop" });
+      const newState = reducer(state, createTestSoftDropAction(true));
 
       expect(newState.physics.isSoftDropping).toBe(true);
     });
 
     it("should disable soft dropping", () => {
       let state = createStateWithPiece();
-      state = reducer(state, { on: true, type: "SoftDrop" });
+      state = reducer(state, createTestSoftDropAction(true));
 
-      const newState = reducer(state, { on: false, type: "SoftDrop" });
+      const newState = reducer(state, createTestSoftDropAction(false));
 
       expect(newState.physics.isSoftDropping).toBe(false);
     });
@@ -167,7 +173,7 @@ describe("physics system", () => {
       assertActivePiece(state);
       const originalY = state.active.y;
 
-      const newState = reducer(state, { on: true, type: "SoftDrop" });
+      const newState = reducer(state, createTestSoftDropAction(true));
 
       assertActivePiece(newState);
       expect(newState.active.y).toBe(originalY + 1);
@@ -209,11 +215,7 @@ describe("physics system", () => {
         },
       };
 
-      const newState = reducer(state, {
-        dir: 1,
-        optimistic: false,
-        type: "TapMove",
-      });
+      const newState = reducer(state, createTestTapMoveAction(1, false));
 
       expect(newState.physics.lockDelayStartTime).toBeNull();
     });
@@ -228,7 +230,7 @@ describe("physics system", () => {
         },
       };
 
-      const newState = reducer(state, { dir: "CW", type: "Rotate" });
+      const newState = reducer(state, createTestRotateAction("CW"));
 
       expect(newState.physics.lockDelayStartTime).toBeNull();
     });

@@ -25,7 +25,11 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { createTestPhysicsState } from "../test-helpers";
+import {
+  createTestPhysicsState,
+  createTestRotateAction,
+  createTestSoftDropAction,
+} from "../test-helpers";
 
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
@@ -160,6 +164,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
         gravityEnabled: true,
         gravityMs: createDurationMs(1000),
         lineClearDelayMs: createDurationMs(0),
+        lockDelayMaxResets: 15,
         lockDelayMs: createDurationMs(500),
         softDrop: 20 as const,
         tickHz: 60,
@@ -198,11 +203,11 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     expect(currentState.active?.x).toBe(4);
 
     // Step 2: Rotate CCW (spawn → left)
-    currentState = reducer(currentState, { dir: "CCW", type: "Rotate" });
+    currentState = reducer(currentState, createTestRotateAction("CCW"));
     expect(currentState.active?.rot).toBe("left");
 
     // Step 3: Start soft drop to get piece down to the right level
-    currentState = reducer(currentState, { on: true, type: "SoftDrop" });
+    currentState = reducer(currentState, createTestSoftDropAction(true));
     expect(currentState.physics.isSoftDropping).toBe(true);
 
     // Simulate several ticks to let the piece fall with soft drop
@@ -227,11 +232,11 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     }
 
     // Step 4: Turn off soft drop
-    currentState = reducer(currentState, { on: false, type: "SoftDrop" });
+    currentState = reducer(currentState, createTestSoftDropAction(false));
     expect(currentState.physics.isSoftDropping).toBe(false);
 
     // Step 5: Second CCW rotation for T-spin setup (left → two)
-    currentState = reducer(currentState, { dir: "CCW", type: "Rotate" });
+    currentState = reducer(currentState, createTestRotateAction("CCW"));
     expect(currentState.active?.rot).toBe("two");
 
     // Build expected processedInputLog based on the manual actions performed
@@ -292,9 +297,9 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     // Simulate a soft drop sequence that eventually locks
     const actions: Array<Action> = [
       { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" }, // Move left
-      { on: true, type: "SoftDrop" }, // Start soft drop - should be included
+      createTestSoftDropAction(true), // Start soft drop - should be included
       { timestampMs: timestamp, type: "Tick" }, // Game tick - should be filtered
-      { on: false, type: "SoftDrop" }, // End soft drop - should be filtered
+      createTestSoftDropAction(false), // End soft drop - should be filtered
       { timestampMs: timestamp, type: "Lock" }, // Auto-lock from soft drop - should be filtered
     ];
 

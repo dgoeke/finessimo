@@ -4,6 +4,7 @@
  */
 
 import { FinessimoApp } from "../../src/app";
+import { isAtBottom } from "../../src/core/board";
 import { OnePieceRng } from "../../src/core/other-rngs";
 import { gameStateSignal } from "../../src/state/signals";
 import { type Action, type GameState } from "../../src/state/types";
@@ -350,9 +351,18 @@ describe("FinessimoApp End-to-End Integration", () => {
       currentState = getState(ctx);
       expect(currentState.active?.rot).toBe("left");
 
-      // 3. Hold soft drop to descend into T-spin cavity
+      // 3. Hold soft drop to descend into T-spin cavity (wait until grounded deterministically)
       holdKey("ArrowDown");
-      advanceFrames(ctx, 60); // 60 frames = ~1 second for plenty of pulses
+      {
+        let frames = 0;
+        // Cap frames to avoid infinite loop in case of regression
+        while (frames < 180) {
+          advanceFrame(ctx);
+          frames++;
+          const s = getState(ctx);
+          if (s.active && isAtBottom(s.board, s.active)) break;
+        }
+      }
       releaseKey("ArrowDown");
       advanceFrame(ctx);
 

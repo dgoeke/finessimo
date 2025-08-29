@@ -6,7 +6,10 @@ import { shouldCompleteLineClear } from "../../src/app";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { createTestSpawnAction } from "../test-helpers";
+import {
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 
 describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {
@@ -23,9 +26,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(1000),
       type: "HardDrop",
@@ -76,9 +79,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(2000),
       type: "HardDrop",
@@ -115,9 +118,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(3000),
       type: "HardDrop",
@@ -127,7 +130,7 @@ describe("Line Clear Edge Cases", () => {
     expect(state.active).toBeUndefined();
 
     // Try to move non-existent piece
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
 
     // Should be unchanged
     expect(state.status).toBe("lineClear");
@@ -152,9 +155,9 @@ describe("Line Clear Edge Cases", () => {
     }
 
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
 
     const lockTime = 5000;
     state = reducer(state, {
@@ -193,9 +196,9 @@ describe("Line Clear Edge Cases", () => {
 
     // First line clear
     state = reducer(state, createTestSpawnAction("I"));
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
+    state = reducer(state, createTestTapMoveAction(1, false));
     state = reducer(state, {
       timestampMs: createTimestamp(4000),
       type: "HardDrop",

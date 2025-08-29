@@ -6,7 +6,14 @@ import {
 import { createSeed, createGridCoord } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece, createTestSpawnAction } from "../test-helpers";
+import {
+  assertActivePiece,
+  createTestHoldMoveAction,
+  createTestRotateAction,
+  createTestSoftDropAction,
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
 
 describe("Reducer Edge Cases and Error Conditions", () => {
@@ -34,13 +41,13 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Actions without active piece", () => {
     it("should return unchanged state for Move action without active piece", () => {
-      const action: Action = { dir: -1, optimistic: false, type: "TapMove" };
+      const action: Action = createTestTapMoveAction(-1, false);
       const result = reducer(validState, action);
       expect(result).toBe(validState); // Same reference
     });
 
     it("should return unchanged state for Rotate action without active piece", () => {
-      const action: Action = { dir: "CW", type: "Rotate" };
+      const action: Action = createTestRotateAction("CW");
       const result = reducer(validState, action);
       expect(result).toBe(validState);
     });
@@ -55,8 +62,8 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should return unchanged state for SoftDrop action without active piece", () => {
-      const softDropOnAction: Action = { on: true, type: "SoftDrop" };
-      const softDropOffAction: Action = { on: false, type: "SoftDrop" };
+      const softDropOnAction: Action = createTestSoftDropAction(true);
+      const softDropOffAction: Action = createTestSoftDropAction(false);
 
       expect(reducer(validState, softDropOnAction)).toBe(validState);
       expect(reducer(validState, softDropOffAction)).toBe(validState);
@@ -84,7 +91,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Move action edge cases", () => {
     it("should handle DAS movement source", () => {
-      const action: Action = { dir: -1, type: "HoldMove" };
+      const action: Action = createTestHoldMoveAction(-1);
       const result = reducer(stateWithActivePiece, action);
 
       expect(result).not.toBe(stateWithActivePiece);
@@ -104,7 +111,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { dir: -1, optimistic: false, type: "TapMove" };
+      const action: Action = createTestTapMoveAction(-1, false);
       const result = reducer(edgeState, action);
       expect(result).toBe(edgeState); // No movement possible
     });
@@ -134,7 +141,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         board: blockedBoard,
       };
 
-      const action: Action = { dir: "CW", type: "Rotate" };
+      const action: Action = createTestRotateAction("CW");
       const result = reducer(blockedState, action);
       expect(result).toBe(blockedState); // Rotation blocked
     });
@@ -153,7 +160,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         },
       };
 
-      const action: Action = { on: true, type: "SoftDrop" };
+      const action: Action = createTestSoftDropAction(true);
       const result = reducer(bottomState, action);
 
       // Should return new state even if piece can't move
@@ -161,7 +168,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     it("should handle soft drop off", () => {
-      const action: Action = { on: false, type: "SoftDrop" };
+      const action: Action = createTestSoftDropAction(false);
       const result = reducer(stateWithActivePiece, action);
 
       // New physics system updates soft drop state

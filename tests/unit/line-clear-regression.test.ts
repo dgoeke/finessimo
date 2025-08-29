@@ -10,7 +10,10 @@ import { type GameState } from "../../src/state/types";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { createTestSpawnAction } from "../test-helpers";
+import {
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 
 // Helper function to create a state with a line ready to clear
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
@@ -34,9 +37,9 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
     // I piece spawns at x=3 with cells at [0,1],[1,1],[2,1],[3,1] relative to piece
     // At x=3, this puts cells at board positions x=3,4,5,6
     // We want to fill x=6,7,8,9 to complete the line (since x=0-5 are already filled)
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=4 -> cells at 4,5,6,7
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=5 -> cells at 5,6,7,8
-    state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=6 -> cells at 6,7,8,9
+    state = reducer(state, createTestTapMoveAction(1, false)); // x=4 -> cells at 4,5,6,7
+    state = reducer(state, createTestTapMoveAction(1, false)); // x=5 -> cells at 5,6,7,8
+    state = reducer(state, createTestTapMoveAction(1, false)); // x=6 -> cells at 6,7,8,9
 
     // HardDrop stages a pending lock for pre-commit pipeline decisions
     state = reducer(state, {
@@ -221,9 +224,9 @@ describe("Line Clearing Regression Tests", () => {
       state = reducer(state, createTestSpawnAction("I"));
       if (state.active) {
         // Move I piece to complete both lines (x=6 -> cells at 6,7,8,9)
-        state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=4
-        state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=5
-        state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=6
+        state = reducer(state, createTestTapMoveAction(1, false)); // x=4
+        state = reducer(state, createTestTapMoveAction(1, false)); // x=5
+        state = reducer(state, createTestTapMoveAction(1, false)); // x=6
 
         // HardDrop stages a pending lock for pre-commit pipeline decisions
         state = reducer(state, {

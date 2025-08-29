@@ -308,7 +308,11 @@ export class StateMachineInputHandler implements InputHandler {
       const MAX_PULSES_PER_UPDATE = 200;
 
       while (nextTime <= nowMs && pulses < MAX_PULSES_PER_UPDATE) {
-        this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
+        this.dispatchWithOptionalProcessed({
+          on: true,
+          timestampMs: createTimestamp(nextTime),
+          type: "SoftDrop",
+        });
 
         this.softDropLastTime = nextTime;
         nextTime += interval;
@@ -401,9 +405,17 @@ export class StateMachineInputHandler implements InputHandler {
     this.isSoftDropDown = isDown;
     if (isDown) {
       this.softDropLastTime = tMs;
-      this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({
+        on: true,
+        timestampMs: createTimestamp(tMs),
+        type: "SoftDrop",
+      });
     } else {
-      this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({
+        on: false,
+        timestampMs: createTimestamp(tMs),
+        type: "SoftDrop",
+      });
     }
   }
 
@@ -515,7 +527,7 @@ export class StateMachineInputHandler implements InputHandler {
 
     // Clear soft drop
     if (this.isSoftDropDown) {
-      this.dispatch?.({ on: false, type: "SoftDrop" });
+      this.dispatch?.({ on: false, timestampMs: fromNow(), type: "SoftDrop" });
       this.isSoftDropDown = false;
     }
     this.softDropLastTime = undefined;
@@ -558,7 +570,11 @@ export class StateMachineInputHandler implements InputHandler {
       this.handleMovementUp(binding, timestamp);
     }
     if (binding === "SoftDrop" && this.dispatch) {
-      this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({
+        on: false,
+        timestampMs: createTimestamp(timestamp),
+        type: "SoftDrop",
+      });
       this.isSoftDropDown = false;
     }
   }
@@ -582,10 +598,18 @@ export class StateMachineInputHandler implements InputHandler {
         break;
       }
       case "RotateCW":
-        this.dispatchWithOptionalProcessed({ dir: "CW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({
+          dir: "CW",
+          timestampMs: createTimestamp(timestamp),
+          type: "Rotate",
+        });
         break;
       case "RotateCCW":
-        this.dispatchWithOptionalProcessed({ dir: "CCW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({
+          dir: "CCW",
+          timestampMs: createTimestamp(timestamp),
+          type: "Rotate",
+        });
         break;
       case "HardDrop":
         this.dispatchWithOptionalProcessed(
@@ -600,7 +624,11 @@ export class StateMachineInputHandler implements InputHandler {
         this.dispatch({ type: "Hold" });
         break;
       case "SoftDrop":
-        this.dispatchWithOptionalProcessed({ on: true, type: "SoftDrop" });
+        this.dispatchWithOptionalProcessed({
+          on: true,
+          timestampMs: createTimestamp(timestamp),
+          type: "SoftDrop",
+        });
         this.isSoftDropDown = true;
         this.softDropLastTime = timestamp;
         this.keyStates.set(event.code, true);
@@ -623,7 +651,11 @@ export class StateMachineInputHandler implements InputHandler {
         break;
       case "SoftDrop":
         if (this.dispatch) {
-          this.dispatchWithOptionalProcessed({ on: false, type: "SoftDrop" });
+          this.dispatchWithOptionalProcessed({
+            on: false,
+            timestampMs: createTimestamp(timestamp),
+            type: "SoftDrop",
+          });
           this.isSoftDropDown = false;
         }
         break;
@@ -775,7 +807,7 @@ export class StateMachineInputHandler implements InputHandler {
           // Tentatively track pending tap; finalize on key-up unless hold starts
           this.pendingTap = {
             dir: action.dir,
-            t: action.timestampMs ?? createTimestamp(fromNow() as number),
+            t: action.timestampMs,
           };
           this.dispatch(action);
         } else {
@@ -793,7 +825,7 @@ export class StateMachineInputHandler implements InputHandler {
         this.pendingTap = null;
         const processed = createProcessedHoldMove(
           action.dir,
-          action.timestampMs ?? fromNow(),
+          action.timestampMs,
         );
         this.dispatch({ entry: processed, type: "AppendProcessed" });
       } else {

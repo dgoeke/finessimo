@@ -23,9 +23,10 @@ import {
   HoldStartLeft,
   HoldStartRight,
   RotateCW,
+  RotateCCW,
   HardDrop,
 } from "../helpers/actions";
-import { createTestSpawnAction, assertDefined } from "../test-helpers";
+import { assertDefined, createTestSpawnAction } from "../test-helpers";
 
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
@@ -354,7 +355,7 @@ describe("extractFinesseActions", () => {
   });
 
   test("converts Rotate actions correctly", () => {
-    const actions: Array<Action> = [RotateCW(), { dir: "CCW", type: "Rotate" }];
+    const actions: Array<Action> = [RotateCW(), RotateCCW()];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["RotateCW", "RotateCCW"]);
   });
@@ -396,7 +397,7 @@ describe("extractFinesseActions", () => {
       { dir: -1, timestampMs: timestamp, type: "HoldMove" },
       { dir: -1, timestampMs: timestamp, type: "RepeatMove" },
       // Rotation in between
-      { dir: "CW", type: "Rotate" },
+      RotateCW(),
       // Second hold-run right
       { dir: 1, timestampMs: timestamp, type: "HoldStart" },
       { dir: 1, timestampMs: timestamp, type: "HoldMove" },
@@ -412,7 +413,7 @@ describe("extractFinesseActions", () => {
     const actions: Array<Action> = [
       { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
-      { dir: "CW", type: "Rotate" },
+      RotateCW(),
       { dir: 1, timestampMs: timestamp, type: "HoldStart" },
       { dir: 1, timestampMs: timestamp, type: "HoldMove" },
       { dir: 1, timestampMs: timestamp, type: "RepeatMove" },
@@ -434,7 +435,7 @@ describe("extractFinesseActions", () => {
       { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       { timestampMs: timestamp, type: "Tick" },
       createTestSpawnAction(),
-      { dir: "CW", type: "Rotate" },
+      RotateCW(),
     ];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["MoveLeft", "RotateCW"]);

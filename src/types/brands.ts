@@ -22,6 +22,12 @@ export type Frame = number & { readonly [FrameBrand]: true };
 declare const SeedBrand: unique symbol;
 export type Seed = string & { readonly [SeedBrand]: true };
 
+// Lock delay reset count - constrained to valid range (0-15)
+declare const LockDelayResetCountBrand: unique symbol;
+export type LockDelayResetCount = number & {
+  readonly [LockDelayResetCountBrand]: true;
+};
+
 // DurationMs constructors and guards
 export function createDurationMs(value: number): DurationMs {
   if (value < 0 || !Number.isFinite(value)) {
@@ -100,6 +106,34 @@ export function isSeed(s: unknown): s is Seed {
 
 export function assertSeed(s: unknown): asserts s is Seed {
   if (!isSeed(s)) throw new Error("Not a valid Seed");
+}
+
+// Lock delay reset count constructors and guards
+export function createLockDelayResetCount(value: number): LockDelayResetCount {
+  if (!Number.isInteger(value) || value < 0 || value > 15) {
+    throw new Error(
+      "LockDelayResetCount must be an integer between 0 and 15 inclusive",
+    );
+  }
+  return value as LockDelayResetCount;
+}
+
+export function isLockDelayResetCount(n: unknown): n is LockDelayResetCount {
+  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 15;
+}
+
+export function assertLockDelayResetCount(
+  n: unknown,
+): asserts n is LockDelayResetCount {
+  if (!isLockDelayResetCount(n))
+    throw new Error("Not a valid LockDelayResetCount");
+}
+
+// Helper to convert from number to LockDelayResetCount (for use in reducer)
+export function lockDelayResetCountAsNumber(
+  count: LockDelayResetCount,
+): number {
+  return count as number;
 }
 
 // Conversion helpers for interop at boundaries

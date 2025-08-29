@@ -12,7 +12,14 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { createTestSpawnAction } from "../test-helpers";
+import {
+  createTestHoldMoveAction,
+  createTestRepeatMoveAction,
+  createTestRotateAction,
+  createTestSoftDropAction,
+  createTestSpawnAction,
+  createTestTapMoveAction,
+} from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
 
 describe("Reducer - Extended Coverage", () => {
@@ -31,17 +38,17 @@ describe("Reducer - Extended Coverage", () => {
       const actions: Array<Action> = [
         { timestampMs: createTimestamp(1), type: "Tick" },
         createTestSpawnAction(),
-        { dir: -1, optimistic: false, type: "TapMove" },
-        { dir: 1, type: "HoldMove" },
-        { on: true, type: "SoftDrop" },
-        { on: false, type: "SoftDrop" },
-        { dir: "CW", type: "Rotate" },
-        { dir: "CCW", type: "Rotate" },
+        createTestTapMoveAction(-1, false),
+        createTestHoldMoveAction(1),
+        createTestSoftDropAction(true),
+        createTestSoftDropAction(false),
+        createTestRotateAction("CW"),
+        createTestRotateAction("CCW"),
         { timestampMs: createTimestamp(1000), type: "HardDrop" },
         { type: "Hold" },
         { timestampMs: fromNow(), type: "Lock" },
         { lines: [19], type: "ClearLines" },
-        { dir: 1, optimistic: false, type: "TapMove" },
+        createTestTapMoveAction(1, false),
         {
           gameplay: { finesseBoopEnabled: true, finesseFeedbackEnabled: false },
           type: "UpdateGameplay",
@@ -305,7 +312,7 @@ describe("Reducer - Extended Coverage", () => {
         },
         processedInputLog: [],
       } as GameState;
-      const newAction: Action = { dir: 1, optimistic: false, type: "TapMove" };
+      const newAction: Action = createTestTapMoveAction(1, false);
 
       const result = reducer(stateWithActions, newAction);
 
@@ -316,12 +323,12 @@ describe("Reducer - Extended Coverage", () => {
 
     it("should handle all movement action types without modifying processedInputLog", () => {
       const moveActions: Array<Action> = [
-        { dir: -1, optimistic: false, type: "TapMove" },
-        { dir: 1, optimistic: false, type: "TapMove" },
-        { dir: -1, type: "HoldMove" },
-        { dir: 1, type: "HoldMove" },
-        { dir: -1, type: "RepeatMove" },
-        { dir: 1, type: "RepeatMove" },
+        createTestTapMoveAction(-1, false),
+        createTestTapMoveAction(1, false),
+        createTestHoldMoveAction(-1),
+        createTestHoldMoveAction(1),
+        createTestRepeatMoveAction(-1),
+        createTestRepeatMoveAction(1),
       ];
 
       let currentState: GameState = {
@@ -346,10 +353,7 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should not modify processedInputLog for any action type", () => {
-      const complexAction: Action = {
-        dir: -1,
-        type: "HoldMove",
-      };
+      const complexAction: Action = createTestHoldMoveAction(-1);
 
       const stateWithPiece = {
         ...initialState,
@@ -394,11 +398,7 @@ describe("Reducer - Extended Coverage", () => {
           y: createGridCoord(0),
         },
       };
-      reducer(stateWithPiece, {
-        dir: -1,
-        optimistic: false,
-        type: "TapMove",
-      });
+      reducer(stateWithPiece, createTestTapMoveAction(-1, false));
 
       // Check that the original state object wasn't modified
       expect(originalState.tick).toBe(originalTick);
@@ -418,11 +418,10 @@ describe("Reducer - Extended Coverage", () => {
           y: createGridCoord(0),
         },
       };
-      const result = reducer(stateWithPiece, {
-        dir: -1,
-        optimistic: false,
-        type: "TapMove",
-      });
+      const result = reducer(
+        stateWithPiece,
+        createTestTapMoveAction(-1, false),
+      );
 
       expect(result).not.toBe(stateWithPiece);
       expect(result.processedInputLog).toBe(stateWithPiece.processedInputLog); // processedInputLog should maintain reference since reducer doesn't modify it
@@ -452,11 +451,7 @@ describe("Reducer - Extended Coverage", () => {
               y: createGridCoord(0),
             },
           };
-          state = reducer(state, {
-            dir: -1,
-            optimistic: false,
-            type: "TapMove",
-          });
+          state = reducer(state, createTestTapMoveAction(-1, false));
         }
         if (i % 20 === 0) {
           // Add an active piece before attempting to lock
@@ -564,18 +559,16 @@ describe("Reducer - Extended Coverage", () => {
 
       invalidStates.forEach((invalidState) => {
         expect(() =>
-          reducer(invalidState as InvalidGameState as GameState, {
-            dir: -1,
-            optimistic: false,
-            type: "TapMove",
-          }),
+          reducer(
+            invalidState as InvalidGameState as GameState,
+            createTestTapMoveAction(-1, false),
+          ),
         ).not.toThrow();
 
-        const result = reducer(invalidState as InvalidGameState as GameState, {
-          dir: -1,
-          optimistic: false,
-          type: "TapMove",
-        });
+        const result = reducer(
+          invalidState as InvalidGameState as GameState,
+          createTestTapMoveAction(-1, false),
+        );
         expect(result).toBe(invalidState);
       });
     });

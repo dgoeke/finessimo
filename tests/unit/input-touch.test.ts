@@ -106,10 +106,12 @@ describe("TouchInputHandler", () => {
       testableHandler.triggerAction("RotateCW", "down");
 
       // Should dispatch Rotate action for non-movement actions
-      expect(mockDispatch).toHaveBeenCalledWith({
-        dir: "CW",
-        type: "Rotate",
-      });
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dir: "CW",
+          type: "Rotate",
+        }),
+      );
     });
 
     test("should not dispatch EnqueueInput for movement actions directly", () => {
@@ -130,10 +132,12 @@ describe("TouchInputHandler", () => {
       testableHandler.triggerAction("SoftDropDown", "up");
 
       // Should dispatch SoftDrop action with on: false
-      expect(mockDispatch).toHaveBeenCalledWith({
-        on: false,
-        type: "SoftDrop",
-      });
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          on: false,
+          type: "SoftDrop",
+        }),
+      );
     });
   });
 

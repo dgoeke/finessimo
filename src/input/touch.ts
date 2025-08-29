@@ -542,10 +542,18 @@ export class TouchInputHandler implements InputHandler {
 
     switch (eventAction) {
       case "RotateCW":
-        this.dispatchWithOptionalProcessed({ dir: "CW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({
+          dir: "CW",
+          timestampMs: createTimestamp(inputEvent.tMs),
+          type: "Rotate",
+        });
         break;
       case "RotateCCW":
-        this.dispatchWithOptionalProcessed({ dir: "CCW", type: "Rotate" });
+        this.dispatchWithOptionalProcessed({
+          dir: "CCW",
+          timestampMs: createTimestamp(inputEvent.tMs),
+          type: "Rotate",
+        });
         break;
       case "HardDrop":
         this.dispatchWithOptionalProcessed(
@@ -584,7 +592,11 @@ export class TouchInputHandler implements InputHandler {
     if (this.stateMachineInputHandler) {
       this.stateMachineInputHandler.setSoftDrop(on, timestamp);
     } else if (this.dispatch) {
-      this.dispatchWithOptionalProcessed({ on, type: "SoftDrop" });
+      this.dispatchWithOptionalProcessed({
+        on,
+        timestampMs: createTimestamp(timestamp),
+        type: "SoftDrop",
+      });
     }
   }
 }

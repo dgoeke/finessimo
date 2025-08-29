@@ -97,16 +97,22 @@ export function RepeatMoveRight(overrides: RepeatMoveOverrides = {}): Action {
   };
 }
 
-export function RotateCW(): Action {
+export function RotateCW(
+  timestampMs: Timestamp = createTimestamp(1000),
+): Action {
   return {
     dir: "CW",
+    timestampMs,
     type: "Rotate",
   };
 }
 
-export function RotateCCW(): Action {
+export function RotateCCW(
+  timestampMs: Timestamp = createTimestamp(1000),
+): Action {
   return {
     dir: "CCW",
+    timestampMs,
     type: "Rotate",
   };
 }
@@ -120,16 +126,22 @@ export function HardDrop(
   };
 }
 
-export function SoftDropOn(): Action {
+export function SoftDropOn(
+  timestampMs: Timestamp = createTimestamp(1000),
+): Action {
   return {
     on: true,
+    timestampMs,
     type: "SoftDrop",
   };
 }
 
-export function SoftDropOff(): Action {
+export function SoftDropOff(
+  timestampMs: Timestamp = createTimestamp(1000),
+): Action {
   return {
     on: false,
+    timestampMs,
     type: "SoftDrop",
   };
 }

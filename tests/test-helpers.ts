@@ -1,4 +1,4 @@
-import { createSeed } from "../src/types/brands";
+import { createSeed, createDurationMs } from "../src/types/brands";
 import { fromNow, createTimestamp } from "../src/types/timestamp";
 
 import type { SevenBagRng } from "../src/core/rng";
@@ -8,6 +8,7 @@ import type {
   ActivePiece,
   PhysicsState,
   PieceId,
+  TimingConfig,
 } from "../src/state/types";
 
 // Assertion helper that provides runtime type narrowing
@@ -166,7 +167,26 @@ export function createTestPhysicsState(
     lastGravityTime: fromNow(),
     lineClearLines: [],
     lineClearStartTime: null,
+    lockDelayResetCount: 0,
     lockDelayStartTime: null,
+    ...overrides,
+  };
+}
+
+// Helper for creating test TimingConfig with all required fields
+export function createTestTimingConfig(
+  overrides: Partial<TimingConfig> = {},
+): TimingConfig {
+  return {
+    arrMs: createDurationMs(2),
+    dasMs: createDurationMs(133),
+    gravityEnabled: false,
+    gravityMs: createDurationMs(500),
+    lineClearDelayMs: createDurationMs(0),
+    lockDelayMaxResets: 15,
+    lockDelayMs: createDurationMs(500),
+    softDrop: 10,
+    tickHz: 60,
     ...overrides,
   };
 }
@@ -180,5 +200,115 @@ export function createTestRetryAction(
   return {
     timestampMs: currentTime,
     type: "RetryPendingLock",
+  };
+}
+
+// Helper for creating Rotate actions with timestamps
+export function createTestRotateAction(
+  dir: "CW" | "CCW",
+  timestamp?: number,
+): Extract<Action, { type: "Rotate" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    dir,
+    timestampMs: currentTime,
+    type: "Rotate",
+  };
+}
+
+// Helper for creating SoftDrop actions with timestamps
+export function createTestSoftDropAction(
+  on: boolean,
+  timestamp?: number,
+): Extract<Action, { type: "SoftDrop" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    on,
+    timestampMs: currentTime,
+    type: "SoftDrop",
+  };
+}
+
+// Helper for creating TapMove actions with timestamps
+export function createTestTapMoveAction(
+  dir: -1 | 1,
+  optimistic = false,
+  timestamp?: number,
+): Extract<Action, { type: "TapMove" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    dir,
+    optimistic,
+    timestampMs: currentTime,
+    type: "TapMove",
+  };
+}
+
+// Helper for creating HoldMove actions with timestamps
+export function createTestHoldMoveAction(
+  dir: -1 | 1,
+  timestamp?: number,
+): Extract<Action, { type: "HoldMove" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    dir,
+    timestampMs: currentTime,
+    type: "HoldMove",
+  };
+}
+
+// Helper for creating RepeatMove actions with timestamps
+export function createTestRepeatMoveAction(
+  dir: -1 | 1,
+  timestamp?: number,
+): Extract<Action, { type: "RepeatMove" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    dir,
+    timestampMs: currentTime,
+    type: "RepeatMove",
+  };
+}
+
+// Helper for creating HoldStart actions with timestamps
+export function createTestHoldStartAction(
+  dir: -1 | 1,
+  timestamp?: number,
+): Extract<Action, { type: "HoldStart" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    dir,
+    timestampMs: currentTime,
+    type: "HoldStart",
+  };
+}
+
+// Helper for creating HardDrop actions with timestamps
+export function createTestHardDropAction(
+  timestamp?: number,
+): Extract<Action, { type: "HardDrop" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    timestampMs: currentTime,
+    type: "HardDrop",
+  };
+}
+
+// Helper for creating Tick actions with timestamps
+export function createTestTickAction(
+  timestamp?: number,
+): Extract<Action, { type: "Tick" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    timestampMs: currentTime,
+    type: "Tick",
   };
 }

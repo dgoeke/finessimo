@@ -2,7 +2,7 @@ import { type GameState } from "../../src/state/types";
 import { createSeed, createGridCoord } from "../../src/types/brands";
 import { fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece } from "../test-helpers";
+import { assertActivePiece, createTestRotateAction } from "../test-helpers";
 
 describe("Reducer success paths: Rotate and Hold", () => {
   let base: GameState;
@@ -26,7 +26,7 @@ describe("Reducer success paths: Rotate and Hold", () => {
       },
     };
 
-    const rotated = reducer(withPiece, { dir: "CW", type: "Rotate" });
+    const rotated = reducer(withPiece, createTestRotateAction("CW"));
     expect(rotated).not.toBe(withPiece);
     expect(rotated.active).toBeDefined();
     assertActivePiece(rotated);
