@@ -1,6 +1,7 @@
 import { dropToBottom, createEmptyBoard } from "../core/board";
 import { PIECES } from "../core/pieces";
 import { type FinesseResult } from "../finesse/calculator";
+import { getActionIcon } from "../finesse/constants";
 import {
   type GuidedCard,
   type SrsDeck,
@@ -42,6 +43,35 @@ type GuidedSrsData = Readonly<{
   deck: SrsDeck;
   gradingConfig: GuidedGradingConfig;
 }>;
+
+type RatingFeedback = {
+  text: string;
+  color: string;
+  ttlMs: number;
+};
+
+const ratingToFeedback = {
+  again: {
+    color: "#ef4444",
+    text: "miss",
+    ttlMs: 5000,
+  },
+  easy: {
+    color: "#60a5fa",
+    text: "great!",
+    ttlMs: 1200,
+  },
+  good: {
+    color: "#10b981",
+    text: "good",
+    ttlMs: 1200,
+  },
+  hard: {
+    color: "#f59e0b",
+    text: "okay",
+    ttlMs: 1200,
+  },
+} satisfies Record<Rating, RatingFeedback>;
 
 export class GuidedMode implements GameMode {
   readonly name = "guided";
@@ -110,7 +140,7 @@ export class GuidedMode implements GameMode {
     finesseResult: FinesseResult,
     hasPlayerInput: boolean,
     placementDurationMs: number,
-    gradingConfig: { easyThresholdMs: number; goodThresholdMs: number }
+    gradingConfig: { easyThresholdMs: number; goodThresholdMs: number },
   ): Rating {
     if (
       !placedCorrectly ||
@@ -128,11 +158,49 @@ export class GuidedMode implements GameMode {
     return "hard";
   }
 
+  private createFeedbackEffect(
+    rating: Rating,
+    finesseResult: FinesseResult,
+  ): NonNullable<GameModeResult["postActions"]>[0] {
+    const feedback = ratingToFeedback[rating];
+    const base = feedback.text;
+    const text =
+      rating === "again"
+        ? ((): string => {
+            const firstOptimal = finesseResult.optimalSequences[0];
+            const sequence = firstOptimal
+              ? firstOptimal.map((action) => getActionIcon(action)).join("")
+              : "none";
+            return `${base}! ${sequence}`;
+          })()
+        : base;
+
+    const createdAt = fromNow();
+    const effect = {
+      anchor: "bottomRight" as const,
+      color: feedback.color,
+      createdAt,
+      driftYPx: 120,
+      fontPx: 48,
+      fontWeight: 800,
+      id: createUiEffectId(createdAt as number),
+      kind: "floatingText" as const,
+      offsetX: 0,
+      offsetY: 120,
+      scaleFrom: 1,
+      scaleTo: 0.9,
+      text,
+      ttlMs: createDurationMs(feedback.ttlMs),
+    } as const;
+
+    return { effect, type: "PushUiEffect" };
+  }
+
   onPieceLocked(
     gameState: GameState,
     finesseResult: FinesseResult,
     lockedPiece: ActivePiece,
-    finalPosition: ActivePiece
+    finalPosition: ActivePiece,
   ): GameModeResult {
     const deck = this.getDeck(gameState);
     const now = createTimestamp(gameState.stats.attempts + 1);
@@ -146,7 +214,7 @@ export class GuidedMode implements GameMode {
     // Validate piece matches expected piece (should always match in guided mode)
     if (lockedPiece.id !== dueCard.piece) {
       console.error(
-        "Unexpected piece mismatch in guided mode - this should not happen"
+        "Unexpected piece mismatch in guided mode - this should not happen",
       );
       return {};
     }
@@ -164,7 +232,7 @@ export class GuidedMode implements GameMode {
     const placedCorrectly = this.equalOccupiedCells(
       board,
       finalPosition,
-      targetFinal
+      targetFinal,
     );
 
     const key = canonicalId(dueCard);
@@ -189,49 +257,24 @@ export class GuidedMode implements GameMode {
       finesseResult,
       hasPlayerInput,
       placementDurationMs,
-      gradingConfig
+      gradingConfig,
     );
 
     const updated = rate(rec, rating, now);
     const newDeck = updateDeckRecord(deck, updated);
     // Persist updated deck
     saveGuidedDeck(newDeck);
-    // Map rating to a FloatingText UI effect (generic/string-based)
-    const color =
-      rating === "again"
-        ? "#ef4444"
-        : rating === "hard"
-          ? "#f59e0b"
-          : rating === "good"
-            ? "#10b981"
-            : "#60a5fa"; // easy
-    const createdAt = fromNow();
-    const effect = {
-      anchor: "bottomRight" as const,
-      color,
-      createdAt,
-      driftYPx: 120,
-      fontPx: 48,
-      fontWeight: 800,
-      id: createUiEffectId(createdAt as number),
-      kind: "floatingText" as const,
-      offsetX: -100,
-      offsetY: 12,
-      scaleFrom: 1,
-      scaleTo: 0.9,
-      text: rating,
-      ttlMs: createDurationMs(1200),
-    } as const;
+
     return {
       modeData: { deck: newDeck, gradingConfig },
-      postActions: [{ effect, type: "PushUiEffect" }],
+      postActions: [this.createFeedbackEffect(rating, finesseResult)],
     };
   }
 
   // Compute absolute occupied cells for a piece within board bounds
   private occupiedCells(
     board: Board,
-    piece: ActivePiece
+    piece: ActivePiece,
   ): ReadonlyArray<readonly [number, number]> {
     const shape = PIECES[piece.id];
     const cells = shape.cells[piece.rot];
@@ -250,7 +293,7 @@ export class GuidedMode implements GameMode {
   private equalOccupiedCells(
     board: Board,
     a: ActivePiece,
-    b: ActivePiece
+    b: ActivePiece,
   ): boolean {
     const aCells = this.occupiedCells(board, a);
     const bCells = this.occupiedCells(board, b);
@@ -277,7 +320,7 @@ export class GuidedMode implements GameMode {
   // Provide intended target for analysis
   getTargetFor(
     _lockedPiece: ActivePiece,
-    gameState: GameState
+    gameState: GameState,
   ): { targetX: number; targetRot: Rot } | null {
     const card = this.selectCard(gameState);
     if (!card) return null;
@@ -334,7 +377,7 @@ export class GuidedMode implements GameMode {
   isTargetSatisfied(
     _lockedPiece: ActivePiece,
     finalPosition: ActivePiece,
-    state: GameState
+    state: GameState,
   ): boolean {
     const card = this.selectCard(state);
     if (!card) return true; // no opinion

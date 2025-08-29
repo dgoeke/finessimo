@@ -47,6 +47,12 @@
     "functions": 86,
     "lines": 95
   },
+  "src/finesse/constants.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "src/finesse/log.ts": {
     "statements": 89,
     "branches": 100,
@@ -78,10 +84,10 @@
     "lines": 96
   },
   "src/input/touch.ts": {
-    "statements": 45,
-    "branches": 28,
-    "functions": 63,
-    "lines": 48
+    "statements": 52,
+    "branches": 33,
+    "functions": 75,
+    "lines": 55
   },
   "src/input/machines/das.ts": {
     "statements": 94,
@@ -102,10 +108,10 @@
     "lines": 90
   },
   "src/modes/guided.ts": {
-    "statements": 77,
-    "branches": 47,
-    "functions": 82,
-    "lines": 82
+    "statements": 84,
+    "branches": 63,
+    "functions": 84,
+    "lines": 87
   },
   "src/modes/index.ts": {
     "statements": 88,

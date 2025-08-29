@@ -47,6 +47,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## Finesse
 
 - src/finesse/calculator.ts: BFS-based finesse calculation with FinesseAction enum. Computes optimal sequences using abstract moves (MoveLeft/DASLeft/RotateCW/etc). Includes converter functions between ProcessedActions and FinesseActions. Reports faults and analysis.
+- src/finesse/constants.ts: Shared constants for finesse system. Contains authoritative FINESSE_ACTION_ICONS mapping and getActionIcon() helper for consistent UI representation across components.
 - src/finesse/service.ts: Finesse integration service. Operates on processedInputLog for analysis. Target derivation, input analysis using FinesseActions, fault injection, UI feedback actions. Statistics tracking integration with performance metrics.
 - src/finesse/log.ts: Pure helpers for processed input logging and emission rules (Tap vs Hold vs Repeat, SoftDrop transition dedupe). Used by input handlers to emit `ProcessedAction`s with explicit timestamps. Narrowed status parameter accepts discriminated GameState status union for type safety.
 

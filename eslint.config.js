@@ -177,12 +177,16 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "error",
         {
-          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-          message: "Use fromNow() from '../types/timestamp' instead of Date.now() for consistent timing based on performance.now()",
+          selector:
+            "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message:
+            "Use fromNow() from '../types/timestamp' instead of Date.now() for consistent timing and strong type safety. Only timestamp utilities may use performance.now() directly.",
         },
         {
-          selector: "CallExpression[callee.object.name='performance'][callee.property.name='now']",
-          message: "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing. Only timestamp utilities should use performance.now() directly.",
+          selector:
+            "CallExpression[callee.object.name='performance'][callee.property.name='now']",
+          message:
+            "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing and stronger type safety. Only timestamp utilities may use performance.now() directly.",
         },
       ],
 
@@ -205,8 +209,10 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "error",
         {
-          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-          message: "Use performance.now() instead of Date.now() for consistent timing in timestamp utilities",
+          selector:
+            "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message:
+            "Use performance.now() instead of Date.now() for consistent timing in timestamp utilities",
         },
       ],
     },
@@ -229,10 +235,7 @@ export default tseslint.config(
 
   // Test files: relax some rules, add jest/vitest globals if needed
   {
-    files: [
-      "**/*.test.{ts,tsx}",
-      "**/__tests__/**/*.{ts,tsx}",
-    ],
+    files: ["**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": [
         "error",
@@ -240,10 +243,7 @@ export default tseslint.config(
       ],
       "no-console": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/ban-ts-comment": [
-        "error",
-        { "ts-ignore": false },
-      ],
+      "@typescript-eslint/ban-ts-comment": ["error", { "ts-ignore": false }],
       // If using Vitest/Jest, consider eslint-plugin-jest and its flat config here.
     },
   },

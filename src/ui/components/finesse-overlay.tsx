@@ -2,6 +2,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, html } from "lit";
 import { customElement, state, query } from "lit/decorators.js";
 
+import { getActionIcon } from "../../finesse/constants";
 import { gameStateSignal } from "../../state/signals";
 import { playBoop } from "../audio";
 
@@ -18,24 +19,9 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
   @query(".finesse-feedback-overlay") private feedbackEl?: HTMLElement;
   private onTransitionEnd: ((ev: TransitionEvent) => void) | null = null;
 
-  private static readonly ICON_MAP: Record<FinesseAction, string> = {
-    DASLeft: "⇤",
-    DASRight: "⇥",
-    HardDrop: "⤓",
-    MoveLeft: "←",
-    MoveRight: "→",
-    RotateCCW: "↺",
-    RotateCW: "↻",
-    SoftDrop: "⇩",
-  };
-
   // Use light DOM for consistent styling
   protected createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
-  }
-
-  private getActionIcon(action: FinesseAction): string {
-    return FinesseOverlay.ICON_MAP[action];
   }
 
   private getReadableAction(action: FinesseAction): string {
@@ -234,7 +220,7 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
           title="${this.getReadableAction(action)}"
           aria-hidden="true"
         >
-          ${this.getActionIcon(action)}
+          ${getActionIcon(action)}
         </span>
       `,
     );
