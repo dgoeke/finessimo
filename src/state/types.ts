@@ -129,6 +129,16 @@ export type ModeGuidance = {
   visual?: { highlightTarget?: boolean; showPath?: boolean };
 };
 
+// Board overlay decorations supplied by game modes for board rendering (pure data)
+export type BoardCell = Readonly<{ x: GridCoord; y: GridCoord }>;
+export type BoardDecoration = Readonly<{
+  type: "cellHighlight";
+  cells: ReadonlyArray<BoardCell>;
+  color?: string; // optional suggested color
+  alpha?: number; // 0..1 suggested
+}>;
+export type BoardDecorations = ReadonlyArray<BoardDecoration>;
+
 // Physics timing state
 export type PhysicsState = {
   lastGravityTime: Timestamp;
@@ -212,6 +222,8 @@ type SharedGameFields = {
   modePrompt: string | null;
   // Optional, mode-provided guidance for visualization and prompts
   guidance?: ModeGuidance | null;
+  // Optional: mode-provided board overlay (pure description of cells to decorate)
+  boardDecorations?: BoardDecorations | null;
 };
 
 // Playing state - normal gameplay
@@ -296,6 +308,7 @@ export type Action =
     }
   | { type: "CompleteLineClear" }
   | { type: "ClearLines"; lines: ReadonlyArray<number> }
+  | { type: "ResetBoard" }
   | { type: "SetMode"; mode: string }
   | { type: "UpdateFinesseFeedback"; feedback: FinesseResult | null }
   | { type: "UpdateModePrompt"; prompt: string | null }
@@ -315,6 +328,8 @@ export type Action =
   | { type: "UpdateGameplay"; gameplay: Partial<GameplayConfig> }
   // Mode/UI guidance
   | { type: "UpdateGuidance"; guidance: ModeGuidance | null }
+  // Board overlay updates supplied by active mode
+  | { type: "UpdateBoardDecorations"; decorations: BoardDecorations | null }
   | { type: "UpdateModeData"; data: unknown }
   // Statistics tracking actions
   | {

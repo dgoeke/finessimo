@@ -32,6 +32,8 @@ export type GameSettings = {
 
   // Controls
   keyBindings?: KeyBindings;
+  // Minimal playtest toggle
+  mode?: "freePlay" | "guided";
 };
 
 @customElement("settings-modal")
@@ -43,6 +45,9 @@ export class SettingsModal extends LitElement {
 
   private currentSettings: GameSettings;
   private currentKeyBindings: KeyBindings;
+  private settingsSnapshot?: GameSettings;
+  private keyBindingsSnapshot?: KeyBindings;
+  private changesApplied = false;
   private boundCaptureHandler?: (e: KeyboardEvent) => void;
   private boundBlockHandler?: (e: KeyboardEvent) => void;
 
@@ -329,6 +334,13 @@ export class SettingsModal extends LitElement {
     const gameState = gameStateSignal.get();
     this.syncSettingsFromGameState(gameState);
 
+    // Create snapshots for cancel functionality
+    this.settingsSnapshot = { ...this.currentSettings };
+    this.keyBindingsSnapshot = this.deepCopyKeyBindings(
+      this.currentKeyBindings,
+    );
+    this.changesApplied = false;
+
     this.visible = true;
     document.body.classList.add("settings-open");
     // Emit event to pause game
@@ -341,6 +353,20 @@ export class SettingsModal extends LitElement {
   }
 
   hide(): void {
+    // If changes weren't applied, restore from snapshots
+    if (
+      !this.changesApplied &&
+      this.settingsSnapshot &&
+      this.keyBindingsSnapshot
+    ) {
+      this.currentSettings = { ...this.settingsSnapshot };
+      this.currentKeyBindings = this.deepCopyKeyBindings(
+        this.keyBindingsSnapshot,
+      );
+      // Force re-render to update UI controls
+      this.requestUpdate();
+    }
+
     this.visible = false;
     document.body.classList.remove("settings-open");
     this.stopRebinding();
@@ -428,6 +454,40 @@ export class SettingsModal extends LitElement {
     `;
   }
 
+  private renderModeSelection(): unknown {
+    return html`
+      <div class="setting-group">
+        <label>Game Mode</label>
+        <div>
+          <label style="margin-right: 1rem;">
+            <input
+              type="radio"
+              name="mode-select"
+              value="freePlay"
+              .checked=${this.currentSettings.mode === "freePlay"}
+              @change=${(): void => {
+                this.currentSettings.mode = "freePlay";
+              }}
+            />
+            Free Play
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="mode-select"
+              value="guided"
+              .checked=${this.currentSettings.mode === "guided"}
+              @change=${(): void => {
+                this.currentSettings.mode = "guided";
+              }}
+            />
+            Guided (SRS)
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
   private renderTimingPanel(): unknown {
     const sdfValue =
       this.currentSettings.softDrop === "infinite"
@@ -442,6 +502,8 @@ export class SettingsModal extends LitElement {
       <div
         class="settings-panel ${this.currentTab === "timing" ? "active" : ""}"
       >
+        ${this.renderModeSelection()}
+
         <div class="setting-group">
           <label>DAS - Delayed Auto Shift (ms)</label>
           <input
@@ -778,10 +840,6 @@ export class SettingsModal extends LitElement {
         [action]: [e.code],
       };
       this.currentKeyBindings = updated;
-      this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
-
-      // Notify immediately for live update
-      this.emitSettingsChange({ keyBindings: this.currentKeyBindings });
 
       // Done
       this.stopRebinding();
@@ -831,6 +889,9 @@ export class SettingsModal extends LitElement {
 
     // Save to storage
     this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
+
+    // Mark changes as applied so they won't be reverted on close
+    this.changesApplied = true;
 
     // Emit settings change event
     this.emitSettingsChange({
@@ -890,6 +951,19 @@ export class SettingsModal extends LitElement {
     const nextCountInput = this.querySelector<HTMLInputElement>("#next-count");
     if (nextCountInput)
       newSettings.nextPieceCount = parseInt(nextCountInput.value);
+
+    // Read mode from radio buttons in DOM
+    const freePlayRadio = this.querySelector<HTMLInputElement>(
+      'input[name="mode-select"][value="freePlay"]',
+    );
+    const guidedRadio = this.querySelector<HTMLInputElement>(
+      'input[name="mode-select"][value="guided"]',
+    );
+    if (freePlayRadio?.checked === true) {
+      newSettings.mode = "freePlay";
+    } else if (guidedRadio?.checked === true) {
+      newSettings.mode = "guided";
+    }
   }
 
   private collectFinesseSettings(newSettings: Partial<GameSettings>): void {
@@ -913,20 +987,16 @@ export class SettingsModal extends LitElement {
   }
 
   private resetToDefaults(): void {
-    // Reset internal models
+    // Reset internal models but don't save or apply yet
     this.currentSettings = this.getDefaultSettings();
     this.currentKeyBindings = defaultKeyBindings();
-    this.saveStoreToStorage(this.currentSettings, this.currentKeyBindings);
     this.stopRebinding();
+
+    // Don't mark as applied - user still needs to click Apply
+    // Don't save to storage or emit changes - wait for Apply button
 
     // Force re-render to update UI controls
     this.requestUpdate();
-
-    // Notify listeners for live update
-    this.emitSettingsChange({
-      ...this.currentSettings,
-      keyBindings: this.currentKeyBindings,
-    });
   }
 
   private emitSettingsChange(settings: Partial<GameSettings>): void {
@@ -952,6 +1022,7 @@ export class SettingsModal extends LitElement {
       gravityMs: 750,
       lineClearDelayMs: 125,
       lockDelayMs: 500,
+      mode: "freePlay",
       nextPieceCount: 5,
       retryOnFinesseError: false,
       softDrop: 20,
@@ -989,60 +1060,60 @@ export class SettingsModal extends LitElement {
     return out;
   }
 
+  // Type-safe schema that maps 1:1 with GameSettings to prevent missing fields
+  private readonly GameSettingsSchema = {
+    arrMs: (v: unknown): v is number => typeof v === "number" && v >= 0,
+    // Timing settings
+    dasMs: (v: unknown): v is number => typeof v === "number" && v >= 0,
+    finesseBoopEnabled: (v: unknown): v is boolean => typeof v === "boolean",
+    finesseCancelMs: (v: unknown): v is number =>
+      typeof v === "number" && v >= 0,
+    // Finesse settings
+    finesseFeedbackEnabled: (v: unknown): v is boolean =>
+      typeof v === "boolean",
+
+    ghostPieceEnabled: (v: unknown): v is boolean => typeof v === "boolean",
+    // Gameplay settings
+    gravityEnabled: (v: unknown): v is boolean => typeof v === "boolean",
+    gravityMs: (v: unknown): v is number => typeof v === "number" && v >= 0,
+    // Controls (handled separately in loadStoreFromStorage)
+    keyBindings: (_v: unknown): _v is never => false, // Skip - handled separately
+    lineClearDelayMs: (v: unknown): v is number =>
+      typeof v === "number" && v >= 0,
+
+    lockDelayMs: (v: unknown): v is number => typeof v === "number" && v >= 0,
+    // Mode setting
+    mode: (v: unknown): v is GameSettings["mode"] =>
+      v === "freePlay" || v === "guided",
+    nextPieceCount: (v: unknown): v is number =>
+      typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 10,
+
+    retryOnFinesseError: (v: unknown): v is boolean => typeof v === "boolean",
+
+    softDrop: (v: unknown): v is number | "infinite" =>
+      (typeof v === "number" && v >= 5) || v === "infinite",
+  } as const satisfies Record<keyof GameSettings, (v: unknown) => boolean>;
+
   private coerceSettings(maybe: unknown): Partial<GameSettings> {
     if (!this.isRecord(maybe)) return {};
     const s = maybe;
     const out: Partial<GameSettings> = {};
-    const isNum = (v: unknown): v is number => typeof v === "number";
-    const isBool = (v: unknown): v is boolean => typeof v === "boolean";
 
-    this.coerceTimingSettings(s, out, isNum);
-    this.coerceGameplaySettings(s, out, isNum, isBool);
-    this.coerceFinesseSettings(s, out, isBool);
+    // Use schema-based validation to ensure all fields are handled
+    for (const [key, validator] of Object.entries(this.GameSettingsSchema)) {
+      const fieldKey = key as keyof GameSettings;
+
+      // Skip keyBindings as it's handled separately in loadStoreFromStorage
+      if (fieldKey === "keyBindings") continue;
+
+      const value = s[fieldKey];
+      if (validator(value)) {
+        // Type assertion is safe here because validator confirms the type
+        (out as Record<string, unknown>)[fieldKey] = value;
+      }
+    }
 
     return out;
-  }
-
-  private coerceTimingSettings(
-    s: Record<string, unknown>,
-    out: Partial<GameSettings>,
-    isNum: (v: unknown) => v is number,
-  ): void {
-    if (isNum(s["dasMs"])) out.dasMs = s["dasMs"];
-    if (isNum(s["arrMs"])) out.arrMs = s["arrMs"];
-    // Support both numeric softDrop multiplier and the string "infinite"
-    if (isNum(s["softDrop"]) || s["softDrop"] === "infinite")
-      out.softDrop = s["softDrop"];
-    if (isNum(s["lockDelayMs"])) out.lockDelayMs = s["lockDelayMs"];
-    if (isNum(s["lineClearDelayMs"]))
-      out.lineClearDelayMs = s["lineClearDelayMs"];
-  }
-
-  private coerceGameplaySettings(
-    s: Record<string, unknown>,
-    out: Partial<GameSettings>,
-    isNum: (v: unknown) => v is number,
-    isBool: (v: unknown) => v is boolean,
-  ): void {
-    if (isBool(s["gravityEnabled"])) out.gravityEnabled = s["gravityEnabled"];
-    if (isNum(s["gravityMs"])) out.gravityMs = s["gravityMs"];
-    if (isNum(s["finesseCancelMs"])) out.finesseCancelMs = s["finesseCancelMs"];
-    if (isBool(s["ghostPieceEnabled"]))
-      out.ghostPieceEnabled = s["ghostPieceEnabled"];
-    if (isNum(s["nextPieceCount"])) out.nextPieceCount = s["nextPieceCount"];
-  }
-
-  private coerceFinesseSettings(
-    s: Record<string, unknown>,
-    out: Partial<GameSettings>,
-    isBool: (v: unknown) => v is boolean,
-  ): void {
-    if (isBool(s["finesseFeedbackEnabled"]))
-      out.finesseFeedbackEnabled = s["finesseFeedbackEnabled"];
-    if (isBool(s["finesseBoopEnabled"]))
-      out.finesseBoopEnabled = s["finesseBoopEnabled"];
-    if (isBool(s["retryOnFinesseError"]))
-      out.retryOnFinesseError = s["retryOnFinesseError"];
   }
 
   private loadStoreFromStorage(): {
@@ -1086,7 +1157,13 @@ export class SettingsModal extends LitElement {
 
   private syncSettingsFromGameState(gameState: GameState): void {
     // Update current settings to match game state
-    this.currentSettings = {
+    const maybeMode =
+      gameState.currentMode === "guided"
+        ? "guided"
+        : gameState.currentMode === "freePlay"
+          ? "freePlay"
+          : undefined;
+    const next = {
       ...this.currentSettings,
       arrMs: gameState.timing.arrMs,
       dasMs: gameState.timing.dasMs,
@@ -1098,9 +1175,23 @@ export class SettingsModal extends LitElement {
       gravityMs: gameState.timing.gravityMs,
       lineClearDelayMs: gameState.timing.lineClearDelayMs,
       lockDelayMs: gameState.timing.lockDelayMs,
+      mode: maybeMode,
       nextPieceCount: gameState.gameplay.nextPieceCount ?? 5,
       retryOnFinesseError: gameState.gameplay.retryOnFinesseError ?? false,
       softDrop: gameState.timing.softDrop,
+    } as GameSettings;
+    this.currentSettings = next;
+  }
+
+  private deepCopyKeyBindings(bindings: KeyBindings): KeyBindings {
+    return {
+      HardDrop: [...bindings.HardDrop],
+      Hold: [...bindings.Hold],
+      MoveLeft: [...bindings.MoveLeft],
+      MoveRight: [...bindings.MoveRight],
+      RotateCCW: [...bindings.RotateCCW],
+      RotateCW: [...bindings.RotateCW],
+      SoftDrop: [...bindings.SoftDrop],
     };
   }
 

@@ -454,6 +454,27 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       expect(state.stats.piecesPlaced).toBe(1);
     });
 
+    it("includes HardDrop in finesse sequence and clears processed log after lock", () => {
+      // Ensure input handler has current state before we press keys
+      advanceFrame(ctx);
+      // Drop immediately from spawn with proper timing (keydown processed before analysis)
+      tapKeyWithTiming("Space", ctx);
+      advanceFrame(ctx);
+
+      const state = getState(ctx);
+      // Finesse feedback should contain player's HardDrop
+      expect(state.finesseFeedback).not.toBeNull();
+      if (state.finesseFeedback) {
+        const seq = state.finesseFeedback.playerSequence;
+        expect(seq.length).toBeGreaterThanOrEqual(1);
+        expect(seq[seq.length - 1]).toBe("HardDrop");
+        expect(seq).toContain("HardDrop");
+      }
+
+      // Processed input log is cleared by the finesse pipeline's ClearInputLog
+      expect(state.processedInputLog).toEqual([]);
+    });
+
     it("should hold piece on KeyC press", () => {
       const initialPiece = getState(ctx).active?.id;
 

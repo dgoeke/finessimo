@@ -16,6 +16,7 @@
 
 import { gameModeRegistry } from "./index";
 
+import type { ResolveLockDecision } from "./index";
 import type { FinesseResult } from "../finesse/calculator";
 import type { GameState, Action } from "../state/types";
 
@@ -32,9 +33,9 @@ export const runLockPipeline = (
   state: GameState,
   dispatch: (action: Action) => void,
   analyzeFinesse: PipelineAnalyzer,
-): void => {
+): { decision: ResolveLockDecision } => {
   if (state.status !== "resolvingLock") {
-    return; // Not in resolution mode
+    return { decision: { action: "commit" } }; // No-op; default commit
   }
 
   const pending = state.pendingLock;
@@ -52,7 +53,7 @@ export const runLockPipeline = (
   if (!mode) {
     // Mode not found, default to commit (maintains game flow)
     dispatch({ type: "CommitLock" });
-    return;
+    return { decision: { action: "commit" } };
   }
 
   const decision = mode.onResolveLock
@@ -62,8 +63,13 @@ export const runLockPipeline = (
   // Step 4: Execute decision
   if (decision.action === "retry") {
     dispatch({ type: "RetryPendingLock" });
+    return { decision };
   } else {
     dispatch({ type: "CommitLock" });
     // Note: CommitLock's applyPendingLock already handles zero-delay line clears
+    if (decision.postActions && decision.postActions.length > 0) {
+      for (const a of decision.postActions) dispatch(a);
+    }
+    return { decision };
   }
 };

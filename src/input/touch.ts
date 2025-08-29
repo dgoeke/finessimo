@@ -112,10 +112,7 @@ export class TouchInputHandler implements InputHandler {
       return;
     }
 
-    // Always dispatch the engine action
-    this.dispatch(action);
-
-    // Check if we should also emit a ProcessedAction
+    // Emit processed input BEFORE engine action to avoid races with lock pipeline
     if (this.shouldEmitProcessedAction(action, timestampMs)) {
       const processedAction = this.createProcessedActionFromEngineAction(
         action,
@@ -125,6 +122,9 @@ export class TouchInputHandler implements InputHandler {
         this.dispatch({ entry: processedAction, type: "AppendProcessed" });
       }
     }
+
+    // Now dispatch the engine action
+    this.dispatch(action);
   }
 
   private shouldEmitProcessedAction(

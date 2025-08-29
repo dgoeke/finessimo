@@ -17,6 +17,7 @@ import { createSeed, createDurationMs, type Seed } from "./types/brands";
 import { createTimestamp, fromNow } from "./types/timestamp";
 import { getSettingsModal } from "./ui/utils/dom";
 
+import type { GameMode as IGameMode } from "./modes";
 import type { GameSettings } from "./ui/components/settings-modal";
 
 export class FinessimoApp {
@@ -213,7 +214,18 @@ export class FinessimoApp {
     }
 
     const currentTime = performance.now();
+    this.updateInputs(currentTime);
+    this.handleTickAndPhysics(currentTime);
 
+    if (this.handleAutoRestartIfTopOut()) return;
+
+    this.handleAutoSpawn();
+    this.updateModeUi();
+
+    // Preview refill is handled in dispatch when queue shrinks
+  }
+
+  private updateInputs(currentTime: number): void {
     // Update input handlers using the same timestamp used for Tick/physics
     // Only the keyboard handler calls the shared state machine update to avoid double-calls
     this.keyboardInputHandler.update(this.gameState, currentTime);
@@ -221,43 +233,43 @@ export class FinessimoApp {
       // Touch handler only updates its frame counter, not the shared state machine
       this.touchInputHandler.update(this.gameState, currentTime, true);
     }
+  }
 
+  private handleTickAndPhysics(currentTime: number): void {
     // Always dispatch Tick with timestamp for physics calculations
-    this.dispatch({
-      timestampMs: createTimestamp(currentTime),
-      type: "Tick",
-    });
-
-    // Handle line clear completion
+    this.dispatch({ timestampMs: createTimestamp(currentTime), type: "Tick" });
     if (shouldCompleteLineClear(this.gameState, currentTime)) {
       this.dispatch({ type: "CompleteLineClear" });
     }
+  }
 
-    // Auto-spawn piece if no active piece and game is playing
+  private handleAutoSpawn(): void {
     if (!this.gameState.active && this.gameState.status === "playing") {
       this.spawnNextPiece();
     }
+  }
 
-    // Auto-restart on top-out: treat as game over and immediately restart
-    if (this.gameState.status === "topOut") {
-      const { currentMode, gameplay, timing } = this.gameState;
-      // Reinitialize with existing settings and mode, retaining stats across sessions
-      this.dispatch({
-        gameplay,
-        mode: currentMode,
-        retainStats: true,
-        seed: this.randomSeed(),
-        timestampMs: fromNow(),
-        timing,
-        type: "Init",
-      });
-      this.spawnNextPiece();
-      return;
-    }
+  private handleAutoRestartIfTopOut(): boolean {
+    if (this.gameState.status !== "topOut") return false;
+    const { currentMode, gameplay, timing } = this.gameState;
+    this.dispatch({
+      gameplay,
+      mode: currentMode,
+      retainStats: true,
+      seed: this.randomSeed(),
+      timestampMs: fromNow(),
+      timing,
+      type: "Init",
+    });
+    this.spawnNextPiece();
+    return true;
+  }
 
-    // Update guidance from current mode (only when changed)
+  private updateModeUi(): void {
     const mode = gameModeRegistry.get(this.gameState.currentMode);
-    if (mode && typeof mode.getGuidance === "function") {
+    if (!mode) return;
+
+    if (typeof mode.getGuidance === "function") {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
       if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
@@ -265,7 +277,13 @@ export class FinessimoApp {
       }
     }
 
-    // Preview refill is handled in dispatch when queue shrinks
+    if (typeof mode.getBoardDecorations === "function") {
+      const decorations = mode.getBoardDecorations(this.gameState) ?? null;
+      const prev = this.gameState.boardDecorations ?? null;
+      if (JSON.stringify(decorations) !== JSON.stringify(prev)) {
+        this.dispatch({ decorations, type: "UpdateBoardDecorations" });
+      }
+    }
   }
 
   private render(): void {
@@ -311,42 +329,74 @@ export class FinessimoApp {
   // Public method to change game mode
   setGameMode(modeName: string): void {
     const mode = gameModeRegistry.get(modeName);
-    if (mode) {
-      this.dispatch({ mode: modeName, type: "SetMode" });
-      // Apply optional initial config from mode
-      if (typeof mode.initialConfig === "function") {
-        const cfg = mode.initialConfig();
-        if (cfg.timing)
-          this.dispatch({ timing: cfg.timing, type: "UpdateTiming" });
-        if (cfg.gameplay)
-          this.dispatch({ gameplay: cfg.gameplay, type: "UpdateGameplay" });
-      }
+    if (!mode) return;
 
-      if (mode.shouldPromptNext(this.gameState)) {
-        const prompt = mode.getNextPrompt(this.gameState);
-        if (prompt !== null) {
-          this.dispatch({ prompt, type: "UpdateModePrompt" });
-        }
-      }
+    // Reinitialize the entire game state when switching modes to prevent state leakage
+    const { gameplay, timing } = this.gameState;
+    this.dispatch({
+      gameplay,
+      mode: modeName,
+      retainStats: true, // Keep stats across mode switches
+      seed: this.randomSeed(),
+      timestampMs: fromNow(),
+      timing,
+      type: "Init",
+    });
 
-      // Initialize RNG/preview for the mode immediately on switch
-      if (typeof mode.createRng === "function") {
-        const desired = Math.max(
-          5,
-          this.gameState.gameplay.nextPieceCount ?? 5,
-        );
-        const seededRng = getActiveRng(
-          mode,
-          this.randomSeed(),
-          this.gameState.rng,
-        );
-        const { newRng, pieces } =
-          typeof mode.getPreview === "function"
-            ? mode.getPreview(this.gameState, seededRng, desired)
-            : seededRng.getNextPieces(desired);
-        this.dispatch({ pieces, rng: newRng, type: "ReplacePreview" });
-      }
+    // Apply mode-specific activation after reinitialization
+    this.applyModeActivation(mode);
+
+    // Spawn the first piece for the new mode
+    this.spawnNextPiece();
+  }
+
+  private applyModeActivation(mode: IGameMode): void {
+    this.applyModeInitialConfig(mode);
+    this.applyModePrompt(mode);
+    this.runModeActivationHook(mode);
+    this.setupModeRng(mode);
+  }
+
+  private applyModeInitialConfig(mode: IGameMode): void {
+    if (typeof mode.initialConfig !== "function") return;
+    const cfg = mode.initialConfig();
+    if (cfg.timing) {
+      this.dispatch({ timing: cfg.timing, type: "UpdateTiming" });
     }
+    if (cfg.gameplay) {
+      this.dispatch({ gameplay: cfg.gameplay, type: "UpdateGameplay" });
+    }
+  }
+
+  private applyModePrompt(mode: IGameMode): void {
+    if (!mode.shouldPromptNext(this.gameState)) return;
+    const prompt = mode.getNextPrompt(this.gameState);
+    if (prompt !== null) {
+      this.dispatch({ prompt, type: "UpdateModePrompt" });
+    }
+  }
+
+  private runModeActivationHook(mode: IGameMode): void {
+    if (typeof mode.onActivated !== "function") return;
+    const activation = mode.onActivated(this.gameState);
+    if (activation.modeData !== undefined) {
+      this.dispatch({ data: activation.modeData, type: "UpdateModeData" });
+    }
+    if (Array.isArray(activation.postActions)) {
+      const acts = activation.postActions as ReadonlyArray<Action>;
+      for (const act of acts) this.dispatch(act);
+    }
+  }
+
+  private setupModeRng(mode: IGameMode): void {
+    if (typeof mode.createRng !== "function") return;
+    const desired = Math.max(5, this.gameState.gameplay.nextPieceCount ?? 5);
+    const seededRng = getActiveRng(mode, this.randomSeed(), this.gameState.rng);
+    const { newRng, pieces } =
+      typeof mode.getPreview === "function"
+        ? mode.getPreview(this.gameState, seededRng, desired)
+        : seededRng.getNextPieces(desired);
+    this.dispatch({ pieces, rng: newRng, type: "ReplacePreview" });
   }
 
   // Public method to get available game modes
@@ -454,6 +504,10 @@ export class FinessimoApp {
     this.updateTimingSettings(newSettings);
     this.updateGameplaySettings(newSettings);
     this.updateKeyBindings(newSettings);
+    // Mode switch (minimal playtest toggle)
+    if (newSettings.mode === "freePlay" || newSettings.mode === "guided") {
+      this.setGameMode(newSettings.mode);
+    }
   }
 
   private updateTimingSettings(newSettings: Partial<GameSettings>): void {

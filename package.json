@@ -37,7 +37,8 @@
     "@chnicoloso/lit-jsx": "^0.0.2",
     "@lit-labs/signals": "^0.1.3",
     "lit": "^3.3.1",
-    "robot3": "^1.1.1"
+    "robot3": "^1.1.1",
+    "ts-fsrs": "^5.2.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",

@@ -141,7 +141,7 @@ describe("FreePlayMode", () => {
   });
 });
 
-describe("GuidedMode", () => {
+describe("GuidedMode (SRS)", () => {
   let mode: GuidedMode;
   let state: GameState;
 
@@ -154,18 +154,29 @@ describe("GuidedMode", () => {
     };
   });
 
-  test("advances drill and provides next prompt on optimal finesse", () => {
-    // Match current drill (T at x=0, rot=spawn)
+  test("provides guidance and expected piece for selected card", () => {
+    const guidance = mode.getGuidance(state);
+    const expected = mode.getExpectedPiece(state);
+    expect(guidance?.target).toBeDefined();
+    expect(expected).toBeDefined();
+  });
+
+  test("optimal placement updates deck and changes next selection", () => {
+    const guidance = mode.getGuidance(state);
+    const expected = mode.getExpectedPiece(state);
+    if (guidance?.target === undefined || expected === undefined) return;
+    const firstKey = `${expected}:${guidance.target.rot}:${String(guidance.target.x)}`;
+
     const locked: ActivePiece = {
-      id: "T",
+      id: expected,
       rot: "spawn",
       x: createGridCoord(4),
       y: createGridCoord(0),
     };
     const finalPos: ActivePiece = {
-      id: "T",
-      rot: "spawn",
-      x: createGridCoord(0),
+      id: expected,
+      rot: guidance.target.rot,
+      x: guidance.target.x,
       y: createGridCoord(0),
     };
     const result = mode.onPieceLocked(
@@ -174,224 +185,15 @@ describe("GuidedMode", () => {
       locked,
       finalPos,
     );
-    if (result.modeData !== undefined)
-      state = { ...state, modeData: result.modeData };
-
-    expect(result.nextPrompt).toContain("Place T-piece at right edge");
-  });
-
-  test("does not advance drill on suboptimal finesse", () => {
-    const locked: ActivePiece = {
-      id: "T",
-      rot: "spawn",
-      x: createGridCoord(4),
-      y: createGridCoord(0),
-    };
-    const finalPos: ActivePiece = {
-      id: "T",
-      rot: "spawn",
-      x: createGridCoord(0),
-      y: createGridCoord(0),
-    };
-    const result = mode.onPieceLocked(
-      state,
-      mockSuboptimalResult,
-      locked,
-      finalPos,
-    );
-
-    expect(result.nextPrompt).toBeUndefined();
-    expect(result.modeData).toBeDefined();
-  });
-
-  test("tracks attempts across suboptimal tries", () => {
-    // First attempt - suboptimal
-    const locked: ActivePiece = {
-      id: "T",
-      rot: "spawn",
-      x: createGridCoord(4),
-      y: createGridCoord(0),
-    };
-    const finalPos: ActivePiece = {
-      id: "T",
-      rot: "spawn",
-      x: createGridCoord(0),
-      y: createGridCoord(0),
-    };
-    let result = mode.onPieceLocked(
-      state,
-      mockSuboptimalResult,
-      locked,
-      finalPos,
-    );
     expect(result.modeData).toBeDefined();
     if (result.modeData !== undefined)
       state = { ...state, modeData: result.modeData };
 
-    // Second attempt - suboptimal
-    result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
-    expect(result.modeData).toBeDefined();
-    if (result.modeData !== undefined)
-      state = { ...state, modeData: result.modeData };
-
-    // Third attempt - should show hint
-    result = mode.onPieceLocked(state, mockSuboptimalResult, locked, finalPos);
-    expect(result.modeData).toBeDefined();
-  });
-
-  test("should provide next prompt when no active piece", () => {
-    const stateNoActive = { ...mockGameState, active: undefined };
-
-    expect(mode.shouldPromptNext(stateNoActive)).toBe(true);
-
-    const prompt = mode.getNextPrompt(stateNoActive);
-    expect(prompt).toContain("Drill 1/7");
-    expect(prompt).toContain("Place T-piece at left edge");
-  });
-
-  test("should complete all drills", () => {
-    // Complete all 7 drills with matching piece/target using guidance
-    for (let i = 0; i < 7; i++) {
-      const guidance = mode.getGuidance(state);
-      expect(guidance?.target).toBeDefined();
-      const expected = mode.getExpectedPiece(state);
-      expect(expected).toBeDefined();
-      if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = {
-        id: expected,
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(0),
-      };
-      const finalPos: ActivePiece = {
-        id: locked.id,
-        rot: guidance.target.rot,
-        x: guidance.target.x,
-        y: createGridCoord(0),
-      };
-      const result = mode.onPieceLocked(
-        state,
-        mockOptimalResult,
-        locked,
-        finalPos,
-      );
-      if (result.modeData !== undefined)
-        state = { ...state, modeData: result.modeData };
-      if (i === 6) {
-        expect(result.isComplete).toBe(true);
-      }
-    }
-  });
-
-  test("should track progress correctly", () => {
-    const data0 = state.modeData as { currentDrillIndex: number } | undefined;
-    expect(data0?.currentDrillIndex ?? 0).toBe(0);
-
-    const total = 7;
-
-    // Complete one drill
-    {
-      const guidance = mode.getGuidance(state);
-      expect(guidance?.target).toBeDefined();
-      const expected = mode.getExpectedPiece(state);
-      expect(expected).toBeDefined();
-      if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = {
-        id: expected,
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(0),
-      };
-      const finalPos: ActivePiece = {
-        id: locked.id,
-        rot: guidance.target.rot,
-        x: guidance.target.x,
-        y: createGridCoord(0),
-      };
-      const res = mode.onPieceLocked(
-        state,
-        mockOptimalResult,
-        locked,
-        finalPos,
-      );
-      if (res.modeData !== undefined)
-        state = { ...state, modeData: res.modeData };
-    }
-
-    const data1 = state.modeData as { currentDrillIndex: number } | undefined;
-    expect(data1?.currentDrillIndex ?? 0).toBe(1);
-    expect(total).toBe(7);
-  });
-
-  test("should reset correctly", () => {
-    // Advance a few drills
-    {
-      const guidance = mode.getGuidance(state);
-      const expected = mode.getExpectedPiece(state);
-      expect(guidance?.target).toBeDefined();
-      expect(expected).toBeDefined();
-      if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = {
-        id: expected,
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(0),
-      };
-      const finalPos: ActivePiece = {
-        id: locked.id,
-        rot: guidance.target.rot,
-        x: guidance.target.x,
-        y: createGridCoord(0),
-      };
-      const res = mode.onPieceLocked(
-        state,
-        mockOptimalResult,
-        locked,
-        finalPos,
-      );
-      if (res.modeData !== undefined)
-        state = { ...state, modeData: res.modeData };
-    }
-    {
-      const guidance = mode.getGuidance(state);
-      const expected = mode.getExpectedPiece(state);
-      expect(guidance?.target).toBeDefined();
-      expect(expected).toBeDefined();
-      if (guidance?.target === undefined || expected === undefined) return;
-      const locked: ActivePiece = {
-        id: expected,
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(0),
-      };
-      const finalPos: ActivePiece = {
-        id: locked.id,
-        rot: guidance.target.rot,
-        x: guidance.target.x,
-        y: createGridCoord(0),
-      };
-      const res = mode.onPieceLocked(
-        state,
-        mockOptimalResult,
-        locked,
-        finalPos,
-      );
-      if (res.modeData !== undefined)
-        state = { ...state, modeData: res.modeData };
-    }
-
-    expect(
-      (state.modeData as { currentDrillIndex: number } | undefined)
-        ?.currentDrillIndex ?? 0,
-    ).toBe(2);
-
-    mode.reset();
-
-    // After reset, consumer should re-init modeData using initModeData
-    state = { ...state, modeData: mode.initModeData() };
-    expect(
-      (state.modeData as { currentDrillIndex: number } | undefined)
-        ?.currentDrillIndex ?? 0,
-    ).toBe(0);
+    const guidance2 = mode.getGuidance(state);
+    const expected2 = mode.getExpectedPiece(state);
+    if (guidance2?.target === undefined || expected2 === undefined) return;
+    const secondKey = `${expected2}:${guidance2.target.rot}:${String(guidance2.target.x)}`;
+    // After "good", due increased, so next selection should differ
+    expect(secondKey).not.toEqual(firstKey);
   });
 });

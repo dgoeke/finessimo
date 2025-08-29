@@ -219,6 +219,7 @@ function createInitialState(
   return {
     active: undefined,
     board: createEmptyBoard(),
+    boardDecorations: null,
     canHold: true,
     currentMode: mode ?? "freePlay",
     finesseFeedback: null,
@@ -798,6 +799,16 @@ const actionHandlers: ActionHandlerMap = {
     rng: action.rng,
   }),
 
+  ResetBoard: (state, _action) => ({
+    ...state,
+    board: createEmptyBoard(),
+    physics: {
+      ...state.physics,
+      lineClearLines: [],
+      lineClearStartTime: null,
+    },
+  }),
+
   RetryPendingLock: (state, _action) => {
     if (state.status !== "resolvingLock") {
       return state;
@@ -1000,6 +1011,11 @@ const actionHandlers: ActionHandlerMap = {
 
     return newState;
   },
+
+  UpdateBoardDecorations: (state, action) => ({
+    ...state,
+    boardDecorations: action.decorations,
+  }),
 
   UpdateFinesseFeedback: (state, action) => ({
     ...state,

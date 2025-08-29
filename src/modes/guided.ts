@@ -1,235 +1,292 @@
-import { type FinesseResult, assertNever } from "../finesse/calculator";
+import { dropToBottom, createEmptyBoard } from "../core/board";
+import { PIECES } from "../core/pieces";
+import { type FinesseResult } from "../finesse/calculator";
+import {
+  type GuidedCard,
+  type SrsDeck,
+  pickNextDue,
+  rate,
+  updateDeckRecord,
+} from "../srs/fsrs-adapter";
+import { canonicalId } from "../srs/fsrs-adapter";
+import { loadGuidedDeck, saveGuidedDeck } from "../srs/storage";
 import {
   type GameState,
   type PieceId,
   type Rot,
   type ActivePiece,
   type ModeGuidance,
+  type Action,
+  type BoardDecorations,
+  type Board,
 } from "../state/types";
-import { createGridCoord } from "../types/brands";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
+import { createTimestamp } from "../types/timestamp";
+
+import { makeDefaultDeck } from "./guided/deck";
 
 import { type GameMode, type GameModeResult } from "./index";
 
-type GuidedDrill = {
-  piece: PieceId;
-  targetX: number;
-  targetRot: Rot;
-  description: string;
-};
-
-type GuidedData = {
-  currentDrillIndex: number;
-  attemptsOnCurrentDrill: number;
-};
+type GuidedSrsData = Readonly<{
+  deck: SrsDeck;
+}>;
 
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
-  private drills: Array<GuidedDrill> = [
-    {
-      description: "Place T-piece at left edge (spawn rotation)",
-      piece: "T",
-      targetRot: "spawn",
-      targetX: 0,
-    },
-    {
-      description: "Place T-piece at right edge (spawn rotation)",
-      piece: "T",
-      targetRot: "spawn",
-      targetX: 7,
-    },
-    {
-      description: "Place T-piece at center (right rotation)",
-      piece: "T",
-      targetRot: "right",
-      targetX: 4,
-    },
-    {
-      description: "Place I-piece at left edge (spawn rotation)",
-      piece: "I",
-      targetRot: "spawn",
-      targetX: 0,
-    },
-    {
-      description: "Place I-piece at right edge (spawn rotation)",
-      piece: "I",
-      targetRot: "spawn",
-      targetX: 6,
-    },
-    {
-      description: "Place L-piece at left edge (spawn rotation)",
-      piece: "L",
-      targetRot: "spawn",
-      targetX: 0,
-    },
-    {
-      description: "Place J-piece at right edge (spawn rotation)",
-      piece: "J",
-      targetRot: "spawn",
-      targetX: 7,
-    },
-  ];
-
-  initModeData(): GuidedData {
-    return { attemptsOnCurrentDrill: 0, currentDrillIndex: 0 };
+  initModeData(): GuidedSrsData {
+    return { deck: makeDefaultDeck(createTimestamp(1)) };
   }
 
-  private getData(state: GameState): GuidedData {
-    const data = state.modeData as GuidedData | undefined;
-    if (!data) {
-      return this.initModeData();
-    }
-    return {
-      attemptsOnCurrentDrill: data.attemptsOnCurrentDrill,
-      currentDrillIndex: data.currentDrillIndex,
-    };
+  getDeck(state: GameState): SrsDeck {
+    const data = state.modeData as GuidedSrsData | undefined;
+    if (data?.deck) return data.deck;
+    return makeDefaultDeck(createTimestamp(1));
+  }
+
+  selectCard(state: GameState): GuidedCard | null {
+    const deck = this.getDeck(state);
+    const nowCount = Math.max(1, state.stats.attempts);
+    const now = createTimestamp(nowCount);
+    const rec = pickNextDue(deck, now);
+    return rec?.card ?? null;
   }
 
   onBeforeSpawn(state: GameState): { piece?: PieceId } | null {
-    void state;
-    const data = this.getData(state);
-    const drill = this.drills[data.currentDrillIndex];
-    if (!drill || state.status !== "playing") return null;
-    return { piece: drill.piece };
+    if (state.status !== "playing") return null;
+    const card = this.selectCard(state);
+    if (!card) return null;
+    return { piece: card.piece };
   }
 
   getGuidance(state: GameState): ModeGuidance | null {
-    const data = this.getData(state);
-    const drill = this.drills[data.currentDrillIndex];
-    if (!drill) return null;
+    const card = this.selectCard(state);
+    if (!card) return null;
     return {
-      label: `Drill ${String(data.currentDrillIndex + 1)}/${String(this.drills.length)}: ${drill.description}`,
-      target: { rot: drill.targetRot, x: createGridCoord(drill.targetX) },
+      label: `SRS: ${card.piece} @ x=${String(card.x as number)}, rot=${card.rot}`,
+      target: { rot: card.rot, x: createGridCoord(card.x as number) },
       visual: { highlightTarget: true, showPath: true },
     };
   }
 
   onPieceLocked(
-    _gameState: GameState,
+    gameState: GameState,
     finesseResult: FinesseResult,
     lockedPiece: ActivePiece,
     finalPosition: ActivePiece,
   ): GameModeResult {
-    const data = this.getData(_gameState);
-    const currentDrill = this.drills[data.currentDrillIndex];
+    const deck = this.getDeck(gameState);
+    const now = createTimestamp(gameState.stats.attempts + 1);
+    const dueCard = this.selectCard(gameState);
+    if (!dueCard) return {};
 
-    if (!currentDrill) {
-      return { isComplete: true };
+    // Log finesse warning FIRST (before any validation checks)
+    if (finesseResult.kind === "faulty") {
+      this.logFinesseWarning(dueCard, finesseResult);
     }
 
-    const validationResult = this.validatePieceAndTarget(
-      lockedPiece,
-      finalPosition,
-      currentDrill,
-    );
-    if (validationResult) {
-      return validationResult;
-    }
-
-    switch (finesseResult.kind) {
-      case "optimal":
-        return this.handleOptimalSolution(data);
-      case "faulty":
-        return this.handleSuboptimalSolution(data);
-      default:
-        return assertNever(finesseResult);
-    }
-  }
-
-  private validatePieceAndTarget(
-    lockedPiece: ActivePiece,
-    finalPosition: ActivePiece,
-    expected: GuidedDrill,
-  ): GameModeResult | null {
-    if (lockedPiece.id !== expected.piece) {
-      // Do not advance; textual feedback is not emitted here
+    // Validate piece matches expected piece (should always match in guided mode)
+    if (lockedPiece.id !== dueCard.piece) {
+      console.error(
+        "Unexpected piece mismatch in guided mode - this should not happen",
+      );
       return {};
     }
-    if (
-      !(
-        finalPosition.x === expected.targetX &&
-        finalPosition.rot === expected.targetRot
-      )
-    ) {
-      // Do not advance; textual feedback is not emitted here
-      return {};
-    }
-    return null;
-  }
 
-  private handleOptimalSolution(data: GuidedData): GameModeResult {
-    const nextIndex = data.currentDrillIndex + 1;
-    const nextDrill = this.drills[nextIndex];
-    if (nextDrill) {
-      return {
-        modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
-        nextPrompt: nextDrill.description,
-      };
-    } else {
-      return {
-        isComplete: true,
-        modeData: { attemptsOnCurrentDrill: 0, currentDrillIndex: nextIndex },
-      };
-    }
-  }
-
-  private handleSuboptimalSolution(data: GuidedData): GameModeResult {
-    const nextAttempts = data.attemptsOnCurrentDrill + 1;
-    return {
-      modeData: {
-        attemptsOnCurrentDrill: nextAttempts,
-        currentDrillIndex: data.currentDrillIndex,
-      },
+    // Check if placement fills the intended target squares (rotation-agnostic)
+    const targetPiece: ActivePiece = {
+      id: dueCard.piece,
+      rot: dueCard.rot,
+      x: createGridCoord(dueCard.x as number),
+      y: createGridCoord(-2),
     };
+    // Be resilient in tests that construct partial states
+    const board = (gameState as { board?: Board }).board ?? createEmptyBoard();
+    const targetFinal = dropToBottom(board, targetPiece);
+    const placedCorrectly = this.equalOccupiedCells(
+      board,
+      finalPosition,
+      targetFinal,
+    );
+
+    const key = canonicalId(dueCard);
+    const rec =
+      deck.items.get(key) ??
+      Array.from(deck.items.values()).find((r) => r.key === key);
+    if (!rec) return {};
+
+    // Rating: optimal finesse AND correct placement = "good", otherwise "again"
+    const rating =
+      finesseResult.kind === "optimal" && placedCorrectly ? "good" : "again";
+
+    const updated = rate(rec, rating, now);
+    const newDeck = updateDeckRecord(deck, updated);
+    // Persist updated deck
+    saveGuidedDeck(newDeck);
+    return { modeData: { deck: newDeck } };
+  }
+
+  // Compute absolute occupied cells for a piece within board bounds
+  private occupiedCells(
+    board: Board,
+    piece: ActivePiece,
+  ): ReadonlyArray<readonly [number, number]> {
+    const shape = PIECES[piece.id];
+    const cells = shape.cells[piece.rot];
+    const out: Array<readonly [number, number]> = [];
+    for (const [dx, dy] of cells) {
+      const ax = gridCoordAsNumber(piece.x) + dx;
+      const ay = gridCoordAsNumber(piece.y) + dy;
+      if (ax >= 0 && ax < board.width && ay >= 0 && ay < board.height) {
+        out.push([ax, ay]);
+      }
+    }
+    return out;
+  }
+
+  // Compare two placements by their filled squares (order-insensitive)
+  private equalOccupiedCells(
+    board: Board,
+    a: ActivePiece,
+    b: ActivePiece,
+  ): boolean {
+    const aCells = this.occupiedCells(board, a);
+    const bCells = this.occupiedCells(board, b);
+    if (aCells.length !== bCells.length) return false;
+    const key = (p: readonly [number, number]) =>
+      `${String(p[0])},${String(p[1])}` as const;
+    const setA = new Set(aCells.map(key));
+    for (const c of bCells) {
+      if (!setA.has(key(c))) return false;
+    }
+    return true;
   }
 
   shouldPromptNext(gameState: GameState): boolean {
-    if (!gameState.active) {
-      const data = this.getData(gameState);
-      const currentDrill = this.drills[data.currentDrillIndex];
-      return currentDrill !== undefined;
-    }
-    return false;
+    return !gameState.active;
   }
 
-  getNextPrompt(_gameState: GameState): string | null {
-    void _gameState;
-    const data = this.getData(_gameState);
-    const currentDrill = this.drills[data.currentDrillIndex];
-    if (currentDrill) {
-      return `Drill ${String(data.currentDrillIndex + 1)}/${String(this.drills.length)}: ${currentDrill.description}`;
-    }
-    return null;
+  getNextPrompt(gameState: GameState): string | null {
+    const card = this.selectCard(gameState);
+    if (!card) return null;
+    return `SRS: ${card.piece} @ x=${String(card.x as number)} rot=${card.rot}`;
   }
 
   // Provide intended target for analysis
   getTargetFor(
     _lockedPiece: ActivePiece,
-    _gameState: GameState,
+    gameState: GameState,
   ): { targetX: number; targetRot: Rot } | null {
-    void _lockedPiece;
-    const data = this.getData(_gameState);
-    const currentDrill = this.drills[data.currentDrillIndex];
-    if (!currentDrill) return null;
-    return { targetRot: currentDrill.targetRot, targetX: currentDrill.targetX };
+    const card = this.selectCard(gameState);
+    if (!card) return null;
+    return { targetRot: card.rot, targetX: card.x as number };
   }
 
-  getExpectedPiece(_gameState: GameState): PieceId | undefined {
-    void _gameState;
-    const data = this.getData(_gameState);
-    const currentDrill = this.drills[data.currentDrillIndex];
-    return currentDrill?.piece;
+  getExpectedPiece(gameState: GameState): PieceId | undefined {
+    const card = this.selectCard(gameState);
+    return card?.piece;
+  }
+
+  getBoardDecorations(state: GameState): BoardDecorations | null {
+    if (state.status !== "playing") return null;
+    const card = this.selectCard(state);
+    if (!card) return null;
+    const board = state.board;
+
+    // Build an abstract active piece at the target x/rot above the board
+    const startY = createGridCoord(-2);
+    const startX = createGridCoord(card.x as number);
+    const piece = {
+      id: card.piece,
+      rot: card.rot,
+      x: startX,
+      y: startY,
+    } as const;
+    const finalPos = dropToBottom(board, piece);
+
+    // Compute absolute cells to highlight
+    const shape = PIECES[piece.id];
+    const cells = shape.cells[piece.rot];
+    const decorated = [] as Array<{
+      x: ReturnType<typeof createGridCoord>;
+      y: ReturnType<typeof createGridCoord>;
+    }>;
+    for (const [dx, dy] of cells) {
+      const ax = createGridCoord(gridCoordAsNumber(finalPos.x) + dx);
+      const ay = createGridCoord(gridCoordAsNumber(finalPos.y) + dy);
+      // Only include visible board cells
+      if (ax >= 0 && ax < board.width && ay >= 0 && ay < board.height) {
+        decorated.push({ x: ax, y: ay });
+      }
+    }
+    return [
+      {
+        alpha: 0.25,
+        cells: decorated,
+        color: shape.color,
+        type: "cellHighlight",
+      },
+    ];
+  }
+
+  isTargetSatisfied(
+    _lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+    state: GameState,
+  ): boolean {
+    const card = this.selectCard(state);
+    if (!card) return true; // no opinion
+    const targetPiece: ActivePiece = {
+      id: card.piece,
+      rot: card.rot,
+      x: createGridCoord(card.x as number),
+      y: createGridCoord(-2),
+    };
+    const board = (state as { board?: Board }).board ?? createEmptyBoard();
+    const targetFinal = dropToBottom(board, targetPiece);
+    return this.equalOccupiedCells(board, finalPosition, targetFinal);
   }
 
   reset(): void {
-    void 0;
+    // no-op; consumers should re-init modeData via initModeData
   }
 
-  getCurrentDrill(): GuidedDrill | undefined {
-    return undefined;
+  onResolveLock(): { action: "commit"; postActions: ReadonlyArray<Action> } {
+    // Always commit, then clear the board in guided mode to keep drills independent.
+    return { action: "commit", postActions: [{ type: "ResetBoard" }] };
   }
 
-  getProgress(): { current: number; total: number } {
-    return { current: 0, total: this.drills.length };
+  onActivated(state: GameState): { modeData?: unknown } {
+    const now = state.stats.startedAtMs;
+    const deck = loadGuidedDeck(now);
+    return { modeData: { deck } };
+  }
+
+  private logFinesseWarning(
+    dueCard: GuidedCard,
+    finesseResult: FinesseResult & { kind: "faulty" },
+  ): void {
+    console.warn("🎯 Guided Mode: Suboptimal finesse detected!");
+    console.warn(
+      `Piece: ${dueCard.piece} → ${String(dueCard.x as number)}, ${dueCard.rot}`,
+    );
+    console.warn(`Your moves: [${finesseResult.playerSequence.join(", ")}]`);
+    const firstOptimal = finesseResult.optimalSequences[0];
+    console.warn(
+      `Optimal moves: [${firstOptimal ? firstOptimal.join(", ") : "none"}]`,
+    );
+    if (finesseResult.optimalSequences.length > 1) {
+      console.warn(
+        `Alternative optimal: [${finesseResult.optimalSequences
+          .slice(1)
+          .map((seq) => seq.join(", "))
+          .join("] or [")}]`,
+      );
+    }
+    if (finesseResult.faults.length > 0) {
+      console.warn(
+        `Faults: ${finesseResult.faults.map((f) => f.description).join(", ")}`,
+      );
+    }
   }
 }

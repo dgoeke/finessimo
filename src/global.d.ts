@@ -7,3 +7,5 @@ declare global {
 }
 
 export {};
+
+// (No jest typings augmentation; tests should avoid unsafe casts.)

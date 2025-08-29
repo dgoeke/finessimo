@@ -110,7 +110,7 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-explicit-any": [
         "error",
-        { fixToUnknown: true, ignoreRestArgs: false },
+        { fixToUnknown: false, ignoreRestArgs: false },
       ],
       "@typescript-eslint/consistent-type-imports": [
         "error",

@@ -184,6 +184,22 @@ export class DefaultFinesseService implements FinesseService {
     finalPosition: ActivePiece,
     faults: Array<Fault>,
   ): void {
+    // Prefer mode-specific validation when available
+    if (typeof gameMode.isTargetSatisfied === "function") {
+      const ok = gameMode.isTargetSatisfied(lockedPiece, finalPosition, state);
+      if (!ok) {
+        // Fall back to descriptive guidance if available
+        const t =
+          typeof gameMode.getTargetFor === "function"
+            ? gameMode.getTargetFor(lockedPiece, state)
+            : null;
+        const desc = t
+          ? `Expected target x=${String(t.targetX)}, rot=${t.targetRot}`
+          : "Incorrect placement for this mode";
+        faults.push({ description: desc, type: "wrong_target" });
+      }
+      return;
+    }
     if (typeof gameMode.getTargetFor === "function") {
       const t = gameMode.getTargetFor(lockedPiece, state);
       if (

@@ -5,6 +5,7 @@ import { customElement, query } from "lit/decorators.js";
 import { calculateGhostPosition } from "../../core/board";
 import { PIECES } from "../../core/pieces";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
+import { gridCoordAsNumber } from "../../types/brands";
 import { lightenColor, darkenColor } from "../utils/colors";
 
 import type { GameState, Board, ActivePiece } from "../../state/types";
@@ -19,6 +20,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private lastRenderState?: {
     active: GameState["active"];
     board: GameState["board"];
+    boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
   };
 
@@ -61,6 +63,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private hasStateChanged(newState: {
     active: GameState["active"];
     board: GameState["board"];
+    boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
   }): boolean {
     if (!this.lastRenderState) {
@@ -74,6 +77,11 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Compare board state (reference equality is sufficient since board is immutable)
     if (this.lastRenderState.board !== newState.board) {
+      return true;
+    }
+
+    // Compare board decorations
+    if (this.lastRenderState.boardDecorations !== newState.boardDecorations) {
       return true;
     }
 
@@ -102,6 +110,11 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Render board
     this.renderBoard(gameState.board);
 
+    // Render mode-provided board decorations (e.g., guided target cells)
+    if (gameState.boardDecorations && gameState.boardDecorations.length > 0) {
+      this.renderBoardDecorations(gameState);
+    }
+
     // Render ghost piece first (so active piece draws on top)
     if (gameState.active && (gameState.gameplay.ghostPieceEnabled ?? true)) {
       const ghostPosition = calculateGhostPosition(
@@ -121,6 +134,22 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Draw grid
     this.drawGrid();
+  }
+
+  private renderBoardDecorations(gameState: GameState): void {
+    if (!this.ctx || !gameState.boardDecorations) return;
+    for (const deco of gameState.boardDecorations) {
+      const color = deco.color ?? "#00A2FF";
+      const alpha = typeof deco.alpha === "number" ? deco.alpha : 0.25;
+      for (const c of deco.cells) {
+        const x = gridCoordAsNumber(c.x);
+        const y = gridCoordAsNumber(c.y);
+        if (x < 0 || x >= this.boardWidth || y < 0 || y >= this.boardHeight) {
+          continue;
+        }
+        this.drawHighlightCell(x, y, color, alpha);
+      }
+    }
   }
 
   private renderBoard(board: Board): void {
@@ -228,7 +257,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     gradient.addColorStop(0, lightenColor(color, 0.1));
     gradient.addColorStop(1, darkenColor(color, 0.9));
 
-    this.ctx.fillStyle = "#000000"; //gradient;
+    this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
     this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
 
     // Add subtle highlight on top edge
@@ -249,6 +278,51 @@ export class GameBoard extends SignalWatcher(LitElement) {
       this.cellSize - 2,
       this.cellSize - 2,
     );
+  }
+
+  private drawHighlightCell(
+    x: number,
+    y: number,
+    color: string,
+    alpha: number,
+  ): void {
+    if (!this.ctx) return;
+
+    const pixelX = x * this.cellSize;
+    const pixelY = y * this.cellSize;
+
+    // Draw a bright, truly blurred glow that bleeds ~50% into neighbors
+    this.ctx.save();
+    const clampedAlpha = Math.max(0, Math.min(1, alpha));
+    const extend = Math.floor(this.cellSize * 0.5); // bleed half-cell into neighbors
+    const blurPx = Math.max(2, Math.floor(this.cellSize * 0.5));
+    const glowAlpha = Math.min(1, Math.max(0.3, clampedAlpha)); // brighter glow
+
+    this.ctx.globalCompositeOperation = "lighter"; // additive for luminous effect
+    this.ctx.globalAlpha = glowAlpha;
+    this.ctx.filter = `blur(${String(blurPx)}px)`;
+    this.ctx.fillStyle = color;
+    // Larger rect than the cell to encourage outward bloom
+    this.ctx.fillRect(
+      pixelX - extend,
+      pixelY - extend,
+      this.cellSize + extend * 2,
+      this.cellSize + extend * 2,
+    );
+    this.ctx.restore();
+
+    // Crisp inner core to anchor the target
+    this.ctx.save();
+    this.ctx.globalAlpha = Math.min(1, Math.max(0.4, clampedAlpha * 1.6));
+    // this.ctx.fillStyle = color;
+    const coreMargin = Math.max(2, Math.floor(this.cellSize * 0.12));
+    this.ctx.fillRect(
+      pixelX + coreMargin,
+      pixelY + coreMargin,
+      this.cellSize - coreMargin * 2,
+      this.cellSize - coreMargin * 2,
+    );
+    this.ctx.restore();
   }
 
   private drawGrid(): void {

@@ -49,11 +49,18 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Modes
 
-- src/modes/index.ts: Game mode contracts and registry. Mode-agnostic hooks for config, spawning, guidance, lock resolution, RNG/preview. Registers FreePlayMode and GuidedMode.
+- src/modes/index.ts: Game mode contracts and registry. Mode-agnostic hooks for config, spawning, guidance, board decorations/overlays, lock resolution, RNG/preview. Registers FreePlayMode and GuidedMode.
 - src/modes/freePlay.ts: Free-play mode. Finesse evaluation on final placement, succinct feedback. Implements `onResolveLock` retry-on-finesse-error for suboptimal hard drops. Provides 7-bag defaults for RNG/preview.
-- src/modes/guided.ts: Guided training drills. Piece/target challenges, progress tracking, hints, expected piece/target validation.
+- src/modes/guided.ts: Guided training powered by FSRS SRS. Picks a (piece, rot, x) card, provides guidance, validates placement, rates Good/Again, updates deck. Supplies board decorations to visualize the target placement cells on the board during play.
 - src/modes/lock-pipeline.ts: Pure lock resolution pipeline. Coordinates finesse analysis, mode consultation, and commit/retry decisions. Runs synchronously for consistent game flow.
 - src/modes/spawn-service.ts: Pure helpers to externalize RNG and preview queue refills. Provides `planPreviewRefill` and mode-aware RNG provisioning.
+- src/modes/guided/deck.ts: Generates valid guided cards and builds the default deck.
+- src/modes/guided/types.ts: Branded types for guided mode SRS (Column, CardId, DeckId) with runtime validation.
+
+## SRS
+
+- src/srs/fsrs-adapter.ts: FSRS adapter implementing the official ts-fsrs library. Maps GuidedCard to spaced repetition scheduling with Good/Again ratings, JSON serialization/deserialization, and deck management.
+- src/srs/storage.ts: Persistence layer for SRS deck state. localStorage integration with versioned migration support and graceful fallback to default deck.
 
 ## UI
 
@@ -92,4 +99,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/helpers/assert.ts: Additional test assertion utilities and custom matchers.
 - tests/helpers/reducer-with-pipeline.ts: Pipeline-aware reducer wrapper for tests. Automatically runs the lock pipeline on staged pending locks and mirrors preview refill behavior.
 - tests/unit/key-binding-manager.test.ts: Unit tests for KeyBindingManager utility. Tests handler storage, listener management, cleanup logic, and edge cases using mock DOM elements.
+- tests/unit/guided-storage.test.ts: Unit tests for SRS deck persistence. Tests localStorage save/load cycles, migration fallback, and serialization roundtrips.
+- tests/unit/guided-resetboard.test.ts: Integration test for guided mode board clearing. Verifies that ResetBoard action clears the board after piece commits in guided mode.
+- tests/unit/guided-finesse-warnings.test.ts: Unit tests for guided mode console warnings. Verifies that finesse warnings are logged when moves are suboptimal and not logged when optimal.
+- tests/types/settings-schema.test.ts: Compile-time type test for GameSettings schema completeness. Ensures that all GameSettings fields are handled in the validation schema to prevent persistence issues.
 - tests/types/invariants.test.ts: Compile-time type tests for critical invariants. Tests GameState status union exhaustiveness, board dimensions, readonly constraints, and other type-level guarantees without runtime execution.

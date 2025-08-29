@@ -9,6 +9,8 @@ import {
   type TimingConfig,
   type GameplayConfig,
   type PendingLock,
+  type Action,
+  type BoardDecorations,
 } from "../state/types";
 
 import { FreePlayMode } from "./freePlay";
@@ -21,7 +23,9 @@ export type ResolveLockContext = {
   finesse: FinesseResult; // result from analyzer
 };
 
-export type ResolveLockDecision = { action: "commit" } | { action: "retry" };
+export type ResolveLockDecision =
+  | { action: "retry" }
+  | { action: "commit"; postActions?: ReadonlyArray<Action> };
 
 export type GameModeResult = {
   isComplete?: boolean;
@@ -41,6 +45,14 @@ export type GameMode = {
   // Optional initializer for per-mode opaque data stored in GameState
   initModeData?(): unknown;
 
+  // Optional lifecycle hook invoked by the app when a mode is activated.
+  // Allows a mode to provide initial modeData and/or post-activation actions
+  // (e.g., persistence load, guidance setup) without app.ts branching.
+  onActivated?(state: GameState): {
+    modeData?: unknown;
+    postActions?: ReadonlyArray<Action>;
+  };
+
   onPieceLocked(
     gameState: GameState,
     finesseResult: FinesseResult,
@@ -58,11 +70,20 @@ export type GameMode = {
   // Generic guidance for UI/visualization (targets, labels, flags)
   getGuidance?(state: GameState): ModeGuidance | null;
 
+  // Optional: provide per-frame board decorations for the UI to render
+  getBoardDecorations?(state: GameState): BoardDecorations | null;
+
   // Optional: provide intended target for analysis in this mode
   getTargetFor?(
     lockedPiece: ActivePiece,
     gameState: GameState,
   ): { targetX: number; targetRot: Rot } | null;
+  // Optional: custom placement validation for wrong-target faults
+  isTargetSatisfied?(
+    lockedPiece: ActivePiece,
+    finalPosition: ActivePiece,
+    state: GameState,
+  ): boolean;
   // Optional: provide expected piece for the current challenge (e.g., Guided)
   getExpectedPiece?(gameState: GameState): PieceId | undefined;
 

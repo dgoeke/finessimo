@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
-    "statements": 85,
+    "statements": 84,
     "branches": 70,
-    "functions": 80,
-    "lines": 86
+    "functions": 82,
+    "lines": 85
   },
   "src/core/board.ts": {
     "statements": 97,
@@ -54,10 +54,10 @@
     "lines": 89
   },
   "src/finesse/service.ts": {
-    "statements": 81,
-    "branches": 56,
+    "statements": 84,
+    "branches": 58,
     "functions": 100,
-    "lines": 81
+    "lines": 84
   },
   "src/input/StateMachineInputHandler.ts": {
     "statements": 85,
@@ -102,10 +102,10 @@
     "lines": 90
   },
   "src/modes/guided.ts": {
-    "statements": 73,
-    "branches": 65,
-    "functions": 75,
-    "lines": 76
+    "statements": 70,
+    "branches": 50,
+    "functions": 66,
+    "lines": 79
   },
   "src/modes/index.ts": {
     "statements": 88,
@@ -114,21 +114,45 @@
     "lines": 88
   },
   "src/modes/lock-pipeline.ts": {
-    "statements": 82,
-    "branches": 62,
+    "statements": 86,
+    "branches": 75,
     "functions": 100,
-    "lines": 81
+    "lines": 85
   },
   "src/modes/spawn-service.ts": {
-    "statements": 66,
-    "branches": 50,
+    "statements": 72,
+    "branches": 57,
     "functions": 75,
-    "lines": 70
+    "lines": 76
+  },
+  "src/modes/guided/deck.ts": {
+    "statements": 97,
+    "branches": 88,
+    "functions": 75,
+    "lines": 96
+  },
+  "src/modes/guided/types.ts": {
+    "statements": 73,
+    "branches": 76,
+    "functions": 75,
+    "lines": 76
+  },
+  "src/srs/fsrs-adapter.ts": {
+    "statements": 98,
+    "branches": 81,
+    "functions": 91,
+    "lines": 98
+  },
+  "src/srs/storage.ts": {
+    "statements": 92,
+    "branches": 91,
+    "functions": 100,
+    "lines": 95
   },
   "src/state/reducer.ts": {
     "statements": 91,
     "branches": 82,
-    "functions": 95,
+    "functions": 97,
     "lines": 93
   },
   "src/state/signals.ts": {

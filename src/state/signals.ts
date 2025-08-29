@@ -38,10 +38,12 @@ export const stateSelectors = {
   ): {
     active: GameState["active"];
     board: GameState["board"];
+    boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
   } => ({
     active: state.active,
     board: state.board,
+    boardDecorations: state.boardDecorations,
     tick: state.tick,
   }),
 

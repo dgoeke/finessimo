@@ -195,10 +195,9 @@ export class StateMachineInputHandler implements InputHandler {
       return;
     }
 
-    // Always dispatch the engine action
-    this.dispatch(engineAction);
-
-    // Check if we should also emit a ProcessedAction
+    // IMPORTANT: Emit processed input BEFORE engine action so the finesse
+    // analyzer (triggered by lock resolution after engineAction) sees the
+    // final input (e.g., HardDrop) and the log is cleared after analysis.
     if (this.shouldEmitProcessedAction(engineAction, timestampMs)) {
       const processedAction = this.createProcessedActionFromEngineAction(
         engineAction,
@@ -208,6 +207,9 @@ export class StateMachineInputHandler implements InputHandler {
         this.dispatch({ entry: processedAction, type: "AppendProcessed" });
       }
     }
+
+    // Now dispatch the engine action
+    this.dispatch(engineAction);
   }
 
   private shouldEmitProcessedAction(
