@@ -12,6 +12,7 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestSpawnAction } from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
 
 describe("Reducer - Extended Coverage", () => {
@@ -29,7 +30,7 @@ describe("Reducer - Extended Coverage", () => {
     it("should handle all defined action types without errors", () => {
       const actions: Array<Action> = [
         { timestampMs: createTimestamp(1), type: "Tick" },
-        { type: "Spawn" },
+        createTestSpawnAction(),
         { dir: -1, optimistic: false, type: "TapMove" },
         { dir: 1, type: "HoldMove" },
         { on: true, type: "SoftDrop" },
@@ -65,7 +66,7 @@ describe("Reducer - Extended Coverage", () => {
       });
 
       // Test that Spawn actually works now
-      const spawnResult = reducer(initialState, { type: "Spawn" });
+      const spawnResult = reducer(initialState, createTestSpawnAction());
       expect(spawnResult).not.toBe(initialState); // Should create new state
       expect(spawnResult.active).toBeDefined(); // Should spawn a piece
     });

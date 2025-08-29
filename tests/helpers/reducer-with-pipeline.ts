@@ -73,6 +73,7 @@ export function reducerWithPipeline(
         currentState = reducer(currentState, pipelineAction);
       },
       analyze,
+      currentState.pendingLock.timestampMs,
     );
   }
 

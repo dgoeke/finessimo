@@ -1,12 +1,13 @@
 import { createSeed } from "../src/types/brands";
-import { fromNow } from "../src/types/timestamp";
+import { fromNow, createTimestamp } from "../src/types/timestamp";
 
 import type { SevenBagRng } from "../src/core/rng";
 import type {
   GameState,
-  ActivePiece,
-  PieceId,
   Action,
+  ActivePiece,
+  PhysicsState,
+  PieceId,
 } from "../src/state/types";
 
 // Assertion helper that provides runtime type narrowing
@@ -138,5 +139,46 @@ export function createTestInitAction(
     timestampMs: fromNow(),
     type: "Init",
     ...overrides,
+  };
+}
+
+// Helper for creating properly typed Spawn actions with timestamps
+export function createTestSpawnAction(
+  piece?: PieceId,
+  timestamp?: number,
+): Extract<Action, { type: "Spawn" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    timestampMs: currentTime,
+    type: "Spawn",
+    ...(piece !== undefined ? { piece } : {}),
+  };
+}
+
+// Helper for creating test PhysicsState with all required fields
+export function createTestPhysicsState(
+  overrides: Partial<PhysicsState> = {},
+): PhysicsState {
+  return {
+    activePieceSpawnedAt: null,
+    isSoftDropping: false,
+    lastGravityTime: fromNow(),
+    lineClearLines: [],
+    lineClearStartTime: null,
+    lockDelayStartTime: null,
+    ...overrides,
+  };
+}
+
+// Helper for creating RetryPendingLock actions with timestamps
+export function createTestRetryAction(
+  timestamp?: number,
+): Extract<Action, { type: "RetryPendingLock" }> {
+  const currentTime =
+    timestamp !== undefined ? createTimestamp(timestamp) : fromNow();
+  return {
+    timestampMs: currentTime,
+    type: "RetryPendingLock",
   };
 }

@@ -25,7 +25,7 @@ import {
   RotateCW,
   HardDrop,
 } from "../helpers/actions";
-import { assertDefined } from "../test-helpers";
+import { createTestSpawnAction, assertDefined } from "../test-helpers";
 
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
@@ -433,7 +433,7 @@ describe("extractFinesseActions", () => {
     const actions: Array<Action> = [
       { dir: -1, optimistic: false, timestampMs: timestamp, type: "TapMove" },
       { timestampMs: timestamp, type: "Tick" },
-      { type: "Spawn" },
+      createTestSpawnAction(),
       { dir: "CW", type: "Rotate" },
     ];
     const result = extractFinesseActions(actions);

@@ -4,6 +4,7 @@ import { gameModeRegistry, type GameMode } from "../../src/modes";
 import { getActiveRng } from "../../src/modes/spawn-service";
 import { fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestSpawnAction } from "../test-helpers";
 
 import type { PieceRandomGenerator } from "../../src/core/rng-interface";
 import type { Action, GameState, PieceId } from "../../src/state/types";
@@ -100,7 +101,7 @@ describe("Mode-owned RNG & preview (ReplacePreview)", () => {
     expect(s2.rng).toBe(newRng);
 
     // Spawn should consume from queue and helper refills back to desired size
-    const s3 = reducer(s2, { type: "Spawn" });
+    const s3 = reducer(s2, createTestSpawnAction());
     expect(s3.active?.id).toBe("T");
     expect(s3.nextQueue.length).toBe(desired);
     expect(s3.nextQueue.every((p) => p === "T")).toBe(true);

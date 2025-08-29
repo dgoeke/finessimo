@@ -25,6 +25,13 @@ import type { PieceId, Rot } from "../state/types";
 // usage. It is designed to be replaced with the official 'ts-fsrs' integration
 // without changing the public surface.
 
+const ratingMap = {
+  again: FsrsRating.Again,
+  easy: FsrsRating.Easy,
+  good: FsrsRating.Good,
+  hard: FsrsRating.Hard,
+} satisfies Record<Rating, FsrsRating>;
+
 export type GuidedCard = Readonly<{
   piece: PieceId;
   rot: Rot;
@@ -46,7 +53,7 @@ export type SrsDeck = Readonly<{
   params: Readonly<{ maxNewPerSession: number }>;
 }>;
 
-export type Rating = "again" | "good"; // binary mapping per design
+export type Rating = "again" | "hard" | "good" | "easy";
 
 export function canonicalId(card: GuidedCard): CardId {
   return createCardId(`${card.piece}:${card.rot}:${String(card.x as number)}`);
@@ -84,7 +91,7 @@ export function rate(
 ): SrsRecord {
   const scheduler = createScheduler();
   const current = fromSnapshot(rec.fsrs);
-  const grade = rating === "again" ? FsrsRating.Again : FsrsRating.Good;
+  const grade = ratingMap[rating];
   const rl = scheduler.next(current, new Date(now as number), grade);
   const nextCard = rl.card;
   const newDue = createTimestamp(nextCard.due.getTime());

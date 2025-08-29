@@ -9,6 +9,7 @@ import { gameStateSignal } from "../../src/state/signals";
 import { type Action, type GameState } from "../../src/state/types";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { fromNow } from "../../src/types/timestamp";
+import { createTestSpawnAction } from "../test-helpers";
 
 import {
   AppTestWrapper,
@@ -221,7 +222,7 @@ function getState(ctx: TestContext): GameState {
 function setupNearlyCompleteBottomLine(ctx: TestContext): void {
   // Just place one I piece to partially fill the bottom
   // This is simpler and less likely to cause memory issues
-  ctx.app.dispatch({ piece: "I", type: "Spawn" });
+  ctx.app.dispatch(createTestSpawnAction("I"));
   advanceFrame(ctx);
 
   // Rotate to horizontal position
@@ -330,7 +331,7 @@ describe("FinessimoApp End-to-End Integration", () => {
       });
 
       // Spawn a T piece (will come from our OnePieceRng)
-      ctx.app.dispatch({ type: "Spawn" });
+      ctx.app.dispatch(createTestSpawnAction());
       advanceFrame(ctx);
 
       let currentState = getState(ctx);
@@ -576,7 +577,7 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       setupNearlyCompleteBottomLine(ctx);
 
       // Spawn the final piece to complete the line
-      ctx.app.dispatch({ piece: "I", type: "Spawn" });
+      ctx.app.dispatch(createTestSpawnAction("I"));
       advanceFrame(ctx);
 
       // Position the piece to fill the remaining gap
@@ -927,7 +928,7 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       }
 
       // Trigger spawn
-      ctx.app.dispatch({ type: "Spawn" });
+      ctx.app.dispatch(createTestSpawnAction());
       advanceFrame(ctx);
 
       // Process frames to let game logic run

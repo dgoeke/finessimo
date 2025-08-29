@@ -4,6 +4,7 @@ import { type FinesseResult } from "../finesse/calculator";
 import {
   type GuidedCard,
   type SrsDeck,
+  type Rating,
   pickNextDue,
   rate,
   updateDeckRecord,
@@ -21,14 +22,20 @@ import {
   type Board,
 } from "../state/types";
 import { createGridCoord, gridCoordAsNumber } from "../types/brands";
-import { createTimestamp } from "../types/timestamp";
+import { createTimestamp, fromNow } from "../types/timestamp";
 
 import { makeDefaultDeck } from "./guided/deck";
 
 import { type GameMode, type GameModeResult } from "./index";
 
+type GuidedGradingConfig = Readonly<{
+  easyThresholdMs: number; // < 1000ms for easy grade
+  goodThresholdMs: number; // < 2000ms for good grade (>= 2000ms gets hard)
+}>;
+
 type GuidedSrsData = Readonly<{
   deck: SrsDeck;
+  gradingConfig: GuidedGradingConfig;
 }>;
 
 export class GuidedMode implements GameMode {
@@ -44,13 +51,28 @@ export class GuidedMode implements GameMode {
   }
 
   initModeData(): GuidedSrsData {
-    return { deck: makeDefaultDeck(createTimestamp(1)) };
+    return {
+      deck: makeDefaultDeck(createTimestamp(1)),
+      gradingConfig: {
+        easyThresholdMs: 1000,
+        goodThresholdMs: 2000,
+      },
+    };
   }
 
   getDeck(state: GameState): SrsDeck {
     const data = state.modeData as GuidedSrsData | undefined;
     if (data?.deck) return data.deck;
     return makeDefaultDeck(createTimestamp(1));
+  }
+
+  getGradingConfig(state: GameState): GuidedGradingConfig {
+    const data = state.modeData as GuidedSrsData | undefined;
+    if (data?.gradingConfig) return data.gradingConfig;
+    return {
+      easyThresholdMs: 1000,
+      goodThresholdMs: 2000,
+    };
   }
 
   selectCard(state: GameState): GuidedCard | null {
@@ -78,22 +100,48 @@ export class GuidedMode implements GameMode {
     };
   }
 
+  private calculatePlacementRating(
+    placedCorrectly: boolean,
+    finesseResult: FinesseResult,
+    hasPlayerInput: boolean,
+    placementDurationMs: number,
+    gradingConfig: { easyThresholdMs: number; goodThresholdMs: number }
+  ): Rating {
+    if (
+      !placedCorrectly ||
+      finesseResult.kind !== "optimal" ||
+      !hasPlayerInput
+    ) {
+      return "again";
+    }
+    if (placementDurationMs < gradingConfig.easyThresholdMs) {
+      return "easy";
+    }
+    if (placementDurationMs < gradingConfig.goodThresholdMs) {
+      return "good";
+    }
+    return "hard";
+  }
+
   onPieceLocked(
     gameState: GameState,
     finesseResult: FinesseResult,
     lockedPiece: ActivePiece,
-    finalPosition: ActivePiece,
+    finalPosition: ActivePiece
   ): GameModeResult {
     const deck = this.getDeck(gameState);
     const now = createTimestamp(gameState.stats.attempts + 1);
     const dueCard = this.selectCard(gameState);
     const hasPlayerInput = gameState.processedInputLog.length > 0;
-    if (!dueCard) return {};
+    if (!dueCard) {
+      console.warn(`DEBUG: No due card found, returning early`);
+      return {};
+    }
 
     // Validate piece matches expected piece (should always match in guided mode)
     if (lockedPiece.id !== dueCard.piece) {
       console.error(
-        "Unexpected piece mismatch in guided mode - this should not happen",
+        "Unexpected piece mismatch in guided mode - this should not happen"
       );
       return {};
     }
@@ -111,7 +159,7 @@ export class GuidedMode implements GameMode {
     const placedCorrectly = this.equalOccupiedCells(
       board,
       finalPosition,
-      targetFinal,
+      targetFinal
     );
 
     const key = canonicalId(dueCard);
@@ -120,23 +168,36 @@ export class GuidedMode implements GameMode {
       Array.from(deck.items.values()).find((r) => r.key === key);
     if (!rec) return {};
 
-    // Rating: needs optimal finesse AND correct placement AND player input
-    const rating =
-      finesseResult.kind === "optimal" && placedCorrectly && hasPlayerInput
-        ? "good"
-        : "again";
+    // Calculate piece placement timing for enhanced grading
+    const gradingConfig = this.getGradingConfig(gameState);
+    const spawnTime = gameState.physics.activePieceSpawnedAt;
+    let placementDurationMs = 0;
+
+    if (spawnTime !== null) {
+      // Use current time as lock time for duration calculation
+      const lockTime = fromNow();
+      placementDurationMs = (lockTime as number) - (spawnTime as number);
+    }
+
+    const rating = this.calculatePlacementRating(
+      placedCorrectly,
+      finesseResult,
+      hasPlayerInput,
+      placementDurationMs,
+      gradingConfig
+    );
 
     const updated = rate(rec, rating, now);
     const newDeck = updateDeckRecord(deck, updated);
     // Persist updated deck
     saveGuidedDeck(newDeck);
-    return { modeData: { deck: newDeck } };
+    return { modeData: { deck: newDeck, gradingConfig } };
   }
 
   // Compute absolute occupied cells for a piece within board bounds
   private occupiedCells(
     board: Board,
-    piece: ActivePiece,
+    piece: ActivePiece
   ): ReadonlyArray<readonly [number, number]> {
     const shape = PIECES[piece.id];
     const cells = shape.cells[piece.rot];
@@ -155,7 +216,7 @@ export class GuidedMode implements GameMode {
   private equalOccupiedCells(
     board: Board,
     a: ActivePiece,
-    b: ActivePiece,
+    b: ActivePiece
   ): boolean {
     const aCells = this.occupiedCells(board, a);
     const bCells = this.occupiedCells(board, b);
@@ -182,7 +243,7 @@ export class GuidedMode implements GameMode {
   // Provide intended target for analysis
   getTargetFor(
     _lockedPiece: ActivePiece,
-    gameState: GameState,
+    gameState: GameState
   ): { targetX: number; targetRot: Rot } | null {
     const card = this.selectCard(gameState);
     if (!card) return null;
@@ -239,7 +300,7 @@ export class GuidedMode implements GameMode {
   isTargetSatisfied(
     _lockedPiece: ActivePiece,
     finalPosition: ActivePiece,
-    state: GameState,
+    state: GameState
   ): boolean {
     const card = this.selectCard(state);
     if (!card) return true; // no opinion
@@ -266,6 +327,14 @@ export class GuidedMode implements GameMode {
   onActivated(state: GameState): { modeData?: unknown } {
     const now = state.stats.startedAtMs;
     const deck = loadGuidedDeck(now);
-    return { modeData: { deck } };
+    return {
+      modeData: {
+        deck,
+        gradingConfig: {
+          easyThresholdMs: 1000,
+          goodThresholdMs: 2000,
+        },
+      },
+    };
   }
 }

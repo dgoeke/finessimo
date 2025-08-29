@@ -8,7 +8,7 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece } from "../test-helpers";
+import { assertActivePiece, createTestSpawnAction } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
@@ -23,7 +23,7 @@ function createTestState(): GameState {
 // Helper to create state with active piece
 function createStateWithPiece(): GameState {
   const state = createTestState();
-  return reducer(state, { piece: "T", type: "Spawn" });
+  return reducer(state, createTestSpawnAction("T"));
 }
 
 describe("physics system", () => {
@@ -67,7 +67,7 @@ describe("physics system", () => {
     it("should not move piece when gravity disabled", () => {
       let state = createTestState();
       state = { ...state, timing: { ...state.timing, gravityEnabled: false } };
-      state = reducer(state, { piece: "T", type: "Spawn" });
+      state = reducer(state, createTestSpawnAction("T"));
       assertActivePiece(state);
       const originalY = state.active.y;
 
@@ -90,7 +90,7 @@ describe("physics system", () => {
       });
 
       // Spawn a new piece and put it near the bottom manually
-      state = reducer(state, { piece: "T", type: "Spawn" });
+      state = reducer(state, createTestSpawnAction("T"));
 
       // Move the piece to a position where it can't drop further
       assertActivePiece(state);
@@ -322,7 +322,7 @@ describe("physics system", () => {
       // the piece cannot be placed even at its spawn position
       // This is actually very rare in normal Tetris since pieces spawn above board
       // For testing purposes, let's just verify normal spawn works
-      const normalSpawn = reducer(state, { piece: "T", type: "Spawn" });
+      const normalSpawn = reducer(state, createTestSpawnAction("T"));
       expect(normalSpawn.status).toBe("playing");
       expect(normalSpawn.active).toBeDefined();
 

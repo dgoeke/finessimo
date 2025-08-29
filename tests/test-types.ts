@@ -29,7 +29,7 @@ export type MalformedAction =
       mode?: unknown;
     }
   | { type: "Tick"; timestampMs: unknown }
-  | { type: "Spawn"; piece?: unknown }
+  | { type: "Spawn"; piece?: unknown; timestampMs?: unknown }
   | { type: "Move"; dir: unknown; source: unknown }
   | { type: "SoftDrop"; on: unknown }
   | { type: "Rotate"; dir: unknown }

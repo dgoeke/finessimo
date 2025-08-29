@@ -7,6 +7,7 @@ import {
   createDurationMs,
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
+import { createTestSpawnAction, createTestRetryAction } from "../test-helpers";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, Action } from "../../src/state/types";
@@ -36,7 +37,7 @@ describe("Retry on finesse error", () => {
       });
 
       // Spawn piece and perform hard drop to create pending lock
-      const withPiece = reducer(state, { piece: "T", type: "Spawn" });
+      const withPiece = reducer(state, createTestSpawnAction("T"));
       const hardDropState = reducer(withPiece, {
         timestampMs: createTimestamp(100),
         type: "HardDrop",
@@ -73,6 +74,7 @@ describe("Retry on finesse error", () => {
           resultState = reducer(resultState, action);
         },
         mockAnalyzer,
+        createTimestamp(100),
       );
 
       // Should be committed, not retried
@@ -83,7 +85,7 @@ describe("Retry on finesse error", () => {
 
     it("should retry when retryOnFinesseError is enabled and hard drop is suboptimal", () => {
       // Spawn piece and perform hard drop to create pending lock
-      const withPiece = reducer(initialState, { piece: "T", type: "Spawn" });
+      const withPiece = reducer(initialState, createTestSpawnAction("T"));
       const hardDropState = reducer(withPiece, {
         timestampMs: createTimestamp(100),
         type: "HardDrop",
@@ -121,6 +123,7 @@ describe("Retry on finesse error", () => {
           resultState = reducer(resultState, action);
         },
         mockAnalyzer,
+        createTimestamp(100),
       );
 
       // Should be retried - piece back at spawn position
@@ -135,7 +138,7 @@ describe("Retry on finesse error", () => {
 
     it("should commit when hard drop is optimal, even with retry enabled", () => {
       // Spawn piece and perform hard drop to create pending lock
-      const withPiece = reducer(initialState, { piece: "T", type: "Spawn" });
+      const withPiece = reducer(initialState, createTestSpawnAction("T"));
       const hardDropState = reducer(withPiece, {
         timestampMs: createTimestamp(100),
         type: "HardDrop",
@@ -167,6 +170,7 @@ describe("Retry on finesse error", () => {
           resultState = reducer(resultState, action);
         },
         mockAnalyzer,
+        createTimestamp(100),
       );
 
       // Should be committed, not retried
@@ -177,7 +181,7 @@ describe("Retry on finesse error", () => {
 
     it("should commit for non-hard-drop locks even with retry enabled and suboptimal play", () => {
       // Spawn piece
-      let state = reducer(initialState, { piece: "T", type: "Spawn" });
+      let state = reducer(initialState, createTestSpawnAction("T"));
 
       // Move piece down to a lockable position
       for (let i = 0; i < 22; i++) {
@@ -229,6 +233,7 @@ describe("Retry on finesse error", () => {
           resultState = reducer(resultState, action);
         },
         mockAnalyzer,
+        createTimestamp(100),
       );
 
       // Should be committed, not retried
@@ -239,7 +244,7 @@ describe("Retry on finesse error", () => {
 
     it("should handle finesse feedback actions correctly during retry", () => {
       // Spawn piece and perform hard drop to create pending lock
-      const withPiece = reducer(initialState, { piece: "T", type: "Spawn" });
+      const withPiece = reducer(initialState, createTestSpawnAction("T"));
       const hardDropState = reducer(withPiece, {
         timestampMs: createTimestamp(100),
         type: "HardDrop",
@@ -286,6 +291,7 @@ describe("Retry on finesse error", () => {
           resultState = reducer(resultState, action);
         },
         mockAnalyzer,
+        createTimestamp(100),
       );
 
       // Check that finesse actions were dispatched before retry
@@ -304,14 +310,14 @@ describe("Retry on finesse error", () => {
   describe("RetryPendingLock Reducer", () => {
     it("should properly restore piece to spawn position", () => {
       // Create a pending lock state
-      const withPiece = reducer(initialState, { piece: "I", type: "Spawn" });
+      const withPiece = reducer(initialState, createTestSpawnAction("I"));
       const hardDropState = reducer(withPiece, {
         timestampMs: createTimestamp(100),
         type: "HardDrop",
       });
 
       // Manually retry the pending lock
-      const retriedState = reducer(hardDropState, { type: "RetryPendingLock" });
+      const retriedState = reducer(hardDropState, createTestRetryAction());
 
       expect(retriedState.status).toBe("playing");
       expect(retriedState.pendingLock).toBeNull();
@@ -326,8 +332,8 @@ describe("Retry on finesse error", () => {
     });
 
     it("should not retry when not in resolvingLock status", () => {
-      const normalState = reducer(initialState, { piece: "T", type: "Spawn" });
-      const result = reducer(normalState, { type: "RetryPendingLock" });
+      const normalState = reducer(initialState, createTestSpawnAction("T"));
+      const result = reducer(normalState, createTestRetryAction());
 
       // Should be unchanged
       expect(result).toBe(normalState);
@@ -340,7 +346,7 @@ describe("Retry on finesse error", () => {
         status: "playing" as const,
       } as GameState;
 
-      const result = reducer(stateWithoutPending, { type: "RetryPendingLock" });
+      const result = reducer(stateWithoutPending, createTestRetryAction());
 
       // Should be unchanged since not in resolvingLock state
       expect(result).toBe(stateWithoutPending);

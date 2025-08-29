@@ -320,7 +320,7 @@ export class TouchInputHandler implements InputHandler {
       const zone = this.findTouchZone(element);
 
       this.activeTouches.set(touch.identifier, {
-        startTime: Date.now(),
+        startTime: fromNow() as number,
         startX: touch.clientX,
         startY: touch.clientY,
         zone,
@@ -369,12 +369,11 @@ export class TouchInputHandler implements InputHandler {
     const deltaX = touch.clientX - touchData.startX;
     const deltaY = touch.clientY - touchData.startY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
     if (distance <= this.minSwipeDistance) return;
     if (Math.abs(deltaY) <= Math.abs(deltaX)) return;
     if (deltaY <= 0) return;
 
-    const elapsed = Date.now() - touchData.startTime;
+    const elapsed = (fromNow() as number) - touchData.startTime;
     this.handleVerticalSwipe(deltaY, elapsed, touchData);
   }
 
@@ -429,13 +428,12 @@ export class TouchInputHandler implements InputHandler {
       const touchData = this.activeTouches.get(touch.identifier);
 
       if (touchData?.zone) {
-        // Prevent default touch behavior on control zones
         event.preventDefault();
 
         const zone = touchData.zone;
         zone.element.classList.remove("active");
 
-        const duration = Date.now() - touchData.startTime;
+        const duration = (fromNow() as number) - touchData.startTime;
         const deltaX = touch.clientX - touchData.startX;
         const deltaY = touch.clientY - touchData.startY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);

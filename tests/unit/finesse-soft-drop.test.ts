@@ -25,6 +25,7 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestPhysicsState } from "../test-helpers";
 
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
@@ -115,13 +116,13 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
       modePrompt: null,
       nextQueue: ["I", "O", "S"],
       pendingLock: null,
-      physics: {
+      physics: createTestPhysicsState({
         isSoftDropping: false,
         lastGravityTime: createTimestamp(1),
         lineClearLines: [],
         lineClearStartTime: null,
         lockDelayStartTime: null,
-      },
+      }),
       processedInputLog: [],
       rng: createSevenBagRng(createSeed("12345")),
       stats: {

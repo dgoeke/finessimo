@@ -100,6 +100,7 @@ export class FinessimoApp {
 
   private randomSeed(): Seed {
     return createSeed(
+      // eslint-disable-next-line no-restricted-syntax -- Date.now() needed for entropy in random seed generation
       Date.now().toString(36) + Math.random().toString(36).slice(2),
     );
   }
@@ -307,6 +308,7 @@ export class FinessimoApp {
           newState = reducer(newState, pipelineAction);
         },
         this.createFinesseAnalyzer(),
+        fromNow(),
       );
       // Note: Zero-delay line clears are handled automatically by the reducer
     }
@@ -471,11 +473,12 @@ export class FinessimoApp {
       mode && typeof mode.onBeforeSpawn === "function"
         ? mode.onBeforeSpawn(this.gameState)
         : null;
+    const now = fromNow();
     if (override?.piece !== undefined) {
-      this.dispatch({ piece: override.piece, type: "Spawn" });
+      this.dispatch({ piece: override.piece, timestampMs: now, type: "Spawn" });
       return;
     }
-    this.dispatch({ type: "Spawn" });
+    this.dispatch({ timestampMs: now, type: "Spawn" });
   }
 
   // Maintain preview queue length using mode-owned RNG

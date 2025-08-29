@@ -6,7 +6,7 @@ import {
 import { createSeed, createGridCoord } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece } from "../test-helpers";
+import { assertActivePiece, createTestSpawnAction } from "../test-helpers";
 import { type InvalidGameState } from "../test-types";
 
 describe("Reducer Edge Cases and Error Conditions", () => {
@@ -271,7 +271,7 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Spawn action", () => {
     it("should spawn piece when game is playing", () => {
-      const action: Action = { type: "Spawn" };
+      const action: Action = createTestSpawnAction();
       const result = reducer(validState, action);
 
       // Spawn is now implemented

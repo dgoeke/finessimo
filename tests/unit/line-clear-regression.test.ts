@@ -10,6 +10,7 @@ import { type GameState } from "../../src/state/types";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestSpawnAction } from "../test-helpers";
 
 // Helper function to create a state with a line ready to clear
 function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
@@ -26,7 +27,7 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
   }
 
   // Spawn I piece
-  state = reducer(state, { piece: "I", type: "Spawn" });
+  state = reducer(state, createTestSpawnAction("I"));
 
   // Move I piece to complete the line
   if (state.active) {
@@ -217,7 +218,7 @@ describe("Line Clearing Regression Tests", () => {
       }
 
       // Create first I piece to clear both lines
-      state = reducer(state, { piece: "I", type: "Spawn" });
+      state = reducer(state, createTestSpawnAction("I"));
       if (state.active) {
         // Move I piece to complete both lines (x=6 -> cells at 6,7,8,9)
         state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" }); // x=4
@@ -271,7 +272,7 @@ describe("Line Clearing Regression Tests", () => {
 
       // Trying to spawn should be ignored
       const beforeSpawn = state;
-      state = reducer(state, { type: "Spawn" });
+      state = reducer(state, createTestSpawnAction());
 
       // State should be unchanged
       expect(state).toEqual(beforeSpawn);
@@ -287,7 +288,7 @@ describe("Line Clearing Regression Tests", () => {
       expect(state.status).toBe("playing");
 
       // Now spawning should work
-      state = reducer(state, { type: "Spawn" });
+      state = reducer(state, createTestSpawnAction());
       expect(state.active).toBeDefined();
       expect(state.status).toBe("playing");
     });

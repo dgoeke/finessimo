@@ -15,6 +15,7 @@ import {
   createGridCoord,
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
+import { createTestPhysicsState } from "../test-helpers";
 
 const mockGameState: GameState = {
   active: undefined,
@@ -30,13 +31,13 @@ const mockGameState: GameState = {
   modePrompt: null,
   nextQueue: [],
   pendingLock: null,
-  physics: {
+  physics: createTestPhysicsState({
     isSoftDropping: false,
     lastGravityTime: createTimestamp(1),
     lineClearLines: [],
     lineClearStartTime: null,
     lockDelayStartTime: null,
-  },
+  }),
   processedInputLog: [],
   rng: createSevenBagRng(createSeed("test")),
   stats: {

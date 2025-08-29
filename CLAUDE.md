@@ -13,17 +13,65 @@ You are an expert TypeScript developer working on **Finessimo** — Tetris 2-ste
 - Unidirectional data flow: UI → Input Handler → Reducer → State → UI
 - Side-effects live only in Input Handler; core logic is pure
 
-- Make invalid states unrepresentable using **Haskell‑style types in TypeScript**: *branded primitives*, *discriminated unions*, *user‑defined type guards*, and the narrowest possible types.
+- Make invalid states unrepresentable using **Haskell-style types in TypeScript**: *branded primitives*, *discriminated unions*, *user-defined type guards*, and the narrowest possible types.
 - Functional core with immutable data; side effects at the edges (input devices, time, DOM, persistence).
 - Small, composable modules with explicit data flow.
 
 ---
 
-## Type System Philosophy (Haskell‑ish, in TypeScript)
-Adopt a **types‑first** workflow. Design the domain model before writing behavior. Prefer types that encode invariants so that many runtime checks become unnecessary.
+## MCP Language Server Integration (use these instead of grep)
+You have access to **MCP language server tools** that provide IDE-like capabilities. **Prefer these tools for all code understanding, navigation, diagnostics, and refactoring.**
+
+**Available tools**
+- `mcp__language-server__definition` — jump to a symbol’s definition
+- `mcp__language-server__diagnostics` — list TypeScript diagnostics for files
+- `mcp__language-server__hover` — inspect inferred types/docs at a position
+- `mcp__language-server__references` — list all usages of a symbol
+- `mcp__language-server__rename_symbol` — safe global rename with reference updates
+- `mcp__language-server__edit_file` — apply minimal line-scoped edits
+
+**Rules (must follow)**
+1. **Default to MCP** for “where is X?”, “who uses X?”, “what type is X?”, “why is this error?” and refactors.  
+   Grep/plain text search is a last resort; explain why MCP could not resolve if you fall back.
+2. **Diagnose before changing**: run `diagnostics` on impacted files; use the file/line/column from diagnostics to drive `hover`/`definition`/`references`.
+3. **Navigate, then edit**: locate exact symbols with `definition`/`references`; confirm types with `hover`; propose a **Diff Plan**; then use `edit_file`.
+4. **Refactor safely**: use `rename_symbol` for renames; never manual string edits when a symbol refactor is intended.
+5. **Re-check after edits**: re-run `diagnostics` on touched files; if renames occurred, re-run `references` to catch stragglers.
+6. **Show your work**: include a short **Tool Trace** (which MCP calls, with file/line/symbol) and a **Diff Plan** before applying `edit_file`.
+
+**MCP-first workflow**
+1) `diagnostics` on failing/changed files  
+2) `definition` → pinpoint implementation; `hover` → confirm types/nullability/generics  
+3) `references` → map blast radius (call sites, tests)  
+4) **Diff Plan** → file:lines, minimal changes, side-effect boundaries  
+5) `edit_file` → surgical, reversible edits only  
+6) `diagnostics` (and `references` if rename) → verify green
+
+**Response format (always)**
+- **Summary** — one sentence goal/outcome  
+- **Tool Trace** — bullet list of MCP calls with key params  
+- **Analysis** — what types/defs/refs revealed  
+- **Diff Plan** — file-and-line scoped plan  
+- **Edits** — apply with `edit_file` (include patch snippet)  
+- **Post-check** — results from `diagnostics`; follow-ups/tests to run
+
+> **Example (mini)**
+> - Tool Trace:  
+>   - `diagnostics("src/rng.ts") → error TS2322 at 40:6`  
+>   - `definition(symbol="shuffle") → src/utils/array.ts:12`  
+>   - `hover(file="src/utils/array.ts", pos=12:18) → type T`  
+>   - `references(symbol="shuffle") → tests + 2 call sites`  
+> - Diff Plan: Narrow generic constraint and guard undefined before swap.  
+> - Edits: `edit_file("src/utils/array.ts", lines 8–20)`  
+> - Post-check: `diagnostics(["src/utils/array.ts","src/rng.ts"]) → 0 errors`
+
+---
+
+## Type System Philosophy (Haskell-ish, in TypeScript)
+Adopt a **types-first** workflow. Design the domain model before writing behavior. Prefer types that encode invariants so that many runtime checks become unnecessary.
 
 ### 1) Branded primitives (opaque types)
-Use nominal “brands” to prevent mixing look‑alike primitives. Define factories/guards at the **edges**; use branded types in the **core**.
+Use nominal “brands” to prevent mixing look-alike primitives. Define factories/guards at the **edges**; use branded types in the **core**.
 
 ```ts
 // brands.ts
@@ -43,9 +91,10 @@ export const asTimestamp = (n: number): Timestamp => n as Timestamp;
 export const asDurationMs = (n: number): DurationMs => n as DurationMs;
 export const asGrid = (n: number): GridCoord => Math.trunc(n) as GridCoord;
 export const isCellValue = (n: number): n is CellValue => n >= 0 && n <= 8 && Number.isInteger(n);
-```
+````
 
 ### 2) Discriminated unions with exhaustive handling
+
 Model state with precise variants and **require** exhaustiveness using a `never` guard.
 
 ```ts
@@ -74,7 +123,8 @@ export function selectNext(s: GameState): GameState {
 ```
 
 ### 3) Guards + narrowing at boundaries
-Write **type guards** for parsing/untrusted inputs (DOM events, JSON, query params). The pure core should accept already‑narrowed/branded values.
+
+Write **type guards** for parsing/untrusted inputs (DOM events, JSON, query params). The pure core should accept already-narrowed/branded values.
 
 ```ts
 export const isNonEmptyString = (u: unknown): u is string =>
@@ -85,13 +135,16 @@ export const isTimestamp = (u: unknown): u is Timestamp =>
 ```
 
 ### 4) Prefer readonly / literal types
-- Use `readonly` properties and `as const` where appropriate.
-- Prefer unions of string literals over `enum` (unless interop requires).
+
+* Use `readonly` properties and `as const` where appropriate.
+* Prefer unions of string literals over `enum` (unless interop requires).
 
 ### 5) Lint/type strictness (tsconfig recommended flags)
-- `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`,
+
+* `"strict": true`, `"noUncheckedIndexedAccess": true`, `"exactOptionalPropertyTypes": true`,
   `"noImplicitOverride": true`, `"useUnknownInCatchVariables": true`.
-- Prefer `satisfies` for intent checks:
+* Prefer `satisfies` for intent checks:
+
   ```ts
   const keyMap = { Space: "hardDrop" } as const satisfies Record<string, "hardDrop">;
   ```
@@ -99,29 +152,33 @@ export const isTimestamp = (u: unknown): u is Timestamp =>
 ---
 
 ## Build & quality gate
-- Always run `npm run pre-commit` before considering any change done.
-- Do **not** introduce TypeScript/ESLint suppressions (e.g., `// @ts-ignore`, `// eslint-disable-next-line`). Fix root causes instead.
+
+* Always run `npm run pre-commit` before considering any change done.
+* Do **not** introduce TypeScript/ESLint suppressions (e.g., `// @ts-ignore`, `// eslint-disable-next-line`). Fix root causes instead.
 
 ### Build tools available
-- `npm run typecheck` — runs `tsc` to check types only
-- `npm run lint:fix` — runs lint, auto‑orders imports, fixes safe issues
-- `npm run test` — runs all unit tests
-- `npm run pre-commit` — wrapper for the above
+
+* `npm run typecheck` — runs `tsc` to check types only
+* `npm run lint:fix` — runs lint, auto-orders imports, fixes safe issues
+* `npm run test` — runs all unit tests
+* `npm run pre-commit` — wrapper for the above
 
 ---
 
 ## Workflow
-1) Start by reading `FILES.md` to locate code; finish by ensuring it stays accurate.
-2) Sketch the **types first** (brands, unions, guards). Make invalid states unrepresentable.
-3) Implement thin, testable slices. Keep reducers/core logic deterministic and pure; isolate side effects.
-4) Replace runtime checks with type‑level guarantees when safe; prefer compile‑time failures.
-5) Update `FILES.md` and docs as files move or new modules appear.
+
+1. Start by reading `FILES.md` to locate code; finish by ensuring it stays accurate.
+2. Sketch the **types first** (brands, unions, guards). Make invalid states unrepresentable.
+3. Implement thin, testable slices. Keep reducers/core logic deterministic and pure; isolate side effects.
+4. Replace runtime checks with type-level guarantees when safe; prefer compile-time failures.
+5. Update `FILES.md` and docs as files move or new modules appear.
 
 ---
 
-## Type‑driven testing guidance
-- Prefer **exhaustive switch** tests that cover every union variant.
-- Add **type‑level tests** (compile‑only) using `Expect`/`Equals` utilities to lock invariants.
+## Type-driven testing guidance
+
+* Prefer **exhaustive switch** tests that cover every union variant.
+* Add **type-level tests** (compile-only) using `Expect`/`Equals` utilities to lock invariants.
 
 ```ts
 // tests/types/invariants.test.ts (compile-only patterns)
@@ -133,23 +190,26 @@ type _1 = Expect<Equals<GameState["status"], "playing" | "resolvingLock" | "line
 ```
 
 When test failures surface correctness improvements:
-- Update tests to reflect correct behavior; don’t reintroduce unsafe patterns.
-- Preserve behavior only when tests cover legitimate, correct functionality.
+
+* Update tests to reflect correct behavior; don’t reintroduce unsafe patterns.
+* Preserve behavior only when tests cover legitimate, correct functionality.
 
 ---
 
 ## TypeScript and ESLint suppressions
+
 **You are not allowed** to add new TypeScript or ESLint suppressions.
 
 Forbidden examples:
-- `// @ts-ignore`
-- `// @ts-expect-error`
-- `// @ts-nocheck`
-- `/* @ts-ignore */`
-- `// eslint-disable`
-- `// eslint-disable-line`
-- `// eslint-disable-next-line`
-- `/* eslint-disable */`
+
+* `// @ts-ignore`
+* `// @ts-expect-error`
+* `// @ts-nocheck`
+* `/* @ts-ignore */`
+* `// eslint-disable`
+* `// eslint-disable-line`
+* `// eslint-disable-next-line`
+* `/* eslint-disable */`
 
 Instead: fix the underlying error properly (narrow types, add brands/guards, or refactor).
 
@@ -208,7 +268,6 @@ git commit -m "fix bug"
 npm run pre-commit
 git commit -m "fix bug"
 ```
-
 **Claude-specific notes**
 - concise, example-driven; propose diffs; never add lint/TS suppressions
 - Claude Code

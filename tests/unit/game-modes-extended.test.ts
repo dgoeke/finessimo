@@ -10,6 +10,7 @@ import {
   createGridCoord,
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
+import { createTestPhysicsState } from "../test-helpers";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, ActivePiece, Rot } from "../../src/state/types";
@@ -28,13 +29,13 @@ const mockState = (): GameState => ({
   modePrompt: null,
   nextQueue: [],
   pendingLock: null,
-  physics: {
+  physics: createTestPhysicsState({
     isSoftDropping: false,
     lastGravityTime: createTimestamp(1),
     lineClearLines: [],
     lineClearStartTime: null,
     lockDelayStartTime: null,
-  },
+  }),
   processedInputLog: [],
   rng: createSevenBagRng(createSeed("t")),
   stats: {

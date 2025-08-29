@@ -147,6 +147,7 @@ export type PhysicsState = {
   isSoftDropping: boolean;
   lineClearStartTime: Timestamp | null;
   lineClearLines: ReadonlyArray<number>;
+  activePieceSpawnedAt: Timestamp | null; // When current active piece was spawned, for timing analysis
 };
 
 export type Stats = {
@@ -285,7 +286,7 @@ export type Action =
       rng?: PieceRandomGenerator; // Optional custom RNG for testing
     }
   | { type: "Tick"; timestampMs: Timestamp }
-  | { type: "Spawn"; piece?: PieceId }
+  | { type: "Spawn"; piece?: PieceId; timestampMs: Timestamp }
   | {
       type: "TapMove";
       dir: -1 | 1;
@@ -359,7 +360,7 @@ export type Action =
     } // Adds a row to the bottom of the board
   // Pending lock system actions
   | { type: "CommitLock" }
-  | { type: "RetryPendingLock" };
+  | { type: "RetryPendingLock"; timestampMs: Timestamp };
 // Input log management
 
 export type Reducer = (

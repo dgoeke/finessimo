@@ -19,6 +19,7 @@ import { gameModeRegistry } from "./index";
 import type { ResolveLockDecision } from "./index";
 import type { FinesseResult } from "../finesse/calculator";
 import type { GameState, Action } from "../state/types";
+import type { Timestamp } from "../types/timestamp";
 
 export type PipelineAnalyzer = (state: GameState) => {
   result: FinesseResult;
@@ -33,6 +34,7 @@ export const runLockPipeline = (
   state: GameState,
   dispatch: (action: Action) => void,
   analyzeFinesse: PipelineAnalyzer,
+  timestampMs: Timestamp,
 ): { decision: ResolveLockDecision } => {
   if (state.status !== "resolvingLock") {
     return { decision: { action: "commit" } }; // No-op; default commit
@@ -62,7 +64,7 @@ export const runLockPipeline = (
 
   // Step 4: Execute decision
   if (decision.action === "retry") {
-    dispatch({ type: "RetryPendingLock" });
+    dispatch({ timestampMs, type: "RetryPendingLock" });
     return { decision };
   } else {
     dispatch({ type: "CommitLock" });

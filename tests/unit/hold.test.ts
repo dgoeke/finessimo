@@ -4,7 +4,7 @@ import { type GameState } from "../../src/state/types";
 import { createSeed } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece } from "../test-helpers";
+import { assertActivePiece, createTestSpawnAction } from "../test-helpers";
 
 // Helper to create a test game state
 function createTestState(): GameState {
@@ -18,7 +18,7 @@ function createTestState(): GameState {
 // Helper to create state with active piece and next queue
 function createStateWithPiece(): GameState {
   const state = createTestState();
-  return reducer(state, { piece: "T", type: "Spawn" });
+  return reducer(state, createTestSpawnAction("T"));
 }
 
 describe("hold system", () => {
@@ -228,7 +228,7 @@ describe("hold system", () => {
           timestampMs: createTimestamp(1000 + i),
           type: "HardDrop",
         });
-        state = reducer(state, { type: "Spawn" });
+        state = reducer(state, createTestSpawnAction());
       }
 
       // With queue progression, all seven piece types should appear

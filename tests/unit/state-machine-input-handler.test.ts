@@ -4,6 +4,7 @@ import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandl
 import { createBoardCells } from "../../src/state/types";
 import { createGridCoord, createDurationMs } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
+import { createTestPhysicsState } from "../test-helpers";
 
 import type { PieceRandomGenerator } from "../../src/core/rng-interface";
 import type {
@@ -94,13 +95,13 @@ describe("StateMachineInputHandler", () => {
       tripleLines: 0,
     };
 
-    const physics: PhysicsState = {
+    const physics: PhysicsState = createTestPhysicsState({
       isSoftDropping: false,
       lastGravityTime: createTimestamp(1000),
       lineClearLines: [],
       lineClearStartTime: null,
       lockDelayStartTime: null,
-    };
+    });
 
     const rng: PieceRandomGenerator = createSevenBagRng("42");
 

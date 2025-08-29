@@ -173,6 +173,15 @@ export default tseslint.config(
       ],
       "@typescript-eslint/prefer-optional-chain": "error",
 
+      // Custom restrictions for codebase consistency
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message: "Use fromNow() from '../types/timestamp' instead of Date.now() for consistent timing based on performance.now()",
+        },
+      ],
+
       // Style & API clarity (tune to taste)
       "@typescript-eslint/explicit-function-return-type": [
         "warn",

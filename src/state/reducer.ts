@@ -75,6 +75,7 @@ const defaultGameplayConfig: GameplayConfig = {
 // Create initial physics state
 function createInitialPhysics(timestampMs: Timestamp): PhysicsState {
   return {
+    activePieceSpawnedAt: null,
     isSoftDropping: false,
     lastGravityTime: timestampMs,
     lineClearLines: [],
@@ -389,6 +390,7 @@ const checkLockDelayTimeout = (
         physics: {
           ...currentState.physics,
           lockDelayStartTime: null,
+          // Keep activePieceSpawnedAt for timing calculation during lock resolution
         },
         status: "resolvingLock",
       };
@@ -461,6 +463,7 @@ const applyPendingLock = (
     canHold: state.gameplay.holdEnabled,
     physics: {
       ...state.physics,
+      activePieceSpawnedAt: null,
       lockDelayStartTime: null,
     },
     stats: newStats,
@@ -620,6 +623,7 @@ const actionHandlers: ActionHandlerMap = {
       physics: {
         ...stateWithHardDrop.physics,
         lockDelayStartTime: null,
+        // Keep activePieceSpawnedAt for timing calculation during lock resolution
       },
       status: "resolvingLock",
       tick: state.tick + 1,
@@ -729,6 +733,7 @@ const actionHandlers: ActionHandlerMap = {
       physics: {
         ...state.physics,
         lockDelayStartTime: null,
+        // Keep activePieceSpawnedAt for timing calculation during lock resolution
       },
       status: "resolvingLock",
       tick: state.tick + 1,
@@ -812,7 +817,7 @@ const actionHandlers: ActionHandlerMap = {
     },
   }),
 
-  RetryPendingLock: (state, _action) => {
+  RetryPendingLock: (state, action) => {
     if (state.status !== "resolvingLock") {
       return state;
     }
@@ -831,6 +836,7 @@ const actionHandlers: ActionHandlerMap = {
       // Reset physics state
       physics: {
         ...state.physics,
+        activePieceSpawnedAt: action.timestampMs,
         lineClearLines: [],
         lineClearStartTime: null,
         lockDelayStartTime: null,
@@ -936,6 +942,7 @@ const actionHandlers: ActionHandlerMap = {
       nextQueue: newQueue,
       physics: {
         ...state.physics,
+        activePieceSpawnedAt: action.timestampMs,
         lastGravityTime: state.physics.lastGravityTime,
         lockDelayStartTime: null,
       },

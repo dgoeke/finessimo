@@ -1,9 +1,5 @@
 import { TouchInputHandler } from "../../src/input/touch";
-import {
-  type Action,
-  type KeyAction,
-  type GameState,
-} from "../../src/state/types";
+import { type Action, type KeyAction } from "../../src/state/types";
 
 // Mock DOM APIs for touch support
 Object.defineProperty(window, "ontouchstart", {
@@ -29,8 +25,6 @@ describe("TouchInputHandler", () => {
     handler.init(mockDispatch);
 
     // TouchInputHandler update method now requires gameState and timestamp
-    const mockGameState = { status: "playing" } as GameState;
-    handler.update(mockGameState, Date.now());
   });
 
   afterEach(() => {

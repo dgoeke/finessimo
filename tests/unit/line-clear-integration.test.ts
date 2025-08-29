@@ -6,6 +6,7 @@ import { shouldCompleteLineClear } from "../../src/app";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestSpawnAction } from "../test-helpers";
 
 describe("Line Clear Integration", () => {
   it("should complete line clearing through the app update loop", () => {
@@ -23,7 +24,7 @@ describe("Line Clear Integration", () => {
     }
 
     // Spawn I piece and position it
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -85,7 +86,7 @@ describe("Line Clear Integration", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -116,7 +117,7 @@ describe("Line Clear Integration", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -131,7 +132,7 @@ describe("Line Clear Integration", () => {
 
     // Try to spawn - should be ignored
     const beforeSpawn = { ...state };
-    state = reducer(state, { type: "Spawn" });
+    state = reducer(state, createTestSpawnAction());
 
     // State should be unchanged
     expect(state.status).toBe("lineClear");
@@ -145,7 +146,7 @@ describe("Line Clear Integration", () => {
     expect(state.status).toBe("playing");
 
     // Now spawning should work
-    state = reducer(state, { type: "Spawn" });
+    state = reducer(state, createTestSpawnAction());
     expect(state.active).toBeDefined();
   });
 });

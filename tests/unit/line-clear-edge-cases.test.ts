@@ -6,6 +6,7 @@ import { shouldCompleteLineClear } from "../../src/app";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
+import { createTestSpawnAction } from "../test-helpers";
 
 describe("Line Clear Edge Cases", () => {
   it("should handle multiple ticks during line clear delay", () => {
@@ -21,7 +22,7 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -74,7 +75,7 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -87,7 +88,7 @@ describe("Line Clear Edge Cases", () => {
     expect(state.active).toBeUndefined();
 
     // Try to spawn during line clear - should be ignored
-    state = reducer(state, { type: "Spawn" });
+    state = reducer(state, createTestSpawnAction());
     expect(state.status).toBe("lineClear");
     expect(state.active).toBeUndefined();
 
@@ -96,7 +97,7 @@ describe("Line Clear Edge Cases", () => {
     expect(state.status).toBe("playing");
 
     // Now spawning should work
-    state = reducer(state, { type: "Spawn" });
+    state = reducer(state, createTestSpawnAction());
     expect(state.active).toBeDefined();
   });
 
@@ -113,7 +114,7 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -150,7 +151,7 @@ describe("Line Clear Edge Cases", () => {
       state.board.cells[190 + x] = 1;
     }
 
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -191,7 +192,7 @@ describe("Line Clear Edge Cases", () => {
     }
 
     // First line clear
-    state = reducer(state, { piece: "I", type: "Spawn" });
+    state = reducer(state, createTestSpawnAction("I"));
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
     state = reducer(state, { dir: 1, optimistic: false, type: "TapMove" });
@@ -209,7 +210,7 @@ describe("Line Clear Edge Cases", () => {
 
     // The previous row 18 should now be at row 19 and still incomplete
     // Should be able to spawn new piece normally
-    state = reducer(state, { type: "Spawn" });
+    state = reducer(state, createTestSpawnAction());
     expect(state.active).toBeDefined();
     expect(state.status).toBe("playing");
   });
