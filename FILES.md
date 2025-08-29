@@ -101,6 +101,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/unit/key-binding-manager.test.ts: Unit tests for KeyBindingManager utility. Tests handler storage, listener management, cleanup logic, and edge cases using mock DOM elements.
 - tests/unit/guided-storage.test.ts: Unit tests for SRS deck persistence. Tests localStorage save/load cycles, migration fallback, and serialization roundtrips.
 - tests/unit/guided-resetboard.test.ts: Integration test for guided mode board clearing. Verifies that ResetBoard action clears the board after piece commits in guided mode.
+- tests/unit/colors-normalize.test.ts: Unit tests for color normalization. Verifies luminance moves toward a target and highlights the current limitation for saturated primaries.
 - tests/unit/guided-finesse-warnings.test.ts: Unit tests for guided mode console warnings. Verifies that finesse warnings are logged when moves are suboptimal and not logged when optimal.
 - tests/types/settings-schema.test.ts: Compile-time type test for GameSettings schema completeness. Ensures that all GameSettings fields are handled in the validation schema to prevent persistence issues.
 - tests/types/invariants.test.ts: Compile-time type tests for critical invariants. Tests GameState status union exhaustiveness, board dimensions, readonly constraints, and other type-level guarantees without runtime execution.

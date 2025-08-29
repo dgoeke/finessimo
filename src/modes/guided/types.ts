@@ -3,8 +3,8 @@
 declare const ColumnBrand: unique symbol;
 export type Column = number & { readonly [ColumnBrand]: true };
 export function createColumn(value: number): Column {
-  if (!Number.isInteger(value) || value < 0 || value > 9) {
-    throw new Error("Column must be an integer in [0,9]");
+  if (!Number.isInteger(value) || value < -10 || value > 9) {
+    throw new Error("Column must be an integer in [-10,9]");
   }
   return value as Column;
 }

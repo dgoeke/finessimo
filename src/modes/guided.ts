@@ -87,12 +87,8 @@ export class GuidedMode implements GameMode {
     const deck = this.getDeck(gameState);
     const now = createTimestamp(gameState.stats.attempts + 1);
     const dueCard = this.selectCard(gameState);
+    const hasPlayerInput = gameState.processedInputLog.length > 0;
     if (!dueCard) return {};
-
-    // Log finesse warning FIRST (before any validation checks)
-    if (finesseResult.kind === "faulty") {
-      this.logFinesseWarning(dueCard, finesseResult);
-    }
 
     // Validate piece matches expected piece (should always match in guided mode)
     if (lockedPiece.id !== dueCard.piece) {
@@ -124,9 +120,11 @@ export class GuidedMode implements GameMode {
       Array.from(deck.items.values()).find((r) => r.key === key);
     if (!rec) return {};
 
-    // Rating: optimal finesse AND correct placement = "good", otherwise "again"
+    // Rating: needs optimal finesse AND correct placement AND player input
     const rating =
-      finesseResult.kind === "optimal" && placedCorrectly ? "good" : "again";
+      finesseResult.kind === "optimal" && placedCorrectly && hasPlayerInput
+        ? "good"
+        : "again";
 
     const updated = rate(rec, rating, now);
     const newDeck = updateDeckRecord(deck, updated);
@@ -269,33 +267,5 @@ export class GuidedMode implements GameMode {
     const now = state.stats.startedAtMs;
     const deck = loadGuidedDeck(now);
     return { modeData: { deck } };
-  }
-
-  private logFinesseWarning(
-    dueCard: GuidedCard,
-    finesseResult: FinesseResult & { kind: "faulty" },
-  ): void {
-    console.warn("🎯 Guided Mode: Suboptimal finesse detected!");
-    console.warn(
-      `Piece: ${dueCard.piece} → ${String(dueCard.x as number)}, ${dueCard.rot}`,
-    );
-    console.warn(`Your moves: [${finesseResult.playerSequence.join(", ")}]`);
-    const firstOptimal = finesseResult.optimalSequences[0];
-    console.warn(
-      `Optimal moves: [${firstOptimal ? firstOptimal.join(", ") : "none"}]`,
-    );
-    if (finesseResult.optimalSequences.length > 1) {
-      console.warn(
-        `Alternative optimal: [${finesseResult.optimalSequences
-          .slice(1)
-          .map((seq) => seq.join(", "))
-          .join("] or [")}]`,
-      );
-    }
-    if (finesseResult.faults.length > 0) {
-      console.warn(
-        `Faults: ${finesseResult.faults.map((f) => f.description).join(", ")}`,
-      );
-    }
   }
 }

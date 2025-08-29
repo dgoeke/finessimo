@@ -331,41 +331,34 @@ export class FinessimoApp {
     const mode = gameModeRegistry.get(modeName);
     if (!mode) return;
 
-    // Reinitialize the entire game state when switching modes to prevent state leakage
+    // Get mode's initial config before reinitialization to avoid race condition
+    const modeConfig =
+      typeof mode.initialConfig === "function" ? mode.initialConfig() : {};
+
+    // Merge current settings with mode's initial config
     const { gameplay, timing } = this.gameState;
+    const mergedGameplay = { ...gameplay, ...modeConfig.gameplay };
+    const mergedTiming = { ...timing, ...modeConfig.timing };
+
+    // Reinitialize with correct merged config
     this.dispatch({
-      gameplay,
+      gameplay: mergedGameplay,
       mode: modeName,
       retainStats: true, // Keep stats across mode switches
       seed: this.randomSeed(),
       timestampMs: fromNow(),
-      timing,
+      timing: mergedTiming,
       type: "Init",
     });
 
-    // Apply mode-specific activation after reinitialization
-    this.applyModeActivation(mode);
-
-    // Spawn the first piece for the new mode
-    this.spawnNextPiece();
-  }
-
-  private applyModeActivation(mode: IGameMode): void {
-    this.applyModeInitialConfig(mode);
+    // Apply remaining mode-specific activation (prompt, hooks, RNG)
+    // Skip applyModeInitialConfig since we already applied it during Init
     this.applyModePrompt(mode);
     this.runModeActivationHook(mode);
     this.setupModeRng(mode);
-  }
 
-  private applyModeInitialConfig(mode: IGameMode): void {
-    if (typeof mode.initialConfig !== "function") return;
-    const cfg = mode.initialConfig();
-    if (cfg.timing) {
-      this.dispatch({ timing: cfg.timing, type: "UpdateTiming" });
-    }
-    if (cfg.gameplay) {
-      this.dispatch({ gameplay: cfg.gameplay, type: "UpdateGameplay" });
-    }
+    // Spawn the first piece for the new mode
+    this.spawnNextPiece();
   }
 
   private applyModePrompt(mode: IGameMode): void {

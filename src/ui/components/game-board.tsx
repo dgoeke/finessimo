@@ -6,7 +6,11 @@ import { calculateGhostPosition } from "../../core/board";
 import { PIECES } from "../../core/pieces";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
 import { gridCoordAsNumber } from "../../types/brands";
-import { lightenColor, darkenColor } from "../utils/colors";
+import {
+  lightenColor,
+  darkenColor,
+  normalizeColorBrightness,
+} from "../utils/colors";
 
 import type { GameState, Board, ActivePiece } from "../../state/types";
 
@@ -301,7 +305,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.globalCompositeOperation = "lighter"; // additive for luminous effect
     this.ctx.globalAlpha = glowAlpha;
     this.ctx.filter = `blur(${String(blurPx)}px)`;
-    this.ctx.fillStyle = color;
+    this.ctx.fillStyle = normalizeColorBrightness(color, 0.25); // Normalize brightness for consistent glow visibility
+
     // Larger rect than the cell to encourage outward bloom
     this.ctx.fillRect(
       pixelX - extend,
