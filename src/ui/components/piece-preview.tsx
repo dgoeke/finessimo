@@ -24,40 +24,42 @@ export class PiecePreview extends SignalWatcher(LitElement) {
     return this;
   }
 
-  protected firstUpdated(): void {
-    // Fixed canvas sizes: 60x60 each with 15px cells
-    Array.from(this.canvases).forEach((canvas) => {
-      canvas.width = 60;
-      canvas.height = 60;
-      canvas.style.width = "60px";
-      canvas.style.height = "60px";
-    });
-
-    // Initialize canvas contexts
-    this.contexts = Array.from(this.canvases).map((canvas) => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        console.error("Failed to get 2D rendering context for preview canvas");
-      }
-      return ctx;
-    });
-
-    // Lit will automatically call updated() after firstUpdated() completes
-    // Ensure we schedule a follow-up update after contexts initialize
-    this.requestUpdate();
-  }
-
   protected updated(): void {
+    // Initialize canvas sizes and contexts once, after the first render
+    if (this.contexts.length === 0) {
+      const canvases = Array.from(this.canvases);
+      if (canvases.length === 0) {
+        // Nothing to do yet (should not happen since updated runs post-render)
+        return;
+      }
+
+      // Fixed canvas sizes: 60x60 each with 15px cells
+      for (const canvas of canvases) {
+        canvas.width = 60;
+        canvas.height = 60;
+        canvas.style.width = "60px";
+        canvas.style.height = "60px";
+      }
+
+      // Initialize canvas contexts
+      this.contexts = canvases.map((canvas) => {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          console.error(
+            "Failed to get 2D rendering context for preview canvas",
+          );
+        }
+        return ctx;
+      });
+    }
+
     // Get current state from the signal first to register reactive subscription
     const gameState = gameStateSignal.get();
     const previewState = stateSelectors.getPreviewState(gameState);
 
-    if (
-      this.contexts.length === 0 ||
-      this.contexts.every((ctx) => ctx === null)
-    ) {
+    if (this.contexts.every((ctx) => ctx === null)) {
       // Contexts not ready yet; we've registered the subscription, so a later
-      // signal change or requestUpdate will trigger rendering.
+      // signal change will trigger rendering.
       return;
     }
 
