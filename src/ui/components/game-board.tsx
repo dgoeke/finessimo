@@ -408,18 +408,24 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const color = "#111111";
     const borderColor = "#555555";
 
-    // Create subtle gradient for depth
+    // Create subtle gradient for depth with interior margin
+    const margin = 4;
     const gradient = this.ctx.createLinearGradient(
-      pixelX,
-      pixelY,
-      pixelX + this.cellSize,
-      pixelY + this.cellSize,
+      pixelX + margin,
+      pixelY + margin,
+      pixelX + this.cellSize - margin,
+      pixelY + this.cellSize - margin,
     );
     gradient.addColorStop(0, lightenColor(color, 0.1));
     gradient.addColorStop(1, darkenColor(color, 0.9));
 
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(
+      pixelX + margin,
+      pixelY + margin,
+      this.cellSize - margin * 2,
+      this.cellSize - margin * 2,
+    );
 
     // Add subtle highlight on top edge
     this.ctx.fillStyle = lightenColor(color, 0.1);
