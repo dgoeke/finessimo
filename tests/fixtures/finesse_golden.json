@@ -43,7 +43,14 @@
     "first": "MoveRight"
   },
 
-  { "piece": "O", "targetRot": "spawn", "targetX": 4, "expectedLen": 1 },
+  { "piece": "O", "targetRot": "spawn", "targetX": 3, "expectedLen": 1 },
+  {
+    "piece": "O",
+    "targetRot": "spawn",
+    "targetX": 4,
+    "expectedLen": 2,
+    "first": "MoveRight"
+  },
   {
     "piece": "O",
     "targetRot": "spawn",

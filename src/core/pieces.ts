@@ -126,7 +126,7 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     },
     color: "#FFFF00", // O - yellow
     id: "O",
-    spawnTopLeft: [4, -2],
+    spawnTopLeft: [3, -2], // Center O piece: 4 empty + 2 O cells + 4 empty
   },
   S: {
     cells: {

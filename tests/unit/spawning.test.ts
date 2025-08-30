@@ -46,7 +46,7 @@ describe("spawning", () => {
 
       expect(piece.id).toBe("O");
       expect(piece.rot).toBe("spawn");
-      expect(piece.x).toBe(4); // O piece spawn X
+      expect(piece.x).toBe(3); // O piece spawn X (centered: 4+2+4)
       expect(piece.y).toBe(-2); // O piece spawn Y
     });
   });
