@@ -1,11 +1,14 @@
 import { PIECES } from "../../core/pieces";
+import { createActivePiece } from "../../core/spawning";
+import { finesseCalculator } from "../../finesse/calculator";
 import { makeDeck } from "../../srs/fsrs-adapter";
+import { createDurationMs } from "../../types/brands";
 import { createTimestamp, type Timestamp } from "../../types/timestamp";
 
 import { createColumn, type Column, createCardId, type CardId } from "./types";
 
 import type { GuidedCard, SrsDeck } from "../../srs/fsrs-adapter";
-import type { PieceId, Rot } from "../../state/types";
+import type { GameplayConfig, PieceId, Rot } from "../../state/types";
 
 // Rotation equivalence classes to avoid visual duplicates
 export const ROTATION_CLASSES: Record<PieceId, ReadonlyArray<Rot>> = {
@@ -57,7 +60,132 @@ export function generateCards(): ReadonlyArray<GuidedCard> {
       }
     }
   }
-  return cards;
+
+  return orderCardsByDifficulty(cards);
+}
+
+/**
+ * Orders cards by difficulty using the algorithm specified:
+ * 1. Group cards by piece
+ * 2. Sort each group by optimal sequence length (easiest first)
+ * 3. Round-robin across groups until all cards are selected
+ */
+function orderCardsByDifficulty(
+  cards: ReadonlyArray<GuidedCard>,
+): ReadonlyArray<GuidedCard> {
+  // Step 1: Calculate optimal sequence length for each card
+  const gameplayConfig: GameplayConfig = {
+    finesseCancelMs: createDurationMs(50),
+    holdEnabled: false,
+  };
+
+  type CardWithDifficulty = GuidedCard & { minSequenceLength: number };
+
+  const cardsWithDifficulty: Array<CardWithDifficulty> = cards.map((card) => {
+    const activePiece = createActivePiece(card.piece);
+    const optimalSequences = finesseCalculator.calculateOptimal(
+      activePiece,
+      card.x as number,
+      card.rot,
+      gameplayConfig,
+    );
+
+    // Calculate minimum sequence length (difficulty metric)
+    const minSequenceLength = optimalSequences.reduce(
+      (min, seq) => Math.min(min, seq.length),
+      Number.POSITIVE_INFINITY,
+    );
+
+    return { ...card, minSequenceLength };
+  });
+
+  // Step 2: Group by piece and sort each group by difficulty
+  const groupsByPiece = groupAndSortCardsByPiece(cardsWithDifficulty);
+
+  // Step 3: Round-robin selection across groups
+  return roundRobinSelectCards(groupsByPiece, cards.length);
+}
+
+/**
+ * Groups cards by piece and sorts each group by difficulty (easiest first)
+ */
+function groupAndSortCardsByPiece(
+  cardsWithDifficulty: Array<GuidedCard & { minSequenceLength: number }>,
+): Map<PieceId, Array<GuidedCard & { minSequenceLength: number }>> {
+  const groupsByPiece = new Map<
+    PieceId,
+    Array<GuidedCard & { minSequenceLength: number }>
+  >();
+
+  for (const card of cardsWithDifficulty) {
+    const existingGroup = groupsByPiece.get(card.piece);
+    if (existingGroup) {
+      existingGroup.push(card);
+    } else {
+      groupsByPiece.set(card.piece, [card]);
+    }
+  }
+
+  // Sort each group by difficulty (easiest first)
+  for (const group of groupsByPiece.values()) {
+    group.sort((a, b) => a.minSequenceLength - b.minSequenceLength);
+  }
+
+  return groupsByPiece;
+}
+
+/**
+ * Performs round-robin selection across groups
+ */
+function roundRobinSelectCards(
+  groupsByPiece: Map<
+    PieceId,
+    Array<GuidedCard & { minSequenceLength: number }>
+  >,
+  totalCards: number,
+): Array<GuidedCard> {
+  const result: Array<GuidedCard> = [];
+  const groups = Array.from(groupsByPiece.values());
+  const indices = new Array<number>(groups.length).fill(0);
+
+  while (result.length < totalCards) {
+    const addedThisRound = tryAddOneFromEachGroup(groups, indices, result);
+
+    // Safety check to avoid infinite loop
+    if (!addedThisRound) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Attempts to add one card from each group in the current round
+ */
+function tryAddOneFromEachGroup(
+  groups: Array<Array<GuidedCard & { minSequenceLength: number }>>,
+  indices: Array<number>,
+  result: Array<GuidedCard>,
+): boolean {
+  let addedThisRound = false;
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    const index = indices[i];
+
+    if (group && typeof index === "number" && index < group.length) {
+      const cardWithDifficulty = group[index];
+      if (cardWithDifficulty) {
+        const { minSequenceLength: _, ...card } = cardWithDifficulty; // Remove the difficulty metric
+        result.push(card);
+        indices[i] = index + 1;
+        addedThisRound = true;
+      }
+    }
+  }
+
+  return addedThisRound;
 }
 
 export function makeDefaultDeck(now: Timestamp = createTimestamp(0)): SrsDeck {
