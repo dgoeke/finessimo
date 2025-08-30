@@ -1,4 +1,5 @@
 import { assertNever } from "../../state/types";
+import { Z } from "../ui/overlays";
 
 import type { GameState, UiEffect } from "../../state/types";
 import type {
@@ -48,9 +49,10 @@ function convertEffectToOverlay(effect: UiEffect): RenderOverlay | null {
 
     case "lineFlash": {
       const lineFlashOverlay: LineFlashOverlay = {
+        id: `line-flash:${String(effect.id)}`,
         kind: "line-flash",
         rows: effect.rows,
-        z: 4, // Z.effect
+        z: Z.effect,
         ...(effect.color !== undefined && { color: effect.color }),
         ...(effect.intensity !== undefined && { intensity: effect.intensity }),
       } as const;
@@ -60,9 +62,10 @@ function convertEffectToOverlay(effect: UiEffect): RenderOverlay | null {
     case "finesseBoop": {
       const effectDotOverlay: EffectDotOverlay = {
         at: [effect.gridX, effect.gridY] as const,
+        id: `finesse-boop:${String(effect.id)}`,
         kind: "effect-dot",
         style: effect.style,
-        z: 4, // Z.effect
+        z: Z.effect,
         ...(effect.color !== undefined && { color: effect.color }),
         ...(effect.size !== undefined && { size: effect.size }),
       } as const;

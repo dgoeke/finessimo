@@ -23,7 +23,8 @@ import type { GameMode as IGameMode } from "./modes";
 import type { ModeUiAdapter } from "./modes/types";
 import type { GameSettings } from "./ui/components/settings-modal";
 
-// Type-safe mode names - keep in sync with GameState["currentMode"]
+// Type-safe mode names - must include all supported modes
+// Keep in sync with registered modes in gameModeRegistry
 type ModeName = "freePlay" | "guided";
 
 // Efficient shallow equality for object comparisons

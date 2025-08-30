@@ -28,6 +28,7 @@ export type ZIndex = (typeof Z)[keyof typeof Z];
  */
 export type GhostOverlay = Readonly<{
   kind: "ghost";
+  id: string; // Stable identifier for keyed rendering
   z: typeof Z.ghost;
   cells: ReadonlyArray<readonly [GridCoord, GridCoord]>; // Array of [x, y] coordinate tuples
   pieceId: PieceId;
@@ -39,6 +40,7 @@ export type GhostOverlay = Readonly<{
  */
 export type TargetOverlay = Readonly<{
   kind: "target";
+  id: string; // Stable identifier for keyed rendering
   z: typeof Z.target;
   cells: ReadonlyArray<readonly [GridCoord, GridCoord]>; // Array of [x, y] coordinate tuples
   style: "glow" | "dashed" | "hint";
@@ -51,6 +53,7 @@ export type TargetOverlay = Readonly<{
  */
 export type LineFlashOverlay = Readonly<{
   kind: "line-flash";
+  id: string; // Stable identifier for keyed rendering
   z: typeof Z.effect;
   rows: ReadonlyArray<number>; // 0-based row indices
   color?: string; // hex color, defaults to white
@@ -62,6 +65,7 @@ export type LineFlashOverlay = Readonly<{
  */
 export type EffectDotOverlay = Readonly<{
   kind: "effect-dot";
+  id: string; // Stable identifier for keyed rendering
   z: typeof Z.effect;
   at: readonly [GridCoord, GridCoord]; // single [x, y] coordinate tuple
   style: "pulse" | "sparkle" | "fade";

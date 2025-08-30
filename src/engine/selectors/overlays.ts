@@ -1,6 +1,7 @@
 import { calculateGhostPosition } from "../../core/board";
 import { isPlaying } from "../../state/types";
 import { gridCoordAsNumber } from "../../types/brands";
+import { Z } from "../ui/overlays";
 import { cellsForActivePiece } from "../util/cell-projection";
 
 import type { ExtendedModeData } from "../../modes/types";
@@ -10,7 +11,6 @@ import type {
   GhostOverlay,
   RenderOverlay,
   TargetOverlay,
-  Z,
 } from "../ui/overlays";
 
 /**
@@ -19,6 +19,23 @@ import type {
  * These selectors transform game state into declarative overlay definitions
  * for unified rendering. All functions are pure with no side effects.
  */
+
+/**
+ * Generate a stable ID from a set of coordinate tuples.
+ * Uses first and last cells to create a deterministic hash-like identifier.
+ */
+function generateCellsId(
+  prefix: string,
+  cells: ReadonlyArray<readonly [GridCoord, GridCoord]>,
+): string {
+  if (cells.length === 0) return `${prefix}:empty`;
+  const first = cells[0];
+  const last = cells[cells.length - 1];
+  if (!first || !last) return `${prefix}:empty`; // Type guard for safety
+  const firstStr = `${String(gridCoordAsNumber(first[0]))},${String(gridCoordAsNumber(first[1]))}`;
+  const lastStr = `${String(gridCoordAsNumber(last[0]))},${String(gridCoordAsNumber(last[1]))}`;
+  return `${prefix}:${String(cells.length)}:${firstStr}:${lastStr}`;
+}
 
 /**
  * Selects ghost overlay data from active piece position.
@@ -35,8 +52,12 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
   // Calculate ghost position
   const ghostPosition = calculateGhostPosition(s.board, s.active);
 
-  // Only render ghost if it differs from active piece position
-  if (gridCoordAsNumber(ghostPosition.y) === gridCoordAsNumber(s.active.y)) {
+  // Only render ghost if it differs from active piece position (any axis)
+  if (
+    gridCoordAsNumber(ghostPosition.x) === gridCoordAsNumber(s.active.x) &&
+    gridCoordAsNumber(ghostPosition.y) === gridCoordAsNumber(s.active.y) &&
+    ghostPosition.rot === s.active.rot
+  ) {
     return null;
   }
 
@@ -45,10 +66,11 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
 
   return {
     cells: ghostCells,
+    id: `ghost:${ghostPosition.id}:${String(gridCoordAsNumber(ghostPosition.x))},${String(gridCoordAsNumber(ghostPosition.y))},${ghostPosition.rot}`,
     kind: "ghost",
     opacity: 0.35,
     pieceId: ghostPosition.id,
-    z: 2 satisfies typeof Z.ghost,
+    z: Z.ghost,
   } as const;
 }
 
@@ -64,7 +86,7 @@ export function selectTargetOverlays(
   // NEW: Read from mode adapter data (ExtendedModeData.targets)
   const modeData = s.modeData as ExtendedModeData | undefined;
   if (modeData?.targets) {
-    for (const targetPattern of modeData.targets) {
+    for (const [i, targetPattern] of modeData.targets.entries()) {
       // Convert TargetCell array to coordinate tuples for overlay format
       const cells: Array<readonly [GridCoord, GridCoord]> = [];
       for (const targetCell of targetPattern) {
@@ -73,16 +95,17 @@ export function selectTargetOverlays(
 
       targets.push({
         cells,
+        id: generateCellsId(`target-mode:${String(i)}`, cells),
         kind: "target",
         style: "glow", // Default style for new system
-        z: 3 satisfies typeof Z.target,
+        z: Z.target,
       } as const);
     }
   }
 
   // LEGACY: Fall back to board decorations system for backward compatibility
   if (targets.length === 0 && s.boardDecorations) {
-    for (const decoration of s.boardDecorations) {
+    for (const [i, decoration] of s.boardDecorations.entries()) {
       // Currently BoardDecoration only has "cellHighlight" type
       // Convert BoardDecoration to TargetOverlay with coordinate tuples
       const cells: Array<readonly [GridCoord, GridCoord]> = [];
@@ -92,9 +115,10 @@ export function selectTargetOverlays(
 
       targets.push({
         cells,
+        id: generateCellsId(`target-legacy:${String(i)}`, cells),
         kind: "target",
         style: "glow", // Default style for now
-        z: 3 satisfies typeof Z.target,
+        z: Z.target,
         ...(decoration.color !== undefined && { color: decoration.color }),
         ...(decoration.alpha !== undefined && { alpha: decoration.alpha }),
       } as const);
