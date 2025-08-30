@@ -8,7 +8,7 @@ import type { GridCoord } from "../types/brands";
 export type TargetCell = {
   readonly x: GridCoord;
   readonly y: GridCoord;
-  readonly color?: string; // Optional hex color for piece-specific highlighting
+  readonly color: string; // Hex color for piece-specific highlighting
 };
 
 /**

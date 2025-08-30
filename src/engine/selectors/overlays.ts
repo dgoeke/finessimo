@@ -87,8 +87,8 @@ function createTargetOverlayFromPattern(
 
   for (const targetCell of targetPattern) {
     cells.push([targetCell.x, targetCell.y] as const);
-    // Use color from first cell that has one (all cells in pattern should match)
-    if (patternColor === undefined && targetCell.color !== undefined) {
+    // Use color from first cell (all cells in pattern should match)
+    if (patternColor === undefined) {
       patternColor = targetCell.color;
     }
   }
