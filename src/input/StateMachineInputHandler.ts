@@ -115,7 +115,7 @@ export class StateMachineInputHandler implements InputHandler {
   private emitArrCatchUp(
     gameState: GameState,
     nowMs: number,
-    preCtx: DASContext
+    preCtx: DASContext,
   ): void {
     try {
       const arrMs = Math.max(1, gameState.timing.arrMs as number);
@@ -178,7 +178,7 @@ export class StateMachineInputHandler implements InputHandler {
     window.removeEventListener("blur", this.resetAllInputsBound);
     document.removeEventListener(
       "visibilitychange",
-      this.onVisibilityChangeBound
+      this.onVisibilityChangeBound,
     );
 
     this.dasService.reset();
@@ -189,7 +189,7 @@ export class StateMachineInputHandler implements InputHandler {
    */
   private dispatchWithOptionalProcessed(
     engineAction: Action,
-    timestampMs?: Timestamp
+    timestampMs?: Timestamp,
   ): void {
     if (!this.dispatch) {
       return;
@@ -200,7 +200,7 @@ export class StateMachineInputHandler implements InputHandler {
     if (this.shouldEmitProcessedAction(engineAction, timestampMs)) {
       const processedAction = this.createProcessedActionFromEngineAction(
         engineAction,
-        timestampMs
+        timestampMs,
       );
       if (processedAction) {
         this.dispatch({ entry: processedAction, type: "AppendProcessed" });
@@ -213,7 +213,7 @@ export class StateMachineInputHandler implements InputHandler {
 
   private shouldEmitProcessedAction(
     action: Action,
-    _timestampMs?: Timestamp
+    _timestampMs?: Timestamp,
   ): boolean {
     if (!this.currentGameState) return false;
     const hasActivePiece = Boolean(this.currentGameState.active);
@@ -229,7 +229,7 @@ export class StateMachineInputHandler implements InputHandler {
     if (action.type === "SoftDrop") {
       const [shouldProcess, newState] = shouldProcessSoftDrop(
         action.on,
-        this.softDropState
+        this.softDropState,
       );
       this.softDropState = newState;
       return shouldProcess;
@@ -239,7 +239,7 @@ export class StateMachineInputHandler implements InputHandler {
 
   private createProcessedActionFromEngineAction(
     action: Action,
-    timestampMs?: Timestamp
+    timestampMs?: Timestamp,
   ): ProcessedAction | null {
     const timestamp = timestampMs ?? fromNow();
     if (action.type === "TapMove")
@@ -295,7 +295,7 @@ export class StateMachineInputHandler implements InputHandler {
 
       const interval = Math.max(
         1,
-        Math.floor(gravityMs / Math.max(1, softDropMultiplier))
+        Math.floor(gravityMs / Math.max(1, softDropMultiplier)),
       );
 
       let nextTime =
@@ -355,7 +355,7 @@ export class StateMachineInputHandler implements InputHandler {
 
     if (duplicates.length > 0) {
       console.warn(
-        `Duplicate key bindings detected: ${duplicates.join(", ")}. Some bindings may be overwritten.`
+        `Duplicate key bindings detected: ${duplicates.join(", ")}. Some bindings may be overwritten.`,
       );
     }
 
@@ -387,7 +387,7 @@ export class StateMachineInputHandler implements InputHandler {
   // Apply timing immediately to DAS machine to avoid startup mismatch
   applyTiming(
     dasMsOrTiming: number | { dasMs: number; arrMs: number },
-    maybeArrMs?: number
+    maybeArrMs?: number,
   ): void {
     if (typeof dasMsOrTiming === "number") {
       const arrMs = maybeArrMs ?? this.dasService.getState().context.arrMs;
@@ -421,7 +421,7 @@ export class StateMachineInputHandler implements InputHandler {
   // Public method to handle movement from touch with proper timestamp
   handleMovement(
     action: "LeftDown" | "LeftUp" | "RightDown" | "RightUp",
-    tMs: number
+    tMs: number,
   ): void {
     if (!this.dispatch) return;
 
@@ -444,7 +444,7 @@ export class StateMachineInputHandler implements InputHandler {
 
   private handleMovementDown(
     keyBinding: "MoveLeft" | "MoveRight",
-    timestamp: number
+    timestamp: number,
   ): void {
     if (!this.dispatch) return;
 
@@ -467,7 +467,7 @@ export class StateMachineInputHandler implements InputHandler {
 
   private handleMovementUp(
     keyBinding: "MoveLeft" | "MoveRight",
-    timestamp: number
+    timestamp: number,
   ): void {
     if (!this.dispatch) return;
 
@@ -559,7 +559,7 @@ export class StateMachineInputHandler implements InputHandler {
 
   private handleBlockedKeyRelease(
     binding: BindableAction,
-    event: KeyboardEvent
+    event: KeyboardEvent,
   ): void {
     if (this.isStatefulAction(binding)) {
       this.keyStates.delete(event.code);
@@ -581,7 +581,7 @@ export class StateMachineInputHandler implements InputHandler {
   private handleKeyDownAction(
     binding: BindableAction,
     event: KeyboardEvent,
-    timestamp: number
+    timestamp: number,
   ): void {
     if (!this.dispatch) return;
 
@@ -616,7 +616,7 @@ export class StateMachineInputHandler implements InputHandler {
             timestampMs: createTimestamp(timestamp),
             type: "HardDrop",
           },
-          createTimestamp(timestamp)
+          createTimestamp(timestamp),
         );
         break;
       case "Hold":
@@ -676,7 +676,7 @@ export class StateMachineInputHandler implements InputHandler {
   private handleKeyEvent(
     binding: BindableAction,
     phase: "down" | "up",
-    event: KeyboardEvent
+    event: KeyboardEvent,
   ): void {
     if (!this.dispatch) return;
 
@@ -742,7 +742,7 @@ export class StateMachineInputHandler implements InputHandler {
       const currentBinding: BindableAction =
         dir === -1 ? "MoveLeft" : "MoveRight";
       const remainingPressed = this.bindings[currentBinding].some(
-        (code) => this.keyStates.get(code) === true
+        (code) => this.keyStates.get(code) === true,
       );
 
       // Only send KEY_UP if all codes for this direction are released
@@ -767,7 +767,7 @@ export class StateMachineInputHandler implements InputHandler {
       this.currentGameState &&
       shouldProcessInCurrentState(
         Boolean(this.currentGameState.active),
-        this.currentGameState.status
+        this.currentGameState.status,
       )
     ) {
       const processed = createProcessedTapMove(dir, this.pendingTap.t);
@@ -824,7 +824,7 @@ export class StateMachineInputHandler implements InputHandler {
         this.pendingTap = null;
         const processed = createProcessedHoldMove(
           action.dir,
-          action.timestampMs
+          action.timestampMs,
         );
         this.dispatch({ entry: processed, type: "AppendProcessed" });
       } else {
