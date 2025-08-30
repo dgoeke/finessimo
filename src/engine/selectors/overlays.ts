@@ -76,30 +76,39 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
 
 /**
  * Convert a target pattern from TargetCell array to TargetOverlay.
+ * Returns null for empty patterns to make invalid states unrepresentable.
  */
 function createTargetOverlayFromPattern(
   targetPattern: ReadonlyArray<TargetCell>,
   index: number,
-): TargetOverlay {
+): TargetOverlay | null {
+  // Guard against empty patterns
+  if (targetPattern.length === 0) {
+    return null;
+  }
+
   // Convert TargetCell array to coordinate tuples for overlay format
   const cells: Array<readonly [GridCoord, GridCoord]> = [];
-  let patternColor: string | undefined;
 
   for (const targetCell of targetPattern) {
     cells.push([targetCell.x, targetCell.y] as const);
-    // Use color from first cell (all cells in pattern should match)
-    if (patternColor === undefined) {
-      patternColor = targetCell.color;
-    }
+  }
+
+  // Since we've already checked length > 0, we know first element exists
+  // All cells in a pattern should have the same color by design
+  const firstCell = targetPattern[0];
+  if (!firstCell) {
+    // This should never happen due to length check above, but satisfy TypeScript
+    return null;
   }
 
   return {
     cells,
+    color: firstCell.color,
     id: generateCellsId(`target-mode:${String(index)}`, cells),
     kind: "target",
     style: "glow", // Default style for new system
     z: Z.target,
-    ...(patternColor !== undefined && { color: patternColor }),
   } as const;
 }
 
@@ -140,7 +149,10 @@ export function selectTargetOverlays(
   const modeData = s.modeData as ExtendedModeData | undefined;
   if (modeData?.targets) {
     for (const [i, targetPattern] of modeData.targets.entries()) {
-      targets.push(createTargetOverlayFromPattern(targetPattern, i));
+      const overlay = createTargetOverlayFromPattern(targetPattern, i);
+      if (overlay) {
+        targets.push(overlay);
+      }
     }
   }
 
