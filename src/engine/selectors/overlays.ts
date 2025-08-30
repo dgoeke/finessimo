@@ -1,7 +1,7 @@
 import { calculateGhostPosition } from "../../core/board";
-import { PIECES } from "../../core/pieces";
 import { isPlaying } from "../../state/types";
-import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
+import { gridCoordAsNumber } from "../../types/brands";
+import { cellsForActivePiece } from "../util/cell-projection";
 
 import type { ExtendedModeData } from "../../modes/types";
 import type { GameState } from "../../state/types";
@@ -40,20 +40,8 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
     return null;
   }
 
-  // Extract piece cells at ghost position
-  const shape = PIECES[ghostPosition.id];
-  const cells = shape.cells[ghostPosition.rot];
-
-  // Convert relative piece cells to absolute grid coordinates
-  // Each pair of GridCoord values represents (x, y) of a cell
-  const ghostCells: Array<GridCoord> = [];
-  for (const [dx, dy] of cells) {
-    const absoluteX = gridCoordAsNumber(ghostPosition.x) + dx;
-    const absoluteY = gridCoordAsNumber(ghostPosition.y) + dy;
-    // Add as x,y pair to flat array
-    ghostCells.push(createGridCoord(absoluteX));
-    ghostCells.push(createGridCoord(absoluteY));
-  }
+  // Use cell projection utility to get coordinate tuples
+  const ghostCells = cellsForActivePiece(ghostPosition);
 
   return {
     cells: ghostCells,
@@ -77,10 +65,10 @@ export function selectTargetOverlays(
   const modeData = s.modeData as ExtendedModeData | undefined;
   if (modeData?.targets) {
     for (const targetPattern of modeData.targets) {
-      // Convert TargetCell array to flat GridCoord array for overlay format
-      const cells: Array<GridCoord> = [];
+      // Convert TargetCell array to coordinate tuples for overlay format
+      const cells: Array<readonly [GridCoord, GridCoord]> = [];
       for (const targetCell of targetPattern) {
-        cells.push(targetCell.x, targetCell.y); // Add as x,y pair to flat array
+        cells.push([targetCell.x, targetCell.y] as const);
       }
 
       targets.push({
@@ -96,11 +84,10 @@ export function selectTargetOverlays(
   if (targets.length === 0 && s.boardDecorations) {
     for (const decoration of s.boardDecorations) {
       // Currently BoardDecoration only has "cellHighlight" type
-      // Convert BoardDecoration to TargetOverlay
-      // Each pair of GridCoord values represents (x, y) of a cell
-      const cells: Array<GridCoord> = [];
+      // Convert BoardDecoration to TargetOverlay with coordinate tuples
+      const cells: Array<readonly [GridCoord, GridCoord]> = [];
       for (const cell of decoration.cells) {
-        cells.push(cell.x, cell.y); // Add as x,y pair to flat array
+        cells.push([cell.x, cell.y] as const);
       }
 
       targets.push({

@@ -29,6 +29,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/engine/physics/post-step.ts: Physics post-step that evaluates ground contact and advances the lock-delay machine. Creates pendingLock and transitions to resolvingLock when lock triggers.
 - src/engine/ui/effects.ts — Centralized UI effects helpers (push/prune/clear). Reducer Tick calls pruneUiEffects for TTL cleanup.
 - src/engine/ui/overlays.ts — Foundational overlay type system for UI rendering. Discriminated union types for declarative overlay definitions (ghost, target, line flash, effect dots) with z-ordering and branded coordinates.
+- src/engine/util/cell-projection.ts — Pure utility for projecting piece shapes to absolute grid coordinates. Centralizes coordinate transformation logic for overlay rendering.
 - src/engine/gameplay/movement.ts: Pure movement action handlers for TapMove, HoldMove, and RepeatMove. Extracted from main reducer for modular organization.
 - src/engine/gameplay/rotation.ts: Pure rotation action handler for Rotate actions. Delegates to SRS rotation system with proper collision checking.
 - src/engine/gameplay/spawn.ts: Pure spawn action handler for piece spawning logic. Handles queue consumption, explicit piece spawning, and top-out detection.

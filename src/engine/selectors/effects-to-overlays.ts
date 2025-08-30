@@ -1,5 +1,11 @@
-import type { GameState } from "../../state/types";
-import type { RenderOverlay } from "../ui/overlays";
+import { assertNever } from "../../state/types";
+
+import type { GameState, UiEffect } from "../../state/types";
+import type {
+  RenderOverlay,
+  EffectDotOverlay,
+  LineFlashOverlay,
+} from "../ui/overlays";
 
 /**
  * Maps UI effects to overlay representations for unified rendering.
@@ -10,11 +16,9 @@ import type { RenderOverlay } from "../ui/overlays";
 
 /**
  * Converts active UI effects to overlay representations.
- * Currently only handles FloatingTextEffect, which maps to no overlays
- * (floating text is handled by a separate dedicated component).
  *
- * Future effect types like "sparkle", "pulse", "line-flash" will be converted
- * to their corresponding overlay types here.
+ * This function maps UI effects from the effects system into overlay types
+ * for unified rendering. Uses exhaustive switch for type safety.
  */
 export function selectEffectOverlays(
   s: GameState,
@@ -22,20 +26,50 @@ export function selectEffectOverlays(
   const overlays: Array<RenderOverlay> = [];
 
   for (const effect of s.uiEffects) {
-    // Currently only FloatingTextEffect exists in the UiEffect union
-    // FloatingTextEffect is handled by a separate overlay component
-    // that reads directly from uiEffects. No conversion to RenderOverlay needed.
-    // Future: this might become a dedicated EffectTextOverlay type
-
-    // When additional effect types are added to the UiEffect union,
-    // add cases here to convert them to RenderOverlay types:
-    // - "sparkle" -> EffectDotOverlay
-    // - "lineClear" -> LineFlashOverlay
-    // - etc.
-
-    // For now, no overlays are generated from effects
-    void effect; // Acknowledge the effect parameter
+    const overlay = convertEffectToOverlay(effect);
+    if (overlay) {
+      overlays.push(overlay);
+    }
   }
 
   return overlays;
+}
+
+/**
+ * Converts a single UI effect to its corresponding overlay representation.
+ * Returns null for effects that don't generate overlays (like FloatingTextEffect).
+ */
+function convertEffectToOverlay(effect: UiEffect): RenderOverlay | null {
+  switch (effect.kind) {
+    case "floatingText":
+      // FloatingTextEffect is handled by a separate dedicated component
+      // that reads directly from uiEffects. No RenderOverlay needed.
+      return null;
+
+    case "lineFlash": {
+      const lineFlashOverlay: LineFlashOverlay = {
+        kind: "line-flash",
+        rows: effect.rows,
+        z: 4, // Z.effect
+        ...(effect.color !== undefined && { color: effect.color }),
+        ...(effect.intensity !== undefined && { intensity: effect.intensity }),
+      } as const;
+      return lineFlashOverlay;
+    }
+
+    case "finesseBoop": {
+      const effectDotOverlay: EffectDotOverlay = {
+        at: [effect.gridX, effect.gridY] as const,
+        kind: "effect-dot",
+        style: effect.style,
+        z: 4, // Z.effect
+        ...(effect.color !== undefined && { color: effect.color }),
+        ...(effect.size !== undefined && { size: effect.size }),
+      } as const;
+      return effectDotOverlay;
+    }
+
+    default:
+      return assertNever(effect);
+  }
 }

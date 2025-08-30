@@ -29,7 +29,7 @@ export type ZIndex = (typeof Z)[keyof typeof Z];
 export type GhostOverlay = Readonly<{
   kind: "ghost";
   z: typeof Z.ghost;
-  cells: ReadonlyArray<GridCoord>;
+  cells: ReadonlyArray<readonly [GridCoord, GridCoord]>; // Array of [x, y] coordinate tuples
   pieceId: PieceId;
   opacity?: number; // 0..1, defaults to 0.35
 }>;
@@ -40,7 +40,7 @@ export type GhostOverlay = Readonly<{
 export type TargetOverlay = Readonly<{
   kind: "target";
   z: typeof Z.target;
-  cells: ReadonlyArray<GridCoord>;
+  cells: ReadonlyArray<readonly [GridCoord, GridCoord]>; // Array of [x, y] coordinate tuples
   style: "glow" | "dashed" | "hint";
   color?: string; // hex color, defaults to mode-appropriate color
   alpha?: number; // 0..1, defaults to 0.25
@@ -63,7 +63,7 @@ export type LineFlashOverlay = Readonly<{
 export type EffectDotOverlay = Readonly<{
   kind: "effect-dot";
   z: typeof Z.effect;
-  at: GridCoord; // single cell position
+  at: readonly [GridCoord, GridCoord]; // single [x, y] coordinate tuple
   style: "pulse" | "sparkle" | "fade";
   color?: string; // hex color, defaults to yellow
   size?: number; // relative size multiplier, defaults to 1.0
