@@ -109,8 +109,13 @@ export function makeDeck(
   params: Readonly<{ maxNewPerSession: number }> = { maxNewPerSession: 50 },
 ): SrsDeck {
   const map = new Map<CardId, SrsRecord>();
-  for (const card of items) {
-    const rec = initRecord(card, now);
+  for (let i = 0; i < items.length; i++) {
+    const card = items[i];
+    if (!card) continue;
+    // Assign slightly increasing timestamps to preserve the ordering from items array
+    // This ensures cards are presented in the intended difficulty order
+    const cardTimestamp = createTimestamp((now as number) + i);
+    const rec = initRecord(card, cardTimestamp);
     map.set(rec.key, rec);
   }
   return {
