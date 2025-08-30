@@ -328,7 +328,7 @@ describe("Retry on finesse error", () => {
       expect(retriedState.active).toBeTruthy();
       expect(retriedState.active?.id).toBe("I");
       expect(retriedState.active?.x).toBe(3); // I piece spawn X
-      expect(retriedState.active?.y).toBe(-1); // I piece spawn Y
+      expect(retriedState.active?.y).toBe(-2); // I piece spawn Y (SRS: fully above)
       expect(retriedState.canHold).toBe(true);
       expect(retriedState.physics.lockDelayStartTime).toBeNull();
       expect(retriedState.physics.lineClearLines).toHaveLength(0);

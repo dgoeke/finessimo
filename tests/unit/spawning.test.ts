@@ -32,13 +32,13 @@ describe("spawning", () => {
       expect(piece.y).toBe(-2); // T piece spawn Y
     });
 
-    it("should create I piece at correct spawn position", () => {
+    it("should create I piece at correct spawn position (fully above playfield)", () => {
       const piece = createActivePiece("I");
 
       expect(piece.id).toBe("I");
       expect(piece.rot).toBe("spawn");
       expect(piece.x).toBe(3); // I piece spawn X
-      expect(piece.y).toBe(-1); // I piece spawn Y
+      expect(piece.y).toBe(-2); // I piece spawn Y (SRS: fully above)
     });
 
     it("should create O piece at correct spawn position", () => {
@@ -95,15 +95,15 @@ describe("spawning", () => {
       }
       expect(canSpawnPiece(board, "T")).toBe(true);
 
-      // I piece spawns at (3, -1) with horizontal shape
-      // Its cells are at (3,0), (4,0), (5,0), (6,0) when at spawn
-      // Block these specific cells to test I piece collision
+      // I piece now spawns fully above the playfield (at y = -2 top-left, row of blocks at y = -1)
+      // Blocking the top visible row should NOT prevent spawning anymore.
+      // This verifies SRS spawn semantics (negative y is not collidable).
       const iPieceBoard = createTestBoard();
       iPieceBoard.cells[0 * 10 + 3] = 1; // (3,0)
       iPieceBoard.cells[0 * 10 + 4] = 1; // (4,0)
       iPieceBoard.cells[0 * 10 + 5] = 1; // (5,0)
       iPieceBoard.cells[0 * 10 + 6] = 1; // (6,0)
-      expect(canSpawnPiece(iPieceBoard, "I")).toBe(false);
+      expect(canSpawnPiece(iPieceBoard, "I")).toBe(true);
     });
   });
 

@@ -22,6 +22,7 @@
     "assistants:build": "node scripts/build-assistants.cjs",
     "assistants:validate": "node scripts/validate-assistants.cjs",
     "assistants:pre-commit": "npm-run-all assistants:validate assistants:build && git diff --exit-code -- CLAUDE.md AGENTS.md || (echo '📝 Run assistants:build and commit outputs' && exit 1)",
+    "generate:finesse-table": "jest --runInBand tests/scripts/generate-guided-finesse-table.test.ts",
     "prepare": "husky"
   },
   "keywords": [

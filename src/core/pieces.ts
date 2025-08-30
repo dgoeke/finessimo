@@ -30,7 +30,10 @@ export const PIECES: Record<PieceId, TetrominoShape> = {
     },
     color: "#00FFFF", // I - light blue/cyan
     id: "I",
-    spawnTopLeft: [3, -1],
+    // Guideline/SRS: spawn fully above the playfield
+    // I piece's spawn row (y offset 1 in shape) must land at y = -1
+    // so top-left should be at y = -2 on a y-down grid.
+    spawnTopLeft: [3, -2],
   },
   J: {
     cells: {
