@@ -20,7 +20,7 @@ export function startLockDelay(
   _ld: LockDelayState,
   ts: Timestamp,
 ): LockDelayState {
-  // Always start fresh - this maintains reset count behavior across airborne transitions
+  // Start fresh on contact; preserve resets accumulated while grounded previously
   return Grounded(ts, 0);
 }
 
@@ -47,12 +47,12 @@ export function stepLockDelay(params: {
   const { delayMs, grounded, ld, maxResets, movedWhileGrounded, ts } = params;
 
   if (!grounded) {
-    // any off-ground state cancels delay but preserves reset count
+    // Leaving the ground cancels delay but preserves reset count
     return { ld: Airborne(ld.resets), lockNow: false };
   }
 
   if (ld.tag === "Airborne") {
-    // resuming contact starts delay with preserved resets
+    // Resuming contact starts delay with preserved resets
     return { ld: Grounded(ts, ld.resets), lockNow: false };
   }
 
@@ -60,6 +60,7 @@ export function stepLockDelay(params: {
   const groundedState: LockDelayState = ld;
 
   if (groundedState.resets >= maxResets) {
+    // Cap reached: lock immediately on any further ground frames
     return { ld, lockNow: true };
   }
 

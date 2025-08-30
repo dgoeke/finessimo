@@ -10,7 +10,7 @@ import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import { PIECES } from "./pieces";
 
-// Create an empty board with branded cells array
+// Brand the cells array to lock dimensions and prevent misuse elsewhere
 export function createEmptyBoard(): Board {
   return {
     cells: createBoardCells(),
@@ -97,7 +97,7 @@ export function isAtBottom(board: Board, piece: ActivePiece): boolean {
   return !canMove(board, piece, 0, 1);
 }
 
-// Try to move a piece, return new position or null if invalid
+// Return a new position if valid; otherwise null. Keeps callers pure and branchy.
 export function tryMove(
   board: Board,
   piece: ActivePiece,
@@ -114,7 +114,7 @@ export function tryMove(
   return null;
 }
 
-// Lock a piece onto the board
+// Lock a piece onto the board by writing only visible cells; negative y cells are ignored
 export function lockPiece(board: Board, piece: ActivePiece): Board {
   const newCells = createBoardCells();
   // Copy existing board state
@@ -124,7 +124,7 @@ export function lockPiece(board: Board, piece: ActivePiece): Board {
   const shape = PIECES[piece.id];
   const cells = shape.cells[piece.rot];
 
-  // Convert piece ID to cell value (simple mapping for now)
+  // Map piece ID to a stable cell value for color/render lookups
   const cellValue = getPieceValue(piece.id);
 
   for (const [dx, dy] of cells) {
@@ -219,4 +219,30 @@ export function clearLines(
     ...board,
     cells: newCells,
   };
+}
+
+// Shift all rows up by one and insert the provided row at the bottom.
+// Pure utility to centralize board cell mutations for garbage insertion.
+export function shiftUpAndInsertRow(
+  cells: Uint8Array,
+  row: ReadonlyArray<number>,
+): Uint8Array {
+  const newCells = new Uint8Array(200);
+
+  // Shift rows 1..19 into 0..18
+  for (let y = 0; y < 19; y++) {
+    const sourceBase = (y + 1) * 10;
+    const targetBase = y * 10;
+    for (let x = 0; x < 10; x++) {
+      newCells[targetBase + x] = cells[sourceBase + x] ?? 0;
+    }
+  }
+
+  // Insert new row at bottom (row 19)
+  const bottomBase = 19 * 10;
+  for (let x = 0; x < 10; x++) {
+    newCells[bottomBase + x] = row[x] ?? 0;
+  }
+
+  return newCells;
 }

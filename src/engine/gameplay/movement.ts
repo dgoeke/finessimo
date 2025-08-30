@@ -1,5 +1,9 @@
 import { tryMove } from "../../core/board";
 
+// Movement actions are separated by input classification (Tap/Hold/Repeat)
+// even though reducers are identical. Upstream classification matters for
+// analytics, ARR/DAS behavior, and lock-delay reset semantics.
+
 import type { GameState, Action } from "../../state/types";
 
 export const handlers = {

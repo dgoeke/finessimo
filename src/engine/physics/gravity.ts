@@ -38,8 +38,7 @@ export function applyOneGravityStep(s: GameState, ts: Timestamp): GameState {
     };
   }
 
-  // Piece can't move down due to gravity - this means it just became grounded
-  // Use stepLockDelay to handle lock delay logic
+  // Gravity could not move the piece; treat as ground contact and consult lock-delay machine
   const grounded = isAtBottom(s.board, s.active);
   const { ld, lockNow } = stepLockDelay({
     delayMs: durationMsAsNumber(s.timing.lockDelayMs),
@@ -66,7 +65,7 @@ export function applyOneGravityStep(s: GameState, ts: Timestamp): GameState {
     ? "softDrop"
     : "gravity";
 
-  // Create pending lock (inline logic from reducer)
+  // Build PendingLock inline to keep gravity pure and self-contained
   const finalPos = s.active;
   const simulatedBoard = lockPiece(s.board, finalPos);
   const completedLines = getCompletedLines(simulatedBoard);

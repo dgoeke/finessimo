@@ -34,7 +34,7 @@ export const handlers = {
     let newActive: ActivePiece | undefined;
     const holdQueue = [...state.nextQueue];
 
-    // Consume from preview if first hold
+    // On first hold, consume from preview; thereafter swap with held piece
     if (state.hold !== undefined) {
       newActive = createActivePiece(state.hold);
     } else {

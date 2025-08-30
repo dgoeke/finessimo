@@ -19,10 +19,10 @@ import type { Timestamp } from "../types/timestamp";
 export const defaultTimingConfig: TimingConfig = {
   arrMs: createDurationMs(2),
   dasMs: createDurationMs(133),
-  gravityEnabled: false, // Gravity OFF by default per DESIGN.md
-  gravityMs: createDurationMs(500), // 500ms gravity for visibility
+  gravityEnabled: false, // Default OFF per DESIGN.md to focus on finesse
+  gravityMs: createDurationMs(500), // Slower gravity for visibility in training
   lineClearDelayMs: createDurationMs(0),
-  lockDelayMaxResets: 15, // Standard Tetris Guideline limit
+  lockDelayMaxResets: 15, // Matches Tetris Guideline behavior
   lockDelayMs: createDurationMs(500),
   // Default soft drop multiplier relative to gravity
   softDrop: 10,
@@ -46,7 +46,7 @@ export function createInitialPhysics(timestampMs: Timestamp): PhysicsState {
     lastGravityTime: timestampMs,
     lineClearLines: [],
     lineClearStartTime: null,
-    lockDelay: Airborne(), // Use new ADT instead of separate fields
+    lockDelay: Airborne(), // Single ADT centralizes LD state instead of scattered flags
   };
 }
 

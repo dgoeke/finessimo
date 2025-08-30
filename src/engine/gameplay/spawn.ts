@@ -13,6 +13,7 @@ export const handlers = {
     state: GameState,
     action: Extract<Action, { type: "Spawn" }>,
   ): GameState => {
+    // Spawn only when no active piece exists and gameplay is active
     if (state.active || state.status !== "playing") {
       return state;
     }

@@ -4,14 +4,14 @@ import { reducer } from "./reducer";
 
 import type { Action, GameState } from "./types";
 
-// Global reactive state signal for Lit components
+// Single source of truth for UI reactivity; avoids prop drilling and manual subscriptions
 export const gameStateSignal = signal<GameState>(
   undefined as unknown as GameState,
 );
 
 /**
- * Dispatch an action through the reducer and update the signal
- * This maintains the pure functional approach while providing reactive updates
+ * Dispatch via pure reducer, then publish the new state.
+ * Keeps core logic pure while letting Lit react to changes efficiently.
  */
 export function dispatch(action: Action): void {
   const prevState = gameStateSignal.get();
@@ -20,16 +20,15 @@ export function dispatch(action: Action): void {
 }
 
 /**
- * Helper function to get current state without subscribing to changes
- * Useful for one-time reads where reactivity is not needed
+ * One-time read of the current state without subscribing.
  */
 export function getCurrentState(): GameState {
   return gameStateSignal.get();
 }
 
 /**
- * Helper functions for subscribing to specific state slices
- * These will be useful when components need to react only to specific changes
+ * Selector helpers for components to depend on minimal slices of state.
+ * Reduces unnecessary re-renders and clarifies intent at call sites.
  */
 export const stateSelectors = {
   /** Select board and active piece for game board rendering */

@@ -31,9 +31,8 @@ function wouldTopOut(piece: ActivePiece): boolean {
 }
 
 /**
- * Applies a pending lock to the game state, handling line clears and top-out.
- * This is a pure function that directly applies the lock logic without
- * needing to temporarily set the active piece.
+ * Apply a PendingLock to the game state: place piece, detect clears, and top-out.
+ * Kept pure and direct to avoid temporary mutations to active piece or physics.
  */
 function applyPendingLock(
   state: GameState,
@@ -90,7 +89,7 @@ function applyPendingLock(
   }
 
   if (durationMsAsNumber(state.timing.lineClearDelayMs) === 0) {
-    // Immediate clear with no animation delay
+    // No animation delay configured; clear lines immediately to keep loop synchronous
     const cleared = clearLines(lockedBoard, completedLines);
     const clearedBase = {
       ...baseSharedFields,
@@ -104,7 +103,7 @@ function applyPendingLock(
     return buildPlayingState(clearedBase);
   }
 
-  // Stage line clear animation
+  // Stage line clear animation in physics for UI; reducer stays pure
   const lineClearBase = {
     ...baseSharedFields,
     physics: {

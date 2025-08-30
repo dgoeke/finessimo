@@ -1,8 +1,34 @@
+/**
+ * Reducer Architecture
+ *
+ * Unidirectional flow: UI → Input Handler → Reducer → Physics Post-Step → State → UI
+ * - Input handlers classify raw inputs (Tap/Hold/Repeat/Rotate) and attach timestamps.
+ * - The reducer is pure: it updates domain state by action type, without side effects.
+ * - Physics post-step (physicsPostStep) runs after each reducer pass to advance
+ *   time-based mechanics (lock delay) using a deterministic state machine.
+ *
+ * Module layout:
+ * - engine/gameplay/*: Movement, rotation, spawn, and hold handlers.
+ *   Separated for clarity and to keep reducers small and testable.
+ * - engine/physics/*: Gravity and lock-delay machine. Centralizes timing rules so
+ *   action handlers stay local to their concerns and cannot diverge on timing.
+ * - engine/scoring/*: Lock commit, line clears, and stats updates. Pure and synchronous.
+ * - engine/ui/effects: Push/prune/clear ephemeral UI effects; pruning keyed to Tick.
+ * - engine/init: Initial state/config builders; single source of truth for defaults.
+ *
+ * Why physicsPostStep exists:
+ * - Ground contact and lock timing depend on both the previous and next states
+ *   (e.g., moved while grounded, resume contact). Centralizing after-action keeps
+ *   semantics consistent across all actions and prevents duplicated timing logic.
+ * - The lock-delay machine returns (nextLD, lockNow). When lockNow, we materialize
+ *   a PendingLock and transition to resolvingLock; otherwise we only update LD.
+ */
 import {
   createEmptyBoard,
   tryMove,
   dropToBottom,
   clearLines,
+  shiftUpAndInsertRow,
 } from "../core/board";
 import { createActivePiece } from "../core/spawning";
 import { handlers as holdHandlers } from "../engine/gameplay/hold";
@@ -20,20 +46,23 @@ import { Airborne, Grounded } from "../engine/physics/lock-delay.machine";
 import { physicsPostStep } from "../engine/physics/post-step";
 import { handlers as lineClearHandlers } from "../engine/scoring/line-clear";
 import { applyDelta, updateSessionDurations } from "../engine/scoring/stats";
+import { pruneUiEffects } from "../engine/ui/effects";
 import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import {
   type GameState,
   type Action,
   type LockSource,
-  createBoardCells,
+  type createBoardCells,
   type UiEffect,
-  assertNever,
   buildResolvingLockState,
   buildPlayingState,
+  hasActivePiece,
+  type ActivePiece,
 } from "./types";
 
 import type { FaultType } from "../finesse/calculator";
+import type { Timestamp } from "../types/timestamp";
 
 // Type-safe action handler map for functional pattern
 type ActionHandlerMap = {
@@ -43,6 +72,23 @@ type ActionHandlerMap = {
   ) => GameState;
 };
 
+// Local helpers
+const MAX_PROCESSED_LOG = 200 as const;
+
+function enterResolvingFromActive(
+  s: Extract<GameState, { status: "playing" }> & { active: ActivePiece },
+  ts: Timestamp,
+  source: LockSource,
+): GameState {
+  const pending = createPendingLock(s.board, s.active, source, ts);
+  const base = {
+    ...s,
+    physics: { ...s.physics, lockDelay: Airborne() },
+    tick: s.tick + 1,
+  } as GameState;
+  return buildResolvingLockState(base, pending);
+}
+
 // Individual action handlers - pure functions
 const actionHandlers: ActionHandlerMap = {
   ...movementHandlers,
@@ -50,10 +96,14 @@ const actionHandlers: ActionHandlerMap = {
   ...spawnHandlers,
   ...holdHandlers,
   ...lineClearHandlers,
-  AppendProcessed: (state, action) => ({
-    ...state,
-    processedInputLog: [...state.processedInputLog, action.entry],
-  }),
+  AppendProcessed: (state, action) => {
+    const next = [...state.processedInputLog, action.entry];
+    return {
+      ...state,
+      processedInputLog:
+        next.length > MAX_PROCESSED_LOG ? next.slice(-MAX_PROCESSED_LOG) : next,
+    };
+  },
 
   CancelLockDelay: (state, _action) => ({
     ...state,
@@ -71,84 +121,29 @@ const actionHandlers: ActionHandlerMap = {
   }),
 
   CreateGarbageRow: (state, action) => {
-    const newCells = createBoardCells();
-
-    // Shift all existing rows up by one
-    for (let y = 0; y < 19; y++) {
-      for (let x = 0; x < 10; x++) {
-        const sourceIdx = (y + 1) * 10 + x;
-        const destIdx = y * 10 + x;
-        newCells[destIdx] = state.board.cells[sourceIdx] ?? 0;
-      }
-    }
-
-    // Add the provided row at the bottom (row 19)
-    for (let x = 0; x < 10; x++) {
-      const bottomIdx = 19 * 10 + x;
-      newCells[bottomIdx] = action.row[x] ?? 0;
-    }
-
-    const newBoard = { ...state.board, cells: newCells };
-
-    // Handle state-specific updates
-    switch (state.status) {
-      case "playing": {
-        // Update active piece position if it exists (move it up)
-        const newActive = state.active
-          ? {
-              ...state.active,
-              y: createGridCoord(gridCoordAsNumber(state.active.y) - 1),
-            }
-          : undefined;
-
-        return {
-          ...state,
-          active: newActive,
-          board: newBoard,
-        };
-      }
-      case "resolvingLock":
-        return {
-          ...state,
-          board: newBoard,
-        };
-      case "lineClear":
-        return {
-          ...state,
-          board: newBoard,
-        };
-      case "topOut":
-        return {
-          ...state,
-          board: newBoard,
-        };
-      default:
-        return assertNever(state);
-    }
-  },
-
-  HardDrop: (state, action) => {
-    if (!state.active) return state;
-
-    const pending = createPendingLock(
-      state.board,
-      state.active,
-      "hardDrop",
-      action.timestampMs,
-    );
-
-    const baseState = {
-      ...state,
-      physics: {
-        ...state.physics,
-        lockDelay: Airborne(),
-        // Keep activePieceSpawnedAt for timing calculation during lock resolution
-      },
-      tick: state.tick + 1,
+    const newCells = shiftUpAndInsertRow(state.board.cells, action.row);
+    const newBoard = {
+      ...state.board,
+      cells: newCells as ReturnType<typeof createBoardCells>,
     };
 
-    return buildResolvingLockState(baseState, pending);
+    // Adjust active Y only while playing; otherwise just update board
+    if (state.status === "playing") {
+      const newActive = state.active
+        ? {
+            ...state.active,
+            y: createGridCoord(gridCoordAsNumber(state.active.y) - 1),
+          }
+        : undefined;
+      return { ...state, active: newActive, board: newBoard };
+    }
+    return { ...state, board: newBoard };
   },
+
+  HardDrop: (state, action) =>
+    !hasActivePiece(state)
+      ? state
+      : enterResolvingFromActive(state, action.timestampMs, "hardDrop"),
 
   // Physics actions
   HoldStart: (state, _action) => state, // Analytics/logging only
@@ -163,39 +158,19 @@ const actionHandlers: ActionHandlerMap = {
       timing: action.timing,
     }),
 
-  Lock: (state, action) => {
-    if (typeof state.tick !== "number" || state.active === undefined) {
-      return state;
-    }
-
-    // Determine lock source based on current state
-    const lockSource: LockSource = state.physics.isSoftDropping
-      ? "softDrop"
-      : "gravity";
-    const pending = createPendingLock(
-      state.board,
-      state.active,
-      lockSource,
-      action.timestampMs,
-    );
-
-    const baseState = {
-      ...state,
-      physics: {
-        ...state.physics,
-        lockDelay: Airborne(),
-        // Keep activePieceSpawnedAt for timing calculation during lock resolution
-      },
-      tick: state.tick + 1,
-    };
-
-    return buildResolvingLockState(baseState, pending);
-  },
+  Lock: (state, action) =>
+    !hasActivePiece(state)
+      ? state
+      : enterResolvingFromActive(
+          state,
+          action.timestampMs,
+          state.physics.isSoftDropping ? "softDrop" : "gravity",
+        ),
 
   // UI overlay effects
   PushUiEffect: (state, action) => ({
     ...state,
-    uiEffects: [...state.uiEffects, action.effect] as Array<UiEffect>,
+    uiEffects: [...state.uiEffects, action.effect] as ReadonlyArray<UiEffect>,
   }),
 
   // Statistics
@@ -246,6 +221,7 @@ const actionHandlers: ActionHandlerMap = {
       ...state.physics,
       lineClearLines: [],
       lineClearStartTime: null,
+      lockDelay: Airborne(),
     },
   }),
 
@@ -321,20 +297,10 @@ const actionHandlers: ActionHandlerMap = {
   }),
 
   Tick: (state, action) => {
-    if (typeof state.tick !== "number") {
+    if (typeof (state as { tick?: unknown }).tick !== "number") {
       return state;
     }
-
     const timestampMs = action.timestampMs;
-    const nowNum = timestampMs as number;
-    // Prune expired UI effects based on ttl
-    const prunedEffects: ReadonlyArray<UiEffect> = state.uiEffects.filter(
-      (e) => {
-        const created = e.createdAt as number;
-        const ttl = e.ttlMs as number;
-        return nowNum - created < ttl;
-      },
-    ) as ReadonlyArray<UiEffect>;
     const updatedStats = updateSessionDurations(
       state.stats,
       timestampMs as number,
@@ -344,11 +310,10 @@ const actionHandlers: ActionHandlerMap = {
       stats: updatedStats,
       tick: state.tick + 1,
     } as GameState;
-    if (state.uiEffects !== prunedEffects) {
-      newState = { ...newState, uiEffects: prunedEffects } as GameState;
-    }
+    // Centralized TTL-based pruning for transient UI effects
+    newState = pruneUiEffects(newState, timestampMs);
 
-    if (shouldApplyGravity(state)) {
+    if (shouldApplyGravity(newState)) {
       const timestampNum = timestampMs as number;
       const lastGravityNum = newState.physics.lastGravityTime as number;
       const timeSinceLastGravity = timestampNum - lastGravityNum;

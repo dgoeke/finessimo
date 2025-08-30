@@ -35,7 +35,8 @@ export class FinessimoApp {
 
   // Compute if the game should be actively running
   private computeActive(): boolean {
-    // Only run when the tab is visible AND the browser window is focused AND settings modal is closed
+    // Run only when tab is visible, window focused, and settings modal closed
+    // to avoid burning CPU and to pause gameplay predictably while configuring.
     return (
       document.visibilityState === "visible" &&
       document.hasFocus() &&
@@ -107,7 +108,7 @@ export class FinessimoApp {
     }
   }
 
-  // Low-cost recovery for missed focus events (macOS/browser oddities)
+  // Low-cost recovery for missed focus events (covers browser/OS edge cases)
   private ensureWatchdogRunning(): void {
     if (this.watchdogId !== null) return;
 
@@ -126,7 +127,7 @@ export class FinessimoApp {
     }
   }
 
-  // Update active state and manage loop/watchdog accordingly
+  // Switch loop/watchdog based on activity; minimizes hidden-tab work
   private updateActive(): void {
     const next = this.computeActive();
     if (next === this.isActive) return;
@@ -226,7 +227,7 @@ export class FinessimoApp {
   }
 
   initialize(): void {
-    // All rendering is handled by Lit components
+    // Rendering is handled by Lit components via signals; no manual draw calls here
 
     // Initialize input handlers
     this.keyboardInputHandler.init(this.dispatch.bind(this));
@@ -241,22 +242,22 @@ export class FinessimoApp {
       this.touchInputHandler.start();
     }
 
-    // Find and initialize settings modal
+    // Hook up settings modal so input/activity gating reflects UI state
     this.initializeSettingsModal();
 
-    // Apply persisted settings on startup
+    // Apply persisted settings so controls/timing are correct before first frame
     this.applyPersistedSettings();
 
     // Setup settings button
     this.setupSettingsButton();
 
-    // Setup focus and visibility listeners
+    // Robust focus/visibility detection ensures gameplay pauses predictably
     this.setupVisibilityListeners();
 
     // Spawn initial piece
     this.spawnNextPiece();
 
-    // Render initial state
+    // Initial render primes UI; subsequent renders are signal-driven
     this.render();
   }
 
@@ -302,7 +303,7 @@ export class FinessimoApp {
         this.handleSettingsClosed,
       );
     }
-    // Remove visibility and focus event listeners
+    // Remove visibility and focus event listeners to prevent leaks
     document.removeEventListener(
       "visibilitychange",
       this.handleVisibilityChange,
@@ -323,7 +324,7 @@ export class FinessimoApp {
     this.handleAutoSpawn();
     this.updateModeUi();
 
-    // Preview refill is handled in dispatch when queue shrinks
+    // Queue refill happens in dispatch when preview shrinks (single responsibility)
   }
 
   private updateInputs(currentTime: number): void {
@@ -337,7 +338,7 @@ export class FinessimoApp {
   }
 
   private handleTickAndPhysics(currentTime: number): void {
-    // Always dispatch Tick with timestamp for physics calculations
+    // Always dispatch Tick with timestamp; physics/LD depend on deterministic timing
     this.dispatch({ timestampMs: createTimestamp(currentTime), type: "Tick" });
     if (shouldCompleteLineClear(this.gameState, currentTime)) {
       this.dispatch({ type: "CompleteLineClear" });
@@ -388,14 +389,14 @@ export class FinessimoApp {
   }
 
   private render(): void {
-    // All rendering now handled by Lit components via signals - no direct rendering needed
+    // Rendering handled by Lit signals; method remains for future debug hooks
   }
 
   private dispatch(action: Action): void {
     // Apply the action through the reducer
     let newState = reducer(this.gameState, action);
 
-    // Handle lock resolution through pipeline
+    // Lock resolution happens outside the reducer to keep core pure and pluggable
     if (
       newState.status === "resolvingLock" &&
       action.type !== "CommitLock" &&
@@ -410,14 +411,14 @@ export class FinessimoApp {
         this.createFinesseAnalyzer(),
         fromNow(),
       );
-      // Note: Zero-delay line clears are handled automatically by the reducer
+      // Zero-delay line clears are handled in reducer for synchronous flow
     }
 
     const prevQueueLen = this.gameState.nextQueue.length;
     this.gameState = newState;
     gameStateSignal.set(newState);
 
-    // If preview queue shrank, top it up once according to mode policy
+    // If preview shrank, top it up once using the active mode policy
     if (newState.nextQueue.length < prevQueueLen) {
       this.ensurePreviewFilled(newState);
     }
@@ -437,7 +438,7 @@ export class FinessimoApp {
     const modeConfig =
       typeof mode.initialConfig === "function" ? mode.initialConfig() : {};
 
-    // Merge current settings with mode's initial config
+    // Merge current settings with mode-provided defaults to smooth transitions
     const { gameplay, timing } = this.gameState;
     const mergedGameplay = { ...gameplay, ...modeConfig.gameplay };
     const mergedTiming = { ...timing, ...modeConfig.timing };

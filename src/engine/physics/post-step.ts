@@ -12,7 +12,8 @@ import type {
 } from "../../state/types";
 import type { Timestamp } from "../../types/timestamp";
 
-// Helper function to determine if piece changed position
+// Lock-delay resets only when the piece actually changes position/rotation.
+// Avoid spurious resets from no-op actions or redundant renders.
 function pieceChanged(
   prev: ActivePiece | undefined,
   next: ActivePiece | undefined,
@@ -21,14 +22,15 @@ function pieceChanged(
   return prev.x !== next.x || prev.y !== next.y || prev.rot !== next.rot;
 }
 
-// Helper function to determine if action can reset lock delay
+// Only movement-like inputs can reset lock delay while grounded.
 function canActionResetLockDelay(actionType: Action["type"]): boolean {
   return ["TapMove", "HoldMove", "RepeatMove", "Rotate", "SoftDrop"].includes(
     actionType,
   );
 }
 
-// Helper function to determine if action can start lock delay
+// Actions that may start lock delay upon first ground contact.
+// Includes gravity landings via Tick and Spawn/Hold transitions that place a piece.
 function canActionStartLockDelay(actionType: Action["type"]): boolean {
   return [
     "TapMove",
@@ -39,11 +41,11 @@ function canActionStartLockDelay(actionType: Action["type"]): boolean {
     "Spawn",
     "Hold",
     "RetryPendingLock",
-    "Tick", // Tick can start lock delay via gravity landing
+    "Tick", // Gravity landing can initiate LD even without direct input
   ].includes(actionType);
 }
 
-// Check if soft drop should reset lock delay (only if piece moved down)
+// Soft drop only resets LD if it actually advanced the piece downward.
 function isSoftDropResetValid(
   action: Action,
   previousState: GameState,
@@ -53,7 +55,8 @@ function isSoftDropResetValid(
   return newState.active.y > (previousState.active?.y ?? 0);
 }
 
-// Check if action should be processed for lock delay
+// Only timestamped actions may advance the LD machine to keep timing deterministic.
+// Some actions (e.g., Spawn/Hold) can be dispatched without timestamps; ignore them for LD.
 function shouldProcessLockDelay(
   action: Action,
   newState: GameState,
@@ -73,7 +76,8 @@ function shouldProcessLockDelay(
   return { shouldProcess: true, timestamp };
 }
 
-// Helper to check early exit conditions
+// Skip stepping the LD machine when nothing changed; Tick is the exception
+// because it drives timeout checks even without movement.
 function shouldSkipLockDelayProcessing(params: {
   prev: GameState;
   next: GameState;
@@ -84,17 +88,17 @@ function shouldSkipLockDelayProcessing(params: {
 }): boolean {
   const { action, isNowGrounded, moved, next, prev, wasGrounded } = params;
   // Early exit: if piece didn't move and ground state didn't change, no processing needed
-  // Exception: Tick actions always need processing to check for timeout
+  // Exception: Tick actions advance time and must check for timeout
   if (!moved && wasGrounded === isNowGrounded && action.type !== "Tick") {
     return true;
   }
 
-  // Check soft drop reset validity
+  // Guard against illegitimate soft-drop resets
   if (!isSoftDropResetValid(action, prev, next)) {
     return true;
   }
 
-  // Calculate if this movement should trigger any lock delay processing
+  // Respect reset cap: once reached, movement stops affecting LD entirely.
   const currentResets =
     next.physics.lockDelay.tag === "Grounded"
       ? next.physics.lockDelay.resets
@@ -109,7 +113,8 @@ function shouldSkipLockDelayProcessing(params: {
   return false;
 }
 
-// Helper to create locked state
+// Centralize transition to resolvingLock and materialize PendingLock
+// with an explicit source; reset LD to Airborne for the next piece.
 function createLockedState(next: GameState, timestamp: Timestamp): GameState {
   if (!next.active) {
     throw new Error("Cannot create locked state without active piece");
@@ -137,8 +142,9 @@ function createLockedState(next: GameState, timestamp: Timestamp): GameState {
 }
 
 /**
- * Physics post-step function that handles lock delay state transitions
- * using the lock delay machine. Replaces the old postProcessLockDelay.
+ * Physics post-step: advance the lock-delay state machine after reducers run.
+ * Keeps action handlers pure and local to their domain (movement/rotation/etc.)
+ * while centralizing ground-contact and lock timing here for consistency.
  */
 export function physicsPostStep(
   prev: GameState,
@@ -171,7 +177,7 @@ export function physicsPostStep(
     return next;
   }
 
-  // Use the lock delay machine to handle transitions
+  // Advance the lock-delay machine with current contact/motion context
   const { ld, lockNow } = stepLockDelay({
     delayMs: durationMsAsNumber(next.timing.lockDelayMs),
     grounded: isNowGrounded,
@@ -185,7 +191,7 @@ export function physicsPostStep(
     ts: timestamp,
   });
 
-  // If not locking, just update the lock delay state
+  // If not locking, persist the updated lock-delay state only when it changed
   if (!lockNow) {
     if (ld === next.physics.lockDelay) {
       return next;
@@ -199,6 +205,6 @@ export function physicsPostStep(
     };
   }
 
-  // Lock is triggered - create pending lock and transition to resolvingLock
+  // Machine requested lock: create PendingLock and transition to resolvingLock
   return createLockedState(next, timestamp);
 }

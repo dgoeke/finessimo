@@ -27,6 +27,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/engine/physics/gravity.ts: Gravity system logic. Pure functions for gravity interval calculation, gravity application, and lock delay integration using the lock delay state machine.
 - src/engine/physics/lock-delay.machine.ts: Pure lock-delay state machine (Airborne/Grounded). Steps with resets, movement, and elapsed time; returns next state and whether to lock now.
 - src/engine/physics/post-step.ts: Physics post-step that evaluates ground contact and advances the lock-delay machine. Creates pendingLock and transitions to resolvingLock when lock triggers.
+- src/engine/ui/effects.ts — Centralized UI effects helpers (push/prune/clear). Reducer Tick calls pruneUiEffects for TTL cleanup.
 - src/engine/gameplay/movement.ts: Pure movement action handlers for TapMove, HoldMove, and RepeatMove. Extracted from main reducer for modular organization.
 - src/engine/gameplay/rotation.ts: Pure rotation action handler for Rotate actions. Delegates to SRS rotation system with proper collision checking.
 - src/engine/gameplay/spawn.ts: Pure spawn action handler for piece spawning logic. Handles queue consumption, explicit piece spawning, and top-out detection.
@@ -57,6 +58,10 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/core/rng-interface.ts: RNG interface and type definitions for pluggable random number generation.
 - src/core/other-rngs.ts: Alternative RNG implementations beyond the standard 7-bag (e.g., TGM3, classic).
 - src/core/spawning.ts: Piece spawning, spawn validity checks, top-out detection.
+
+## Selectors
+
+- src/engine/selectors.ts — Pure read selectors for derived UI data: phase guards, PPM/LPM/finesse percentages, lock-delay indicators, active/grounded status, and ghost piece position.
 
 ## Finesse
 
