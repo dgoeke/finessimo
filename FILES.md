@@ -28,6 +28,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/engine/physics/lock-delay.machine.ts: Pure lock-delay state machine (Airborne/Grounded). Steps with resets, movement, and elapsed time; returns next state and whether to lock now.
 - src/engine/physics/post-step.ts: Physics post-step that evaluates ground contact and advances the lock-delay machine. Creates pendingLock and transitions to resolvingLock when lock triggers.
 - src/engine/ui/effects.ts — Centralized UI effects helpers (push/prune/clear). Reducer Tick calls pruneUiEffects for TTL cleanup.
+- src/engine/ui/overlays.ts — Foundational overlay type system for UI rendering. Discriminated union types for declarative overlay definitions (ghost, target, line flash, effect dots) with z-ordering and branded coordinates.
+- src/engine/util/cell-projection.ts — Pure utility for projecting piece shapes to absolute grid coordinates. Centralizes coordinate transformation logic for overlay rendering.
 - src/engine/gameplay/movement.ts: Pure movement action handlers for TapMove, HoldMove, and RepeatMove. Extracted from main reducer for modular organization.
 - src/engine/gameplay/rotation.ts: Pure rotation action handler for Rotate actions. Delegates to SRS rotation system with proper collision checking.
 - src/engine/gameplay/spawn.ts: Pure spawn action handler for piece spawning logic. Handles queue consumption, explicit piece spawning, and top-out detection.
@@ -62,6 +64,9 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## Selectors
 
 - src/engine/selectors.ts — Pure read selectors for derived UI data: phase guards, PPM/LPM/finesse percentages, lock-delay indicators, active/grounded status, and ghost piece position.
+- src/engine/selectors/overlays.ts — Pure selectors for derived overlays: ghost piece, target highlights, and frame-based overlay data from game state.
+- src/engine/selectors/effects-to-overlays.ts — Maps UiEffects to overlay representations for unified rendering (bridges effects system with overlay architecture).
+- src/engine/selectors/board-render.ts — Combines all overlay sources into complete BoardRenderModel with z-ordered overlays for game board rendering.
 
 ## Finesse
 
@@ -73,12 +78,15 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 ## Modes
 
 - src/modes/index.ts: Game mode contracts and registry. Mode-agnostic hooks for config, spawning, guidance, board decorations/overlays, lock resolution, RNG/preview. Registers FreePlayMode and GuidedMode.
+- src/modes/types.ts: Mode UI adapter system types. Defines ModeUiAdapter interface for declarative UI data provision, ExtendedModeData for standardized UI fields, and TargetCell for target highlighting.
 - src/modes/freePlay.ts: Free-play mode. Finesse evaluation on final placement, succinct feedback. Implements `onResolveLock` retry-on-finesse-error for suboptimal hard drops. Provides 7-bag defaults for RNG/preview.
 - src/modes/guided.ts: Guided training powered by FSRS SRS. Picks a (piece, rot, x) card, provides guidance, validates placement, rates Good/Again, updates deck. Supplies board decorations to visualize the target placement cells on the board during play.
 - src/modes/lock-pipeline.ts: Pure lock resolution pipeline. Coordinates finesse analysis, mode consultation, and commit/retry decisions. Runs synchronously for consistent game flow.
 - src/modes/spawn-service.ts: Pure helpers to externalize RNG and preview queue refills. Provides `planPreviewRefill` and mode-aware RNG provisioning.
+- src/modes/freePlay/ui.ts: Free play mode UI adapter. Minimal implementation that returns null as free play requires no special UI data beyond standard rendering.
 - src/modes/guided/deck.ts: Generates valid guided cards and builds the default deck.
 - src/modes/guided/types.ts: Branded types for guided mode SRS (Column, CardId, DeckId) with runtime validation.
+- src/modes/guided/ui.ts: Guided mode UI adapter. Extracts target cell computation from getBoardDecorations logic and converts it to declarative targets data for UI selectors.
 
 ## SRS
 

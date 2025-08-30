@@ -3,6 +3,8 @@ import { finesseService } from "./finesse/service";
 import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { gameModeRegistry } from "./modes";
+import { freePlayUi } from "./modes/freePlay/ui";
+import { guidedUi } from "./modes/guided/ui";
 import { runLockPipeline } from "./modes/lock-pipeline";
 import { getActiveRng, planPreviewRefill } from "./modes/spawn-service";
 import { reducer } from "./state/reducer";
@@ -18,7 +20,41 @@ import { createTimestamp, fromNow } from "./types/timestamp";
 import { getSettingsModal } from "./ui/utils/dom";
 
 import type { GameMode as IGameMode } from "./modes";
+import type { ModeUiAdapter } from "./modes/types";
 import type { GameSettings } from "./ui/components/settings-modal";
+
+// Type-safe mode names - must include all supported modes
+// Keep in sync with registered modes in gameModeRegistry
+type ModeName = "freePlay" | "guided";
+
+// Efficient shallow equality for object comparisons
+function shallowEqual(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+// Simple equality check that handles null values and falls back to JSON comparison for complex objects
+function simpleEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  // For complex objects, fall back to JSON comparison (less optimal but more reliable)
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// Type-safe registry mapping mode names to their UI adapters
+const modeUiAdapterRegistry: Record<ModeName, ModeUiAdapter> = {
+  freePlay: freePlayUi,
+  guided: guidedUi,
+};
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -371,18 +407,47 @@ export class FinessimoApp {
     const mode = gameModeRegistry.get(this.gameState.currentMode);
     if (!mode) return;
 
+    this.updateModeGuidance(mode);
+    this.updateModeAdapterData();
+    this.updateBoardDecorations(mode);
+  }
+
+  private updateModeGuidance(mode: IGameMode): void {
     if (typeof mode.getGuidance === "function") {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
-      if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
+      if (!simpleEqual(guidance, prev)) {
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
+  }
 
+  private updateModeAdapterData(): void {
+    const adapter =
+      modeUiAdapterRegistry[this.gameState.currentMode as ModeName];
+    const derivedUi = adapter.computeDerivedUi(this.gameState);
+    if (derivedUi === null) return;
+
+    // Merge with existing modeData to avoid overwriting other mode state
+    const currentModeData =
+      typeof this.gameState.modeData === "object" &&
+      this.gameState.modeData !== null
+        ? (this.gameState.modeData as Record<string, unknown>)
+        : {};
+    const mergedModeData = { ...currentModeData, ...derivedUi };
+
+    // Only dispatch if data actually changed
+    if (!shallowEqual(mergedModeData, currentModeData)) {
+      this.dispatch({ data: mergedModeData, type: "UpdateModeData" });
+    }
+  }
+
+  private updateBoardDecorations(mode: IGameMode): void {
+    // LEGACY: Keep existing board decorations for backward compatibility during transition
     if (typeof mode.getBoardDecorations === "function") {
       const decorations = mode.getBoardDecorations(this.gameState) ?? null;
       const prev = this.gameState.boardDecorations ?? null;
-      if (JSON.stringify(decorations) !== JSON.stringify(prev)) {
+      if (!simpleEqual(decorations, prev)) {
         this.dispatch({ decorations, type: "UpdateBoardDecorations" });
       }
     }

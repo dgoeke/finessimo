@@ -2,9 +2,10 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
 
-import { calculateGhostPosition } from "../../core/board";
 import { PIECES } from "../../core/pieces";
+import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
+import { assertNever } from "../../state/types";
 import { gridCoordAsNumber } from "../../types/brands";
 import {
   lightenColor,
@@ -12,6 +13,7 @@ import {
   normalizeColorBrightness,
 } from "../utils/colors";
 
+import type { RenderOverlay } from "../../engine/ui/overlays";
 import type { GameState, Board, ActivePiece } from "../../state/types";
 
 @customElement("game-board")
@@ -26,6 +28,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     board: GameState["board"];
     boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
+    overlays: ReadonlyArray<RenderOverlay>;
   };
 
   // Use light DOM for consistent styling
@@ -56,11 +59,18 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Get current state from the signal (reactive subscription)
     const gameState = gameStateSignal.get();
     const boardState = stateSelectors.getBoardState(gameState);
+    const renderModel = selectBoardRenderModel(gameState);
+
+    // Combine board state with overlay data for change detection
+    const currentRenderState = {
+      ...boardState,
+      overlays: renderModel.overlays,
+    };
 
     // Only re-render if the relevant state has actually changed
-    if (this.hasStateChanged(boardState)) {
-      this.renderGameBoard(gameState);
-      this.lastRenderState = boardState;
+    if (this.hasStateChanged(currentRenderState)) {
+      this.renderGameBoard(gameState, renderModel);
+      this.lastRenderState = currentRenderState;
     }
   }
 
@@ -69,6 +79,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     board: GameState["board"];
     boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
+    overlays: ReadonlyArray<RenderOverlay>;
   }): boolean {
     if (!this.lastRenderState) {
       return true;
@@ -84,8 +95,13 @@ export class GameBoard extends SignalWatcher(LitElement) {
       return true;
     }
 
-    // Compare board decorations
+    // Compare board decorations (legacy bridge - will be removed later)
     if (this.lastRenderState.boardDecorations !== newState.boardDecorations) {
+      return true;
+    }
+
+    // Compare overlays (reference equality check for the array itself)
+    if (this.lastRenderState.overlays !== newState.overlays) {
       return true;
     }
 
@@ -101,7 +117,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
     return html`<canvas></canvas>`;
   }
 
-  private renderGameBoard(gameState: GameState): void {
+  private renderGameBoard(
+    gameState: GameState,
+    renderModel: ReturnType<typeof selectBoardRenderModel>,
+  ): void {
     if (!this.ctx) {
       console.error("Canvas not initialized");
       return;
@@ -114,24 +133,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Render board
     this.renderBoard(gameState.board);
 
-    // Render mode-provided board decorations (e.g., guided target cells)
-    if (gameState.boardDecorations && gameState.boardDecorations.length > 0) {
-      this.renderBoardDecorations(gameState);
-    }
+    // Render unified overlay system (sorted by z-order)
+    this.renderOverlays(renderModel.overlays);
 
-    // Render ghost piece first (so active piece draws on top)
-    if (gameState.active && (gameState.gameplay.ghostPieceEnabled ?? true)) {
-      const ghostPosition = calculateGhostPosition(
-        gameState.board,
-        gameState.active,
-      );
-      // Only render ghost piece if it's different from active piece position
-      if (ghostPosition.y !== gameState.active.y) {
-        this.renderGhostPiece(ghostPosition);
-      }
-    }
-
-    // Render active piece
+    // Render active piece (active piece is not an overlay, always renders on top)
     if (gameState.active) {
       this.renderActivePiece(gameState.active);
     }
@@ -140,20 +145,189 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.drawGrid();
   }
 
-  private renderBoardDecorations(gameState: GameState): void {
-    if (!this.ctx || !gameState.boardDecorations) return;
-    for (const deco of gameState.boardDecorations) {
-      const color = deco.color ?? "#00A2FF";
-      const alpha = typeof deco.alpha === "number" ? deco.alpha : 0.25;
-      for (const c of deco.cells) {
-        const x = gridCoordAsNumber(c.x);
-        const y = gridCoordAsNumber(c.y);
-        if (x < 0 || x >= this.boardWidth || y < 0 || y >= this.boardHeight) {
-          continue;
-        }
-        this.drawHighlightCell(x, y, color, alpha);
+  /**
+   * Renders all overlays in z-order using the unified overlay system.
+   * Each overlay type has its own specialized rendering logic.
+   */
+  private renderOverlays(overlays: ReadonlyArray<RenderOverlay>): void {
+    if (!this.ctx) return;
+
+    for (const overlay of overlays) {
+      switch (overlay.kind) {
+        case "ghost":
+          this.renderGhostOverlay(overlay);
+          break;
+        case "target":
+          this.renderTargetOverlay(overlay);
+          break;
+        case "line-flash":
+          this.renderLineFlashOverlay(overlay);
+          break;
+        case "effect-dot":
+          this.renderEffectDotOverlay(overlay);
+          break;
+        default:
+          assertNever(overlay);
       }
     }
+  }
+
+  /**
+   * Renders a ghost overlay using the piece color at reduced opacity.
+   */
+  private renderGhostOverlay(
+    overlay: Extract<RenderOverlay, { kind: "ghost" }>,
+  ): void {
+    if (!this.ctx) return;
+
+    const opacity = overlay.opacity ?? 0.35;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = opacity;
+
+    for (const [x, y] of overlay.cells) {
+      const gridX = gridCoordAsNumber(x);
+      const gridY = gridCoordAsNumber(y);
+
+      // Only render cells within visible board area
+      if (
+        gridX >= 0 &&
+        gridX < this.boardWidth &&
+        gridY >= 0 &&
+        gridY < this.boardHeight
+      ) {
+        this.drawGhostCell(gridX, gridY);
+      }
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Renders a target overlay with configurable style and color.
+   */
+  private renderTargetOverlay(
+    overlay: Extract<RenderOverlay, { kind: "target" }>,
+  ): void {
+    if (!this.ctx) return;
+
+    const color = overlay.color ?? "#00A2FF";
+    const alpha = overlay.alpha ?? 0.25;
+
+    for (const [x, y] of overlay.cells) {
+      const gridX = gridCoordAsNumber(x);
+      const gridY = gridCoordAsNumber(y);
+
+      // Only render cells within visible board area
+      if (
+        gridX >= 0 &&
+        gridX < this.boardWidth &&
+        gridY >= 0 &&
+        gridY < this.boardHeight
+      ) {
+        // For now, all target styles use the highlight renderer
+        // TODO: Implement different rendering for "dashed" and "hint" styles
+        this.drawHighlightCell(gridX, gridY, color, alpha);
+      }
+    }
+  }
+
+  /**
+   * Renders a line flash overlay for row clearing animation.
+   */
+  private renderLineFlashOverlay(
+    overlay: Extract<RenderOverlay, { kind: "line-flash" }>,
+  ): void {
+    if (!this.ctx) return;
+
+    const color = overlay.color ?? "#FFFFFF";
+    const intensity = overlay.intensity ?? 1.0;
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = "lighter"; // Additive blending for flash effect
+    this.ctx.globalAlpha = intensity;
+    this.ctx.fillStyle = color;
+
+    for (const row of overlay.rows) {
+      // Only render rows within visible board area
+      if (row >= 0 && row < this.boardHeight) {
+        const pixelY = row * this.cellSize;
+        this.ctx.fillRect(0, pixelY, this.canvas.width, this.cellSize);
+      }
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Renders an effect dot overlay for finesse feedback and other effects.
+   */
+  private renderEffectDotOverlay(
+    overlay: Extract<RenderOverlay, { kind: "effect-dot" }>,
+  ): void {
+    if (!this.ctx) return;
+
+    const [x, y] = overlay.at;
+    const gridX = gridCoordAsNumber(x);
+    const gridY = gridCoordAsNumber(y);
+
+    // Only render effects within visible board area
+    if (
+      gridX < 0 ||
+      gridX >= this.boardWidth ||
+      gridY < 0 ||
+      gridY >= this.boardHeight
+    ) {
+      return;
+    }
+
+    const color = overlay.color ?? "#FFFF00";
+    const size = overlay.size ?? 1.0;
+
+    const pixelX = gridX * this.cellSize + this.cellSize / 2;
+    const pixelY = gridY * this.cellSize + this.cellSize / 2;
+    const radius = this.cellSize * 0.3 * size;
+
+    this.ctx.save();
+
+    // Apply effect-specific rendering based on style
+    switch (overlay.style) {
+      case "pulse":
+        // Pulsing circle with glow
+        this.ctx.globalCompositeOperation = "lighter";
+        this.ctx.fillStyle = color;
+        this.ctx.filter = `blur(${String(radius * 0.2)}px)`;
+        this.ctx.beginPath();
+        this.ctx.arc(pixelX, pixelY, radius, 0, 2 * Math.PI);
+        this.ctx.fill();
+        break;
+
+      case "sparkle":
+        // Sparkle effect with small bright points
+        this.ctx.globalCompositeOperation = "lighter";
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(
+          pixelX - radius * 0.5,
+          pixelY - radius * 0.5,
+          radius,
+          radius,
+        );
+        break;
+
+      case "fade":
+        // Simple fading circle
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.fillStyle = color;
+        this.ctx.beginPath();
+        this.ctx.arc(pixelX, pixelY, radius, 0, 2 * Math.PI);
+        this.ctx.fill();
+        break;
+
+      default:
+        assertNever(overlay.style);
+    }
+
+    this.ctx.restore();
   }
 
   private renderBoard(board: Board): void {
@@ -188,23 +362,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
         // If y is negative, render at y=0 (top of visible board)
         const renderY = Math.max(0, y);
         this.drawCell(x, renderY, shape.color);
-      }
-    }
-  }
-
-  private renderGhostPiece(piece: ActivePiece): void {
-    if (!this.ctx) return;
-
-    const shape = PIECES[piece.id];
-    const cells = shape.cells[piece.rot];
-
-    for (const [dx, dy] of cells) {
-      const x = piece.x + dx;
-      const y = piece.y + dy;
-
-      // Only render ghost piece within visible board area
-      if (x >= 0 && x < this.boardWidth && y >= 0 && y < this.boardHeight) {
-        this.drawGhostCell(x, y);
       }
     }
   }

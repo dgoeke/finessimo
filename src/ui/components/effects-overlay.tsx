@@ -14,6 +14,11 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
   }
 
   private renderEffect(e: UiEffect): unknown {
+    // Only render FloatingTextEffect - other effects are handled by overlay system
+    if (e.kind !== "floatingText") {
+      return html``;
+    }
+
     // Anchor class and absolute offsets
     const anchorClass = `anchor-${e.anchor}`;
     const posStyle =

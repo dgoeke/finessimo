@@ -169,7 +169,36 @@ export type FloatingTextEffect = Readonly<{
   ttlMs: DurationMs;
   createdAt: Timestamp;
 }>;
-export type UiEffect = FloatingTextEffect;
+
+/**
+ * Line flash effect - displays animated row clearing effects
+ */
+export type LineFlashEffect = Readonly<{
+  kind: "lineFlash";
+  id: UiEffectId;
+  rows: ReadonlyArray<number>; // 0-based row indices
+  color?: string; // hex color, defaults to white
+  intensity?: number; // 0..1, flash intensity, defaults to 1.0
+  ttlMs: DurationMs;
+  createdAt: Timestamp;
+}>;
+
+/**
+ * Finesse boop effect - displays point effects for finesse feedback
+ */
+export type FinesseBoopEffect = Readonly<{
+  kind: "finesseBoop";
+  id: UiEffectId;
+  gridX: GridCoord; // grid x position
+  gridY: GridCoord; // grid y position
+  style: "pulse" | "sparkle" | "fade"; // visual style
+  color?: string; // hex color, defaults to yellow
+  size?: number; // relative size multiplier, defaults to 1.0
+  ttlMs: DurationMs;
+  createdAt: Timestamp;
+}>;
+
+export type UiEffect = FloatingTextEffect | LineFlashEffect | FinesseBoopEffect;
 
 // Lock delay state ADT - makes invalid combinations unrepresentable
 export type LockDelayState =
