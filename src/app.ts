@@ -23,11 +23,37 @@ import type { GameMode as IGameMode } from "./modes";
 import type { ModeUiAdapter } from "./modes/types";
 import type { GameSettings } from "./ui/components/settings-modal";
 
-// Registry mapping mode names to their UI adapters
-const modeUiAdapterRegistry = new Map<string, ModeUiAdapter>([
-  ["freePlay", freePlayUi],
-  ["guided", guidedUi],
-]);
+// Type-safe mode names - keep in sync with GameState["currentMode"]
+type ModeName = "freePlay" | "guided";
+
+// Efficient shallow equality for object comparisons
+function shallowEqual(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+// Simple equality check that handles null values and falls back to JSON comparison for complex objects
+function simpleEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  // For complex objects, fall back to JSON comparison (less optimal but more reliable)
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+// Type-safe registry mapping mode names to their UI adapters
+const modeUiAdapterRegistry: Record<ModeName, ModeUiAdapter> = {
+  freePlay: freePlayUi,
+  guided: guidedUi,
+};
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -389,16 +415,15 @@ export class FinessimoApp {
     if (typeof mode.getGuidance === "function") {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
-      if (JSON.stringify(guidance) !== JSON.stringify(prev)) {
+      if (!simpleEqual(guidance, prev)) {
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
   }
 
   private updateModeAdapterData(): void {
-    const adapter = modeUiAdapterRegistry.get(this.gameState.currentMode);
-    if (!adapter) return;
-
+    const adapter =
+      modeUiAdapterRegistry[this.gameState.currentMode as ModeName];
     const derivedUi = adapter.computeDerivedUi(this.gameState);
     if (derivedUi === null) return;
 
@@ -411,7 +436,7 @@ export class FinessimoApp {
     const mergedModeData = { ...currentModeData, ...derivedUi };
 
     // Only dispatch if data actually changed
-    if (JSON.stringify(mergedModeData) !== JSON.stringify(currentModeData)) {
+    if (!shallowEqual(mergedModeData, currentModeData)) {
       this.dispatch({ data: mergedModeData, type: "UpdateModeData" });
     }
   }
@@ -421,7 +446,7 @@ export class FinessimoApp {
     if (typeof mode.getBoardDecorations === "function") {
       const decorations = mode.getBoardDecorations(this.gameState) ?? null;
       const prev = this.gameState.boardDecorations ?? null;
-      if (JSON.stringify(decorations) !== JSON.stringify(prev)) {
+      if (!simpleEqual(decorations, prev)) {
         this.dispatch({ decorations, type: "UpdateBoardDecorations" });
       }
     }
