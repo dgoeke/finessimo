@@ -3,6 +3,14 @@ name: Deploy static content to Pages
 on:
   push:
     branches: ["main"]
+    # Only deploy when files that affect the build output change
+    paths:
+      - "src/**"           # Source code
+      - "public/**"        # Static assets
+      - "package.json"     # Dependencies
+      - "package-lock.json" # Dependency lockfile
+      - "index.html"       # Entry point
+      - "vite.config.ts"   # Build configuration
 
   # Allows this workflow to manually from the Actions tab
   workflow_dispatch:
