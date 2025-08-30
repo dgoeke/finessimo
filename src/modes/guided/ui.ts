@@ -99,10 +99,10 @@ export const guidedUi: ModeUiAdapter = {
         gridCoordAsNumber(absoluteY) >= 0 &&
         gridCoordAsNumber(absoluteY) < state.board.height
       ) {
-        targetCells.push({ 
-          color: shape.color, 
-          x: absoluteX, 
-          y: absoluteY 
+        targetCells.push({
+          color: shape.color,
+          x: absoluteX,
+          y: absoluteY,
         });
       }
     }

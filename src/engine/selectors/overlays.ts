@@ -84,7 +84,7 @@ function createTargetOverlayFromPattern(
   // Convert TargetCell array to coordinate tuples for overlay format
   const cells: Array<readonly [GridCoord, GridCoord]> = [];
   let patternColor: string | undefined;
-  
+
   for (const targetCell of targetPattern) {
     cells.push([targetCell.x, targetCell.y] as const);
     // Use color from first cell that has one (all cells in pattern should match)
