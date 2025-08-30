@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState } from "../../src/state/types";
+import { type GameState, getLockDelayStartTime } from "../../src/state/types";
 import { createSeed } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
@@ -56,13 +56,17 @@ describe("hold system", () => {
         physics: {
           ...state.physics,
           lastGravityTime: createTimestamp(500),
-          lockDelayStartTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
         },
       };
 
       const newState = reducer(state, { type: "Hold" });
 
-      expect(newState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBeNull();
       // Hold action should preserve lastGravityTime since reducer is now pure
       expect(newState.physics.lastGravityTime).toBe(
         state.physics.lastGravityTime,

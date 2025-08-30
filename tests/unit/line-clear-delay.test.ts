@@ -6,6 +6,7 @@ import {
   type Board,
   idx,
   createBoardCells,
+  buildPlayingState,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -41,17 +42,21 @@ function boardWithBottomGaps(): Board {
 describe("line clear with non-zero delay", () => {
   it("HardDrop properly sets lineClearStartTime to valid timestamp and app completes after delay", () => {
     const state = createStateWithDelay(200);
-    const s1: GameState = {
-      ...state,
-      active: {
-        id: "O",
-        rot: "spawn",
-        x: createGridCoord(3),
-        y: createGridCoord(10),
+    const s1 = buildPlayingState(
+      {
+        ...state,
+        board: boardWithBottomGaps(),
+        // lastGravityTime remains 0 since gravity is disabled
       },
-      board: boardWithBottomGaps(),
-      // lastGravityTime remains 0 since gravity is disabled
-    };
+      {
+        active: {
+          id: "O",
+          rot: "spawn",
+          x: createGridCoord(3),
+          y: createGridCoord(10),
+        },
+      },
+    );
 
     const afterDrop = reducerWithPipeline(s1, {
       timestampMs: createTimestamp(1000),

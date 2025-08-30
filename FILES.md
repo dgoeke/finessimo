@@ -18,6 +18,20 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/state/reducer.ts: Pure reducer for game logic. Handles movement, rotation, spawning, line clears, hold, gravity, lock delay. Appends to `processedInputLog` only via explicit `AppendProcessed` actions from input handlers, and clears it via `ClearInputLog`. Implements `RetryPendingLock` logic for piece restoration. Supports `RefillPreview`/`ReplacePreview` for mode-owned RNG/preview. Manages UI effects lifecycle via PushUiEffect actions and Tick-based pruning.
 - src/state/signals.ts: Reactive state management using Lit signals. Global gameStateSignal with dispatch wrapper and selector helpers for efficient component updates.
 
+## Engine
+
+- src/engine/init.ts: Game state initialization module. Contains default timing/gameplay configs, createInitialPhysics, and createInitialState functions. Centralizes all initialization logic previously scattered in the reducer.
+- src/engine/lock-utils.ts: Shared helper to construct a PendingLock from the current board and active piece (simulates hard drop when source is hardDrop). Used by reducer and physics post-step.
+- src/engine/scoring/stats.ts: Statistics calculation and updates. Pure functions for deriving metrics, applying deltas, and updating session durations.
+- src/engine/scoring/line-clear.ts: Line-clear and commit-lock logic. Pure handlers for CommitLock, CompleteLineClear, and StartLineClear actions. Includes applyPendingLock function for lock resolution, stats updates, and top-out detection.
+- src/engine/physics/gravity.ts: Gravity system logic. Pure functions for gravity interval calculation, gravity application, and lock delay integration using the lock delay state machine.
+- src/engine/physics/lock-delay.machine.ts: Pure lock-delay state machine (Airborne/Grounded). Steps with resets, movement, and elapsed time; returns next state and whether to lock now.
+- src/engine/physics/post-step.ts: Physics post-step that evaluates ground contact and advances the lock-delay machine. Creates pendingLock and transitions to resolvingLock when lock triggers.
+- src/engine/gameplay/movement.ts: Pure movement action handlers for TapMove, HoldMove, and RepeatMove. Extracted from main reducer for modular organization.
+- src/engine/gameplay/rotation.ts: Pure rotation action handler for Rotate actions. Delegates to SRS rotation system with proper collision checking.
+- src/engine/gameplay/spawn.ts: Pure spawn action handler for piece spawning logic. Handles queue consumption, explicit piece spawning, and top-out detection.
+- src/engine/gameplay/hold.ts: Pure hold action handler for hold system logic. Manages piece swapping, queue consumption, and spawn validity checking.
+
 ## Types
 
 - src/types/brands.ts: Branded primitive types for type safety and domain modeling. DurationMs, GridCoord, Seed, UiEffectId, and other branded types with factory functions to prevent mixing of conceptually different values.

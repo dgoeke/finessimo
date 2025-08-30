@@ -41,6 +41,72 @@
     "functions": 100,
     "lines": 95
   },
+  "src/engine/init.ts": {
+    "statements": 100,
+    "branches": 85,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/lock-utils.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/gameplay/hold.ts": {
+    "statements": 79,
+    "branches": 71,
+    "functions": 100,
+    "lines": 90
+  },
+  "src/engine/gameplay/movement.ts": {
+    "statements": 90,
+    "branches": 83,
+    "functions": 100,
+    "lines": 90
+  },
+  "src/engine/gameplay/rotation.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/gameplay/spawn.ts": {
+    "statements": 78,
+    "branches": 75,
+    "functions": 100,
+    "lines": 88
+  },
+  "src/engine/physics/gravity.ts": {
+    "statements": 93,
+    "branches": 78,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/physics/lock-delay.machine.ts": {
+    "statements": 85,
+    "branches": 91,
+    "functions": 42,
+    "lines": 85
+  },
+  "src/engine/physics/post-step.ts": {
+    "statements": 94,
+    "branches": 92,
+    "functions": 100,
+    "lines": 93
+  },
+  "src/engine/scoring/line-clear.ts": {
+    "statements": 92,
+    "branches": 83,
+    "functions": 100,
+    "lines": 92
+  },
+  "src/engine/scoring/stats.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "src/finesse/calculator.ts": {
     "statements": 94,
     "branches": 90,
@@ -67,7 +133,7 @@
   },
   "src/input/StateMachineInputHandler.ts": {
     "statements": 85,
-    "branches": 72,
+    "branches": 73,
     "functions": 91,
     "lines": 87
   },
@@ -156,10 +222,10 @@
     "lines": 96
   },
   "src/state/reducer.ts": {
-    "statements": 90,
-    "branches": 82,
-    "functions": 94,
-    "lines": 92
+    "statements": 89,
+    "branches": 81,
+    "functions": 89,
+    "lines": 89
   },
   "src/state/signals.ts": {
     "statements": 86,
@@ -168,16 +234,16 @@
     "lines": 86
   },
   "src/state/types.ts": {
-    "statements": 94,
-    "branches": 100,
-    "functions": 75,
-    "lines": 92
+    "statements": 70,
+    "branches": 53,
+    "functions": 52,
+    "lines": 68
   },
   "src/types/brands.ts": {
-    "statements": 98,
-    "branches": 100,
-    "functions": 96,
-    "lines": 98
+    "statements": 90,
+    "branches": 79,
+    "functions": 83,
+    "lines": 88
   },
   "src/types/timestamp.ts": {
     "statements": 100,

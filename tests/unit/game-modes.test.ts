@@ -1,6 +1,7 @@
 import { describe, test, expect } from "@jest/globals";
 
 import { createSevenBagRng } from "../../src/core/rng";
+import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import { type FinesseResult } from "../../src/finesse/calculator";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
@@ -23,6 +24,7 @@ import {
 const mockGameState: GameState = {
   active: undefined,
   board: { cells: createBoardCells(), height: 20, width: 10 },
+  boardDecorations: null,
   canHold: true,
   currentMode: "freePlay",
   finesseFeedback: null,
@@ -30,7 +32,9 @@ const mockGameState: GameState = {
     finesseCancelMs: createDurationMs(50),
     holdEnabled: true,
   },
+  guidance: null,
   hold: undefined,
+  modeData: null,
   modePrompt: null,
   nextQueue: [],
   pendingLock: null,
@@ -39,7 +43,7 @@ const mockGameState: GameState = {
     lastGravityTime: createTimestamp(1),
     lineClearLines: [],
     lineClearStartTime: null,
-    lockDelayStartTime: null,
+    lockDelay: Airborne(),
   }),
   processedInputLog: [],
   rng: createSevenBagRng(createSeed("test")),
@@ -76,6 +80,7 @@ const mockGameState: GameState = {
     gravityEnabled: false,
     gravityMs: createDurationMs(1000),
   }),
+  uiEffects: [],
 };
 
 const mockPiece: ActivePiece = {

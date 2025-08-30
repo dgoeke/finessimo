@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState } from "../../src/state/types";
+import { type GameState, buildPlayingState } from "../../src/state/types";
 import {
   createSeed,
   createDurationMs,
@@ -30,20 +30,28 @@ describe("finesse analysis trigger logic", () => {
     const state = createTestState();
 
     // Create state with active piece in lock delay
-    const stateWithActive: GameState = {
-      ...state,
-      active: {
-        id: "T",
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(18),
+    const stateWithActive: GameState = buildPlayingState(
+      {
+        ...state,
+        physics: {
+          ...state.physics,
+          lastGravityTime: createTimestamp(1),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
+        },
       },
-      physics: {
-        ...state.physics,
-        lastGravityTime: createTimestamp(1),
-        lockDelayStartTime: createTimestamp(1000),
+      {
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(18),
+        },
       },
-    };
+    );
 
     // Trigger auto-lock by advancing time past lock delay
     const stateAfterAutoLock = reducer(stateWithActive, {
@@ -76,15 +84,14 @@ describe("finesse analysis trigger logic", () => {
 
     const state = createTestState();
 
-    const stateWithActive: GameState = {
-      ...state,
+    const stateWithActive: GameState = buildPlayingState(state, {
       active: {
         id: "T",
         rot: "spawn",
         x: createGridCoord(4),
         y: createGridCoord(10), // High up
       },
-    };
+    });
 
     // HardDrop should lock the piece
     const stateAfterHardDrop = reducer(stateWithActive, {

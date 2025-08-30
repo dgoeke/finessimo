@@ -1,6 +1,7 @@
 import { describe, test, expect, jest } from "@jest/globals";
 
 import { createSevenBagRng } from "../../src/core/rng";
+import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import { type FinesseResult } from "../../src/finesse/calculator";
 import { GuidedMode } from "../../src/modes/guided";
 import {
@@ -37,7 +38,7 @@ const createMockGameState = (overrides: Partial<GameState> = {}): GameState =>
       lastGravityTime: createTimestamp(1),
       lineClearLines: [],
       lineClearStartTime: null,
-      lockDelayStartTime: null,
+      lockDelay: Airborne(),
     }),
     processedInputLog: [],
     rng: createSevenBagRng(createSeed("test")),

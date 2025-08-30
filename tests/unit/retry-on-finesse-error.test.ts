@@ -1,6 +1,7 @@
 import { gameModeRegistry } from "../../src/modes";
 import { runLockPipeline } from "../../src/modes/lock-pipeline";
 import { reducer } from "../../src/state/reducer";
+import { getLockDelayStartTime } from "../../src/state/types";
 import {
   createSeed,
   createGridCoord,
@@ -330,7 +331,7 @@ describe("Retry on finesse error", () => {
       expect(retriedState.active?.x).toBe(3); // I piece spawn X
       expect(retriedState.active?.y).toBe(-2); // I piece spawn Y (SRS: fully above)
       expect(retriedState.canHold).toBe(true);
-      expect(retriedState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(retriedState.physics.lockDelay)).toBeNull();
       expect(retriedState.physics.lineClearLines).toHaveLength(0);
       expect(retriedState.physics.lineClearStartTime).toBeNull();
     });

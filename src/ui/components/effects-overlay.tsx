@@ -57,7 +57,7 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
   protected render(): unknown {
     const state = gameStateSignal.get();
     const effects = state.uiEffects;
-    if (!effects || effects.length === 0) {
+    if (effects.length === 0) {
       return html``;
     }
 

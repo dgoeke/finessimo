@@ -8,6 +8,7 @@ import {
 } from "@jest/globals";
 
 import { createSevenBagRng } from "../../src/core/rng";
+import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import { TouchInputHandler } from "../../src/input/touch";
 import {
   type GameState,
@@ -73,7 +74,7 @@ const createMockGameState = (overrides: Partial<GameState> = {}): GameState =>
       lastGravityTime: createTimestamp(1),
       lineClearLines: [],
       lineClearStartTime: null,
-      lockDelayStartTime: null,
+      lockDelay: Airborne(),
     }),
     processedInputLog: [],
     rng: createSevenBagRng(createSeed("test")),

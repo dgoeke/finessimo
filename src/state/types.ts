@@ -171,11 +171,15 @@ export type FloatingTextEffect = Readonly<{
 }>;
 export type UiEffect = FloatingTextEffect;
 
+// Lock delay state ADT - makes invalid combinations unrepresentable
+export type LockDelayState =
+  | { tag: "Airborne"; resets: number }
+  | { tag: "Grounded"; start: Timestamp; resets: number };
+
 // Physics timing state
 export type PhysicsState = {
   lastGravityTime: Timestamp;
-  lockDelayStartTime: Timestamp | null;
-  lockDelayResetCount: number; // Track number of lock delay resets for current piece (0-15)
+  lockDelay: LockDelayState; // Replaces lockDelayStartTime + lockDelayResetCount pair
   isSoftDropping: boolean;
   lineClearStartTime: Timestamp | null;
   lineClearLines: ReadonlyArray<number>;
@@ -234,57 +238,59 @@ export type PendingLock = {
   timestampMs: Timestamp; // preserve original timestamp for lockCurrentPiece
 };
 
-// Shared fields common to all game states
-type SharedGameFields = {
+// Base fields shared by ALL game states
+export type BaseShared = Readonly<{
   board: Board;
-  active: ActivePiece | undefined;
+  boardDecorations: BoardDecorations | null;
+  gameplay: GameplayConfig;
+  guidance: ModeGuidance | null;
   hold: PieceId | undefined;
   canHold: boolean;
   nextQueue: ReadonlyArray<PieceId>;
-  rng: PieceRandomGenerator; // Generic RNG interface for testability
-  timing: TimingConfig;
-  gameplay: GameplayConfig;
-  tick: number;
-  stats: Stats;
   physics: PhysicsState;
-  // Processed actions log for finesse analysis - contains structured actions with tap/das distinction
-  processedInputLog: ReadonlyArray<ProcessedAction>;
-  // Game mode and finesse feedback
+  rng: PieceRandomGenerator;
+  stats: Stats;
+  timing: TimingConfig;
   currentMode: string;
-  modeData?: unknown;
   finesseFeedback: FinesseResult | null;
+  modeData: unknown;
   modePrompt: string | null;
-  // Optional, mode-provided guidance for visualization and prompts
-  guidance?: ModeGuidance | null;
-  // Optional: mode-provided board overlay (pure description of cells to decorate)
-  boardDecorations?: BoardDecorations | null;
-  // Ephemeral UI effects rendered by overlay (optional for backward compatibility)
-  uiEffects?: ReadonlyArray<UiEffect>;
-};
+  processedInputLog: ReadonlyArray<ProcessedAction>;
+  tick: number;
+  uiEffects: ReadonlyArray<UiEffect>;
+}>;
 
 // Playing state - normal gameplay
-export type PlayingState = SharedGameFields & {
-  status: "playing";
-  pendingLock: null;
-};
+export type PlayingState = BaseShared &
+  Readonly<{
+    status: "playing";
+    active: ActivePiece | undefined; // you allow none before first spawn
+    pendingLock: null;
+  }>;
 
 // Resolving lock state - piece is staged for lock resolution
-export type ResolvingLockState = SharedGameFields & {
-  status: "resolvingLock";
-  pendingLock: PendingLock;
-};
+export type ResolvingLockState = BaseShared &
+  Readonly<{
+    status: "resolvingLock";
+    active: undefined;
+    pendingLock: PendingLock; // guaranteed
+  }>;
 
 // Line clear state - lines are being cleared with delay
-export type LineClearState = SharedGameFields & {
-  status: "lineClear";
-  pendingLock: null;
-};
+export type LineClearState = BaseShared &
+  Readonly<{
+    status: "lineClear";
+    active: undefined;
+    pendingLock: null;
+  }>;
 
 // Top out state - game over
-export type TopOutState = SharedGameFields & {
-  status: "topOut";
-  pendingLock: null;
-};
+export type TopOutState = BaseShared &
+  Readonly<{
+    status: "topOut";
+    active: undefined;
+    pendingLock: null;
+  }>;
 
 // Discriminated union of all game states
 export type GameState =
@@ -293,40 +299,66 @@ export type GameState =
   | LineClearState
   | TopOutState;
 
+// Type guards for GameState discrimination
+export function isPlaying(state: GameState): state is PlayingState {
+  return state.status === "playing";
+}
+
+export function isResolvingLock(state: GameState): state is ResolvingLockState {
+  return state.status === "resolvingLock";
+}
+
+export function isLineClear(state: GameState): state is LineClearState {
+  return state.status === "lineClear";
+}
+
+export function isTopOut(state: GameState): state is TopOutState {
+  return state.status === "topOut";
+}
+
 // Utility function for exhaustiveness checking
 export function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${String(x)}`);
 }
 
-// Type-level validation helpers for edge cases
-export type ValidLockDelayState = {
-  /** Lock delay can only be active when piece is grounded */
-  readonly lockDelayStartTime: Timestamp | null;
-  /** Reset count must be valid when lock delay is active */
-  readonly lockDelayResetCount: number; // TODO: Use LockDelayResetCount when fully implemented
-};
+// Type guards for lock delay state ADT
+export function isLockDelayAirborne(
+  ld: LockDelayState,
+): ld is Extract<LockDelayState, { tag: "Airborne" }> {
+  return ld.tag === "Airborne";
+}
 
-// Type guard to ensure lock delay state is valid
+export function isLockDelayGrounded(
+  ld: LockDelayState,
+): ld is Extract<LockDelayState, { tag: "Grounded" }> {
+  return ld.tag === "Grounded";
+}
+
+// Helper functions to maintain compatibility during transition
+export function getLockDelayStartTime(ld: LockDelayState): Timestamp | null {
+  return ld.tag === "Grounded" ? ld.start : null;
+}
+
+export function getLockDelayResetCount(ld: LockDelayState): number {
+  return ld.resets;
+}
+
+// Type guard to ensure lock delay state is valid (always true with ADT)
 export function isValidLockDelayState(physics: PhysicsState): boolean {
-  // Reset count must always be within valid range for the piece's lifetime
-  if (physics.lockDelayResetCount < 0 || physics.lockDelayResetCount > 15) {
-    return false;
-  }
-  // Allow nonzero reset count even when lock delay is temporarily inactive (airborne phase)
-  // This preserves the reset cap across off-ground transitions.
-  return true;
+  // With the ADT, validate reset count is within bounds for both states
+  const resets = physics.lockDelay.resets;
+  return resets >= 0 && resets <= 15;
 }
 
 // Assertion function for lock delay state validation
 export function assertValidLockDelayState(
   physics: PhysicsState,
   context?: string,
-): asserts physics is PhysicsState & ValidLockDelayState {
+): asserts physics is PhysicsState {
   if (!isValidLockDelayState(physics)) {
     throw new Error(
       `Invalid lock delay state${context !== undefined ? ` in ${context}` : ""}: ` +
-        `lockDelayStartTime=${physics.lockDelayStartTime?.toString() ?? "null"}, ` +
-        `lockDelayResetCount=${physics.lockDelayResetCount.toString()}`,
+        `lockDelay=${JSON.stringify(physics.lockDelay)}`,
     );
   }
 }
@@ -456,3 +488,69 @@ export type Reducer = (
   s: Readonly<GameState> | undefined,
   a: Action,
 ) => GameState;
+
+// Builder functions for safe state construction
+// These preserve variant types and avoid hybrid states from spread operations
+
+export function buildPlayingState(
+  base: BaseShared,
+  overrides: Partial<Pick<PlayingState, "active">> = {},
+): PlayingState {
+  return {
+    ...base,
+    active: overrides.active ?? undefined,
+    pendingLock: null,
+    status: "playing",
+  };
+}
+
+export function buildResolvingLockState(
+  base: BaseShared,
+  pendingLock: PendingLock,
+): ResolvingLockState {
+  return {
+    ...base,
+    active: undefined,
+    pendingLock,
+    status: "resolvingLock",
+  };
+}
+
+export function buildLineClearState(base: BaseShared): LineClearState {
+  return {
+    ...base,
+    active: undefined,
+    pendingLock: null,
+    status: "lineClear",
+  };
+}
+
+export function buildTopOutState(base: BaseShared): TopOutState {
+  return {
+    ...base,
+    active: undefined,
+    pendingLock: null,
+    status: "topOut",
+  };
+}
+
+// Generic state update function that preserves variant type
+export function updateGameState<T extends GameState>(
+  state: T,
+  updates: Partial<BaseShared>,
+): T {
+  const base: BaseShared = { ...state, ...updates };
+
+  switch (state.status) {
+    case "playing":
+      return buildPlayingState(base, { active: state.active }) as T;
+    case "resolvingLock":
+      return buildResolvingLockState(base, state.pendingLock) as T;
+    case "lineClear":
+      return buildLineClearState(base) as T;
+    case "topOut":
+      return buildTopOutState(base) as T;
+    default:
+      return assertNever(state);
+  }
+}

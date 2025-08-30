@@ -13,6 +13,7 @@ import {
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
+  createTestGameState,
   createTestHoldMoveAction,
   createTestRepeatMoveAction,
   createTestRotateAction,
@@ -201,21 +202,24 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should preserve all other state when ticking", () => {
-      const complexState: GameState = {
-        ...initialState,
-        active: {
-          id: "T",
-          rot: "spawn",
-          x: createGridCoord(4),
-          y: createGridCoord(0),
+      const complexState: GameState = createTestGameState(
+        {
+          ...initialState,
+          canHold: false,
+          hold: "I",
+          nextQueue: ["T", "S", "Z"],
+          processedInputLog: [],
+          tick: 10,
         },
-        canHold: false,
-        hold: "I",
-        nextQueue: ["T", "S", "Z"],
-        processedInputLog: [],
-        status: "lineClear",
-        tick: 10,
-      } as GameState;
+        {
+          active: {
+            id: "T",
+            rot: "spawn",
+            x: createGridCoord(4),
+            y: createGridCoord(0),
+          },
+        },
+      );
 
       const result = reducer(complexState, {
         timestampMs: createTimestamp(1),
@@ -234,18 +238,22 @@ describe("Reducer - Extended Coverage", () => {
 
   describe("Lock action detailed testing", () => {
     it("should reset piece-related state", () => {
-      const stateWithPiece: GameState = {
-        ...initialState,
-        active: {
-          id: "T",
-          rot: "right",
-          x: createGridCoord(5),
-          y: createGridCoord(10),
+      const stateWithPiece: GameState = createTestGameState(
+        {
+          ...initialState,
+          canHold: false,
+          processedInputLog: [],
+          tick: 42,
         },
-        canHold: false,
-        processedInputLog: [],
-        tick: 42,
-      };
+        {
+          active: {
+            id: "T",
+            rot: "right",
+            x: createGridCoord(5),
+            y: createGridCoord(10),
+          },
+        },
+      );
 
       const result = reducer(stateWithPiece, {
         timestampMs: fromNow(),
@@ -331,15 +339,14 @@ describe("Reducer - Extended Coverage", () => {
         createTestRepeatMoveAction(1),
       ];
 
-      let currentState: GameState = {
-        ...initialState,
+      let currentState: GameState = createTestGameState(initialState, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
 
       const originalLogLength = currentState.processedInputLog.length;
 
@@ -355,15 +362,14 @@ describe("Reducer - Extended Coverage", () => {
     it("should not modify processedInputLog for any action type", () => {
       const complexAction: Action = createTestHoldMoveAction(-1);
 
-      const stateWithPiece = {
-        ...initialState,
+      const stateWithPiece = createTestGameState(initialState, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
       const result = reducer(stateWithPiece, complexAction);
 
       // Reducer should NOT modify processedInputLog - it's managed externally
@@ -389,15 +395,14 @@ describe("Reducer - Extended Coverage", () => {
         timestampMs: fromNow(),
         type: "Lock",
       });
-      const stateWithPiece = {
-        ...originalState,
+      const stateWithPiece = createTestGameState(originalState, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
       reducer(stateWithPiece, createTestTapMoveAction(-1, false));
 
       // Check that the original state object wasn't modified
@@ -409,15 +414,14 @@ describe("Reducer - Extended Coverage", () => {
     });
 
     it("should create new objects for nested state changes", () => {
-      const stateWithPiece = {
-        ...initialState,
+      const stateWithPiece = createTestGameState(initialState, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
       const result = reducer(
         stateWithPiece,
         createTestTapMoveAction(-1, false),
@@ -442,28 +446,26 @@ describe("Reducer - Extended Coverage", () => {
 
         if (i % 10 === 0) {
           // Add an active piece before attempting to move
-          state = {
-            ...state,
+          state = createTestGameState(state, {
             active: {
               id: "T" as const,
               rot: "spawn" as const,
               x: createGridCoord(4),
               y: createGridCoord(0),
             },
-          };
+          });
           state = reducer(state, createTestTapMoveAction(-1, false));
         }
         if (i % 20 === 0) {
           // Add an active piece before attempting to lock
-          state = {
-            ...state,
+          state = createTestGameState(state, {
             active: {
               id: "T" as const,
               rot: "spawn" as const,
               x: createGridCoord(4),
               y: createGridCoord(0),
             },
-          };
+          });
           state = reducer(state, {
             timestampMs: fromNow(),
             type: "Lock",

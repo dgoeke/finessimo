@@ -11,7 +11,11 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import { assertActivePiece, createTestTapMoveAction } from "../test-helpers";
+import {
+  assertActivePiece,
+  createTestGameState,
+  createTestTapMoveAction,
+} from "../test-helpers";
 
 describe("Reducer", () => {
   let initialState: GameState;
@@ -94,17 +98,21 @@ describe("Reducer", () => {
   describe("Lock action", () => {
     it("should clear active piece and reset hold capability", () => {
       // Set up state with an active piece and used hold
-      const stateWithActivePiece: GameState = {
-        ...initialState,
-        active: {
-          id: "T",
-          rot: "spawn",
-          x: createGridCoord(4),
-          y: createGridCoord(0),
+      const stateWithActivePiece: GameState = createTestGameState(
+        {
+          ...initialState,
+          canHold: false,
+          processedInputLog: [],
         },
-        canHold: false,
-        processedInputLog: [],
-      };
+        {
+          active: {
+            id: "T",
+            rot: "spawn",
+            x: createGridCoord(4),
+            y: createGridCoord(0),
+          },
+        },
+      );
 
       const newState = reducer(stateWithActivePiece, {
         timestampMs: fromNow(),
@@ -119,16 +127,20 @@ describe("Reducer", () => {
     });
 
     it("should not mutate the original state", () => {
-      const originalState = {
-        ...initialState,
-        active: {
-          id: "T" as const,
-          rot: "spawn" as const,
-          x: createGridCoord(4),
-          y: createGridCoord(0),
+      const originalState = createTestGameState(
+        {
+          ...initialState,
+          tick: 5,
         },
-        tick: 5,
-      };
+        {
+          active: {
+            id: "T" as const,
+            rot: "spawn" as const,
+            x: createGridCoord(4),
+            y: createGridCoord(0),
+          },
+        },
+      );
       const newState = reducer(originalState, {
         timestampMs: fromNow(),
         type: "Lock",
@@ -186,17 +198,21 @@ describe("Reducer", () => {
     });
 
     it("should preserve most properties but may move active piece with gravity", () => {
-      const stateWithData: GameState = {
-        ...initialState,
-        active: {
-          id: "T",
-          rot: "spawn",
-          x: createGridCoord(4),
-          y: createGridCoord(0),
+      const stateWithData: GameState = createTestGameState(
+        {
+          ...initialState,
+          canHold: false,
+          hold: "I",
         },
-        canHold: false,
-        hold: "I",
-      };
+        {
+          active: {
+            id: "T",
+            rot: "spawn",
+            x: createGridCoord(4),
+            y: createGridCoord(0),
+          },
+        },
+      );
 
       const newState = reducer(stateWithData, {
         timestampMs: fromNow(),
@@ -230,15 +246,14 @@ describe("Reducer", () => {
       const originalCells = new Uint8Array(initialState.board.cells);
 
       // Try various actions that might mutate state
-      const stateWithActive = {
-        ...initialState,
+      const stateWithActive = createTestGameState(initialState, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
       reducer(stateWithActive, {
         timestampMs: fromNow(),
         type: "Lock",
@@ -257,15 +272,14 @@ describe("Reducer", () => {
         timestampMs: createTimestamp(1),
         type: "Tick",
       });
-      const stateWithActive = {
-        ...newState1,
+      const stateWithActive = createTestGameState(newState1, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(0),
         },
-      };
+      });
       const newState2 = reducer(stateWithActive, {
         timestampMs: fromNow(),
         type: "Lock",
@@ -283,16 +297,20 @@ describe("Reducer", () => {
       // This is managed at the app/input handler level for finesse analysis
       const timestamp = createTimestamp(1000);
 
-      const stateWithPiece = {
-        ...initialState,
-        active: {
-          id: "T" as const,
-          rot: "spawn" as const,
-          x: createGridCoord(4),
-          y: createGridCoord(0),
+      const stateWithPiece = createTestGameState(
+        {
+          ...initialState,
+          processedInputLog: [] as const, // Empty log
         },
-        processedInputLog: [] as const, // Empty log
-      };
+        {
+          active: {
+            id: "T" as const,
+            rot: "spawn" as const,
+            x: createGridCoord(4),
+            y: createGridCoord(0),
+          },
+        },
+      );
 
       const stateAfterAction = reducer(stateWithPiece, {
         dir: -1,

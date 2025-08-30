@@ -1,7 +1,9 @@
+import { createSevenBagRng, type SevenBagRng } from "../src/core/rng";
+import { Airborne } from "../src/engine/physics/lock-delay.machine";
+import { createBoardCells, buildPlayingState } from "../src/state/types";
 import { createSeed, createDurationMs } from "../src/types/brands";
 import { fromNow, createTimestamp } from "../src/types/timestamp";
 
-import type { SevenBagRng } from "../src/core/rng";
 import type {
   GameState,
   Action,
@@ -9,6 +11,7 @@ import type {
   PhysicsState,
   PieceId,
   TimingConfig,
+  BaseShared,
 } from "../src/state/types";
 
 // Assertion helper that provides runtime type narrowing
@@ -167,8 +170,7 @@ export function createTestPhysicsState(
     lastGravityTime: fromNow(),
     lineClearLines: [],
     lineClearStartTime: null,
-    lockDelayResetCount: 0,
-    lockDelayStartTime: null,
+    lockDelay: Airborne(),
     ...overrides,
   };
 }
@@ -311,4 +313,67 @@ export function createTestTickAction(
     timestampMs: currentTime,
     type: "Tick",
   };
+}
+
+// Helper for creating a complete test GameState using builders
+export function createTestGameState(
+  baseOverrides: Partial<BaseShared> = {},
+  activeOverrides: { active?: ActivePiece } = {},
+): GameState {
+  const base: BaseShared = {
+    board: {
+      cells: createBoardCells(),
+      height: 20,
+      width: 10,
+    },
+    boardDecorations: null,
+    canHold: true,
+    currentMode: "test",
+    finesseFeedback: null,
+    gameplay: {
+      finesseCancelMs: createDurationMs(50),
+      holdEnabled: true,
+    },
+    guidance: null,
+    hold: undefined,
+    modeData: null,
+    modePrompt: null,
+    nextQueue: [],
+    physics: createTestPhysicsState(),
+    processedInputLog: [],
+    rng: createSevenBagRng("test"),
+    stats: {
+      accuracyPercentage: 0,
+      attempts: 0,
+      averageInputsPerPiece: 0,
+      doubleLines: 0,
+      faultsByType: {},
+      finesseAccuracy: 0,
+      incorrectPlacements: 0,
+      linesCleared: 0,
+      linesPerMinute: 0,
+      longestSessionMs: createDurationMs(0),
+      optimalInputs: 0,
+      optimalPlacements: 0,
+      piecesPerMinute: 0,
+      piecesPlaced: 0,
+      sessionLinesCleared: 0,
+      sessionPiecesPlaced: 0,
+      sessionStartMs: createTimestamp(1),
+      singleLines: 0,
+      startedAtMs: createTimestamp(1),
+      tetrisLines: 0,
+      timePlayedMs: createDurationMs(0),
+      totalFaults: 0,
+      totalInputs: 0,
+      totalSessions: 0,
+      tripleLines: 0,
+    },
+    tick: 0,
+    timing: createTestTimingConfig(),
+    uiEffects: [],
+    ...baseOverrides,
+  };
+
+  return buildPlayingState(base, activeOverrides);
 }

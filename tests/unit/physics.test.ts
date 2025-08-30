@@ -1,6 +1,10 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState, createBoardCells } from "../../src/state/types";
+import {
+  type GameState,
+  createBoardCells,
+  getLockDelayStartTime,
+} from "../../src/state/types";
 import {
   createSeed,
   createGridCoord,
@@ -45,7 +49,7 @@ describe("physics system", () => {
 
       expect(state.physics).toBeDefined();
       expect(state.physics.lastGravityTime).toBe(timestamp);
-      expect(state.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(state.physics.lockDelay)).toBeNull();
       expect(state.physics.isSoftDropping).toBe(false);
       expect(state.physics.lineClearStartTime).toBeNull();
       expect(state.physics.lineClearLines).toEqual([]);
@@ -121,7 +125,9 @@ describe("physics system", () => {
         type: "Tick",
       });
 
-      expect(newState.physics.lockDelayStartTime).toBe(gravityTime);
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBe(
+        gravityTime,
+      );
     });
 
     it("should auto-lock piece after lock delay expires", () => {
@@ -134,7 +140,11 @@ describe("physics system", () => {
         active: { ...state.active, y: createGridCoord(18) }, // Near bottom
         physics: {
           ...state.physics,
-          lockDelayStartTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
         },
       };
 
@@ -146,7 +156,7 @@ describe("physics system", () => {
       });
 
       expect(newState.active).toBeUndefined();
-      expect(newState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBeNull();
     });
   });
 
@@ -211,13 +221,17 @@ describe("physics system", () => {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
         },
       };
 
       const newState = reducer(state, createTestTapMoveAction(1, false));
 
-      expect(newState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBeNull();
     });
 
     it("should cancel lock delay on rotation", () => {
@@ -226,13 +240,17 @@ describe("physics system", () => {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
         },
       };
 
       const newState = reducer(state, createTestRotateAction("CW"));
 
-      expect(newState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBeNull();
     });
 
     it("should start lock delay manually", () => {
@@ -244,7 +262,7 @@ describe("physics system", () => {
         type: "StartLockDelay",
       });
 
-      expect(newState.physics.lockDelayStartTime).toBe(timestamp);
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBe(timestamp);
     });
 
     it("should cancel lock delay manually", () => {
@@ -253,13 +271,17 @@ describe("physics system", () => {
         ...state,
         physics: {
           ...state.physics,
-          lockDelayStartTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
         },
       };
 
       const newState = reducer(state, { type: "CancelLockDelay" });
 
-      expect(newState.physics.lockDelayStartTime).toBeNull();
+      expect(getLockDelayStartTime(newState.physics.lockDelay)).toBeNull();
     });
   });
 

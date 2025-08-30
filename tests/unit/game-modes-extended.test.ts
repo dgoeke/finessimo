@@ -1,9 +1,10 @@
 import { describe, test, expect, beforeEach, jest } from "@jest/globals";
 
 import { createSevenBagRng } from "../../src/core/rng";
+import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import { FreePlayMode } from "../../src/modes/freePlay";
 import { GuidedMode } from "../../src/modes/guided";
-import { createBoardCells } from "../../src/state/types";
+import { buildPlayingState } from "../../src/state/types";
 import {
   createDurationMs,
   createSeed,
@@ -13,68 +14,55 @@ import { createTimestamp } from "../../src/types/timestamp";
 import {
   createTestPhysicsState,
   createTestTimingConfig,
+  createTestGameState,
 } from "../test-helpers";
 
 import type { FinesseResult } from "../../src/finesse/calculator";
 import type { GameState, ActivePiece, Rot } from "../../src/state/types";
 
-const mockState = (): GameState => ({
-  active: undefined,
-  board: { cells: createBoardCells(), height: 20, width: 10 },
-  canHold: true,
-  currentMode: "freePlay",
-  finesseFeedback: null,
-  gameplay: {
-    finesseCancelMs: createDurationMs(50),
-    holdEnabled: true,
-  },
-  hold: undefined,
-  modePrompt: null,
-  nextQueue: [],
-  pendingLock: null,
-  physics: createTestPhysicsState({
-    isSoftDropping: false,
-    lastGravityTime: createTimestamp(1),
-    lineClearLines: [],
-    lineClearStartTime: null,
-    lockDelayStartTime: null,
-  }),
-  processedInputLog: [],
-  rng: createSevenBagRng(createSeed("t")),
-  stats: {
-    accuracyPercentage: 0,
-    attempts: 0,
-    averageInputsPerPiece: 0,
-    doubleLines: 0,
-    faultsByType: {},
-    finesseAccuracy: createGridCoord(0),
-    incorrectPlacements: 0,
-    linesCleared: 0,
-    linesPerMinute: 0,
-    longestSessionMs: createDurationMs(0),
-    optimalInputs: 0,
-    optimalPlacements: 0,
-    piecesPerMinute: 0,
-    piecesPlaced: 0,
-    sessionLinesCleared: 0,
-    sessionPiecesPlaced: 0,
-    sessionStartMs: createTimestamp(0.1),
-    singleLines: 0,
-    startedAtMs: createTimestamp(0.1),
-    tetrisLines: 0,
-    timePlayedMs: createDurationMs(0),
-    totalFaults: 0,
-    totalInputs: 0,
-    totalSessions: 1,
-    tripleLines: 0,
-  },
-  status: "playing",
-  tick: 0,
-  timing: createTestTimingConfig({
-    gravityEnabled: false,
-    gravityMs: createDurationMs(1000),
-  }),
-});
+const mockState = (): GameState =>
+  createTestGameState({
+    currentMode: "freePlay",
+    physics: createTestPhysicsState({
+      isSoftDropping: false,
+      lastGravityTime: createTimestamp(1),
+      lineClearLines: [],
+      lineClearStartTime: null,
+      lockDelay: Airborne(),
+    }),
+    rng: createSevenBagRng(createSeed("t")),
+    stats: {
+      accuracyPercentage: 0,
+      attempts: 0,
+      averageInputsPerPiece: 0,
+      doubleLines: 0,
+      faultsByType: {},
+      finesseAccuracy: createGridCoord(0),
+      incorrectPlacements: 0,
+      linesCleared: 0,
+      linesPerMinute: 0,
+      longestSessionMs: createDurationMs(0),
+      optimalInputs: 0,
+      optimalPlacements: 0,
+      piecesPerMinute: 0,
+      piecesPlaced: 0,
+      sessionLinesCleared: 0,
+      sessionPiecesPlaced: 0,
+      sessionStartMs: createTimestamp(0.1),
+      singleLines: 0,
+      startedAtMs: createTimestamp(0.1),
+      tetrisLines: 0,
+      timePlayedMs: createDurationMs(0),
+      totalFaults: 0,
+      totalInputs: 0,
+      totalSessions: 1,
+      tripleLines: 0,
+    },
+    timing: createTestTimingConfig({
+      gravityEnabled: false,
+      gravityMs: createDurationMs(1000),
+    }),
+  });
 
 describe("FreePlayMode - extended", () => {
   test("FreePlay returns no textual feedback for suboptimal sequences", () => {
@@ -121,11 +109,12 @@ describe("GuidedMode - extended (SRS)", () => {
   let state: GameState;
   beforeEach(() => {
     mode = new GuidedMode();
-    state = {
-      ...mockState(),
+    const base = mockState();
+    state = buildPlayingState({
+      ...base,
       currentMode: "guided",
       modeData: mode.initModeData(),
-    };
+    });
   });
 
   test("wrong piece does not update deck", () => {
@@ -208,15 +197,14 @@ describe("GuidedMode - extended (SRS)", () => {
   });
 
   test("shouldPromptNext is false when active piece exists", () => {
-    const stateWithActive = {
-      ...state,
+    const stateWithActive = buildPlayingState(state, {
       active: {
         id: "T" as const,
         rot: "spawn" as const,
         x: createGridCoord(3),
         y: createGridCoord(0),
       },
-    };
+    });
     expect(mode.shouldPromptNext(stateWithActive)).toBe(false);
   });
 });

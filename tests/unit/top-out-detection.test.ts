@@ -5,6 +5,7 @@ import {
   type Board,
   idx,
   createBoardCells,
+  buildPlayingState,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -59,21 +60,29 @@ describe("top-out detection", () => {
     const state = createTestState();
 
     // Create state where piece will be forced to lock at y < 0
-    const stateWithFullBoard: GameState = {
-      ...state,
-      active: {
-        id: "T",
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(-1), // Piece position above visible board
+    const stateWithFullBoard = buildPlayingState(
+      {
+        ...state,
+        board: createAlmostFullBoard(),
+        physics: {
+          ...state.physics,
+          lastGravityTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
+        },
       },
-      board: createAlmostFullBoard(),
-      physics: {
-        ...state.physics,
-        lastGravityTime: createTimestamp(1000),
-        lockDelayStartTime: createTimestamp(1000),
+      {
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(-1), // Piece position above visible board
+        },
       },
-    };
+    );
 
     // Trigger auto-lock
     const newState = reducer(stateWithFullBoard, {
@@ -89,16 +98,20 @@ describe("top-out detection", () => {
     const state = createTestState();
 
     // Use the same almost full board that prevents movement
-    const stateWithFullBoard: GameState = {
-      ...state,
-      active: {
-        id: "T",
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(-2), // T-piece high above board
+    const stateWithFullBoard = buildPlayingState(
+      {
+        ...state,
+        board: createAlmostFullBoard(),
       },
-      board: createAlmostFullBoard(),
-    };
+      {
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(-2), // T-piece high above board
+        },
+      },
+    );
 
     const newState = reducer(stateWithFullBoard, {
       timestampMs: createTimestamp(1000),
@@ -113,20 +126,28 @@ describe("top-out detection", () => {
     const state = createTestState();
 
     // Create state with piece that can lock safely
-    const safeState: GameState = {
-      ...state,
-      active: {
-        id: "T",
-        rot: "spawn",
-        x: createGridCoord(4),
-        y: createGridCoord(18), // Safe position within board
+    const safeState = buildPlayingState(
+      {
+        ...state,
+        physics: {
+          ...state.physics,
+          lastGravityTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
+        },
       },
-      physics: {
-        ...state.physics,
-        lastGravityTime: createTimestamp(1000),
-        lockDelayStartTime: createTimestamp(1000),
+      {
+        active: {
+          id: "T",
+          rot: "spawn",
+          x: createGridCoord(4),
+          y: createGridCoord(18), // Safe position within board
+        },
       },
-    };
+    );
 
     const newState = reducer(safeState, {
       timestampMs: createTimestamp(1500 + 500),

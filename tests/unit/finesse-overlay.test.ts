@@ -154,7 +154,7 @@ describe("finesse-overlay boop behavior", () => {
       finesseFeedback: {
         faults: [],
         kind: "faulty",
-        optimalSequences: [["MoveLeft"]],
+        optimalSequences: [["MoveLeft" as const]],
         playerSequence: [],
       },
       gameplay: {
@@ -194,16 +194,19 @@ describe("finesse-overlay boop behavior", () => {
 
     // New feedback (different content) should boop again
     const state2 = createStateWithFeedback(1200);
-    // Make the feedback different by changing the sequence
-    if (state2.finesseFeedback) {
-      state2.finesseFeedback = {
-        ...state2.finesseFeedback,
-        optimalSequences: [["MoveRight"]], // Different from MoveLeft
-      };
-    }
+    // Make the feedback different by creating a new state with different sequence
+    const state2Modified = {
+      ...state2,
+      finesseFeedback: state2.finesseFeedback
+        ? {
+            ...state2.finesseFeedback,
+            optimalSequences: [["MoveRight" as const]], // Different from MoveLeft
+          }
+        : null,
+    };
     (
       el as unknown as { updateFinesseFeedback: (s: GameState) => void }
-    ).updateFinesseFeedback(state2);
+    ).updateFinesseFeedback(state2Modified);
     expect(boopCount).toBe(2);
   });
 });

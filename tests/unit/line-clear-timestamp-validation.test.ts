@@ -6,6 +6,8 @@ import {
   type Board,
   idx,
   createBoardCells,
+  buildPlayingState,
+  buildLineClearState,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -64,16 +66,20 @@ describe("timestamp validation in line clear scenarios", () => {
 
   it("HardDrop with valid timestamp properly sets lineClearStartTime", () => {
     const state = createStateWithDelay(200);
-    const s1: GameState = {
-      ...state,
-      active: {
-        id: "O",
-        rot: "spawn",
-        x: createGridCoord(3),
-        y: createGridCoord(10),
+    const s1 = buildPlayingState(
+      {
+        ...state,
+        board: boardWithBottomGaps(),
       },
-      board: boardWithBottomGaps(),
-    };
+      {
+        active: {
+          id: "O",
+          rot: "spawn",
+          x: createGridCoord(3),
+          y: createGridCoord(10),
+        },
+      },
+    );
 
     const afterDrop = reducer(s1, {
       timestampMs: createTimestamp(1500),
@@ -86,26 +92,34 @@ describe("timestamp validation in line clear scenarios", () => {
 
   it("auto-lock in Tick with valid timestamp sets correct lineClearStartTime", () => {
     const state = createStateWithDelay(150);
-    const s1: GameState = {
-      ...state,
-      active: {
-        id: "O",
-        rot: "spawn",
-        x: createGridCoord(3),
-        y: createGridCoord(18),
-      }, // One row above bottom
-      board: boardWithBottomGaps(),
-      physics: {
-        ...state.physics,
-        lastGravityTime: createTimestamp(1000),
-        lockDelayStartTime: createTimestamp(1000),
+    const s1 = buildPlayingState(
+      {
+        ...state,
+        board: boardWithBottomGaps(),
+        physics: {
+          ...state.physics,
+          lastGravityTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          },
+        },
+        timing: {
+          ...state.timing,
+          gravityEnabled: true,
+          lockDelayMs: createDurationMs(100),
+        },
       },
-      timing: {
-        ...state.timing,
-        gravityEnabled: true,
-        lockDelayMs: createDurationMs(100),
+      {
+        active: {
+          id: "O",
+          rot: "spawn",
+          x: createGridCoord(3),
+          y: createGridCoord(18),
+        }, // One row above bottom
       },
-    };
+    );
 
     // Tick after lock delay has expired should auto-lock
     const afterTick = reducer(s1, {
@@ -119,16 +133,14 @@ describe("timestamp validation in line clear scenarios", () => {
 
   it("shouldCompleteLineClear works correctly with valid timestamps", () => {
     const state = createStateWithDelay(300);
-    const s1: GameState = {
+    const s1 = buildLineClearState({
       ...state,
-      pendingLock: null,
       physics: {
         ...state.physics,
         lineClearLines: [19],
         lineClearStartTime: createTimestamp(1000),
       },
-      status: "lineClear",
-    };
+    });
 
     // Not enough time elapsed
     expect(shouldCompleteLineClear(s1, 1250)).toBe(false);
@@ -142,16 +154,20 @@ describe("timestamp validation in line clear scenarios", () => {
 
   it("functional purity is preserved with Timestamp", () => {
     const state = createStateWithDelay(100);
-    const s1: GameState = {
-      ...state,
-      active: {
-        id: "O",
-        rot: "spawn",
-        x: createGridCoord(3),
-        y: createGridCoord(10),
+    const s1 = buildPlayingState(
+      {
+        ...state,
+        board: boardWithBottomGaps(),
       },
-      board: boardWithBottomGaps(),
-    };
+      {
+        active: {
+          id: "O",
+          rot: "spawn",
+          x: createGridCoord(3),
+          y: createGridCoord(10),
+        },
+      },
+    );
 
     const timestamp1 = createTimestamp(2000);
     const timestamp2 = createTimestamp(3000);

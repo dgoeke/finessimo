@@ -8,6 +8,7 @@ import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
   assertActivePiece,
+  createTestGameState,
   createTestHoldMoveAction,
   createTestRotateAction,
   createTestSoftDropAction,
@@ -28,15 +29,14 @@ describe("Reducer Edge Cases and Error Conditions", () => {
     });
 
     // Create state with an active piece for testing actions that require one
-    stateWithActivePiece = {
-      ...validState,
+    stateWithActivePiece = createTestGameState(validState, {
       active: {
         id: "T",
         rot: "spawn",
         x: createGridCoord(4),
         y: createGridCoord(2),
       },
-    };
+    });
   });
 
   describe("Actions without active piece", () => {
@@ -101,15 +101,14 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
     it("should handle invalid movement (blocked)", () => {
       // Create a piece at the edge that can't move further
-      const edgeState = {
-        ...stateWithActivePiece,
+      const edgeState = createTestGameState(stateWithActivePiece, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(0), // At left edge, can't move further left
           y: createGridCoord(2),
         },
-      };
+      });
 
       const action: Action = createTestTapMoveAction(-1, false);
       const result = reducer(edgeState, action);
@@ -150,15 +149,14 @@ describe("Reducer Edge Cases and Error Conditions", () => {
   describe("SoftDrop action edge cases", () => {
     it("should handle soft drop when piece cannot move down", () => {
       // Create a piece at the bottom
-      const bottomState = {
-        ...stateWithActivePiece,
+      const bottomState = createTestGameState(stateWithActivePiece, {
         active: {
           id: "T" as const,
           rot: "spawn" as const,
           x: createGridCoord(4),
           y: createGridCoord(18), // At bottom
         },
-      };
+      });
 
       const action: Action = createTestSoftDropAction(true);
       const result = reducer(bottomState, action);
@@ -192,16 +190,20 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         }
       }
 
-      const almostCompleteState = {
-        ...stateWithActivePiece,
-        active: {
-          id: "T" as const,
-          rot: "spawn" as const,
-          x: createGridCoord(4),
-          y: createGridCoord(0), // High up so it drops
+      const almostCompleteState = createTestGameState(
+        {
+          ...stateWithActivePiece,
+          board: boardWithAlmostCompleteLine,
         },
-        board: boardWithAlmostCompleteLine,
-      };
+        {
+          active: {
+            id: "T" as const,
+            rot: "spawn" as const,
+            x: createGridCoord(4),
+            y: createGridCoord(0), // High up so it drops
+          },
+        },
+      );
 
       const action: Action = {
         timestampMs: createTimestamp(1000),
@@ -216,11 +218,9 @@ describe("Reducer Edge Cases and Error Conditions", () => {
 
   describe("Invalid or malformed states", () => {
     it("should handle Lock action with invalid state structure", () => {
-      const invalidState: InvalidGameState = {
-        ...validState,
-      };
-      // Remove the tick property to make it invalid
-      delete invalidState.tick;
+      // Create invalid state by omitting required property
+      const { tick: _tick, ...stateWithoutTick } = validState;
+      const invalidState: InvalidGameState = stateWithoutTick;
 
       const action: Action = {
         timestampMs: fromNow(),

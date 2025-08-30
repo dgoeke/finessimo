@@ -1,7 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
 import { isAtBottom } from "../../src/core/board";
-import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import {
   createBoardCells,
   type GameState,
@@ -10,6 +9,8 @@ import {
   getLockDelayStartTime,
   getLockDelayResetCount,
   buildPlayingState,
+  buildResolvingLockState,
+  updateGameState,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -18,11 +19,7 @@ import {
 } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
-import {
-  createTestSpawnAction,
-  createTestTimingConfig,
-  createTestGameState,
-} from "../test-helpers";
+import { createTestSpawnAction, createTestTimingConfig } from "../test-helpers";
 
 // Helper to create a test state with ground contact detection
 function createGroundedState(): GameState {
@@ -49,20 +46,17 @@ function createGroundedState(): GameState {
   cells[19 * 10 + 4] = 1; // Block below T piece center
   cells[19 * 10 + 5] = 1; // Block below T piece right
 
-  state = buildPlayingState(
-    {
-      ...state,
-      board: { ...state.board, cells },
-    },
-    {
-      active: state.active
-        ? {
-            ...state.active,
-            y: createGridCoord(17), // One row above support; grounded (can't move down)
-          }
-        : undefined,
-    },
-  );
+  state = buildPlayingState({
+    ...state,
+    board: { ...state.board, cells },
+  }, {
+    active: state.active
+      ? {
+          ...state.active,
+          y: createGridCoord(17), // One row above support; grounded (can't move down)
+        }
+      : undefined,
+  });
 
   return state;
 }
@@ -90,20 +84,17 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       for (let x = 0; x < 10; x++) {
         cells[19 * 10 + x] = 1; // Fill bottom row
       }
-      state = buildPlayingState(
-        {
-          ...state,
-          board: { ...state.board, cells },
-        },
-        {
-          active: state.active
-            ? {
-                ...state.active,
-                y: createGridCoord(17), // Position piece just above ground
-              }
-            : undefined,
-        },
-      );
+      state = buildPlayingState({
+        ...state,
+        board: { ...state.board, cells },
+      }, {
+        active: state.active
+          ? {
+              ...state.active,
+              y: createGridCoord(17), // Position piece just above ground
+            }
+          : undefined,
+      });
 
       // Trigger gravity to make piece land
       const nextTick = reducer(state, {
@@ -120,23 +111,20 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       let state = createGroundedState();
 
       // Move piece up first
-      state = buildPlayingState(
-        {
-          ...state,
-          physics: {
-            ...state.physics,
-            lockDelay: Airborne(), // Ensure no lock delay initially
-          },
+      state = buildPlayingState({
+        ...state,
+        physics: {
+          ...state.physics,
+          lockDelay: { resets: 0, tag: "Airborne" }, // Ensure no lock delay initially
         },
-        {
-          active: state.active
-            ? {
-                ...state.active,
-                y: createGridCoord(16), // Two rows above ground
-              }
-            : undefined,
-        },
-      );
+      }, {
+        active: state.active
+          ? {
+              ...state.active,
+              y: createGridCoord(16), // Two rows above ground
+            }
+          : undefined,
+      });
 
       // Soft drop the piece to ground
       state = reducer(state, {
@@ -168,25 +156,20 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       cells.set(state.board.cells);
       cells[19 * 10 + 4] = 1; // Single block that would touch piece after rotation
 
-      state = createTestGameState(
-        {
-          ...state,
-          board: { ...state.board, cells },
-          physics: {
-            ...state.physics,
-            lockDelay: Airborne(), // Ensure no lock delay initially
-          },
-        },
-        state.active
+      state = updateGameState(state, {
+        active: state.active
           ? {
-              active: {
-                ...state.active,
-                x: createGridCoord(4),
-                y: createGridCoord(16), // Position so rotation will touch ground
-              },
+              ...state.active,
+              x: createGridCoord(4),
+              y: createGridCoord(16), // Position so rotation will touch ground
             }
-          : {},
-      );
+          : state.active,
+        board: { ...state.board, cells },
+        physics: {
+          ...state.physics,
+          lockDelay: { resets: 0, tag: "Airborne" }, // Ensure no lock delay initially
+        },
+      };
 
       // Verify piece is not grounded before rotation
       if (state.active) {
@@ -226,25 +209,20 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       cells.set(state.board.cells);
       cells[19 * 10 + 6] = 1; // Block that will support right side of piece after sideways movement
 
-      state = createTestGameState(
-        {
-          ...state,
-          board: { ...state.board, cells },
-          physics: {
-            ...state.physics,
-            lockDelay: Airborne(),
-          },
-        },
-        state.active
+      state = updateGameState(state, {
+        active: state.active
           ? {
-              active: {
-                ...state.active,
-                x: createGridCoord(3), // Position so moving right will put right edge over support
-                y: createGridCoord(17), // Position piece higher up
-              },
+              ...state.active,
+              x: createGridCoord(3), // Position so moving right will put right edge over support
+              y: createGridCoord(17), // Position piece higher up
             }
-          : {},
-      );
+          : state.active,
+        board: { ...state.board, cells },
+        physics: {
+          ...state.physics,
+          lockDelay: { resets: 0, tag: "Airborne" },
+        },
+      };
 
       // Verify not grounded initially
       if (state.active) {
@@ -441,31 +419,26 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       cells[18 * 10 + 6] = 1; // Right wall
 
       const baseState = createGroundedState();
-      const state: GameState = createTestGameState(
-        {
-          ...baseState,
-          board: {
-            ...baseState.board,
-            cells,
-          },
-          physics: {
-            ...baseState.physics,
-            lockDelay: {
-              resets: 2,
-              start: createTimestamp(1000),
-              tag: "Grounded",
-            },
+      const state: GameState = updateGameState(baseState, {
+        active: {
+          id: "T",
+          rot: "spawn", // T-piece pointing up
+          x: createGridCoord(4), // Centered in the opening
+          y: createGridCoord(18), // One row above bottom
+        },
+        board: {
+          ...baseState.board,
+          cells,
+        },
+        physics: {
+          ...baseState.physics,
+          lockDelay: {
+            resets: 2,
+            start: createTimestamp(1000),
+            tag: "Grounded",
           },
         },
-        {
-          active: {
-            id: "T",
-            rot: "spawn", // T-piece pointing up
-            x: createGridCoord(4), // Centered in the opening
-            y: createGridCoord(18), // One row above bottom
-          },
-        },
-      );
+      });
 
       // Verify piece is grounded before rotation
       expect(state.active).toBeDefined();
@@ -572,27 +545,22 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       let state = createGroundedState();
 
       // Move piece to left wall
-      state = createTestGameState(
-        {
-          ...state,
-          physics: {
-            ...state.physics,
-            lockDelay: {
-              resets: 3,
-              start: createTimestamp(1000),
-              tag: "Grounded",
-            },
+      state = updateGameState(state, {
+        active: state.active
+          ? {
+              ...state.active,
+              x: createGridCoord(0), // At left wall
+            }
+          : state.active,
+        physics: {
+          ...state.physics,
+          lockDelay: {
+            resets: 3,
+            start: createTimestamp(1000),
+            tag: "Grounded",
           },
         },
-        state.active
-          ? {
-              active: {
-                ...state.active,
-                x: createGridCoord(0), // At left wall
-              },
-            }
-          : {},
-      );
+      });
 
       // Try to move left (should fail - already at wall)
       const afterFailedMove = reducer(state, {
@@ -660,20 +628,15 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       for (let x = 0; x < 10; x++) {
         cells[19 * 10 + x] = 1; // Fill bottom row
       }
-      state = createTestGameState(
-        {
-          ...state,
-          board: { ...state.board, cells },
-        },
-        state.active
+      state = updateGameState(state, {
+        active: state.active
           ? {
-              active: {
-                ...state.active,
-                y: createGridCoord(17), // Position piece just above ground
-              },
+              ...state.active,
+              y: createGridCoord(17), // Position piece just above ground
             }
-          : {},
-      );
+          : state.active,
+        board: { ...state.board, cells },
+      });
 
       // First tick - gravity makes piece land, should start lock delay
       const afterFirstTick = reducer(state, {
@@ -828,7 +791,7 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
 
       const physicsState = {
         ...state.physics,
-        lockDelay: Airborne(), // Reset count is preserved in Airborne state
+        lockDelay: { resets: 0, tag: "Airborne" } as const, // Reset count is preserved in Airborne state
       };
 
       expect(isValidLockDelayState(physicsState)).toBe(true);

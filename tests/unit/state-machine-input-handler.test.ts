@@ -1,4 +1,5 @@
 import { createSevenBagRng } from "../../src/core/rng";
+import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import { defaultKeyBindings } from "../../src/input/keyboard";
 import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
 import { createBoardCells } from "../../src/state/types";
@@ -98,7 +99,7 @@ describe("StateMachineInputHandler", () => {
       lastGravityTime: createTimestamp(1000),
       lineClearLines: [],
       lineClearStartTime: null,
-      lockDelayStartTime: null,
+      lockDelay: Airborne(),
     });
 
     const rng: PieceRandomGenerator = createSevenBagRng("42");

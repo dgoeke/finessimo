@@ -5,6 +5,7 @@ import {
   type Board,
   idx,
   createBoardCells,
+  buildPlayingState,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -55,21 +56,29 @@ describe("line clear with zero delay", () => {
     const boardWithGaps = createBoardWithAlmostCompletedLines();
 
     // Set up state with almost completed lines and active piece that will complete them
-    const stateWithBoard: GameState = {
-      ...state,
-      active: {
-        id: "O", // Use O piece which is simpler - 2x2 square
-        rot: "spawn", // O piece same in all rotations
-        x: createGridCoord(3), // Position so cells land at x=4,5
-        y: createGridCoord(18), // Position so cells land at y=18,19
+    const stateWithBoard = buildPlayingState(
+      {
+        ...state,
+        board: boardWithGaps,
+        physics: {
+          ...state.physics,
+          lastGravityTime: createTimestamp(1000),
+          lockDelay: {
+            resets: 0,
+            start: createTimestamp(1000),
+            tag: "Grounded",
+          }, // Already in lock delay
+        },
       },
-      board: boardWithGaps,
-      physics: {
-        ...state.physics,
-        lastGravityTime: createTimestamp(1000),
-        lockDelayStartTime: createTimestamp(1000), // Already in lock delay
+      {
+        active: {
+          id: "O", // Use O piece which is simpler - 2x2 square
+          rot: "spawn", // O piece same in all rotations
+          x: createGridCoord(3), // Position so cells land at x=4,5
+          y: createGridCoord(18), // Position so cells land at y=18,19
+        },
       },
-    };
+    );
 
     // Trigger auto-lock with Tick after lock delay expires
     const newState = reducer(stateWithBoard, {
@@ -116,16 +125,20 @@ describe("line clear with zero delay", () => {
   it("should clear lines immediately on HardDrop when lineClearDelayMs is 0", () => {
     const state = createTestState();
 
-    const stateWithBoard: GameState = {
-      ...state,
-      active: {
-        id: "O",
-        rot: "spawn",
-        x: createGridCoord(3),
-        y: createGridCoord(10), // High up, will drop down
+    const stateWithBoard = buildPlayingState(
+      {
+        ...state,
+        board: createBoardWithAlmostCompletedLines(),
       },
-      board: createBoardWithAlmostCompletedLines(),
-    };
+      {
+        active: {
+          id: "O",
+          rot: "spawn",
+          x: createGridCoord(3),
+          y: createGridCoord(10), // High up, will drop down
+        },
+      },
+    );
 
     const newState = reducer(stateWithBoard, {
       timestampMs: createTimestamp(1000),
