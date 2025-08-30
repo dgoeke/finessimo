@@ -68,7 +68,7 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
     cells: ghostCells,
     id: `ghost:${ghostPosition.id}:${String(gridCoordAsNumber(ghostPosition.x))},${String(gridCoordAsNumber(ghostPosition.y))},${ghostPosition.rot}`,
     kind: "ghost",
-    opacity: 0.35,
+    opacity: 0.8,
     pieceId: ghostPosition.id,
     z: Z.ghost,
   } as const;
