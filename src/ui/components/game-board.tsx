@@ -214,6 +214,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const color = overlay.color ?? "#00A2FF";
     const alpha = overlay.alpha ?? 0.25;
 
+    // Collect valid cells to render
+    const validCells: Array<[number, number]> = [];
     for (const [x, y] of overlay.cells) {
       const gridX = gridCoordAsNumber(x);
       const gridY = gridCoordAsNumber(y);
@@ -225,10 +227,18 @@ export class GameBoard extends SignalWatcher(LitElement) {
         gridY >= 0 &&
         gridY < this.boardHeight
       ) {
-        // For now, all target styles use the highlight renderer
-        // TODO: Implement different rendering for "dashed" and "hint" styles
-        this.drawHighlightCell(gridX, gridY, color, alpha);
+        validCells.push([gridX, gridY]);
       }
+    }
+
+    // First pass: Draw all glows (they can overlap)
+    for (const [gridX, gridY] of validCells) {
+      this.drawHighlightCellGlow(gridX, gridY, color, alpha);
+    }
+
+    // Second pass: Draw all borders and cores (ensures they're on top)
+    for (const [gridX, gridY] of validCells) {
+      this.drawHighlightCellBorderAndCore(gridX, gridY, color, alpha);
     }
   }
 
@@ -406,7 +416,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const pixelY = y * this.cellSize;
 
     const color = "#111111";
-    const borderColor = "#555555";
+    const borderColor = "#777777"; // Brighter border (was #555555)
 
     // Create subtle gradient for depth with interior margin
     const margin = 4;
@@ -447,7 +457,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     );
   }
 
-  private drawHighlightCell(
+  private drawHighlightCellGlow(
     x: number,
     y: number,
     color: string,
@@ -463,12 +473,12 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const clampedAlpha = Math.max(0, Math.min(1, alpha));
     const extend = Math.floor(this.cellSize * 0.5); // bleed half-cell into neighbors
     const blurPx = Math.max(2, Math.floor(this.cellSize * 0.5));
-    const glowAlpha = Math.min(1, Math.max(0.3, clampedAlpha)); // brighter glow
+    const glowAlpha = Math.min(1, Math.max(0.5, clampedAlpha)); // brighter minimum glow (was 0.3)
 
     this.ctx.globalCompositeOperation = "lighter"; // additive for luminous effect
     this.ctx.globalAlpha = glowAlpha;
     this.ctx.filter = `blur(${String(blurPx)}px)`;
-    this.ctx.fillStyle = normalizeColorBrightness(color, 0.25); // Normalize brightness for consistent glow visibility
+    this.ctx.fillStyle = normalizeColorBrightness(color, 0.35); // Increased brightness normalization (was 0.25)
 
     // Larger rect than the cell to encourage outward bloom
     this.ctx.fillRect(
@@ -478,11 +488,36 @@ export class GameBoard extends SignalWatcher(LitElement) {
       this.cellSize + extend * 2,
     );
     this.ctx.restore();
+  }
+
+  private drawHighlightCellBorderAndCore(
+    x: number,
+    y: number,
+    _color: string,
+    alpha: number,
+  ): void {
+    if (!this.ctx) return;
+
+    const pixelX = x * this.cellSize;
+    const pixelY = y * this.cellSize;
+    const clampedAlpha = Math.max(0, Math.min(1, alpha));
+
+    // border
+    this.ctx.save();
+    this.ctx.strokeStyle = "#666666";
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(
+      pixelX + 1,
+      pixelY + 1,
+      this.cellSize - 2,
+      this.cellSize - 2,
+    );
+    this.ctx.restore();
 
     // Crisp inner core to anchor the target
     this.ctx.save();
-    this.ctx.globalAlpha = Math.min(1, Math.max(0.4, clampedAlpha * 1.6));
-    // this.ctx.fillStyle = color;
+    this.ctx.globalAlpha = Math.min(1, Math.max(0.6, clampedAlpha * 1.8)); // Brighter core (was 0.4 and 1.6)
+    this.ctx.fillStyle = "rgba(1, 1, 1, 0.5)";
     const coreMargin = Math.max(2, Math.floor(this.cellSize * 0.12));
     this.ctx.fillRect(
       pixelX + coreMargin,
