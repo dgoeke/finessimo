@@ -3,6 +3,8 @@ import { finesseService } from "./finesse/service";
 import { KeyboardInputHandler } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { gameModeRegistry } from "./modes";
+import { freePlayUi } from "./modes/freePlay/ui";
+import { guidedUi } from "./modes/guided/ui";
 import { runLockPipeline } from "./modes/lock-pipeline";
 import { getActiveRng, planPreviewRefill } from "./modes/spawn-service";
 import { reducer } from "./state/reducer";
@@ -18,7 +20,14 @@ import { createTimestamp, fromNow } from "./types/timestamp";
 import { getSettingsModal } from "./ui/utils/dom";
 
 import type { GameMode as IGameMode } from "./modes";
+import type { ModeUiAdapter } from "./modes/types";
 import type { GameSettings } from "./ui/components/settings-modal";
+
+// Registry mapping mode names to their UI adapters
+const modeUiAdapterRegistry = new Map<string, ModeUiAdapter>([
+  ["freePlay", freePlayUi],
+  ["guided", guidedUi],
+]);
 
 export class FinessimoApp {
   private gameState: GameState;
@@ -371,6 +380,12 @@ export class FinessimoApp {
     const mode = gameModeRegistry.get(this.gameState.currentMode);
     if (!mode) return;
 
+    this.updateModeGuidance(mode);
+    this.updateModeAdapterData();
+    this.updateBoardDecorations(mode);
+  }
+
+  private updateModeGuidance(mode: IGameMode): void {
     if (typeof mode.getGuidance === "function") {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
@@ -378,7 +393,31 @@ export class FinessimoApp {
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
+  }
 
+  private updateModeAdapterData(): void {
+    const adapter = modeUiAdapterRegistry.get(this.gameState.currentMode);
+    if (!adapter) return;
+
+    const derivedUi = adapter.computeDerivedUi(this.gameState);
+    if (derivedUi === null) return;
+
+    // Merge with existing modeData to avoid overwriting other mode state
+    const currentModeData =
+      typeof this.gameState.modeData === "object" &&
+      this.gameState.modeData !== null
+        ? (this.gameState.modeData as Record<string, unknown>)
+        : {};
+    const mergedModeData = { ...currentModeData, ...derivedUi };
+
+    // Only dispatch if data actually changed
+    if (JSON.stringify(mergedModeData) !== JSON.stringify(currentModeData)) {
+      this.dispatch({ data: mergedModeData, type: "UpdateModeData" });
+    }
+  }
+
+  private updateBoardDecorations(mode: IGameMode): void {
+    // LEGACY: Keep existing board decorations for backward compatibility during transition
     if (typeof mode.getBoardDecorations === "function") {
       const decorations = mode.getBoardDecorations(this.gameState) ?? null;
       const prev = this.gameState.boardDecorations ?? null;

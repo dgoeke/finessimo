@@ -4,6 +4,7 @@ import { customElement, query } from "lit/decorators.js";
 
 import { calculateGhostPosition } from "../../core/board";
 import { PIECES } from "../../core/pieces";
+import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
 import { gridCoordAsNumber } from "../../types/brands";
 import {
@@ -12,6 +13,7 @@ import {
   normalizeColorBrightness,
 } from "../utils/colors";
 
+import type { RenderOverlay } from "../../engine/ui/overlays";
 import type { GameState, Board, ActivePiece } from "../../state/types";
 
 @customElement("game-board")
@@ -26,6 +28,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     board: GameState["board"];
     boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
+    overlays: ReadonlyArray<RenderOverlay>;
   };
 
   // Use light DOM for consistent styling
@@ -56,11 +59,18 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Get current state from the signal (reactive subscription)
     const gameState = gameStateSignal.get();
     const boardState = stateSelectors.getBoardState(gameState);
+    const renderModel = selectBoardRenderModel(gameState);
+
+    // Combine board state with overlay data for change detection
+    const currentRenderState = {
+      ...boardState,
+      overlays: renderModel.overlays,
+    };
 
     // Only re-render if the relevant state has actually changed
-    if (this.hasStateChanged(boardState)) {
-      this.renderGameBoard(gameState);
-      this.lastRenderState = boardState;
+    if (this.hasStateChanged(currentRenderState)) {
+      this.renderGameBoard(gameState, renderModel);
+      this.lastRenderState = currentRenderState;
     }
   }
 
@@ -69,6 +79,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     board: GameState["board"];
     boardDecorations: GameState["boardDecorations"];
     tick: GameState["tick"];
+    overlays: ReadonlyArray<RenderOverlay>;
   }): boolean {
     if (!this.lastRenderState) {
       return true;
@@ -84,8 +95,13 @@ export class GameBoard extends SignalWatcher(LitElement) {
       return true;
     }
 
-    // Compare board decorations
+    // Compare board decorations (legacy bridge - will be removed later)
     if (this.lastRenderState.boardDecorations !== newState.boardDecorations) {
+      return true;
+    }
+
+    // Compare overlays (reference equality check for the array itself)
+    if (this.lastRenderState.overlays !== newState.overlays) {
       return true;
     }
 
@@ -101,7 +117,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
     return html`<canvas></canvas>`;
   }
 
-  private renderGameBoard(gameState: GameState): void {
+  private renderGameBoard(
+    gameState: GameState,
+    _renderModel: ReturnType<typeof selectBoardRenderModel>,
+  ): void {
     if (!this.ctx) {
       console.error("Canvas not initialized");
       return;
@@ -114,9 +133,30 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Render board
     this.renderBoard(gameState.board);
 
+    // For now, use legacy rendering to maintain compatibility
+    // TODO: Replace with unified overlay system once coordinate handling is resolved
+    this.renderLegacyOverlays(gameState);
+
+    // Render active piece (active piece is not an overlay, always renders on top)
+    if (gameState.active) {
+      this.renderActivePiece(gameState.active);
+    }
+
+    // Draw grid
+    this.drawGrid();
+  }
+
+  // TODO: Implement unified overlay rendering system
+  // private renderOverlays(overlays: ReadonlyArray<RenderOverlay>): void { ... }
+
+  /**
+   * Legacy overlay rendering method - maintains backward compatibility
+   * This includes the original ghost piece and board decoration rendering
+   */
+  private renderLegacyOverlays(gameState: GameState): void {
     // Render mode-provided board decorations (e.g., guided target cells)
     if (gameState.boardDecorations && gameState.boardDecorations.length > 0) {
-      this.renderBoardDecorations(gameState);
+      this.renderLegacyBoardDecorations(gameState);
     }
 
     // Render ghost piece first (so active piece draws on top)
@@ -127,20 +167,12 @@ export class GameBoard extends SignalWatcher(LitElement) {
       );
       // Only render ghost piece if it's different from active piece position
       if (ghostPosition.y !== gameState.active.y) {
-        this.renderGhostPiece(ghostPosition);
+        this.renderLegacyGhostPiece(ghostPosition);
       }
     }
-
-    // Render active piece
-    if (gameState.active) {
-      this.renderActivePiece(gameState.active);
-    }
-
-    // Draw grid
-    this.drawGrid();
   }
 
-  private renderBoardDecorations(gameState: GameState): void {
+  private renderLegacyBoardDecorations(gameState: GameState): void {
     if (!this.ctx || !gameState.boardDecorations) return;
     for (const deco of gameState.boardDecorations) {
       const color = deco.color ?? "#00A2FF";
@@ -152,6 +184,23 @@ export class GameBoard extends SignalWatcher(LitElement) {
           continue;
         }
         this.drawHighlightCell(x, y, color, alpha);
+      }
+    }
+  }
+
+  private renderLegacyGhostPiece(piece: ActivePiece): void {
+    if (!this.ctx) return;
+
+    const shape = PIECES[piece.id];
+    const cells = shape.cells[piece.rot];
+
+    for (const [dx, dy] of cells) {
+      const x = piece.x + dx;
+      const y = piece.y + dy;
+
+      // Only render ghost piece within visible board area
+      if (x >= 0 && x < this.boardWidth && y >= 0 && y < this.boardHeight) {
+        this.drawGhostCell(x, y);
       }
     }
   }
@@ -188,23 +237,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
         // If y is negative, render at y=0 (top of visible board)
         const renderY = Math.max(0, y);
         this.drawCell(x, renderY, shape.color);
-      }
-    }
-  }
-
-  private renderGhostPiece(piece: ActivePiece): void {
-    if (!this.ctx) return;
-
-    const shape = PIECES[piece.id];
-    const cells = shape.cells[piece.rot];
-
-    for (const [dx, dy] of cells) {
-      const x = piece.x + dx;
-      const y = piece.y + dy;
-
-      // Only render ghost piece within visible board area
-      if (x >= 0 && x < this.boardWidth && y >= 0 && y < this.boardHeight) {
-        this.drawGhostCell(x, y);
       }
     }
   }
