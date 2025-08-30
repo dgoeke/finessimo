@@ -8,6 +8,7 @@ import { makeDefaultDeck } from "./deck";
 
 import type { GuidedCard, SrsDeck } from "../../srs/fsrs-adapter";
 import type { GameState } from "../../state/types";
+import type { GridCoord } from "../../types/brands";
 import type { ModeUiAdapter, ExtendedModeData, TargetCell } from "../types";
 
 /**
@@ -41,6 +42,23 @@ function selectCard(state: GameState): GuidedCard | null {
   const now = createTimestamp(nowCount);
   const rec = pickNextDue(deck, now);
   return rec?.card ?? null;
+}
+
+/**
+ * Pure function to check if coordinates are within visible board bounds.
+ */
+function isWithinBounds(
+  x: GridCoord,
+  y: GridCoord,
+  boardWidth: number,
+  boardHeight: number,
+): boolean {
+  return (
+    gridCoordAsNumber(x) >= 0 &&
+    gridCoordAsNumber(x) < boardWidth &&
+    gridCoordAsNumber(y) >= 0 &&
+    gridCoordAsNumber(y) < boardHeight
+  );
 }
 
 /**
@@ -94,12 +112,18 @@ export const guidedUi: ModeUiAdapter = {
 
       // Only include cells within visible board bounds
       if (
-        gridCoordAsNumber(absoluteX) >= 0 &&
-        gridCoordAsNumber(absoluteX) < state.board.width &&
-        gridCoordAsNumber(absoluteY) >= 0 &&
-        gridCoordAsNumber(absoluteY) < state.board.height
+        isWithinBounds(
+          absoluteX,
+          absoluteY,
+          state.board.width,
+          state.board.height,
+        )
       ) {
-        targetCells.push({ x: absoluteX, y: absoluteY });
+        targetCells.push({
+          color: shape.color,
+          x: absoluteX,
+          y: absoluteY,
+        });
       }
     }
 

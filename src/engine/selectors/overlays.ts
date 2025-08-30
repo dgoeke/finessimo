@@ -4,8 +4,8 @@ import { gridCoordAsNumber } from "../../types/brands";
 import { Z } from "../ui/overlays";
 import { cellsForActivePiece } from "../util/cell-projection";
 
-import type { ExtendedModeData } from "../../modes/types";
-import type { GameState } from "../../state/types";
+import type { ExtendedModeData, TargetCell } from "../../modes/types";
+import type { GameState, BoardDecoration } from "../../state/types";
 import type { GridCoord } from "../../types/brands";
 import type {
   GhostOverlay,
@@ -75,6 +75,68 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
 }
 
 /**
+ * Convert a target pattern from TargetCell array to TargetOverlay.
+ * Returns null for empty patterns to make invalid states unrepresentable.
+ */
+function createTargetOverlayFromPattern(
+  targetPattern: ReadonlyArray<TargetCell>,
+  index: number,
+): TargetOverlay | null {
+  // Guard against empty patterns
+  if (targetPattern.length === 0) {
+    return null;
+  }
+
+  // Convert TargetCell array to coordinate tuples for overlay format
+  const cells: Array<readonly [GridCoord, GridCoord]> = [];
+
+  for (const targetCell of targetPattern) {
+    cells.push([targetCell.x, targetCell.y] as const);
+  }
+
+  // Since we've already checked length > 0, we know first element exists
+  // All cells in a pattern should have the same color by design
+  const firstCell = targetPattern[0];
+  if (!firstCell) {
+    // This should never happen due to length check above, but satisfy TypeScript
+    return null;
+  }
+
+  return {
+    cells,
+    color: firstCell.color,
+    id: generateCellsId(`target-mode:${String(index)}`, cells),
+    kind: "target",
+    style: "glow", // Default style for new system
+    z: Z.target,
+  } as const;
+}
+
+/**
+ * Convert a board decoration to a TargetOverlay.
+ */
+function createTargetOverlayFromDecoration(
+  decoration: BoardDecoration,
+  index: number,
+): TargetOverlay {
+  // Convert BoardDecoration to TargetOverlay with coordinate tuples
+  const cells: Array<readonly [GridCoord, GridCoord]> = [];
+  for (const cell of decoration.cells) {
+    cells.push([cell.x, cell.y] as const);
+  }
+
+  return {
+    cells,
+    id: generateCellsId(`target-legacy:${String(index)}`, cells),
+    kind: "target",
+    style: "glow", // Default style for now
+    z: Z.target,
+    ...(decoration.color !== undefined && { color: decoration.color }),
+    ...(decoration.alpha !== undefined && { alpha: decoration.alpha }),
+  } as const;
+}
+
+/**
  * Selects target overlay data from mode adapter data and legacy board decorations.
  * Prioritizes new modeData.targets structure, falls back to board decorations.
  */
@@ -87,41 +149,17 @@ export function selectTargetOverlays(
   const modeData = s.modeData as ExtendedModeData | undefined;
   if (modeData?.targets) {
     for (const [i, targetPattern] of modeData.targets.entries()) {
-      // Convert TargetCell array to coordinate tuples for overlay format
-      const cells: Array<readonly [GridCoord, GridCoord]> = [];
-      for (const targetCell of targetPattern) {
-        cells.push([targetCell.x, targetCell.y] as const);
+      const overlay = createTargetOverlayFromPattern(targetPattern, i);
+      if (overlay) {
+        targets.push(overlay);
       }
-
-      targets.push({
-        cells,
-        id: generateCellsId(`target-mode:${String(i)}`, cells),
-        kind: "target",
-        style: "glow", // Default style for new system
-        z: Z.target,
-      } as const);
     }
   }
 
   // LEGACY: Fall back to board decorations system for backward compatibility
   if (targets.length === 0 && s.boardDecorations) {
     for (const [i, decoration] of s.boardDecorations.entries()) {
-      // Currently BoardDecoration only has "cellHighlight" type
-      // Convert BoardDecoration to TargetOverlay with coordinate tuples
-      const cells: Array<readonly [GridCoord, GridCoord]> = [];
-      for (const cell of decoration.cells) {
-        cells.push([cell.x, cell.y] as const);
-      }
-
-      targets.push({
-        cells,
-        id: generateCellsId(`target-legacy:${String(i)}`, cells),
-        kind: "target",
-        style: "glow", // Default style for now
-        z: Z.target,
-        ...(decoration.color !== undefined && { color: decoration.color }),
-        ...(decoration.alpha !== undefined && { alpha: decoration.alpha }),
-      } as const);
+      targets.push(createTargetOverlayFromDecoration(decoration, i));
     }
   }
 
