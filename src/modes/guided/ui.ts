@@ -128,8 +128,10 @@ export const guidedUi: ModeUiAdapter = {
     }
 
     // Return target pattern as single array (one target placement)
+    // Also suppress ghost pieces in guided mode to avoid visual confusion
     return {
       targets: [targetCells],
+      ghostEnabled: false,
     };
   },
 } as const;

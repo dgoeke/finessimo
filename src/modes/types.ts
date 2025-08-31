@@ -22,6 +22,14 @@ export type ExtendedModeData = {
    * Multiple patterns can be displayed simultaneously.
    */
   readonly targets?: ReadonlyArray<ReadonlyArray<TargetCell>>;
+  
+  /**
+   * Whether ghost pieces should be displayed for this mode.
+   * When undefined, defaults to user preference from settings.
+   * When true, forces ghost pieces on regardless of settings.
+   * When false, suppresses ghost pieces for this mode only.
+   */
+  readonly ghostEnabled?: boolean;
 };
 
 /**

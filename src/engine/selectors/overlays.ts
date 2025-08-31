@@ -46,9 +46,13 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
   // Ghost only renders during playing state
   if (!isPlaying(s)) return null;
 
-  // Check if ghost is enabled and active piece exists
-  const ghostEnabled = s.gameplay.ghostPieceEnabled ?? true;
-  if (!ghostEnabled || !s.active) return null;
+  // Check if active piece exists
+  if (!s.active) return null;
+
+  // Check ghost enabled state: mode data overrides user settings
+  const modeData = s.modeData as ExtendedModeData | undefined;
+  const ghostEnabled = modeData?.ghostEnabled ?? (s.gameplay.ghostPieceEnabled ?? true);
+  if (!ghostEnabled) return null;
 
   // Calculate ghost position
   const ghostPosition = calculateGhostPosition(s.board, s.active);

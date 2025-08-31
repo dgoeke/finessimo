@@ -76,13 +76,13 @@ const ratingToFeedback = {
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
-  // Disable hold and ghost piece in guided mode for focused training
+  // Disable hold in guided mode for focused training
+  // Note: Ghost piece control moved to UI adapter system to avoid persisting settings
   initialConfig(): {
-    gameplay: { holdEnabled: boolean; ghostPieceEnabled: boolean };
+    gameplay: { holdEnabled: boolean };
   } {
     return {
       gameplay: {
-        ghostPieceEnabled: false,
         holdEnabled: false,
       },
     };
