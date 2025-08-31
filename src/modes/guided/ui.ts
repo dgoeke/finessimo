@@ -22,12 +22,19 @@ type GuidedSrsData = Readonly<{
   };
 }>;
 
+function isGuidedSrsData(u: unknown): u is GuidedSrsData {
+  if (u === null || typeof u !== "object") return false;
+  const o = u as Record<string, unknown>;
+  // Minimal structural check: presence of deck object is sufficient
+  return typeof o["deck"] === "object" && o["deck"] !== null;
+}
+
 /**
  * Pure function to get the SRS deck from game state.
  * Mirrors the getDeck method from GuidedMode class.
  */
 function getDeck(state: GameState): SrsDeck {
-  const data = state.modeData as GuidedSrsData | undefined;
+  const data = isGuidedSrsData(state.modeData) ? state.modeData : undefined;
   if (data?.deck) return data.deck;
   return makeDefaultDeck(createTimestamp(1));
 }
@@ -128,7 +135,9 @@ export const guidedUi: ModeUiAdapter = {
     }
 
     // Return target pattern as single array (one target placement)
+    // Also suppress ghost pieces in guided mode to avoid visual confusion
     return {
+      ghostEnabled: false,
       targets: [targetCells],
     };
   },

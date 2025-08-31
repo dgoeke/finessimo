@@ -22,6 +22,14 @@ export type ExtendedModeData = {
    * Multiple patterns can be displayed simultaneously.
    */
   readonly targets?: ReadonlyArray<ReadonlyArray<TargetCell>>;
+
+  /**
+   * Whether ghost pieces should be displayed for this mode.
+   * When undefined, defaults to user preference from settings.
+   * When true, forces ghost pieces on regardless of settings.
+   * When false, suppresses ghost pieces for this mode only.
+   */
+  readonly ghostEnabled?: boolean;
 };
 
 /**
@@ -47,3 +55,31 @@ export type ModeUiAdapter = {
    */
   computeDerivedUi(state: GameState): Partial<ExtendedModeData> | null;
 };
+
+/**
+ * Type guard to safely narrow unknown modeData to ExtendedModeData.
+ * Checks only structural presence of known fields to keep core pure.
+ */
+export function isExtendedModeData(u: unknown): u is ExtendedModeData {
+  if (u === null || typeof u !== "object") return false;
+  const o = u as Record<string, unknown>;
+
+  const ghostOk =
+    o["ghostEnabled"] === undefined || typeof o["ghostEnabled"] === "boolean";
+
+  const targets = o["targets"];
+  const targetsOk =
+    targets === undefined ||
+    (Array.isArray(targets) &&
+      targets.every(
+        (pattern) =>
+          Array.isArray(pattern) &&
+          pattern.every((c) => {
+            if (c === null || typeof c !== "object") return false;
+            const rc = c as Record<string, unknown>;
+            return "x" in rc && "y" in rc && "color" in rc;
+          }),
+      ));
+
+  return ghostOk && targetsOk;
+}

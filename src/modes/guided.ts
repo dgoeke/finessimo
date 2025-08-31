@@ -44,6 +44,17 @@ type GuidedSrsData = Readonly<{
   gradingConfig: GuidedGradingConfig;
 }>;
 
+function isGuidedSrsData(u: unknown): u is GuidedSrsData {
+  if (u === null || typeof u !== "object") return false;
+  const o = u as Record<string, unknown>;
+  return (
+    typeof o["deck"] === "object" &&
+    o["deck"] !== null &&
+    typeof o["gradingConfig"] === "object" &&
+    o["gradingConfig"] !== null
+  );
+}
+
 type RatingFeedback = {
   text: string;
   color: string;
@@ -76,13 +87,13 @@ const ratingToFeedback = {
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
-  // Disable hold and ghost piece in guided mode for focused training
+  // Disable hold in guided mode for focused training
+  // Note: Ghost piece control moved to UI adapter system to avoid persisting settings
   initialConfig(): {
-    gameplay: { holdEnabled: boolean; ghostPieceEnabled: boolean };
+    gameplay: { holdEnabled: boolean };
   } {
     return {
       gameplay: {
-        ghostPieceEnabled: false,
         holdEnabled: false,
       },
     };
@@ -99,13 +110,13 @@ export class GuidedMode implements GameMode {
   }
 
   getDeck(state: GameState): SrsDeck {
-    const data = state.modeData as GuidedSrsData | undefined;
+    const data = isGuidedSrsData(state.modeData) ? state.modeData : undefined;
     if (data?.deck) return data.deck;
     return makeDefaultDeck(createTimestamp(1));
   }
 
   getGradingConfig(state: GameState): GuidedGradingConfig {
-    const data = state.modeData as GuidedSrsData | undefined;
+    const data = isGuidedSrsData(state.modeData) ? state.modeData : undefined;
     if (data?.gradingConfig) return data.gradingConfig;
     return {
       easyThresholdMs: 1000,
