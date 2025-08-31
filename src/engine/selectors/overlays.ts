@@ -1,10 +1,11 @@
 import { calculateGhostPosition } from "../../core/board";
+import { isExtendedModeData } from "../../modes/types";
 import { isPlaying } from "../../state/types";
 import { gridCoordAsNumber } from "../../types/brands";
 import { Z } from "../ui/overlays";
 import { cellsForActivePiece } from "../util/cell-projection";
 
-import type { ExtendedModeData, TargetCell } from "../../modes/types";
+import type { TargetCell } from "../../modes/types";
 import type { GameState, BoardDecoration } from "../../state/types";
 import type { GridCoord } from "../../types/brands";
 import type {
@@ -50,8 +51,9 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
   if (!s.active) return null;
 
   // Check ghost enabled state: mode data overrides user settings
-  const modeData = s.modeData as ExtendedModeData | undefined;
-  const ghostEnabled = modeData?.ghostEnabled ?? (s.gameplay.ghostPieceEnabled ?? true);
+  const modeData = isExtendedModeData(s.modeData) ? s.modeData : undefined;
+  const ghostEnabled =
+    modeData?.ghostEnabled ?? s.gameplay.ghostPieceEnabled ?? true;
   if (!ghostEnabled) return null;
 
   // Calculate ghost position
@@ -151,7 +153,7 @@ export function selectTargetOverlays(
   const targets: Array<TargetOverlay> = [];
 
   // NEW: Read from mode adapter data (ExtendedModeData.targets)
-  const modeData = s.modeData as ExtendedModeData | undefined;
+  const modeData = isExtendedModeData(s.modeData) ? s.modeData : undefined;
   if (modeData?.targets) {
     for (const [i, targetPattern] of modeData.targets.entries()) {
       const overlay = createTargetOverlayFromPattern(targetPattern, i);
