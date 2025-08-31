@@ -45,6 +45,9 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
   // Ghost only renders during playing state
   if (!isPlaying(s)) return null;
 
+  // In guided mode, ghost pieces should never render regardless of settings
+  if (s.currentMode === "guided") return null;
+
   // Check if ghost is enabled and active piece exists
   const ghostEnabled = s.gameplay.ghostPieceEnabled ?? true;
   if (!ghostEnabled || !s.active) return null;

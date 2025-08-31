@@ -76,13 +76,13 @@ const ratingToFeedback = {
 export class GuidedMode implements GameMode {
   readonly name = "guided";
 
-  // Disable hold and ghost piece in guided mode for focused training
+  // Disable hold in guided mode for focused training
+  // Note: ghost piece rendering is handled in overlay selector, not via config
   initialConfig(): {
-    gameplay: { holdEnabled: boolean; ghostPieceEnabled: boolean };
+    gameplay: { holdEnabled: boolean };
   } {
     return {
       gameplay: {
-        ghostPieceEnabled: false,
         holdEnabled: false,
       },
     };
@@ -143,7 +143,7 @@ export class GuidedMode implements GameMode {
     finesseResult: FinesseResult,
     hasPlayerInput: boolean,
     placementDurationMs: number,
-    gradingConfig: { easyThresholdMs: number; goodThresholdMs: number }
+    gradingConfig: { easyThresholdMs: number; goodThresholdMs: number },
   ): Rating {
     if (
       !placedCorrectly ||
@@ -163,7 +163,7 @@ export class GuidedMode implements GameMode {
 
   private createFeedbackEffect(
     rating: Rating,
-    finesseResult: FinesseResult
+    finesseResult: FinesseResult,
   ): NonNullable<GameModeResult["postActions"]>[0] {
     const feedback = ratingToFeedback[rating];
     const base = feedback.text;
@@ -203,7 +203,7 @@ export class GuidedMode implements GameMode {
     gameState: GameState,
     finesseResult: FinesseResult,
     lockedPiece: ActivePiece,
-    finalPosition: ActivePiece
+    finalPosition: ActivePiece,
   ): GameModeResult {
     const deck = this.getDeck(gameState);
     const now = createTimestamp(gameState.stats.attempts + 1);
@@ -217,7 +217,7 @@ export class GuidedMode implements GameMode {
     // Validate piece matches expected piece (should always match in guided mode)
     if (lockedPiece.id !== dueCard.piece) {
       console.error(
-        "Unexpected piece mismatch in guided mode - this should not happen"
+        "Unexpected piece mismatch in guided mode - this should not happen",
       );
       return {};
     }
@@ -235,7 +235,7 @@ export class GuidedMode implements GameMode {
     const placedCorrectly = this.equalOccupiedCells(
       board,
       finalPosition,
-      targetFinal
+      targetFinal,
     );
 
     const key = canonicalId(dueCard);
@@ -260,7 +260,7 @@ export class GuidedMode implements GameMode {
       finesseResult,
       hasPlayerInput,
       placementDurationMs,
-      gradingConfig
+      gradingConfig,
     );
 
     const updated = rate(rec, rating, now);
@@ -277,7 +277,7 @@ export class GuidedMode implements GameMode {
   // Compute absolute occupied cells for a piece within board bounds
   private occupiedCells(
     board: Board,
-    piece: ActivePiece
+    piece: ActivePiece,
   ): ReadonlyArray<readonly [number, number]> {
     const shape = PIECES[piece.id];
     const cells = shape.cells[piece.rot];
@@ -296,7 +296,7 @@ export class GuidedMode implements GameMode {
   private equalOccupiedCells(
     board: Board,
     a: ActivePiece,
-    b: ActivePiece
+    b: ActivePiece,
   ): boolean {
     const aCells = this.occupiedCells(board, a);
     const bCells = this.occupiedCells(board, b);
@@ -323,7 +323,7 @@ export class GuidedMode implements GameMode {
   // Provide intended target for analysis
   getTargetFor(
     _lockedPiece: ActivePiece,
-    gameState: GameState
+    gameState: GameState,
   ): { targetX: number; targetRot: Rot } | null {
     const card = this.selectCard(gameState);
     if (!card) return null;
@@ -380,7 +380,7 @@ export class GuidedMode implements GameMode {
   isTargetSatisfied(
     _lockedPiece: ActivePiece,
     finalPosition: ActivePiece,
-    state: GameState
+    state: GameState,
   ): boolean {
     const card = this.selectCard(state);
     if (!card) return true; // no opinion
