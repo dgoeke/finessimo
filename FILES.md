@@ -113,6 +113,10 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/ui/utils/outlines.ts: Pure geometry utilities for computing piece outlines. Implements oriented edge cancellation algorithm to compute perimeter paths from grid cells. Used for rendering clean single borders around tetromino shapes in guided mode.
 - src/ui/audio.ts: Audio helper for UI sound effects. WebAudio-based boop sound with browser compatibility and fallback handling.
 
+### Debug Utilities
+
+- src/utils/debug.ts: Opt-in debug logger. Enable with localStorage key `finessimo/debug` (e.g., `guided,finesse,occupancy`) or `window.__FINESSIMO_DEBUG__ = { on: true }`. Provides `isDebugEnabled`, `debugLog`, and `debugTable` used by Guided mode and finesse service to log analysis targets, player inputs, optimal sequences, and occupancy diffs.
+
 ### Input Utilities
 
 - src/input/utils/key-binding-manager.ts: Keyboard event binding manager. Maps KeyboardEvent.code directly to handlers without pattern parsing. Supports all keys including modifiers as standalone bindings.

@@ -86,6 +86,7 @@ const ratingToFeedback = {
 
 export class GuidedMode implements GameMode {
   readonly name = "guided";
+  // no debug state
 
   // Disable hold in guided mode for focused training
   // Note: Ghost piece control moved to UI adapter system to avoid persisting settings
@@ -274,6 +275,8 @@ export class GuidedMode implements GameMode {
       gradingConfig,
     );
 
+    // debug logging removed
+
     const updated = rate(rec, rating, now);
     const newDeck = updateDeckRecord(deck, updated);
     // Persist updated deck
@@ -302,6 +305,8 @@ export class GuidedMode implements GameMode {
     }
     return out;
   }
+
+  // debug helper removed
 
   // Compare two placements by their filled squares (order-insensitive)
   private equalOccupiedCells(

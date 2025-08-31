@@ -6,8 +6,10 @@ import {
   type Action,
   type ActivePiece,
   type Rot,
+  type FinesseAction,
 } from "../state/types";
 import { createGridCoord } from "../types/brands";
+// debug logging removed
 
 import {
   finesseCalculator,
@@ -45,6 +47,8 @@ export class DefaultFinesseService implements FinesseService {
       state.processedInputLog,
     );
 
+    // no debug logging
+
     // Short-circuit: if no player inputs, emit optimal empty feedback and stats
     if (playerInputs.length === 0) {
       const emptyResult: FinesseResult = {
@@ -63,13 +67,27 @@ export class DefaultFinesseService implements FinesseService {
       return this.buildActionList(emptyResult, modeResult, playerInputs);
     }
 
-    const finesseResult = finesseCalculator.analyze(
+    // Compute optimal sequences; if the mode provides occupancy-based validation,
+    // accept any (x,rot) whose final placement satisfies the same target.
+    const optimalSequences = this.calculateOptimalWithEquivalents(
+      state,
+      gameMode,
       spawnPiece,
       targetX,
       targetRot,
-      playerInputs,
-      state.gameplay,
     );
+
+    // Short-circuit: if player used soft drop at any point, treat as optimal pass-through
+    const usedSoftDrop = playerInputs.includes("SoftDrop");
+    const finesseResult = usedSoftDrop
+      ? {
+          kind: "optimal" as const,
+          optimalSequences,
+          playerSequence: playerInputs,
+        }
+      : this.compareToOptimal(optimalSequences, playerInputs);
+
+    // no debug logging
 
     // Gather additional mode-specific faults
     const existingFaults =
@@ -92,6 +110,8 @@ export class DefaultFinesseService implements FinesseService {
             optimalSequences: finesseResult.optimalSequences,
             playerSequence: finesseResult.playerSequence,
           };
+
+    // no debug logging
 
     const modeResult = gameMode.onPieceLocked(
       state,
@@ -117,16 +137,130 @@ export class DefaultFinesseService implements FinesseService {
       if (g?.target) {
         targetX = g.target.x;
         targetRot = g.target.rot;
+        // no debug logging
       }
     } else if (typeof gameMode.getTargetFor === "function") {
       const t = gameMode.getTargetFor(lockedPiece, state);
       if (t) {
         targetX = t.targetX;
         targetRot = t.targetRot;
+        // no debug logging
       }
     }
 
     return { targetRot, targetX };
+  }
+
+  // Expand targets by occupancy equivalence if the mode supports it; otherwise
+  // calculate for the single canonical target.
+  private calculateOptimalWithEquivalents(
+    state: GameState,
+    gameMode: GameMode,
+    spawnPiece: ActivePiece,
+    targetX: number,
+    targetRot: Rot,
+  ): Array<Array<FinesseAction>> {
+    const calcFor = (x: number, rot: Rot): Array<Array<FinesseAction>> =>
+      finesseCalculator.calculateOptimal(spawnPiece, x, rot, state.gameplay);
+
+    // Base case: no special validation hook → single target analysis
+    if (typeof gameMode.isTargetSatisfied !== "function") {
+      return calcFor(targetX, targetRot);
+    }
+
+    // Build a list of equivalent (x,rot) placements that satisfy the target by
+    // occupancy on the current board.
+    const boardForEquiv = state.board;
+    const pieceId = spawnPiece.id;
+    const candidates: Array<{ x: number; rot: Rot }> = [];
+
+    const rots: ReadonlyArray<Rot> = ["spawn", "right", "two", "left"];
+    for (const rot of rots) {
+      const [minX, maxX] = this.validXBounds(pieceId, rot);
+      for (let x = minX; x <= maxX; x++) {
+        const candidate: ActivePiece = {
+          id: pieceId,
+          rot,
+          x: createGridCoord(x),
+          y: createGridCoord(-2),
+        };
+        const finalPos = dropToBottom(boardForEquiv, candidate);
+        // Reuse mode occupancy validation to see if this finalPos would be accepted
+        const ok = gameMode.isTargetSatisfied(spawnPiece, finalPos, state);
+        if (ok) candidates.push({ rot, x });
+      }
+    }
+
+    // no debug logging
+
+    // Always include the base target in case none matched (defensive)
+    if (!candidates.some((c) => c.x === targetX && c.rot === targetRot)) {
+      candidates.push({ rot: targetRot, x: targetX });
+    }
+
+    // Calculate and merge unique sequences across all equivalent targets
+    const uniq = new Map<string, Array<FinesseAction>>();
+    for (const c of candidates) {
+      const seqs = calcFor(c.x, c.rot);
+      for (const s of seqs) {
+        const key = s.join("|");
+        if (!uniq.has(key)) uniq.set(key, s);
+      }
+    }
+    return Array.from(uniq.values());
+  }
+
+  private validXBounds(pieceId: string, rot: Rot): readonly [number, number] {
+    const shape = PIECES[pieceId as keyof typeof PIECES];
+    const cells = shape.cells[rot];
+    let minDx = Number.POSITIVE_INFINITY;
+    let maxDx = Number.NEGATIVE_INFINITY;
+    for (const [dx] of cells) {
+      if (dx < minDx) minDx = dx;
+      if (dx > maxDx) maxDx = dx;
+    }
+    const minStart = -minDx;
+    const maxStart = 9 - maxDx;
+    return [minStart, maxStart] as const;
+  }
+
+  private compareToOptimal(
+    optimalSequences: Array<Array<FinesseAction>>,
+    playerInputs: Array<FinesseAction>,
+  ): FinesseResult {
+    const normalized = playerInputs; // already normalized by extractor
+
+    const minLen = optimalSequences.reduce(
+      (min, seq) => Math.min(min, seq.length),
+      Number.POSITIVE_INFINITY,
+    );
+    const optimalLength = minLen === Number.POSITIVE_INFINITY ? 0 : minLen;
+    const playerLength = normalized.length;
+    const isOptimal = playerLength === optimalLength;
+
+    const faults: Array<Fault> = [];
+    if (playerLength > optimalLength) {
+      faults.push({
+        description: `Used ${String(playerLength)} inputs instead of optimal ${String(optimalLength)}`,
+        position: optimalLength,
+        type: "extra_input",
+      });
+    } else if (playerLength < optimalLength) {
+      faults.push({
+        description: `Sequence incomplete or mismatched; expected ${String(optimalLength)} inputs`,
+        position: playerLength,
+        type: "suboptimal_path",
+      });
+    }
+
+    return isOptimal && faults.length === 0
+      ? { kind: "optimal", optimalSequences, playerSequence: normalized }
+      : {
+          faults,
+          kind: "faulty",
+          optimalSequences,
+          playerSequence: normalized,
+        };
   }
 
   private createSpawnPiece(lockedPiece: ActivePiece): ActivePiece {
