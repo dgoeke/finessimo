@@ -1,4 +1,8 @@
-import { makeDefaultDeck, validColumns } from "../modes/guided/deck";
+import {
+  makeDefaultDeck,
+  validColumns,
+  ROTATION_CLASSES,
+} from "../modes/guided/deck";
 
 import {
   deserialize,
@@ -13,10 +17,15 @@ function sanitizeDeck(deck: SrsDeck): SrsDeck {
   const filtered = new Map(deck.items);
   let removed = 0;
   for (const [key, rec] of deck.items) {
-    const allowed = validColumns(rec.card.piece, rec.card.rot).some(
+    // 1) Column must be legal for the piece+rot
+    const columnAllowed = validColumns(rec.card.piece, rec.card.rot).some(
       (c) => (c as unknown as number) === (rec.card.x as unknown as number),
     );
-    if (!allowed) {
+    // 2) Rotation must be one of the representative rotations for this piece
+    const allowedRots = ROTATION_CLASSES[rec.card.piece];
+    const rotAllowed = allowedRots.includes(rec.card.rot);
+
+    if (!columnAllowed || !rotAllowed) {
       filtered.delete(key);
       removed++;
     }

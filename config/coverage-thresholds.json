@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
     "statements": 83,
-    "branches": 68,
+    "branches": 69,
     "functions": 78,
-    "lines": 85
+    "lines": 86
   },
   "src/core/board.ts": {
     "statements": 98,
@@ -126,8 +126,8 @@
     "lines": 93
   },
   "src/engine/selectors/overlays.ts": {
-    "statements": 90,
-    "branches": 80,
+    "statements": 91,
+    "branches": 82,
     "functions": 100,
     "lines": 95
   },
@@ -216,10 +216,10 @@
     "lines": 90
   },
   "src/modes/guided.ts": {
-    "statements": 84,
-    "branches": 63,
-    "functions": 84,
-    "lines": 87
+    "statements": 85,
+    "branches": 68,
+    "functions": 85,
+    "lines": 88
   },
   "src/modes/index.ts": {
     "statements": 88,
@@ -238,6 +238,12 @@
     "branches": 57,
     "functions": 75,
     "lines": 76
+  },
+  "src/modes/types.ts": {
+    "statements": 92,
+    "branches": 95,
+    "functions": 100,
+    "lines": 100
   },
   "src/modes/freePlay/ui.ts": {
     "statements": 100,
@@ -258,10 +264,10 @@
     "lines": 76
   },
   "src/modes/guided/ui.ts": {
-    "statements": 91,
-    "branches": 64,
+    "statements": 100,
+    "branches": 95,
     "functions": 100,
-    "lines": 91
+    "lines": 100
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 97,
@@ -271,9 +277,9 @@
   },
   "src/srs/storage.ts": {
     "statements": 94,
-    "branches": 93,
+    "branches": 94,
     "functions": 100,
-    "lines": 96
+    "lines": 97
   },
   "src/state/reducer.ts": {
     "statements": 93,

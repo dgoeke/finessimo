@@ -153,15 +153,17 @@ export const isTimestamp = (u: unknown): u is Timestamp =>
 
 ## Build & quality gate
 
-* Always run `npm run pre-commit` before considering any change done.
+* Always run `npm run ci` before considering any change done.
 * Do **not** introduce TypeScript/ESLint suppressions (e.g., `// @ts-ignore`, `// eslint-disable-next-line`). Fix root causes instead.
+* You will not be allowed to add code that reduces test coverage or type safety. If that happens, the `git commit` command will be rejected.
+* To confirm test coverage is sufficient, run `npm run test:coverage`; it will exit non-zero if coverage drops.
 
 ### Build tools available
 
 * `npm run typecheck` — runs `tsc` to check types only
 * `npm run lint:fix` — runs lint, auto-orders imports, fixes safe issues
 * `npm run test` — runs all unit tests
-* `npm run pre-commit` — wrapper for the above
+* `npm run ci` — wrapper for the above
 
 ---
 
@@ -265,7 +267,7 @@ src/modes/newMode.ts   (missing from FILES.md)
 git commit -m "fix bug"
 
 # ✅ Always run
-npm run pre-commit
+npm run ci
 git commit -m "fix bug"
 ```
 **Claude-specific notes**

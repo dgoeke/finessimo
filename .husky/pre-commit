@@ -1,2 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+
 echo "🛠️ Running pre-commit checks..."
+
+# Capture list of currently staged files (relative paths)
+STAGED_FILES=$(git diff --name-only --cached)
+
+# Run the project's pre-commit task (may format/fix files)
 npm run pre-commit
+
+# Collect unstaged changes produced by the pre-commit task
+UNSTAGED_CHANGED=$(git diff --name-only)
+
+# Re-stage only those changed files that were already staged before
+if [ -n "${UNSTAGED_CHANGED}" ] && [ -n "${STAGED_FILES}" ]; then
+  echo "$UNSTAGED_CHANGED" | while IFS= read -r f; do
+    # If this file was part of the original staged set, re-add it
+    if echo "$STAGED_FILES" | grep -Fxq -- "$f"; then
+      git add -- "$f"
+      echo "✨ Auto-staged: $f"
+    fi
+  done
+fi
+
+# Always include updated coverage thresholds if modified
+if git diff --name-only -- "config/coverage-thresholds.json" | grep -q .; then
+  git add -- "config/coverage-thresholds.json"
+  echo "🛡️ Auto-staged: config/coverage-thresholds.json"
+fi
+
+exit 0
