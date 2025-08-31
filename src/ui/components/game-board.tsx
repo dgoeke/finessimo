@@ -12,10 +12,30 @@ import {
   darkenColor,
   normalizeColorBrightness,
 } from "../utils/colors";
+import {
+  computeOutlinePaths,
+  getCellsHash,
+  pathToPath2D,
+} from "../utils/outlines";
 
 import type { RenderOverlay } from "../../engine/ui/overlays";
 import type { GameState, Board, ActivePiece } from "../../state/types";
+import type { GridCoord } from "../../types/brands";
+import type { GridCell, OutlinePath } from "../utils/outlines";
 
+/**
+ * Game board canvas renderer with per-frame updates.
+ *
+ * Design Note: The board intentionally re-renders every tick (60fps) to support
+ * smooth animations for line clears, effects, and piece movement. The hasStateChanged
+ * check prevents unnecessary selector re-computation but does NOT prevent canvas draws,
+ * as the canvas needs to update each frame for visual continuity.
+ *
+ * Performance considerations:
+ * - Grid drawing runs each frame but could be cached to an offscreen canvas
+ * - Outline paths are cached by cell coordinates to avoid recomputation
+ * - Most render operations are optimized for 60fps performance
+ */
 @customElement("game-board")
 export class GameBoard extends SignalWatcher(LitElement) {
   @query("canvas") private canvas!: HTMLCanvasElement;
@@ -23,6 +43,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private readonly cellSize = 30;
   private readonly boardWidth = 10;
   private readonly boardHeight = 20;
+  private readonly outlineCache = new Map<string, OutlinePath>();
+  private gridCanvas?: OffscreenCanvas;
+  private gridCtx?: OffscreenCanvasRenderingContext2D;
   private lastRenderState?: {
     active: GameState["active"];
     board: GameState["board"];
@@ -133,6 +156,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
     // Render board
     this.renderBoard(gameState.board);
 
+    // Draw grid before overlays (so overlay borders appear on top)
+    this.drawGrid();
+
     // Render unified overlay system (sorted by z-order)
     this.renderOverlays(renderModel.overlays);
 
@@ -140,9 +166,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
     if (gameState.active) {
       this.renderActivePiece(gameState.active);
     }
-
-    // Draw grid
-    this.drawGrid();
   }
 
   /**
@@ -215,12 +238,33 @@ export class GameBoard extends SignalWatcher(LitElement) {
     const alpha = overlay.alpha ?? 0.25;
 
     // Collect valid cells to render
+    const { validCells, validGridCells } = this.filterValidCells(overlay.cells);
+
+    if (validGridCells.length > 0) {
+      if (overlay.style === "outline") {
+        this.drawTargetWithOutline(validGridCells, validCells, alpha, color);
+      } else {
+        this.drawTargetWithBorders(validCells, color, alpha);
+      }
+    }
+  }
+
+  /**
+   * Filter cells to only include those within visible board bounds.
+   */
+  private filterValidCells(
+    cells: ReadonlyArray<readonly [GridCoord, GridCoord]>,
+  ): {
+    validCells: Array<[number, number]>;
+    validGridCells: Array<GridCell>;
+  } {
     const validCells: Array<[number, number]> = [];
-    for (const [x, y] of overlay.cells) {
+    const validGridCells: Array<GridCell> = [];
+
+    for (const [x, y] of cells) {
       const gridX = gridCoordAsNumber(x);
       const gridY = gridCoordAsNumber(y);
 
-      // Only render cells within visible board area
       if (
         gridX >= 0 &&
         gridX < this.boardWidth &&
@@ -228,17 +272,53 @@ export class GameBoard extends SignalWatcher(LitElement) {
         gridY < this.boardHeight
       ) {
         validCells.push([gridX, gridY]);
+        validGridCells.push([x, y]);
       }
     }
 
-    // First pass: Draw all glows (they can overlap)
+    return { validCells, validGridCells };
+  }
+
+  /**
+   * Draw target with outline style.
+   */
+  private drawTargetWithOutline(
+    validGridCells: Array<GridCell>,
+    validCells: Array<[number, number]>,
+    alpha: number,
+    color: string,
+  ): void {
+    // First: Draw solid fill for each cell
     for (const [gridX, gridY] of validCells) {
-      this.drawHighlightCellGlow(gridX, gridY, color, alpha);
+      this.drawTargetCellFill(gridX, gridY, color, alpha);
     }
 
-    // Second pass: Draw all borders and cores (ensures they're on top)
+    // Second: Draw single thick outline around entire piece (on top)
+    const outline = this.getCachedOutline(validGridCells);
+    this.drawTargetPieceOutline(outline, {
+      lineCap: "square",
+      lineJoin: "miter",
+      lineWidthPx: Math.max(3, this.cellSize * 0.12),
+      strokeColor: "#444444",
+    });
+  }
+
+  /**
+   * Draw target with individual cell borders.
+   */
+  private drawTargetWithBorders(
+    validCells: Array<[number, number]>,
+    color: string,
+    alpha: number,
+  ): void {
+    // First: Draw solid fills
     for (const [gridX, gridY] of validCells) {
-      this.drawHighlightCellBorderAndCore(gridX, gridY, color, alpha);
+      this.drawTargetCellFill(gridX, gridY, color, alpha);
+    }
+
+    // Second: Draw borders on top
+    for (const [gridX, gridY] of validCells) {
+      this.drawHighlightCellBorder(gridX, gridY, color, alpha);
     }
   }
 
@@ -457,54 +537,43 @@ export class GameBoard extends SignalWatcher(LitElement) {
     );
   }
 
-  private drawHighlightCellGlow(
+  /**
+   * Draws a solid color fill for a target cell.
+   */
+  private drawTargetCellFill(
     x: number,
     y: number,
     color: string,
     alpha: number,
   ): void {
     if (!this.ctx) return;
-
     const pixelX = x * this.cellSize;
     const pixelY = y * this.cellSize;
 
-    // Draw a bright, truly blurred glow that bleeds ~50% into neighbors
+    // Draw solid fill with normalized brightness
     this.ctx.save();
-    const clampedAlpha = Math.max(0, Math.min(1, alpha));
-    const extend = Math.floor(this.cellSize * 0.5); // bleed half-cell into neighbors
-    const blurPx = Math.max(2, Math.floor(this.cellSize * 0.5));
-    const glowAlpha = Math.min(1, Math.max(0.5, clampedAlpha)); // brighter minimum glow (was 0.3)
-
-    this.ctx.globalCompositeOperation = "lighter"; // additive for luminous effect
-    this.ctx.globalAlpha = glowAlpha;
-    this.ctx.filter = `blur(${String(blurPx)}px)`;
-    this.ctx.fillStyle = normalizeColorBrightness(color, 0.35); // Increased brightness normalization (was 0.25)
-
-    // Larger rect than the cell to encourage outward bloom
-    this.ctx.fillRect(
-      pixelX - extend,
-      pixelY - extend,
-      this.cellSize + extend * 2,
-      this.cellSize + extend * 2,
-    );
+    this.ctx.globalAlpha = alpha;
+    this.ctx.fillStyle = normalizeColorBrightness(color, 0.15);
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
     this.ctx.restore();
   }
 
-  private drawHighlightCellBorderAndCore(
+  /**
+   * Draws individual cell border for non-outline styles.
+   */
+  private drawHighlightCellBorder(
     x: number,
     y: number,
     _color: string,
-    alpha: number,
+    _alpha: number,
   ): void {
     if (!this.ctx) return;
-
     const pixelX = x * this.cellSize;
     const pixelY = y * this.cellSize;
-    const clampedAlpha = Math.max(0, Math.min(1, alpha));
 
-    // border
+    // Draw border on top of fill
     this.ctx.save();
-    this.ctx.strokeStyle = "#666666";
+    this.ctx.strokeStyle = "#444444";
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(
       pixelX + 1,
@@ -513,44 +582,110 @@ export class GameBoard extends SignalWatcher(LitElement) {
       this.cellSize - 2,
     );
     this.ctx.restore();
+  }
 
-    // Crisp inner core to anchor the target
+  /**
+   * Gets or computes the cached outline path for a set of cells.
+   * Uses a stable hash of cell coordinates for cache key to avoid collisions.
+   */
+  private getCachedOutline(cells: ReadonlyArray<GridCell>): OutlinePath {
+    const cacheKey = getCellsHash(cells);
+    const cached = this.outlineCache.get(cacheKey);
+    if (cached) return cached;
+
+    const paths = computeOutlinePaths(cells);
+    const outline = paths[0] ?? [];
+    this.outlineCache.set(cacheKey, outline);
+    return outline;
+  }
+
+  /**
+   * Draws a thick outline around the target piece using the precomputed path.
+   */
+  private drawTargetPieceOutline(
+    outline: OutlinePath,
+    style: {
+      lineCap?: CanvasLineCap;
+      lineJoin?: CanvasLineJoin;
+      lineWidthPx: number;
+      strokeColor: string;
+    },
+  ): void {
+    if (!this.ctx || outline.length === 0) return;
+
+    const path2d = pathToPath2D(outline, this.cellSize);
+
     this.ctx.save();
-    this.ctx.globalAlpha = Math.min(1, Math.max(0.6, clampedAlpha * 1.8)); // Brighter core (was 0.4 and 1.6)
-    this.ctx.fillStyle = "rgba(1, 1, 1, 0.5)";
-    const coreMargin = Math.max(2, Math.floor(this.cellSize * 0.12));
-    this.ctx.fillRect(
-      pixelX + coreMargin,
-      pixelY + coreMargin,
-      this.cellSize - coreMargin * 2,
-      this.cellSize - coreMargin * 2,
-    );
+    this.ctx.strokeStyle = style.strokeColor;
+    this.ctx.lineWidth = style.lineWidthPx;
+    this.ctx.lineJoin = style.lineJoin ?? "miter";
+    this.ctx.lineCap = style.lineCap ?? "square";
+    this.ctx.stroke(path2d);
     this.ctx.restore();
   }
 
-  private drawGrid(): void {
-    if (!this.ctx) return;
+  /**
+   * Initialize or get the cached grid canvas.
+   * The grid is static and only needs to be drawn once.
+   */
+  private getGridCanvas(): OffscreenCanvas {
+    if (!this.gridCanvas || !this.gridCtx) {
+      // Create offscreen canvas for grid
+      this.gridCanvas = new OffscreenCanvas(
+        this.boardWidth * this.cellSize,
+        this.boardHeight * this.cellSize,
+      );
 
-    this.ctx.strokeStyle = "#222222";
-    this.ctx.lineWidth = 1;
+      const ctx = this.gridCanvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Failed to get 2D context for grid canvas");
+      }
+      this.gridCtx = ctx;
+
+      // Draw grid once to the offscreen canvas
+      this.drawGridToCanvas(this.gridCtx);
+    }
+
+    return this.gridCanvas;
+  }
+
+  /**
+   * Draw the grid lines to the specified canvas context.
+   * This is called once to cache the grid on an offscreen canvas.
+   */
+  private drawGridToCanvas(ctx: OffscreenCanvasRenderingContext2D): void {
+    ctx.strokeStyle = "#222222";
+    ctx.lineWidth = 1;
 
     // Vertical lines
     for (let x = 0; x <= this.boardWidth; x++) {
       const pixelX = x * this.cellSize;
-      this.ctx.beginPath();
-      this.ctx.moveTo(pixelX, 0);
-      this.ctx.lineTo(pixelX, this.canvas.height);
-      this.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(pixelX, 0);
+      ctx.lineTo(pixelX, this.boardHeight * this.cellSize);
+      ctx.stroke();
     }
 
     // Horizontal lines
     for (let y = 0; y <= this.boardHeight; y++) {
       const pixelY = y * this.cellSize;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, pixelY);
-      this.ctx.lineTo(this.canvas.width, pixelY);
-      this.ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, pixelY);
+      ctx.lineTo(this.boardWidth * this.cellSize, pixelY);
+      ctx.stroke();
     }
+  }
+
+  /**
+   * Draw the cached grid to the main canvas.
+   * Much more efficient than redrawing all the lines each frame.
+   */
+  private drawGrid(): void {
+    if (!this.ctx) return;
+
+    // Draw the cached grid canvas
+    const gridCanvas = this.getGridCanvas();
+    this.ctx.drawImage(gridCanvas, 0, 0);
   }
 
   private getCellColor(cellValue: number): string {
@@ -571,5 +706,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.ctx = undefined;
+    delete this.gridCtx;
+    delete this.gridCanvas;
+    this.outlineCache.clear();
   }
 }

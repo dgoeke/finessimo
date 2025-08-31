@@ -107,7 +107,7 @@ function createTargetOverlayFromPattern(
     color: firstCell.color,
     id: generateCellsId(`target-mode:${String(index)}`, cells),
     kind: "target",
-    style: "glow", // Default style for new system
+    style: "outline", // Use outline style for cleaner target rendering
     z: Z.target,
   } as const;
 }
@@ -129,7 +129,7 @@ function createTargetOverlayFromDecoration(
     cells,
     id: generateCellsId(`target-legacy:${String(index)}`, cells),
     kind: "target",
-    style: "glow", // Default style for now
+    style: "outline", // Use outline style for cleaner target rendering
     z: Z.target,
     ...(decoration.color !== undefined && { color: decoration.color }),
     ...(decoration.alpha !== undefined && { alpha: decoration.alpha }),

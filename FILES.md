@@ -110,6 +110,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 - src/ui/utils/colors.ts: Shared color manipulation utilities. Functions for lightening and darkening hex colors used across canvas components for gradient piece styling.
 - src/ui/utils/dom.ts: Typed DOM query utilities. Centralizes and type-safes document.querySelector calls for custom elements. Provides specific helpers for settings modal, shell, and board frame elements.
+- src/ui/utils/outlines.ts: Pure geometry utilities for computing piece outlines. Implements oriented edge cancellation algorithm to compute perimeter paths from grid cells. Used for rendering clean single borders around tetromino shapes in guided mode.
 - src/ui/audio.ts: Audio helper for UI sound effects. WebAudio-based boop sound with browser compatibility and fallback handling.
 
 ### Input Utilities

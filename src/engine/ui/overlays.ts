@@ -43,7 +43,7 @@ export type TargetOverlay = Readonly<{
   id: string; // Stable identifier for keyed rendering
   z: typeof Z.target;
   cells: ReadonlyArray<readonly [GridCoord, GridCoord]>; // Array of [x, y] coordinate tuples
-  style: "glow" | "dashed" | "hint";
+  style: "glow" | "outline" | "dashed" | "hint";
   color?: string; // hex color, defaults to mode-appropriate color
   alpha?: number; // 0..1, defaults to 0.25
 }>;
