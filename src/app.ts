@@ -677,8 +677,11 @@ export class FinessimoApp {
     this.updateTimingSettings(newSettings);
     this.updateGameplaySettings(newSettings);
     this.updateKeyBindings(newSettings);
-    // Mode switch (minimal playtest toggle)
-    if (newSettings.mode === "freePlay" || newSettings.mode === "guided") {
+    // Mode switch: only re-init if mode actually changed
+    if (
+      (newSettings.mode === "freePlay" || newSettings.mode === "guided") &&
+      newSettings.mode !== this.gameState.currentMode
+    ) {
       this.setGameMode(newSettings.mode);
     }
   }

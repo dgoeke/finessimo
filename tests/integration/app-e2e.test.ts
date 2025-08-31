@@ -787,6 +787,37 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       expect(finalState.status).toBe("playing");
       expect(finalState.active).toBeDefined();
     });
+
+    it("does not re-init when changing non-mode settings", () => {
+      const before = getState(ctx).stats.totalSessions;
+
+      ctx.app.handleSettingsChange({ arrMs: 21, dasMs: 111 });
+      advanceFrame(ctx);
+
+      const after = getState(ctx).stats.totalSessions;
+      expect(after).toBe(before); // no Init dispatched
+    });
+
+    it("does not re-init when selecting the same mode", () => {
+      // Default mode is freePlay
+      const before = getState(ctx).stats.totalSessions;
+
+      ctx.app.handleSettingsChange({ mode: "freePlay" });
+      advanceFrame(ctx);
+
+      const after = getState(ctx).stats.totalSessions;
+      expect(after).toBe(before); // unchanged when mode is the same
+    });
+
+    it("re-inits when changing to a different mode", () => {
+      const before = getState(ctx).stats.totalSessions;
+
+      ctx.app.handleSettingsChange({ mode: "guided" });
+      advanceFrame(ctx);
+
+      const after = getState(ctx).stats.totalSessions;
+      expect(after).toBe(before + 1); // Init dispatched with retainStats
+    });
   });
 
   describe("Finesse Analysis", () => {
