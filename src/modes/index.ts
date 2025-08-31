@@ -89,6 +89,9 @@ export type GameMode = {
   // Optional: provide expected piece for the current challenge (e.g., Guided)
   getExpectedPiece?(gameState: GameState): PieceId | undefined;
 
+  // Optional: control ghost piece rendering for this mode
+  shouldRenderGhost?(gameState: GameState): boolean;
+
   // Lock resolution hook for retry decisions
   onResolveLock?(ctx: ResolveLockContext): ResolveLockDecision;
 

@@ -77,7 +77,7 @@ export class GuidedMode implements GameMode {
   readonly name = "guided";
 
   // Disable hold in guided mode for focused training
-  // Note: ghost piece rendering is handled in overlay selector, not via config
+  // Note: ghost piece rendering is handled via shouldRenderGhost() hook
   initialConfig(): {
     gameplay: { holdEnabled: boolean };
   } {
@@ -333,6 +333,11 @@ export class GuidedMode implements GameMode {
   getExpectedPiece(gameState: GameState): PieceId | undefined {
     const card = this.selectCard(gameState);
     return card?.piece;
+  }
+
+  shouldRenderGhost(_gameState: GameState): boolean {
+    // Ghost pieces should never render in guided mode for focused training
+    return false;
   }
 
   getBoardDecorations(state: GameState): BoardDecorations | null {

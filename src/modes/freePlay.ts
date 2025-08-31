@@ -77,6 +77,12 @@ export class FreePlayMode implements GameMode {
     return undefined;
   }
 
+  shouldRenderGhost(_gameState: GameState): boolean {
+    // In free play mode, respect user's ghost piece setting
+    void _gameState;
+    return true;
+  }
+
   // Lock resolution - implements retry on finesse error for hard drops
   onResolveLock(ctx: ResolveLockContext): ResolveLockDecision {
     const { finesse, pending, state } = ctx;

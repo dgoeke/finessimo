@@ -1,4 +1,5 @@
 import { calculateGhostPosition } from "../../core/board";
+import { gameModeRegistry } from "../../modes";
 import { isPlaying } from "../../state/types";
 import { gridCoordAsNumber } from "../../types/brands";
 import { Z } from "../ui/overlays";
@@ -45,8 +46,11 @@ export function selectGhostOverlay(s: GameState): GhostOverlay | null {
   // Ghost only renders during playing state
   if (!isPlaying(s)) return null;
 
-  // In guided mode, ghost pieces should never render regardless of settings
-  if (s.currentMode === "guided") return null;
+  // Check if the current mode allows ghost rendering
+  const mode = gameModeRegistry.get(s.currentMode);
+  if (mode?.shouldRenderGhost && !mode.shouldRenderGhost(s)) {
+    return null;
+  }
 
   // Check if ghost is enabled and active piece exists
   const ghostEnabled = s.gameplay.ghostPieceEnabled ?? true;
