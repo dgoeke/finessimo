@@ -153,14 +153,19 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.fillStyle = "#000000";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Render overlays first (those with z < 1, like column highlight)
+    const backgroundOverlays = renderModel.overlays.filter((o) => o.z < 1);
+    this.renderOverlays(backgroundOverlays);
+
     // Render board
     this.renderBoard(gameState.board);
 
-    // Draw grid before overlays (so overlay borders appear on top)
+    // Draw grid
     this.drawGrid();
 
-    // Render unified overlay system (sorted by z-order)
-    this.renderOverlays(renderModel.overlays);
+    // Render overlays above grid (those with z >= 1)
+    const foregroundOverlays = renderModel.overlays.filter((o) => o.z >= 1);
+    this.renderOverlays(foregroundOverlays);
 
     // Render active piece (active piece is not an overlay, always renders on top)
     if (gameState.active) {
@@ -188,6 +193,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
           break;
         case "effect-dot":
           this.renderEffectDotOverlay(overlay);
+          break;
+        case "column-highlight":
+          this.renderColumnHighlightOverlay(overlay);
           break;
         default:
           assertNever(overlay);
@@ -343,6 +351,33 @@ export class GameBoard extends SignalWatcher(LitElement) {
       if (row >= 0 && row < this.boardHeight) {
         const pixelY = row * this.cellSize;
         this.ctx.fillRect(0, pixelY, this.canvas.width, this.cellSize);
+      }
+    }
+
+    this.ctx.restore();
+  }
+
+  /**
+   * Renders a column highlight overlay for guided mode active piece spotlight.
+   */
+  private renderColumnHighlightOverlay(
+    overlay: Extract<RenderOverlay, { kind: "column-highlight" }>,
+  ): void {
+    if (!this.ctx) return;
+
+    const color = overlay.color ?? "#CCCCCC"; // Default to light grey
+    const intensity = overlay.intensity ?? 0.08;
+
+    this.ctx.save();
+    // Use normal composite mode since we're behind the grid
+    this.ctx.globalAlpha = intensity;
+    this.ctx.fillStyle = color;
+
+    for (const column of overlay.columns) {
+      // Only render columns within visible board area
+      if (column >= 0 && column < this.boardWidth) {
+        const pixelX = column * this.cellSize;
+        this.ctx.fillRect(pixelX, 0, this.cellSize, this.canvas.height);
       }
     }
 

@@ -8,6 +8,7 @@ import type { ExtendedModeData, TargetCell } from "../../modes/types";
 import type { GameState, BoardDecoration } from "../../state/types";
 import type { GridCoord } from "../../types/brands";
 import type {
+  ColumnHighlightOverlay,
   GhostOverlay,
   RenderOverlay,
   TargetOverlay,
@@ -167,6 +168,46 @@ export function selectTargetOverlays(
 }
 
 /**
+ * Selects column highlight overlay for the active piece in guided mode.
+ * Returns null if not in guided mode or no active piece.
+ */
+export function selectColumnHighlightOverlay(
+  s: GameState,
+): ColumnHighlightOverlay | null {
+  // Only active in guided mode
+  if (s.currentMode !== "guided") return null;
+
+  // Check for active piece
+  if (!isPlaying(s) || !s.active) return null;
+
+  // Get cells for active piece
+  const activeCells = cellsForActivePiece(s.active);
+
+  // Extract unique column indices
+  const columnSet = new Set<number>();
+  for (const [x] of activeCells) {
+    const gridX = gridCoordAsNumber(x);
+    // Only include visible columns (0-9 for standard Tetris board)
+    if (gridX >= 0 && gridX < 10) {
+      columnSet.add(gridX);
+    }
+  }
+
+  if (columnSet.size === 0) return null;
+
+  const columns = Array.from(columnSet).sort((a, b) => a - b);
+
+  return {
+    color: "#FFFFFF", // White color for subtle highlight
+    columns,
+    id: `column-highlight:${s.active.id}:${columns.join(",")}`,
+    intensity: 0.08, // Lower intensity since it's behind the grid
+    kind: "column-highlight",
+    z: Z.columnHighlight,
+  } as const;
+}
+
+/**
  * Combines all frame-based derived overlays into a single array.
  * This is the main entry point for pure, state-derived overlay data.
  */
@@ -174,6 +215,12 @@ export function selectDerivedOverlays(
   s: GameState,
 ): ReadonlyArray<RenderOverlay> {
   const overlays: Array<RenderOverlay> = [];
+
+  // Add column highlight overlay (renders first, behind other overlays)
+  const columnHighlight = selectColumnHighlightOverlay(s);
+  if (columnHighlight) {
+    overlays.push(columnHighlight);
+  }
 
   // Add ghost overlay if available
   const ghost = selectGhostOverlay(s);

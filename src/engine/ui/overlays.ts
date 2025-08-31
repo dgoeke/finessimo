@@ -14,6 +14,7 @@ import type { GridCoord } from "../../types/brands";
 // Z-order layering policy - higher numbers render on top
 export const Z = {
   board: 0,
+  columnHighlight: 0.5, // Behind everything including grid
   cursor: 5,
   effect: 4,
   ghost: 2,
@@ -74,6 +75,18 @@ export type EffectDotOverlay = Readonly<{
 }>;
 
 /**
+ * Column highlight overlay - highlights columns occupied by the active piece in guided mode
+ */
+export type ColumnHighlightOverlay = Readonly<{
+  kind: "column-highlight";
+  id: string; // Stable identifier for keyed rendering
+  z: typeof Z.columnHighlight;
+  columns: ReadonlyArray<number>; // 0-based column indices
+  color?: string; // hex color, defaults to light grey
+  intensity?: number; // 0..1, defaults to 0.12
+}>;
+
+/**
  * Unified overlay discriminated union - all possible overlay types
  *
  * This union enables:
@@ -86,7 +99,8 @@ export type RenderOverlay =
   | GhostOverlay
   | TargetOverlay
   | LineFlashOverlay
-  | EffectDotOverlay;
+  | EffectDotOverlay
+  | ColumnHighlightOverlay;
 
 /**
  * Type guard to validate overlay z-ordering
