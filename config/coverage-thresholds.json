@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
     "statements": 83,
-    "branches": 69,
-    "functions": 76,
-    "lines": 86
+    "branches": 68,
+    "functions": 78,
+    "lines": 85
   },
   "src/core/board.ts": {
     "statements": 98,
@@ -54,10 +54,10 @@
     "lines": 100
   },
   "src/engine/selectors.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/gameplay/hold.ts": {
     "statements": 79,
@@ -91,7 +91,7 @@
   },
   "src/engine/physics/lock-delay.machine.ts": {
     "statements": 85,
-    "branches": 91,
+    "branches": 100,
     "functions": 42,
     "lines": 85
   },
@@ -113,11 +113,41 @@
     "functions": 100,
     "lines": 100
   },
+  "src/engine/selectors/board-render.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/selectors/effects-to-overlays.ts": {
+    "statements": 93,
+    "branches": 92,
+    "functions": 100,
+    "lines": 93
+  },
+  "src/engine/selectors/overlays.ts": {
+    "statements": 90,
+    "branches": 78,
+    "functions": 100,
+    "lines": 95
+  },
   "src/engine/ui/effects.ts": {
     "statements": 53,
     "branches": 25,
     "functions": 25,
     "lines": 53
+  },
+  "src/engine/ui/overlays.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/util/cell-projection.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/finesse/calculator.ts": {
     "statements": 94,
@@ -209,11 +239,17 @@
     "functions": 75,
     "lines": 76
   },
+  "src/modes/freePlay/ui.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
   "src/modes/guided/deck.ts": {
     "statements": 97,
-    "branches": 80,
-    "functions": 75,
-    "lines": 96
+    "branches": 81,
+    "functions": 90,
+    "lines": 97
   },
   "src/modes/guided/types.ts": {
     "statements": 73,
@@ -221,9 +257,15 @@
     "functions": 75,
     "lines": 76
   },
+  "src/modes/guided/ui.ts": {
+    "statements": 91,
+    "branches": 64,
+    "functions": 100,
+    "lines": 91
+  },
   "src/srs/fsrs-adapter.ts": {
-    "statements": 98,
-    "branches": 88,
+    "statements": 97,
+    "branches": 81,
     "functions": 91,
     "lines": 98
   },
@@ -246,10 +288,10 @@
     "lines": 86
   },
   "src/state/types.ts": {
-    "statements": 70,
-    "branches": 53,
-    "functions": 52,
-    "lines": 68
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/types/brands.ts": {
     "statements": 90,
@@ -280,5 +322,11 @@
     "branches": 0,
     "functions": 40,
     "lines": 53
+  },
+  "src/ui/utils/outlines.ts": {
+    "statements": 81,
+    "branches": 74,
+    "functions": 66,
+    "lines": 83
   }
 }
