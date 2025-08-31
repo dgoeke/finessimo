@@ -83,7 +83,7 @@ function orderCardsByDifficulty(
 
   const cardsWithDifficulty: Array<CardWithDifficulty> = cards.map((card) => {
     const activePiece = createActivePiece(card.piece);
-    const optimalSequences = finesseCalculator.calculateOptimal(
+    const sequence = finesseCalculator.calculateOptimal(
       activePiece,
       card.x as number,
       card.rot,
@@ -91,10 +91,9 @@ function orderCardsByDifficulty(
     );
 
     // Calculate minimum sequence length (difficulty metric)
-    const minSequenceLength = optimalSequences.reduce(
-      (min, seq) => Math.min(min, seq.length),
-      Number.POSITIVE_INFINITY,
-    );
+    const minSequenceLength = sequence
+      ? sequence.length
+      : Number.POSITIVE_INFINITY;
 
     return { ...card, minSequenceLength };
   });
@@ -175,13 +174,11 @@ function tryAddOneFromEachGroup(
     const index = indices[i];
 
     if (group && typeof index === "number" && index < group.length) {
-      const cardWithDifficulty = group[index];
-      if (cardWithDifficulty) {
-        const { minSequenceLength: _, ...card } = cardWithDifficulty; // Remove the difficulty metric
-        result.push(card);
-        indices[i] = index + 1;
-        addedThisRound = true;
-      }
+      const cardWithDifficulty = group[index]!;
+      const { minSequenceLength: _, ...card } = cardWithDifficulty; // Remove the difficulty metric
+      result.push(card);
+      indices[i] = index + 1;
+      addedThisRound = true;
     }
   }
 

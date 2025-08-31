@@ -43,26 +43,23 @@ describe("Finesse golden fixtures", () => {
   for (const c of cases) {
     test(`${c.piece} -> x=${String(c.targetX)}, rot=${c.targetRot} expects ${String(c.expectedLen)}`, () => {
       const piece = spawnPiece(c.piece);
-      const seqs = finesseCalculator.calculateOptimal(
+      const seq = finesseCalculator.calculateOptimal(
         piece,
         c.targetX,
         c.targetRot,
         cfg,
       );
       if (c.expectedLen === 0) {
-        expect(seqs.length).toBe(0);
+        expect(seq).toBeNull();
         return;
       }
-      expect(seqs.length).toBeGreaterThan(0);
-      const minLen = Math.min(...seqs.map((s) => s.length));
-      expect(minLen).toBe(c.expectedLen);
+      expect(seq).toBeDefined();
+      if (!seq) return;
+      expect(seq.length).toBe(c.expectedLen);
       // Ensure HardDrop present in minimal sequence
-      const one = seqs.find((s) => s.length === c.expectedLen);
-      expect(one).toBeDefined();
-      if (!one) return;
-      expect(one[one.length - 1]).toBe("HardDrop");
+      expect(seq[seq.length - 1]).toBe("HardDrop");
       if (c.first !== undefined && c.first !== "") {
-        expect(one[0]).toBe(c.first);
+        expect(seq[0]).toBe(c.first);
       }
     });
   }

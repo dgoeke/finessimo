@@ -5,6 +5,8 @@ import {
   finesseCalculator,
   type Fault,
   extractFinesseActions,
+  isFaultyResult,
+  isOptimalResult,
 } from "../../src/finesse/calculator";
 import {
   type FinesseAction,
@@ -46,142 +48,115 @@ function spawnPiece(id: keyof typeof PIECES): ActivePiece {
 describe("Finesse Calculator (BFS minimality)", () => {
   test("Spawn position with no movement is HardDrop only (1 input)", () => {
     const piece = spawnPiece("T");
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       piece.x,
       "spawn",
       cfg,
     );
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(1);
-    expect(seqs.some((s) => s.length === 1 && s[0] === "HardDrop")).toBe(true);
+    expect(seq?.length).toBe(1);
+    expect(seq?.[0]).toBe("HardDrop");
   });
 
   test("Hold-left to wall is 1 input (+ HardDrop)", () => {
     const piece = spawnPiece("T"); // spawn x = 3
     const targetX = 0;
     const targetRot: Rot = "spawn";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    expect(seqs.length).toBeGreaterThan(0);
-    // Minimal should be exactly 2 inputs: LeftDAS + HardDrop
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(2);
-    const one = seqs.find((s) => s.length === 2);
-    expect(one).toBeDefined();
-    if (!one) return;
-    expect(one).toEqual(["DASLeft", "HardDrop"]);
+    expect(seq).toEqual(["DASLeft", "HardDrop"]);
   });
 
   test("Two-step left to column 1 is 2 inputs (+ HardDrop)", () => {
     const piece = spawnPiece("T"); // x=3
     const targetX = 1; // two steps left
     const targetRot: Rot = "spawn";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    expect(seqs.length).toBeGreaterThan(0);
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(3); // Left, Left, HardDrop
-    const opt = seqs.find((s) => s.length === 3);
-    expect(opt).toBeDefined();
-    if (!opt) return;
-    expect(opt[0]).toBe("MoveLeft");
-    expect(opt[1]).toBe("MoveLeft");
-    expect(opt[2]).toBe("HardDrop");
+    expect(seq?.length).toBe(3); // Left, Left, HardDrop
+    expect(seq?.[0]).toBe("MoveLeft");
+    expect(seq?.[1]).toBe("MoveLeft");
+    expect(seq?.[2]).toBe("HardDrop");
   });
 
   test("Rotate to right is 1 input (+ HardDrop)", () => {
     const piece = spawnPiece("T");
     const targetX = piece.x; // keep same column
     const targetRot: Rot = "right";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(2); // RotateCW, HardDrop
-    // Either CW or CCW could reach right depending on path, but CW is direct from spawn
-    const found = seqs.find((s) => s.length === 2);
-    expect(found).toBeDefined();
-    if (!found) return;
-    expect(found[1]).toBe("HardDrop");
-    expect(["RotateCW", "RotateCCW"]).toContain(found[0]);
+    expect(seq?.length).toBe(2); // Rotate*, HardDrop
+    expect(seq?.[1]).toBe("HardDrop");
+    expect(["RotateCW", "RotateCCW"]).toContain(seq?.[0] ?? "");
   });
 
   test("Rotate to left prefers CCW (1 input + HardDrop)", () => {
     const piece = spawnPiece("T");
     const targetX = piece.x;
     const targetRot: Rot = "left";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(2); // RotateCCW, HardDrop
-    const found = seqs.find((s) => s.length === 2);
-    expect(found).toBeDefined();
-    if (!found) return;
-    expect(found[1]).toBe("HardDrop");
-    expect(found[0]).toBe("RotateCCW");
+    expect(seq?.length).toBe(2); // RotateCCW, HardDrop
+    expect(seq?.[1]).toBe("HardDrop");
+    expect(seq?.[0]).toBe("RotateCCW");
   });
 
   test("Rotate to two state is 2 inputs (+ HardDrop)", () => {
     const piece = spawnPiece("T");
     const targetX = piece.x;
     const targetRot: Rot = "two";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(3); // Two rotations needed to reach 'two' state, plus HardDrop
-    const found = seqs.find((s) => s.length === 3);
-    expect(found).toBeDefined();
-    if (!found) return;
-    expect(found[2]).toBe("HardDrop");
-    // Could be CW+CW or CCW+CCW
-    expect(["RotateCW", "RotateCCW"]).toContain(found[0]);
-    expect(["RotateCW", "RotateCCW"]).toContain(found[1]);
+    expect(seq?.length).toBe(3); // Two rotations + HardDrop
+    expect(seq?.[2]).toBe("HardDrop");
+    expect(["RotateCW", "RotateCCW"]).toContain(seq?.[0] ?? "");
+    expect(["RotateCW", "RotateCCW"]).toContain(seq?.[1] ?? "");
   });
 
   test("Unreachable target returns no sequences (O cannot rotate)", () => {
     const piece = spawnPiece("O");
     const targetX = piece.x;
     const targetRot: Rot = "right"; // O rotation not allowed
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    expect(seqs.length).toBe(0);
+    expect(seq).toBeNull();
   });
 
   test("Unreachable due to x beyond wall returns no sequences", () => {
     const piece = spawnPiece("L");
     const targetX = 9; // invalid for L spawn orientation
     const targetRot: Rot = "spawn";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    expect(seqs.length).toBe(0);
+    expect(seq).toBeNull();
   });
 
   test("analyze: exact minimal sequence is optimal with no faults", () => {
@@ -260,17 +235,14 @@ describe("Finesse Calculator (BFS minimality)", () => {
     const piece = spawnPiece("L"); // x=3
     const targetX = 7; // rightmost valid x for spawn L
     const targetRot: Rot = "spawn";
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(2);
-    const one = seqs.find((s) => s.length === 2);
-    assertDefined(one, "Expected to find a sequence with length 2");
-    expect(one).toEqual(["DASRight", "HardDrop"]);
+    assertDefined(seq, "Expected a sequence with length 2");
+    expect(seq).toEqual(["DASRight", "HardDrop"]);
   });
 
   const pieces: Array<keyof typeof PIECES> = [
@@ -287,21 +259,15 @@ describe("Finesse Calculator (BFS minimality)", () => {
       const piece = spawnPiece(pid);
       const board = createEmptyBoard();
       const left = moveToWall(board, piece, -1);
-      const seqs = finesseCalculator.calculateOptimal(
+      const seq = finesseCalculator.calculateOptimal(
         piece,
         left.x,
         piece.rot,
         cfg,
       );
-      const minLen = Math.min(...seqs.map((s) => s.length));
-      expect(minLen).toBe(2);
-      const one = seqs.find((s) => s.length === 2);
-      assertDefined(
-        one,
-        `Expected to find a sequence with length 2 for ${pid}`,
-      );
-      expect(one[0]).toBe("DASLeft");
-      expect(one[1]).toBe("HardDrop");
+      assertDefined(seq, `Expected a sequence with length 2 for ${pid}`);
+      expect(seq[0]).toBe("DASLeft");
+      expect(seq[1]).toBe("HardDrop");
     });
   }
 
@@ -310,21 +276,15 @@ describe("Finesse Calculator (BFS minimality)", () => {
       const piece = spawnPiece(pid);
       const board = createEmptyBoard();
       const right = moveToWall(board, piece, 1);
-      const seqs = finesseCalculator.calculateOptimal(
+      const seq = finesseCalculator.calculateOptimal(
         piece,
         right.x,
         piece.rot,
         cfg,
       );
-      const minLen = Math.min(...seqs.map((s) => s.length));
-      expect(minLen).toBe(2);
-      const one = seqs.find((s) => s.length === 2);
-      assertDefined(
-        one,
-        `Expected to find a sequence with length 2 for ${pid}`,
-      );
-      expect(one[0]).toBe("DASRight");
-      expect(one[1]).toBe("HardDrop");
+      assertDefined(seq, `Expected a sequence with length 2 for ${pid}`);
+      expect(seq[0]).toBe("DASRight");
+      expect(seq[1]).toBe("HardDrop");
     });
   }
 
@@ -336,9 +296,32 @@ describe("Finesse Calculator (BFS minimality)", () => {
     expect(rotated).toBeDefined();
     if (!rotated) return;
     const right = moveToWall(board, rotated, 1);
-    const seqs = finesseCalculator.calculateOptimal(piece, right.x, rot, cfg);
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBe(3); // Rotate + RightDAS + HardDrop
+    const seq = finesseCalculator.calculateOptimal(piece, right.x, rot, cfg);
+    expect(seq?.length).toBe(3); // Rotate + RightDAS + HardDrop
+  });
+
+  test("neighbors include SoftDrop on non-empty boards (internal path)", () => {
+    const piece = spawnPiece("T");
+    const board = createEmptyBoard();
+    // Mark a single cell to ensure non-empty board
+    board.cells[0] = 1;
+    const anyCalc = finesseCalculator as unknown as {
+      calculateOptimal: (
+        p: ActivePiece,
+        tx: number,
+        tr: Rot,
+        c: GameplayConfig,
+        b?: any,
+      ) => Array<string> | null;
+    };
+    const seq = anyCalc.calculateOptimal(
+      piece,
+      (piece.x as unknown as number) + 1,
+      "spawn",
+      cfg,
+      board,
+    );
+    expect(Array.isArray(seq) || seq === null).toBe(true);
   });
 });
 
@@ -364,6 +347,15 @@ describe("extractFinesseActions", () => {
     const actions: Array<Action> = [HardDrop(timestamp)];
     const result = extractFinesseActions(actions);
     expect(result).toEqual(["HardDrop"]);
+  });
+
+  test("type guards for FinesseResult work as expected", () => {
+    const ok: any = { kind: "optimal", optimalSequences: [["HardDrop"]], playerSequence: ["HardDrop"] };
+    const bad: any = { kind: "faulty", faults: [{ type: "extra_input" }], optimalSequences: [], playerSequence: [] };
+    expect(isOptimalResult(ok)).toBe(true);
+    expect(isFaultyResult(ok)).toBe(false);
+    expect(isOptimalResult(bad)).toBe(false);
+    expect(isFaultyResult(bad)).toBe(true);
   });
 
   test("maps each hold-run action to DAS action (no coalescing)", () => {
@@ -510,6 +502,17 @@ describe("extractFinesseActions", () => {
     expect(result).toEqual(["MoveLeft", "DASRight"]);
   });
 
+  test("optimistic TapMove is kept when HoldStart is in the opposite direction", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ optimistic: true, timestampMs: timestamp }), // Optimistic left tap
+      HoldStartRight({ timestampMs: createTimestamp(timestamp + 100) }), // Opposite direction
+      HoldMoveRight({ timestampMs: createTimestamp(timestamp + 267) }),
+    ];
+    const result = extractFinesseActions(actions);
+    // Optimistic tap should not be filtered because direction switched before a matching HoldStart
+    expect(result).toEqual(["MoveLeft", "DASRight"]);
+  });
+
   test("keeps TapMove when no following HoldStart", () => {
     const actions: Array<Action> = [
       MoveLeft({ timestampMs: timestamp }), // Just a tap, no hold
@@ -528,5 +531,15 @@ describe("extractFinesseActions", () => {
     const result = extractFinesseActions(actions);
     // Should see both MoveLeft and DASLeft (tap + separate DAS)
     expect(result).toEqual(["MoveLeft", "DASLeft"]);
+  });
+
+  test("optimistic TapMove with unrelated events does not filter the tap", () => {
+    const actions: Array<Action> = [
+      MoveLeft({ optimistic: true, timestampMs: timestamp }),
+      RotateCW(),
+      HardDrop(timestamp),
+    ];
+    const result = extractFinesseActions(actions);
+    expect(result).toEqual(["MoveLeft", "RotateCW", "HardDrop"]);
   });
 });

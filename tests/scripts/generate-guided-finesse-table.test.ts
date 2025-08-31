@@ -21,14 +21,14 @@ describe("Guided finesse table generator", () => {
       piece: string;
       x: number;
       rot: string;
-      sequences: ReadonlyArray<ReadonlyArray<string>>;
+      sequence: ReadonlyArray<string> | null;
     };
 
     const rows: Array<Row> = [];
 
     for (const card of cards) {
       const start = createActivePiece(card.piece);
-      const sequences = finesseCalculator.calculateOptimal(
+      const sequence = finesseCalculator.calculateOptimal(
         start,
         card.x as number,
         card.rot,
@@ -38,7 +38,7 @@ describe("Guided finesse table generator", () => {
       rows.push({
         piece: card.piece,
         rot: card.rot,
-        sequences,
+        sequence,
         x: card.x as number,
       });
     }
@@ -46,7 +46,7 @@ describe("Guided finesse table generator", () => {
     const outDir = path.join(process.cwd(), "generated");
     fs.mkdirSync(outDir, { recursive: true });
 
-    // JSON output (unchanged)
+    // JSON output (unchanged shape aside from 'sequence')
     const jsonPath = path.join(outDir, "guided_finesse_table.json");
     fs.writeFileSync(jsonPath, JSON.stringify(rows, null, 2), "utf8");
 
@@ -68,7 +68,7 @@ function toCsv(
     piece: string;
     x: number;
     rot: string;
-    sequences: ReadonlyArray<ReadonlyArray<string>>;
+    sequence: ReadonlyArray<string> | null;
   }>,
 ): string {
   const headers = ["piece", "x", "rot", "sequences"];
@@ -79,7 +79,7 @@ function toCsv(
       row.piece,
       String(row.x),
       row.rot,
-      JSON.stringify(row.sequences),
+      JSON.stringify(row.sequence),
     ].map(escapeCsvField);
 
     lines.push(fields.join(","));

@@ -273,7 +273,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     // Verify finesse analysis works but shows limitations
     const finesseActions = extractFinesseActionsFromProcessed(playerActions);
     const tPiece = spawnPiece("T");
-    const optimalSequences = finesseCalculator.calculateOptimal(
+    const optimalSequence = finesseCalculator.calculateOptimal(
       tPiece,
       4,
       "two",
@@ -290,7 +290,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
 
     // The optimalSequence doesn't include softdrop and can't even work on our
     // filled board, because it assumes an empty board.
-    expect(optimalSequences[0]).toEqual([
+    expect(optimalSequence).toEqual([
       "MoveRight",
       "RotateCW",
       "RotateCW",
@@ -353,29 +353,21 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     const targetX = 7; // Far right
     const targetRot: Rot = "two"; // upside down
 
-    const seqs = finesseCalculator.calculateOptimal(
+    const seq = finesseCalculator.calculateOptimal(
       piece,
       targetX,
       targetRot,
       cfg,
     );
-
-    expect(seqs.length).toBeGreaterThan(0);
-
-    // Should be able to find multiple paths
-    const minLen = Math.min(...seqs.map((s) => s.length));
-    expect(minLen).toBeGreaterThanOrEqual(3); // Movement + rotations + hard drop
-
-    // Should contain movements and rotations
-    const flatActions = seqs.flat();
+    expect(seq).toBeDefined();
+    if (!seq) return;
+    expect(seq.length).toBeGreaterThanOrEqual(3); // Movement + rotations + hard drop
     expect(
-      flatActions.some(
-        (action) => action.includes("Right") || action === "DASRight",
-      ),
+      seq.some((action) => action.includes("Right") || action === "DASRight"),
     ).toBe(true);
-    expect(flatActions.some((action) => action.includes("Rotate"))).toBe(true);
+    expect(seq.some((action) => action.includes("Rotate"))).toBe(true);
     expect(
-      flatActions.every((action) =>
+      seq.every((action) =>
         [
           "MoveLeft",
           "MoveRight",

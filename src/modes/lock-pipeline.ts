@@ -18,7 +18,12 @@ import { gameModeRegistry } from "./index";
 
 import type { ResolveLockDecision } from "./index";
 import type { FinesseResult } from "../finesse/calculator";
-import type { GameState, Action } from "../state/types";
+import type {
+  GameState,
+  Action,
+  PendingLock,
+  ActivePiece,
+} from "../state/types";
 import type { Timestamp } from "../types/timestamp";
 
 export type PipelineAnalyzer = (state: GameState) => {
@@ -30,6 +35,41 @@ export type PipelineAnalyzer = (state: GameState) => {
  * Main pipeline runner - processes pending lock resolution
  * This is called from the app loop when state.status === 'resolvingLock'
  */
+function dispatchMany(
+  dispatch: (action: Action) => void,
+  actions: ReadonlyArray<Action>,
+): void {
+  for (const a of actions) dispatch(a);
+}
+
+function buildLockedPieceForHook(p: PendingLock): ActivePiece {
+  return {
+    id: p.pieceId,
+    rot: p.finalPos.rot,
+    x: p.finalPos.x,
+    y: p.finalPos.y,
+  };
+}
+
+function handleCommit(
+  dispatch: (action: Action) => void,
+  decision: ResolveLockDecision,
+  modeResult?: { postActions?: ReadonlyArray<Action> },
+): ResolveLockDecision {
+  dispatch({ type: "CommitLock" });
+  // Note: CommitLock's applyPendingLock already handles zero-delay line clears
+  type CommitDecision = Extract<ResolveLockDecision, { action: "commit" }>;
+  const commitDecision = decision as CommitDecision;
+  if (commitDecision.postActions && commitDecision.postActions.length > 0) {
+    dispatchMany(dispatch, commitDecision.postActions);
+  }
+  // Emit mode-provided postActions (e.g., feedback effect) AFTER reset/commit for desired timing
+  if (modeResult?.postActions && modeResult.postActions.length > 0) {
+    dispatchMany(dispatch, modeResult.postActions);
+  }
+  return decision;
+}
+
 export const runLockPipeline = (
   state: GameState,
   dispatch: (action: Action) => void,
@@ -46,11 +86,9 @@ export const runLockPipeline = (
   const { actions: finesseActions, result: finesse } = analyzeFinesse(state);
 
   // Step 2: Dispatch finesse feedback actions (includes ClearInputLog as final action)
-  for (const action of finesseActions) {
-    dispatch(action);
-  }
+  dispatchMany(dispatch, finesseActions);
 
-  // Step 3: Get mode decision
+  // Step 3: Let the mode react to the piece lock (rating, feedback, persistence)
   const mode = gameModeRegistry.get(state.currentMode);
   if (!mode) {
     // Mode not found, default to commit (maintains game flow)
@@ -58,20 +96,40 @@ export const runLockPipeline = (
     return { decision: { action: "commit" } };
   }
 
-  const decision = mode.onResolveLock
-    ? mode.onResolveLock({ finesse, pending, state })
-    : { action: "commit" as const };
+  // Build a best-effort locked piece for the hook; mode typically checks id only
+  const lockedPieceForHook = buildLockedPieceForHook(pending);
+
+  const modeHasOnPieceLocked =
+    typeof (mode as { onPieceLocked?: unknown }).onPieceLocked === "function";
+  const modeResult = modeHasOnPieceLocked
+    ? (mode as Required<Pick<typeof mode, "onPieceLocked">>).onPieceLocked(
+        state,
+        finesse,
+        lockedPieceForHook,
+        pending.finalPos,
+      )
+    : undefined;
+
+  // Apply mode-provided modeData updates immediately (e.g., Guided deck advancement)
+  if (modeResult?.modeData !== undefined) {
+    dispatch({ data: modeResult.modeData, type: "UpdateModeData" });
+  }
+
+  const decision =
+    typeof (mode as { onResolveLock?: unknown }).onResolveLock === "function"
+      ? (mode as Required<Pick<typeof mode, "onResolveLock">>).onResolveLock({
+          finesse,
+          pending,
+          state,
+        })
+      : ({ action: "commit" } as const);
 
   // Step 4: Execute decision
   if (decision.action === "retry") {
     dispatch({ timestampMs, type: "RetryPendingLock" });
     return { decision };
-  } else {
-    dispatch({ type: "CommitLock" });
-    // Note: CommitLock's applyPendingLock already handles zero-delay line clears
-    if (decision.postActions && decision.postActions.length > 0) {
-      for (const a of decision.postActions) dispatch(a);
-    }
-    return { decision };
   }
+
+  const finalDecision = handleCommit(dispatch, decision, modeResult);
+  return { decision: finalDecision };
 };

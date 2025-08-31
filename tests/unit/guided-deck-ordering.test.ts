@@ -19,17 +19,14 @@ describe("Guided deck card ordering", () => {
     // Calculate difficulty for each card
     const cardsWithDifficulty = cards.map((card) => {
       const activePiece = createActivePiece(card.piece);
-      const optimalSequences = finesseCalculator.calculateOptimal(
+      const seq = finesseCalculator.calculateOptimal(
         activePiece,
         card.x as number,
         card.rot,
         gameplayConfig,
       );
 
-      const minSequenceLength = optimalSequences.reduce(
-        (min, seq) => Math.min(min, seq.length),
-        Number.POSITIVE_INFINITY,
-      );
+      const minSequenceLength = seq ? seq.length : Number.POSITIVE_INFINITY;
 
       return { ...card, minSequenceLength };
     });
@@ -111,17 +108,13 @@ describe("Guided deck card ordering", () => {
 
     for (const card of firstCards) {
       const activePiece = createActivePiece(card.piece);
-      const optimalSequences = finesseCalculator.calculateOptimal(
+      const seq = finesseCalculator.calculateOptimal(
         activePiece,
         card.x as number,
         card.rot,
         gameplayConfig,
       );
-
-      const minSequenceLength = optimalSequences.reduce(
-        (min, seq) => Math.min(min, seq.length),
-        Number.POSITIVE_INFINITY,
-      );
+      const minSequenceLength = seq ? seq.length : Number.POSITIVE_INFINITY;
 
       // The first cards should be quite easy (sequence length <= 3)
       expect(minSequenceLength).toBeLessThanOrEqual(3);
