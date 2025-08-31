@@ -127,7 +127,7 @@
   },
   "src/engine/selectors/overlays.ts": {
     "statements": 90,
-    "branches": 78,
+    "branches": 80,
     "functions": 100,
     "lines": 95
   },

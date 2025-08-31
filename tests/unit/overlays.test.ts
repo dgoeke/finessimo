@@ -6,13 +6,13 @@ import {
   selectColumnHighlightOverlay,
   selectDerivedOverlays,
 } from "../../src/engine/selectors/overlays";
+import { buildTopOutState } from "../../src/state/types";
 import { createGridCoord } from "../../src/types/brands";
 // no timestamp helpers needed in this test
 import { createTestGameState } from "../test-helpers";
 
 import type { ExtendedModeData, TargetCell } from "../../src/modes/types";
 import type { GameState, ActivePiece, BaseShared } from "../../src/state/types";
-import { buildTopOutState } from "../../src/state/types";
 
 describe("overlays.ts", () => {
   const mockActivePiece: ActivePiece = {
@@ -29,27 +29,29 @@ describe("overlays.ts", () => {
   const toBaseShared = (s: GameState): BaseShared => ({
     board: s.board,
     boardDecorations: s.boardDecorations,
+    canHold: s.canHold,
+    currentMode: s.currentMode,
+    finesseFeedback: s.finesseFeedback,
     gameplay: s.gameplay,
     guidance: s.guidance,
     hold: s.hold,
-    canHold: s.canHold,
-    nextQueue: s.nextQueue,
-    physics: s.physics,
-    rng: s.rng,
-    stats: s.stats,
-    timing: s.timing,
-    currentMode: s.currentMode,
-    finesseFeedback: s.finesseFeedback,
     modeData: s.modeData,
     modePrompt: s.modePrompt,
+    nextQueue: s.nextQueue,
+    physics: s.physics,
     processedInputLog: s.processedInputLog,
+    rng: s.rng,
+    stats: s.stats,
     tick: s.tick,
+    timing: s.timing,
     uiEffects: s.uiEffects,
   });
 
   describe("selectGhostOverlay", () => {
     it("should return null for non-playing states", () => {
-      const topOutState: GameState = buildTopOutState(toBaseShared(basePlayingState));
+      const topOutState: GameState = buildTopOutState(
+        toBaseShared(basePlayingState),
+      );
 
       const ghost = selectGhostOverlay(topOutState);
       expect(ghost).toBeNull();
