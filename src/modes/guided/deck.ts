@@ -16,9 +16,9 @@ export const ROTATION_CLASSES: Record<PieceId, ReadonlyArray<Rot>> = {
   J: ["spawn", "right", "two", "left"], // All unique
   L: ["spawn", "right", "two", "left"], // All unique
   O: ["spawn"], // All rotations identical
-  S: ["spawn", "left"], // spawn≡two, left≡right (visual symmetry)
+  S: ["spawn"], // spawn≡two, only spawn needed (left/right provide equivalent training at different positions)
   T: ["spawn", "right", "two", "left"], // All unique
-  Z: ["spawn", "left"], // spawn≡two, left≡right (visual symmetry)
+  Z: ["spawn"], // spawn≡two, only spawn needed (left/right provide equivalent training at different positions)
 };
 
 export function validColumns(piece: PieceId, rot: Rot): ReadonlyArray<Column> {
