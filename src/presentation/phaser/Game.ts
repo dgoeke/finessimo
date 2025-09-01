@@ -1,14 +1,29 @@
-// Phase 0: Placeholder game factory (no Phaser import yet)
-// Intentionally avoids importing external 'phaser' to keep lint/typecheck green
-// until dependencies are introduced in later phases.
+import Phaser from "phaser";
 
-export type GameHandle = Readonly<{ readonly kind: "PhaserGameHandle" }>;
+import { SCENES } from "./scenes";
 
 export function createGame(
-  _parent: HTMLElement,
-  _width: number,
-  _height: number,
-): GameHandle {
-  // Not constructed in Phase 0; return a sentinel handle
-  return { kind: "PhaserGameHandle" } as const;
+  parent: HTMLElement,
+  width: number,
+  height: number,
+): Phaser.Game {
+  const config: Phaser.Types.Core.GameConfig = {
+    backgroundColor: "#000000",
+    height,
+    parent,
+    pixelArt: true,
+    roundPixels: true,
+    scale: {
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      height,
+      mode: Phaser.Scale.FIT,
+      width,
+    },
+    // Register scenes using the typed registry
+    scene: SCENES as unknown as Array<Phaser.Types.Scenes.SceneType>,
+    type: Phaser.AUTO,
+    width,
+  };
+
+  return new Phaser.Game(config);
 }

@@ -1,21 +1,39 @@
 import { FinessimoApp } from "./app";
+import { createGame } from "./presentation/phaser/Game";
+import { SCENE_KEYS } from "./presentation/phaser/scenes";
 import { getFinessimoShell } from "./ui/utils/dom";
 
-// Import components to register them
-import "./ui/components/finessimo-shell.tsx";
-import "./ui/components/game-board.tsx";
-import "./ui/components/finesse-overlay.tsx";
-import "./ui/components/piece-hold.tsx";
-import "./ui/components/piece-preview.tsx";
-import "./ui/components/stats-panel.tsx";
-import "./ui/components/settings-modal.tsx";
+// UI components are dynamically imported in DOM branch only
+
+function shouldUsePhaser(): boolean {
+  return new URLSearchParams(location.search).get("ui") === "phaser";
+}
 
 // Main entry point
-function main(): void {
+async function main(): Promise<void> {
   // Starting Finessimo - Tetris Finesse Trainer
 
-  // Create the application instance
+  if (shouldUsePhaser()) {
+    const root = document.getElementById("app") ?? document.body;
+    const game = createGame(root, innerWidth, innerHeight);
+    // Scenes are registered in Game.ts; start Boot
+    game.scene.start(SCENE_KEYS.Boot);
+    return;
+  }
+
+  // Create the application instance (DOM/Lit UI is default)
   const app = new FinessimoApp();
+
+  // Dynamically import UI components to avoid loading Lit in Phaser mode
+  await Promise.all([
+    import("./ui/components/finessimo-shell.tsx"),
+    import("./ui/components/game-board.tsx"),
+    import("./ui/components/finesse-overlay.tsx"),
+    import("./ui/components/piece-hold.tsx"),
+    import("./ui/components/piece-preview.tsx"),
+    import("./ui/components/stats-panel.tsx"),
+    import("./ui/components/settings-modal.tsx"),
+  ]);
 
   // Wait for DOM to be ready
   if (document.readyState === "loading") {
@@ -58,4 +76,4 @@ window.addEventListener("beforeunload", () => {
 });
 
 // Start the application
-main();
+void main();
