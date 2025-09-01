@@ -45,7 +45,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/Game.ts — Phase 0 placeholder game factory (no Phaser import yet). Returns a sentinel handle; real Phaser wiring comes in later phases.
 - src/presentation/phaser/presenter/types.ts — Phase 0 core presentation types: branded primitives (Px, Col, Row, Ms), ViewModel, RenderPlan union, and Presenter contract (pure computePlan + impure apply).
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
-- src/presentation/phaser/presenter/viewModel.ts — Phase 0: exposes `mapGameStateToViewModel` signature; implementation to arrive in Phase 2.
+- src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
 
 - src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 1: minimal scene shell with shallow transition helpers (`toSettings`, `toModeSelect`, `toGameplay`). No Phaser import yet.
