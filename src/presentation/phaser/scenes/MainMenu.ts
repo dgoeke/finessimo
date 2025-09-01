@@ -11,16 +11,50 @@ export class MainMenu extends Phaser.Scene {
   }
 
   create(): void {
-    // Minimal placeholder UI (rexUI wiring can replace this later)
-    // Keep side effects minimal for tests; text creation is safe under Jest mock.
+    // Build rexUI-based vertical menu
     const w = this.scale.width;
     const h = this.scale.height;
-    const title = this.add.text(w / 2, h / 2 - 20, "Finessimo", {
+
+    const header = this.add.text(0, 0, "Finessimo", {
       color: "#ffffff",
       fontFamily: "monospace",
-      fontSize: "16px",
+      fontSize: "22px",
     });
-    title.setOrigin(0.5, 0.5);
+    header.setOrigin(0.5, 0.5);
+
+    const menu = this.rexUI.add.sizer({
+      orientation: 1, // vertical
+      space: { item: 8 },
+      x: w / 2,
+      y: h / 2,
+    });
+
+    // Helper to create a labeled button with interactive background
+    const makeButton = (
+      label: string,
+      onClick: () => void,
+    ): RexUIInternal.Base => {
+      const bg = this.rexUI.add.roundRectangle(0, 0, 160, 36, 8, 0x223344);
+      bg.setOrigin(0.5, 0.5);
+      const txt = this.add.text(0, 0, label, {
+        color: "#e7eaf0",
+        fontFamily: "monospace",
+        fontSize: "14px",
+      });
+      const btn = this.rexUI.add.label({
+        background: bg,
+        text: txt,
+      }) as RexUIInternal.Base;
+      bg.setInteractive();
+      bg.on("pointerdown", () => onClick());
+      return btn;
+    };
+
+    menu.add(header, { align: "center" });
+    menu.add(makeButton("Start Free Play", () => this.startFreePlay()));
+    menu.add(makeButton("Mode Select", () => this.toModeSelect()));
+    menu.add(makeButton("Settings", () => this.toSettings()));
+    menu.layout();
   }
 
   toSettings(): void {

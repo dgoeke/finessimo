@@ -1,6 +1,8 @@
 import Phaser from "phaser";
+// rexUI scene plugin mapping (ESM). Registered via Game config.
+import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin.js";
 
-import { SCENES } from "./scenes";
+import { SCENES_FOR_CONFIG } from "./scenes";
 
 export function createGame(
   parent: HTMLElement,
@@ -12,6 +14,15 @@ export function createGame(
     height,
     parent,
     pixelArt: true,
+    plugins: {
+      scene: [
+        {
+          key: "rexui",
+          mapping: "rexUI",
+          plugin: RexUIPlugin,
+        },
+      ],
+    },
     roundPixels: true,
     scale: {
       autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -19,8 +30,8 @@ export function createGame(
       mode: Phaser.Scale.FIT,
       width,
     },
-    // Register scenes using the typed registry
-    scene: SCENES as unknown as Array<Phaser.Types.Scenes.SceneType>,
+    // Register scenes using the typed registry (no unsafe casts)
+    scene: SCENES_FOR_CONFIG,
     type: Phaser.AUTO,
     width,
   };

@@ -54,12 +54,18 @@ describe("Phaser Scene Shells (Phase 1)", () => {
   });
 
   it("Settings.backToMenu() transitions to MainMenu", () => {
-    const start = jest.fn<(k: SceneKey) => void>();
-    const controller: SceneController = { start };
     const settings = new Settings();
-    settings.scene = controller;
+    const startSpy = jest
+      .spyOn(
+        settings.scene as unknown as {
+          start: (...args: Array<unknown>) => unknown;
+        },
+        "start",
+      )
+      .mockImplementation(() => settings.scene);
     settings.backToMenu();
-    expect(start).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
+    expect(startSpy).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
+    startSpy.mockRestore();
   });
 
   it("ModeSelect transitions to Gameplay and back", () => {
