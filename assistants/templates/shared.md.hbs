@@ -35,24 +35,6 @@ Use IDE-grade language features and compiler diagnostics for code understanding,
 5) Apply edits: surgical, reversible changes only  
 6) Re-check diagnostics (and references if rename) → verify green
 
-**Response format (always)**
-- **Summary** — one sentence goal/outcome  
-- **Tool Trace** — bullet list of key tool calls/commands with params  
-- **Analysis** — what types/defs/refs revealed  
-- **Diff Plan** — file-and-line scoped plan  
-- **Edits** — applied patch snippet(s)  
-- **Post-check** — results from diagnostics; follow-ups/tests to run
-
-> **Example (mini)**
-> - Tool Trace:  
->   - `diagnostics("src/rng.ts") → error TS2322 at 40:6`  
->   - `definition("shuffle") → src/utils/array.ts:12`  
->   - `hover(src/utils/array.ts:12:18) → type T`  
->   - `references("shuffle") → tests + 2 call sites`  
-> - Diff Plan: Narrow generic constraint and guard undefined before swap.  
-> - Edits: `src/utils/array.ts` lines 8–20  
-> - Post-check: `diagnostics(["src/utils/array.ts","src/rng.ts"]) → 0 errors`
-
 ---
 
 ## Type System Philosophy (Haskell-ish, in TypeScript)

@@ -24,6 +24,7 @@ export type BlitterLike = {
 
 export type ContainerLike = {
   setPosition(x: number, y: number): void;
+  list?: Array<unknown>;
 };
 
 export type BoardPresenterOptions = Readonly<{
@@ -68,6 +69,31 @@ function pxFromColRow(
   const x = originX + (col as unknown as number) * tile;
   const y = originY + (row as unknown as number) * tile;
   return { xPx: toPx(x), yPx: toPx(y) };
+}
+
+function pieceKindToFrame(
+  kind?: "I" | "J" | "L" | "O" | "S" | "T" | "Z",
+): number {
+  switch (kind) {
+    case "I":
+      return 1; // Cyan
+    case "J":
+      return 2; // Blue
+    case "L":
+      return 3; // Orange
+    case "O":
+      return 4; // Yellow
+    case "S":
+      return 5; // Green
+    case "T":
+      return 6; // Purple
+    case "Z":
+      return 7; // Red
+    case undefined:
+      return 1; // Default to cyan if no kind specified
+    default:
+      return 1; // Should never reach here
+  }
 }
 
 function forEachBoardCell(
@@ -138,17 +164,20 @@ export class BoardPresenter implements Presenter {
     prev: ViewModel | null,
     next: ViewModel,
   ): ReadonlyArray<RenderPlan> {
+    const prevActiveCells = prev?.active?.cells ?? null;
+    const nextActiveCells = next.active?.cells ?? null;
+    const prevGhostCells = prev?.ghost?.cells ?? null;
+    const nextGhostCells = next.ghost?.cells ?? null;
+    const pieceKind = next.active?.kind;
+
     return [
       ...this.piecePlanFor(
-        prev?.active?.cells ?? null,
-        next.active?.cells ?? null,
+        prevActiveCells,
+        nextActiveCells,
         "active",
+        pieceKind,
       ),
-      ...this.piecePlanFor(
-        prev?.ghost?.cells ?? null,
-        next.ghost?.cells ?? null,
-        "ghost",
-      ),
+      ...this.piecePlanFor(prevGhostCells, nextGhostCells, "ghost", pieceKind),
     ] as const satisfies ReadonlyArray<RenderPlan>;
   }
 
@@ -156,17 +185,55 @@ export class BoardPresenter implements Presenter {
     prevCells: ReadonlyArray<{ col: Col; row: Row }> | null,
     nextCells: ReadonlyArray<{ col: Col; row: Row }> | null,
     id: "active" | "ghost",
+    kind?: "I" | "J" | "L" | "O" | "S" | "T" | "Z",
   ): ReadonlyArray<RenderPlan> {
-    if (!nextCells || nextCells.length === 0) return [] as const;
+    // Always generate a plan when cells change (for visibility and positioning)
+    const cellsChanged = !this.cellsEqual(prevCells, nextCells);
+    if (!cellsChanged) return [] as const;
+
+    if (!nextCells || nextCells.length === 0) {
+      // Hide the piece
+      const plan: RenderPlan = {
+        cells: [],
+        id,
+        t: "PiecePos",
+        xPx: toPx(0),
+        yPx: toPx(0),
+      };
+      if (kind !== undefined) {
+        return [{ ...plan, kind }];
+      }
+      return [plan];
+    }
+
     const nextMin = minColRow(nextCells);
-    const prevMin =
-      prevCells && prevCells.length > 0 ? minColRow(prevCells) : null;
-    const moved =
-      !prevMin || prevMin.col !== nextMin.col || prevMin.row !== nextMin.row;
-    if (!moved) return [] as const;
     const { originXPx: ox, originYPx: oy, tileSizePx: tile } = this.opts;
     const { xPx, yPx } = pxFromColRow(nextMin.col, nextMin.row, tile, ox, oy);
-    return [{ id, t: "PiecePos", xPx, yPx }];
+
+    // Convert cells to relative positions within the container
+    const cells = nextCells.map((cell) => ({
+      col: (cell.col as unknown as number) - (nextMin.col as unknown as number),
+      row: (cell.row as unknown as number) - (nextMin.row as unknown as number),
+    }));
+
+    const plan: RenderPlan = { cells, id, t: "PiecePos", xPx, yPx };
+    if (kind !== undefined) {
+      return [{ ...plan, kind }];
+    }
+    return [plan];
+  }
+
+  private cellsEqual(
+    a: ReadonlyArray<{ col: Col; row: Row }> | null,
+    b: ReadonlyArray<{ col: Col; row: Row }> | null,
+  ): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i]?.col !== b[i]?.col || a[i]?.row !== b[i]?.row) return false;
+    }
+    return true;
   }
 
   private fxAndSoundPlans(
@@ -243,6 +310,33 @@ export class BoardPresenter implements Presenter {
     const target =
       p.id === "active" ? this.opts.activeContainer : this.opts.ghostContainer;
     target.setPosition(p.xPx as unknown as number, p.yPx as unknown as number);
+
+    // Update sprites within the container if we have pooled sprites and cell data
+    if (target.list && p.cells) {
+      const sprites = target.list as Array<{
+        setVisible(visible: boolean): void;
+        setPosition(x: number, y: number): void;
+        setFrame?(frame: number): void;
+      }>;
+      const { tileSizePx } = this.opts;
+
+      // Hide all sprites first
+      for (const sprite of sprites) {
+        sprite.setVisible(false);
+      }
+
+      // Show and position sprites for each cell
+      const frame = pieceKindToFrame(p.kind);
+      for (let i = 0; i < Math.min(p.cells.length, sprites.length); i++) {
+        const cell = p.cells[i];
+        const sprite = sprites[i];
+        if (cell && sprite) {
+          sprite.setPosition(cell.col * tileSizePx, cell.row * tileSizePx);
+          sprite.setVisible(true);
+          sprite.setFrame?.(frame);
+        }
+      }
+    }
   }
 
   private applyCameraFx(p: Extract<RenderPlan, { t: "CameraFx" }>): void {

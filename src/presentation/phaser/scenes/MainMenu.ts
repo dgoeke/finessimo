@@ -75,6 +75,7 @@ export class MainMenu extends Phaser.Scene {
 
     menu.add(header, { align: "center" });
     menu.add(makeButton("Start Free Play", () => this.startFreePlay()));
+    menu.add(makeButton("Start Guided", () => this.startGuided()));
     menu.add(makeButton("Mode Select", () => this.toModeSelect()));
     menu.add(makeButton("Settings", () => this.toSettings()));
     menu.layout();

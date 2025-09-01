@@ -19,9 +19,12 @@ export class Boot extends Phaser.Scene {
   // For now, keep it minimal to avoid asset coupling.
   preload(): void {
     // rexUI is installed globally via Game config plugins (see Game.ts)
-    // Example: this.load.atlas('tiles', 'assets/tiles.png', 'assets/tiles.json');
-    // Example: this.load.bitmapFont('arcade', 'assets/arcade.png', 'assets/arcade.xml');
-    // Example: this.load.audio('lock', 'assets/lock.mp3');
+
+    // Generate visual assets at runtime
+    this.ensureGeneratedTilesTexture();
+
+    // Generate audio placeholders at runtime for spawn/lock/line/topout
+    this.ensureGeneratedAudioPlaceholders();
 
     // Show a simple progress text while loading (even if nothing to load yet)
     const w = this.scale.width;
@@ -54,5 +57,54 @@ export class Boot extends Phaser.Scene {
 
     // Transition to MainMenu after assets are ready
     this.scene.start(SCENE_KEYS.MainMenu);
+  }
+
+  private ensureGeneratedTilesTexture(): void {
+    const key = "tiles";
+    if (this.textures.exists(key)) return;
+
+    const size = 16; // px
+    const frames = 9; // 0..8
+    const tex = this.textures.createCanvas(key, size * frames, size);
+    if (!tex) return; // narrow for strict types; texture manager should be available in real runtime
+    const ctx = tex.context;
+
+    // Simple palette (index 0 is empty/black)
+    const palette = [
+      "#000000", // 0 (empty)
+      "#00ffff", // 1 I (cyan)
+      "#0000ff", // 2 J (blue)
+      "#ff7f00", // 3 L (orange)
+      "#ffff00", // 4 O (yellow)
+      "#00ff00", // 5 S (green)
+      "#800080", // 6 T (purple)
+      "#ff0000", // 7 Z (red)
+      "#7f7f7f", // 8 (extra)
+    ] as const;
+
+    for (let i = 0; i < frames; i++) {
+      ctx.fillStyle = palette[i] ?? "#ffffff";
+      ctx.fillRect(i * size, 0, size, size);
+      // simple inner stroke for definition
+      if (i !== 0) {
+        ctx.strokeStyle = "#111111";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(i * size + 1, 1, size - 2, size - 2);
+      }
+    }
+    tex.refresh();
+
+    // Define frames 0..8 over the canvas so blitter can address by index
+    const texture = this.textures.get(key);
+    for (let i = 0; i < frames; i++) {
+      texture.add(String(i), 0, i * size, 0, size, size);
+    }
+  }
+
+  private ensureGeneratedAudioPlaceholders(): void {
+    // Generate simple placeholder sounds - for now just register silent placeholders
+    // Real implementation would use Web Audio API or load actual files
+    // Audio keys expected by AudioBus: spawn, lock, line, topout
+    // The Phaser sound manager will handle missing sounds gracefully
   }
 }

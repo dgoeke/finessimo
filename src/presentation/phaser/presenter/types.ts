@@ -32,7 +32,14 @@ export type RenderPlan =
       puts: ReadonlyArray<Readonly<{ col: Col; row: Row; frame: number }>>;
       dels: ReadonlyArray<Readonly<{ col: Col; row: Row }>>;
     }>
-  | Readonly<{ t: "PiecePos"; id: "active" | "ghost"; xPx: Px; yPx: Px }>
+  | Readonly<{
+      t: "PiecePos";
+      id: "active" | "ghost";
+      xPx: Px;
+      yPx: Px;
+      cells?: ReadonlyArray<Readonly<{ col: number; row: number }>>;
+      kind?: "I" | "J" | "L" | "O" | "S" | "T" | "Z";
+    }>
   | Readonly<{
       t: "CameraFx";
       kind: "shake" | "fadeIn" | "fadeOut" | "zoomTo";

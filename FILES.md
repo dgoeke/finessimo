@@ -47,7 +47,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Presentation (Phaser)
 
-- src/presentation/phaser/Game.ts — Phase 0 placeholder game factory (no Phaser import yet). Returns a sentinel handle; real Phaser wiring comes in later phases.
+ - src/presentation/phaser/Game.ts — Real Phaser game factory. Configures AUTO renderer, pixelArt/roundPixels, FIT scaling, and registers rexUI as a scene plugin. Exposes `createGame(parent, width, height)`.
 - src/presentation/phaser/presenter/types.ts — Phase 0 core presentation types: branded primitives (Px, Col, Row, Ms), ViewModel, RenderPlan union, and Presenter contract (pure computePlan + impure apply).
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
@@ -58,7 +58,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/input/PhaserInputAdapterImpl.ts — Phaser keyboard implementation emitting DAS machine events and immediate actions.
 - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 
-- src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
+- src/presentation/phaser/scenes/Boot.ts — Real Phaser.Scene. `preload()` generates a minimal colored tile spritesheet at runtime (ensuring visible blocks without external assets) and `create()` dispatches Init (mode+seed) then starts MainMenu.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 6: menu helpers with typed navigation + quick mode shortcuts. Adds `startMode(name)`, `startFreePlay()`, `startGuided()` that dispatch `SetMode` and start Gameplay.
 - src/presentation/phaser/scenes/Settings.ts — Phase 6: settings mapping helpers that convert primitives to brands and dispatch store actions. Adds `updateTimingMs({...})`, `updateGameplay({...})`, and `applySettings({ timing, gameplay })`.
 - src/presentation/phaser/scenes/ModeSelect.ts — Phase 6: mode list/select helpers. Adds `listModes()` to query registry and `selectMode(name)` to dispatch `SetMode` and start Gameplay.

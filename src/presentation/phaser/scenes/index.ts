@@ -41,4 +41,5 @@ export const SCENES_FOR_CONFIG: Array<Phaser.Types.Scenes.SceneType> = [
   Settings,
   ModeSelect,
   Gameplay,
+  Results,
 ];

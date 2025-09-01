@@ -26,9 +26,7 @@ export function createGame(
     roundPixels: true,
     scale: {
       autoCenter: Phaser.Scale.CENTER_BOTH,
-      height,
-      mode: Phaser.Scale.FIT,
-      width,
+      mode: Phaser.Scale.RESIZE,
     },
     // Register scenes using the typed registry (no unsafe casts)
     scene: SCENES_FOR_CONFIG,

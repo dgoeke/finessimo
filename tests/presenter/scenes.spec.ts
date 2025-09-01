@@ -81,22 +81,29 @@ describe("Phaser Scene Shells (Phase 1)", () => {
   });
 
   it("Gameplay transitions to Results or MainMenu", () => {
-    const start = jest.fn<(k: SceneKey) => void>();
+    const start = jest.fn<(k: SceneKey, data?: unknown) => void>();
     const controller: SceneController = { start };
     const gameplay = new Gameplay();
     // In tests, override Phaser scene controller with our light adapter
     (gameplay.scene as unknown as SceneController) = controller;
     gameplay.toResults();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.Results);
+    // Should pass summary data to Results scene
+    expect(start).toHaveBeenCalledWith(
+      SCENE_KEYS.Results,
+      expect.objectContaining({ summary: expect.any(Object) }),
+    );
     gameplay.backToMenu();
     expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.MainMenu);
   });
 
   it("Results.backToMenu() transitions to MainMenu", () => {
     const start = jest.fn<(k: SceneKey) => void>();
-    const controller: SceneController = { start };
     const results = new Results();
-    results.scene = controller;
+    // Mock the scene plugin directly on the instance
+    Object.defineProperty(results, "scene", {
+      value: { start },
+      writable: true,
+    });
     results.backToMenu();
     expect(start).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
   });
