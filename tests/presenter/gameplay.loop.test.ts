@@ -6,21 +6,25 @@ import { Gameplay } from "../../src/presentation/phaser/scenes/Gameplay";
 import { createSeed } from "../../src/types/brands";
 import { createTimestamp } from "../../src/types/timestamp";
 
-import type { PhaserInputAdapter } from "../../src/presentation/phaser/input/PhaserInputAdapter";
+import type {
+  PhaserInputAdapter,
+  InputEvent,
+} from "../../src/presentation/phaser/input/PhaserInputAdapter";
 import type {
   BlitterLike,
   BobLike,
   ContainerLike,
 } from "../../src/presentation/phaser/presenter/BoardPresenter";
+import type { Ms } from "../../src/presentation/phaser/presenter/types";
 import type { Action } from "../../src/state/types";
 
 class ScriptedInput implements PhaserInputAdapter {
-  private readonly steps: Array<ReadonlyArray<Action>>;
+  private readonly steps: Array<ReadonlyArray<InputEvent>>;
   private i = 0;
-  constructor(steps: Array<ReadonlyArray<Action>>) {
+  constructor(steps: Array<ReadonlyArray<InputEvent>>) {
     this.steps = steps;
   }
-  drainActions(): ReadonlyArray<Action> {
+  drainEvents(_dt: Ms): ReadonlyArray<InputEvent> {
     const out = this.steps[this.i] ?? [];
     this.i += 1;
     return out;

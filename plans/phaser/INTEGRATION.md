@@ -155,7 +155,7 @@ Goal
 Changes
 - `src/presentation/phaser/scenes/Gameplay.ts`: convert to `extends Phaser.Scene` while preserving the fixed-step loop logic from current file.
 - Create real adapters:
-  - `src/presentation/phaser/input/PhaserInputAdapterImpl.ts`: read Phaser keys/gamepad, implement DAS/ARR timing to emit `Action[]` per fixed step.
+  - `src/presentation/phaser/input/PhaserInputAdapterImpl.ts`: read Phaser keys/gamepad and emit DAS machine events plus immediate actions for the fixed-step loop.
   - Use `BoardPresenter` as-is but inject real Blitter and Containers for active/ghost.
   - Implement adapters for FX and Audio via `Effects.ts` and `AudioBus.ts` interfaces.
 

@@ -1,5 +1,7 @@
+// Phase 4: Deterministic fixed-step loop
 import { Phaser } from "phaser";
 
+import { DASMachineService } from "../../../input/machines/das";
 import { reducer as coreReducer } from "../../../state/reducer";
 import { getCurrentState } from "../../../state/signals";
 import { createTimestamp } from "../../../types/timestamp";
@@ -11,8 +13,12 @@ import { SimulatedClock } from "./clock";
 import { SCENE_KEYS } from "./types";
 
 import type { Clock } from "./clock";
+import type { DASEvent } from "../../../input/machines/das";
 import type { GameState, Action } from "../../../state/types";
-import type { PhaserInputAdapter } from "../input/PhaserInputAdapter";
+import type {
+  PhaserInputAdapter,
+  InputEvent,
+} from "../input/PhaserInputAdapter";
 import type { AudioBus } from "../presenter/AudioBus";
 import type { CameraFxAdapter } from "../presenter/Effects";
 import type { Presenter, Ms, ViewModel } from "../presenter/types";
@@ -24,6 +30,7 @@ export class Gameplay extends Phaser.Scene {
   private _state: GameState | null = null;
   private _presenter: Presenter | null = null;
   private _input: PhaserInputAdapter | null = null;
+  private _das = new DASMachineService();
   private _vmPrev: ViewModel | null = null;
   private _reduce: (s: Readonly<GameState>, a: Action) => GameState =
     coreReducer;
@@ -88,7 +95,16 @@ export class Gameplay extends Phaser.Scene {
     if (!this._state || !this._presenter || !this._input) return;
     this._accumulator += delta;
     while (this._accumulator >= (this._fixedDt as unknown as number)) {
-      const actions = this._input.drainActions(this._fixedDt);
+      // 1) Drain input events for this fixed step
+      const events = this._input.drainEvents(this._fixedDt);
+      const actions: Array<Action> = [];
+      for (const e of events) {
+        if (this.isDasEvent(e)) {
+          actions.push(...this._das.send(e));
+        } else {
+          actions.push(e);
+        }
+      }
       for (const a of actions) {
         this._state = this._reduce(this._state, a);
       }
@@ -112,5 +128,14 @@ export class Gameplay extends Phaser.Scene {
 
   backToMenu(): void {
     this.scene.start(SCENE_KEYS.MainMenu);
+  }
+
+  private isDasEvent(e: InputEvent): e is DASEvent {
+    return (
+      e.type === "KEY_DOWN" ||
+      e.type === "KEY_UP" ||
+      e.type === "TIMER_TICK" ||
+      e.type === "UPDATE_CONFIG"
+    );
   }
 }
