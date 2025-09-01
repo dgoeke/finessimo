@@ -1,14 +1,26 @@
-// Phase 6: Mode selection helpers — list/select modes via the pure registry
+// PR3: Real Phaser ModeSelect scene — lists and selects modes
+import Phaser from "phaser";
+
 import { gameModeRegistry } from "../../../modes";
 import { dispatch } from "../../../state/signals";
 
-import { SCENE_KEYS, type SceneController } from "./types";
+import { SCENE_KEYS } from "./types";
 
-export class ModeSelect /* extends Phaser.Scene */ {
-  public scene: SceneController = { start: () => void 0 };
+export class ModeSelect extends Phaser.Scene {
+  constructor() {
+    super({ key: SCENE_KEYS.ModeSelect });
+  }
 
   create(): void {
-    // Intentionally empty
+    // Placeholder label; rexUI list wiring will replace this later.
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const label = this.add.text(w / 2, h / 2 - 20, "Select Mode", {
+      color: "#ffffff",
+      fontFamily: "monospace",
+      fontSize: "14px",
+    });
+    label.setOrigin(0.5, 0.5);
   }
 
   toGameplay(): void {

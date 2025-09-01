@@ -1,13 +1,26 @@
-// Phase 6: Main menu helpers — typed navigation + quick mode shortcuts
+// PR3: Real Phaser MainMenu scene — typed navigation hooks
+import Phaser from "phaser";
+
 import { dispatch } from "../../../state/signals";
 
-import { SCENE_KEYS, type SceneController } from "./types";
+import { SCENE_KEYS } from "./types";
 
-export class MainMenu /* extends Phaser.Scene */ {
-  public scene: SceneController = { start: () => void 0 };
+export class MainMenu extends Phaser.Scene {
+  constructor() {
+    super({ key: SCENE_KEYS.MainMenu });
+  }
 
   create(): void {
-    // Intentionally empty for Phase 1 (no rendering)
+    // Minimal placeholder UI (rexUI wiring can replace this later)
+    // Keep side effects minimal for tests; text creation is safe under Jest mock.
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const title = this.add.text(w / 2, h / 2 - 20, "Finessimo", {
+      color: "#ffffff",
+      fontFamily: "monospace",
+      fontSize: "16px",
+    });
+    title.setOrigin(0.5, 0.5);
   }
 
   toSettings(): void {

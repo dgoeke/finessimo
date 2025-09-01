@@ -40,16 +40,17 @@ describe("Phaser Scene Shells (Phase 1)", () => {
   });
 
   it("MainMenu has shallow transitions", () => {
-    const start = jest.fn<(k: SceneKey) => void>();
-    const controller: SceneController = { start };
     const menu = new MainMenu();
-    menu.scene = controller;
+    const spy = jest
+      .spyOn(menu.scene, "start")
+      .mockImplementation((_: unknown, __?: unknown) => menu.scene);
     menu.toSettings();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.Settings);
+    expect(spy).toHaveBeenLastCalledWith(SCENE_KEYS.Settings);
     menu.toModeSelect();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.ModeSelect);
+    expect(spy).toHaveBeenLastCalledWith(SCENE_KEYS.ModeSelect);
     menu.toGameplay();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.Gameplay);
+    expect(spy).toHaveBeenLastCalledWith(SCENE_KEYS.Gameplay);
+    spy.mockRestore();
   });
 
   it("Settings.backToMenu() transitions to MainMenu", () => {
@@ -62,14 +63,15 @@ describe("Phaser Scene Shells (Phase 1)", () => {
   });
 
   it("ModeSelect transitions to Gameplay and back", () => {
-    const start = jest.fn<(k: SceneKey) => void>();
-    const controller: SceneController = { start };
     const modeSelect = new ModeSelect();
-    modeSelect.scene = controller;
+    const spy = jest
+      .spyOn(modeSelect.scene, "start")
+      .mockImplementation((_: unknown, __?: unknown) => modeSelect.scene);
     modeSelect.toGameplay();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.Gameplay);
+    expect(spy).toHaveBeenLastCalledWith(SCENE_KEYS.Gameplay);
     modeSelect.backToMenu();
-    expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.MainMenu);
+    expect(spy).toHaveBeenLastCalledWith(SCENE_KEYS.MainMenu);
+    spy.mockRestore();
   });
 
   it("Gameplay transitions to Results or MainMenu", () => {
