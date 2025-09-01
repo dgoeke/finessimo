@@ -19,11 +19,18 @@ import { runLockPipeline } from "../../../modes/lock-pipeline";
 import { getActiveRng, planPreviewRefill } from "../../../modes/spawn-service";
 import { reducer as coreReducer } from "../../../state/reducer";
 import { getCurrentState, dispatch } from "../../../state/signals";
-import { createSeed, createDurationMs } from "../../../types/brands";
+import {
+  createSeed,
+  createDurationMs,
+  durationMsAsNumber,
+  gridCoordAsNumber,
+  uiEffectIdAsNumber,
+} from "../../../types/brands";
 import { createTimestamp, fromNow } from "../../../types/timestamp";
 import { PhaserInputAdapterImpl } from "../input/PhaserInputAdapterImpl";
 import { BoardPresenter } from "../presenter/BoardPresenter";
 import { mapGameStateToViewModel } from "../presenter/viewModel";
+import { ms as unbrandMs } from "../utils/unbrand";
 
 import { SimulatedClock } from "./clock";
 import { SCENE_KEYS } from "./types";
@@ -146,13 +153,12 @@ export class Gameplay extends Phaser.Scene {
     >,
     now: number,
     seen: Set<number>,
-    toNum: (n: unknown) => number,
   ): void {
-    const id = toNum(effect.id as unknown as number);
+    const id = uiEffectIdAsNumber(effect.id);
     seen.add(id);
     if (!this._effectsStart.has(id)) this._effectsStart.set(id, now);
     const start = this._effectsStart.get(id) ?? now;
-    let ttl = toNum(effect.ttlMs as unknown as number);
+    let ttl = durationMsAsNumber(effect.ttlMs);
     if (ttl <= 0) ttl = 1;
     const p = Math.max(0, Math.min(1, (now - start) / ttl));
     const alpha = 1 - p;
@@ -168,9 +174,9 @@ export class Gameplay extends Phaser.Scene {
     );
     const pos = this.computeEffectBoardPos(
       effect.anchor,
-      toNum(effect.offsetX as unknown as number),
-      toNum(effect.offsetY as unknown as number),
-      toNum(effect.driftYPx as unknown as number),
+      effect.offsetX,
+      effect.offsetY,
+      effect.driftYPx,
       p,
     );
     t.setOrigin(pos.ox, pos.oy);
@@ -254,11 +260,10 @@ export class Gameplay extends Phaser.Scene {
     }
 
     const fx: CameraFxAdapter = {
-      fadeIn: (ms) => this.cameras.main.fadeIn(ms as unknown as number),
-      fadeOut: (ms) => this.cameras.main.fadeOut(ms as unknown as number),
-      shake: (ms, mag) =>
-        this.cameras.main.shake(ms as unknown as number, mag ?? 0.005),
-      zoomTo: (ms, z) => this.cameras.main.zoomTo(z, ms as unknown as number),
+      fadeIn: (ms) => this.cameras.main.fadeIn(unbrandMs(ms)),
+      fadeOut: (ms) => this.cameras.main.fadeOut(unbrandMs(ms)),
+      shake: (ms, mag) => this.cameras.main.shake(unbrandMs(ms), mag ?? 0.005),
+      zoomTo: (ms, z) => this.cameras.main.zoomTo(z, unbrandMs(ms)),
     };
     const audio: AudioBus = {
       play: (name) => this.sound.play(name),
@@ -435,9 +440,10 @@ export class Gameplay extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this._state || !this._presenter || !this._input) return;
     this._accumulator += delta;
-    while (this._accumulator >= (this._fixedDt as unknown as number)) {
+    const dt = unbrandMs(this._fixedDt);
+    while (this._accumulator >= dt) {
       this.processFixedTimeStep();
-      this._accumulator -= this._fixedDt as unknown as number;
+      this._accumulator -= dt;
     }
   }
 
@@ -487,10 +493,7 @@ export class Gameplay extends Phaser.Scene {
     }
     const dasActions = this._das.send(e);
     for (const a of dasActions) {
-      if (
-        a.type === "TapMove" &&
-        (a as { optimistic?: boolean }).optimistic === true
-      ) {
+      if (this.isTapMove(a) && a.optimistic) {
         this._pendingTap = { dir: a.dir, t: a.timestampMs };
       }
       if (a.type === "HoldStart") this._pendingTap = null;
@@ -545,7 +548,7 @@ export class Gameplay extends Phaser.Scene {
   private processTickAction(): void {
     if (!this._state) return;
     this._clock.tick(this._fixedDt);
-    const currentTime = this._clock.nowMs() as unknown as number;
+    const currentTime = unbrandMs(this._clock.nowMs());
 
     // Always dispatch Tick with timestamp; physics/LD depend on deterministic timing
     this._state = this.processActionWithLockPipeline(this._state, {
@@ -620,8 +623,8 @@ export class Gameplay extends Phaser.Scene {
       const alpha = ov.alpha ?? 0.6;
       g.lineStyle(2, color, alpha);
       for (const [cx, cy] of ov.cells) {
-        const x = this._originX + (cx as unknown as number) * this._tileSize;
-        const y = this._originY + (cy as unknown as number) * this._tileSize;
+        const x = this._originX + gridCoordAsNumber(cx) * this._tileSize;
+        const y = this._originY + gridCoordAsNumber(cy) * this._tileSize;
         g.strokeRect(x, y, this._tileSize, this._tileSize);
       }
     }
@@ -629,16 +632,13 @@ export class Gameplay extends Phaser.Scene {
 
   private drawUiEffects(): void {
     if (!this._state) return;
-    const now = this._clock.nowMs() as unknown as number;
+    const now = unbrandMs(this._clock.nowMs());
     const seen = new Set<number>();
     // screen-space dimensions are accessed via this.scale in helpers
 
-    const toNum = (n: unknown): number =>
-      Number.isFinite(n as number) ? (n as number) : 0;
-
     for (const effect of this._state.uiEffects) {
       if (effect.kind !== "floatingText") continue;
-      this.renderFloatingText(effect, now, seen, toNum);
+      this.renderFloatingText(effect, now, seen);
     }
 
     // Cleanup texts for effects no longer present
@@ -664,7 +664,7 @@ export class Gameplay extends Phaser.Scene {
       color,
       fontFamily: "monospace",
       fontSize: `${String(fontPx)}px`,
-      fontStyle: String(fontWeight ?? 800),
+      ...(fontWeight !== undefined ? ({ fontStyle: "bold" } as const) : {}),
     });
     t.setDepth(1000);
     // World-anchored so it moves with the board/camera
@@ -742,13 +742,14 @@ export class Gameplay extends Phaser.Scene {
   private handleAutoRestartIfTopOut(): boolean {
     if (!this._state || this._state.status !== "topOut") return false;
     const { currentMode, gameplay, timing } = this._state;
+    const seed = this.randomSeed();
 
     // Reinitialize with retained stats
     this._state = this._reduce(this._state, {
       gameplay,
       mode: currentMode,
       retainStats: true,
-      seed: this.randomSeed(),
+      seed,
       timestampMs: fromNow(),
       timing,
       type: "Init",
@@ -759,7 +760,7 @@ export class Gameplay extends Phaser.Scene {
       gameplay,
       mode: currentMode,
       retainStats: true,
-      seed: this.randomSeed(),
+      seed,
       timestampMs: fromNow(),
       timing,
       type: "Init",
@@ -873,7 +874,7 @@ export class Gameplay extends Phaser.Scene {
     const stats = this._state.stats;
     const linesCleared = stats.linesCleared;
     const piecesPlaced = stats.piecesPlaced;
-    const timePlayedMs = stats.timePlayedMs as unknown as number;
+    const timePlayedMs = durationMsAsNumber(stats.timePlayedMs);
 
     // Use the pre-calculated accuracy percentage from stats
     const accuracyPercentage = Math.round(stats.accuracyPercentage);
@@ -903,13 +904,14 @@ export class Gameplay extends Phaser.Scene {
     const { gameplay, timing } = this._state;
     const mergedGameplay = { ...gameplay, ...modeConfig.gameplay };
     const mergedTiming = { ...timing, ...modeConfig.timing };
+    const seed = this.randomSeed();
 
     // Reinitialize with correct merged config
     this._state = this._reduce(this._state, {
       gameplay: mergedGameplay,
       mode: modeName,
       retainStats: true, // Keep stats across mode switches
-      seed: this.randomSeed(),
+      seed,
       timestampMs: fromNow(),
       timing: mergedTiming,
       type: "Init",
@@ -920,7 +922,7 @@ export class Gameplay extends Phaser.Scene {
       gameplay: mergedGameplay,
       mode: modeName,
       retainStats: true,
-      seed: this.randomSeed(),
+      seed,
       timestampMs: fromNow(),
       timing: mergedTiming,
       type: "Init",
@@ -1237,7 +1239,16 @@ export class Gameplay extends Phaser.Scene {
     );
   }
 
-  private pieceKindToFrame(kind?: TetrominoPieceId): number {
+  // Narrowing helper for TapMove actions
+  private isTapMove(a: Action): a is Extract<Action, { type: "TapMove" }> {
+    return a.type === "TapMove";
+  }
+
+  private pieceKindToFrame(kind?: TetrominoPieceId): 1 | 2 | 3 | 4 | 5 | 6 | 7 {
+    function assertNever(x: never): never {
+      throw new Error(`Unexpected: ${String(x)}`);
+    }
+    if (kind === undefined) return 1;
     switch (kind) {
       case "I":
         return 1; // Cyan
@@ -1253,16 +1264,14 @@ export class Gameplay extends Phaser.Scene {
         return 6; // Purple
       case "Z":
         return 7; // Red
-      case undefined:
-        return 1; // Default to cyan if no kind specified
       default:
-        return 1; // Should never reach here
+        return assertNever(kind);
     }
   }
 
   private updateNextPreviews(
     containers: Array<Phaser.GameObjects.Container>,
-    nextQueue: ReadonlyArray<string>,
+    nextQueue: ReadonlyArray<TetrominoPieceId>,
   ): void {
     // Hide all sprites first
     containers.forEach((container) => {
@@ -1275,7 +1284,7 @@ export class Gameplay extends Phaser.Scene {
 
     // Show pieces for each position in queue (up to 5)
     for (let i = 0; i < Math.min(containers.length, nextQueue.length); i++) {
-      const pieceId = nextQueue[i] as TetrominoPieceId | undefined;
+      const pieceId = nextQueue[i];
       const container = containers[i];
       if (
         pieceId !== undefined &&
@@ -1289,7 +1298,7 @@ export class Gameplay extends Phaser.Scene {
 
   private updateHoldPreview(
     container: Phaser.GameObjects.Container | null,
-    holdPiece: string | null,
+    holdPiece: TetrominoPieceId | null,
   ): void {
     if (!container) return;
 
@@ -1302,11 +1311,7 @@ export class Gameplay extends Phaser.Scene {
 
     // Show hold piece if one exists
     if (holdPiece !== null && holdPiece in PIECES) {
-      this.renderPieceInContainer(
-        container,
-        holdPiece as TetrominoPieceId,
-        false,
-      );
+      this.renderPieceInContainer(container, holdPiece, false);
     }
   }
 
@@ -1334,7 +1339,8 @@ export class Gameplay extends Phaser.Scene {
     const offsetCellsY = center ? (PREVIEW_BOX_ROWS - heightCells) / 2 : 0;
     const frame = this.pieceKindToFrame(pieceId);
     const sprites = container.list.filter(
-      (obj) => obj instanceof Phaser.GameObjects.Sprite,
+      (o): o is Phaser.GameObjects.Sprite =>
+        o instanceof Phaser.GameObjects.Sprite,
     );
 
     // Position sprites based on piece shape

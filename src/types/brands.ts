@@ -142,6 +142,7 @@ export const gridCoordAsNumber = (g: GridCoord): number => g as number;
 export const cellValueAsNumber = (c: CellValue): number => c as number;
 export const frameAsNumber = (f: Frame): number => f as number;
 export const seedAsString = (s: Seed): string => s as string;
+export const uiEffectIdAsNumber = (id: UiEffectId): number => id as number;
 
 // Safe conversion from unbranded values (with validation)
 export function numberToDurationMs(n: number): DurationMs {
