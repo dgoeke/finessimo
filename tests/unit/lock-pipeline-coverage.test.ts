@@ -3,20 +3,18 @@ import { describe, expect, test } from "@jest/globals";
 import { createEmptyBoard } from "../../src/core/board";
 import { createActivePiece } from "../../src/core/spawning";
 import { createPendingLock } from "../../src/engine/lock-utils";
-import { runLockPipeline } from "../../src/modes/lock-pipeline";
 import { gameModeRegistry } from "../../src/modes";
-import { createDurationMs } from "../../src/types/brands";
-import { fromNow } from "../../src/types/timestamp";
+import { runLockPipeline } from "../../src/modes/lock-pipeline";
+import { createDurationMs, createUiEffectId } from "../../src/types/brands";
+import { asNumber, fromNow } from "../../src/types/timestamp";
 
-import type {
-  Action,
-  GameState,
-  GameplayConfig,
-} from "../../src/state/types";
 import type { FinesseResult } from "../../src/finesse/calculator";
-import type { ResolveLockDecision } from "../../src/modes";
+import type { GameMode, ResolveLockDecision } from "../../src/modes";
+import type { Action, GameState, GameplayConfig } from "../../src/state/types";
 
-const dummyAnalyze = (_s: GameState): { result: FinesseResult; actions: Action[] } => ({
+const dummyAnalyze = (
+  _s: GameState,
+): { result: FinesseResult; actions: Array<Action> } => ({
   actions: [],
   result: { kind: "optimal", optimalSequences: [], playerSequence: [] },
 });
@@ -52,14 +50,20 @@ function makeBaseState(): GameState {
       lockDelay: { resets: 0, tag: "Airborne" },
     },
     processedInputLog: [],
-    rng: { getNextPiece: () => ({ newRng: (null as unknown) as any, piece: "T" }), getNextPieces: (_: number) => ({ newRng: (null as unknown) as any, pieces: ["T"] }) } as any,
+    rng: {
+      getNextPiece: () => ({ newRng: null as unknown, piece: "T" }),
+      getNextPieces: (_: number) => ({
+        newRng: null as unknown,
+        pieces: ["T"],
+      }),
+    } as unknown,
     stats: {
       accuracyPercentage: 0,
       attempts: 0,
       averageInputsPerPiece: 0,
       doubleLines: 0,
       faultsByType: {},
-      finesseAccuracy: 0 as any,
+      finesseAccuracy: 0 as unknown,
       incorrectPlacements: 0,
       linesCleared: 0,
       linesPerMinute: 0,
@@ -80,6 +84,7 @@ function makeBaseState(): GameState {
       totalSessions: 0,
       tripleLines: 0,
     },
+    status: "playing",
     tick: 0,
     timing: {
       arrMs: createDurationMs(2),
@@ -93,15 +98,19 @@ function makeBaseState(): GameState {
       tickHz: 60,
     },
     uiEffects: [],
-    status: "playing",
   } as GameState;
 }
 
 describe("lock-pipeline coverage", () => {
   test("returns commit immediately when not resolving", () => {
     const base = makeBaseState();
-    const dispatched: Action[] = [];
-    const { decision } = runLockPipeline(base, (a) => dispatched.push(a), dummyAnalyze, fromNow());
+    const dispatched: Array<Action> = [];
+    const { decision } = runLockPipeline(
+      base,
+      (a) => dispatched.push(a),
+      dummyAnalyze,
+      fromNow(),
+    );
     expect(decision.action).toBe("commit");
     expect(dispatched.length).toBe(0);
   });
@@ -109,38 +118,90 @@ describe("lock-pipeline coverage", () => {
   test("mode not found: commits and dispatches CommitLock", () => {
     const base = makeBaseState();
     const active = createActivePiece("T");
-    const pending = createPendingLock(base.board, active, "hardDrop", fromNow());
-    const resolving = { ...base, currentMode: "nonexistent", pendingLock: pending, status: "resolvingLock" } as GameState;
-    const dispatched: Action[] = [];
-    const { decision } = runLockPipeline(resolving, (a) => dispatched.push(a), dummyAnalyze, fromNow());
+    const pending = createPendingLock(
+      base.board,
+      active,
+      "hardDrop",
+      fromNow(),
+    );
+    const resolving = {
+      ...base,
+      currentMode: "nonexistent",
+      pendingLock: pending,
+      status: "resolvingLock",
+    } as GameState;
+    const dispatched: Array<Action> = [];
+    const { decision } = runLockPipeline(
+      resolving,
+      (a) => dispatched.push(a),
+      dummyAnalyze,
+      fromNow(),
+    );
     expect(decision.action).toBe("commit");
     expect(dispatched.some((a) => a.type === "CommitLock")).toBe(true);
   });
 
   test("mode onPieceLocked updates modeData and post actions dispatch after commit", () => {
     const modeName = "pipeline_test";
-    const mode = {
+    const mode: GameMode = {
+      getNextPrompt: () => null,
       name: modeName,
       onPieceLocked: (
         _s: GameState,
         _r: FinesseResult,
-        _lp: any,
-        _fp: any,
-      ): { modeData?: unknown; postActions?: ReadonlyArray<Action> } => ({
+        _lp: unknown,
+        _fp: unknown,
+      ) => ({
         modeData: { updated: true },
-        postActions: [{ type: "PushUiEffect", effect: { kind: "floatingText", id: (fromNow() as any), text: "ok", color: "#fff", fontPx: 10, anchor: "bottomRight", offsetX: 0, offsetY: 0, driftYPx: 0, ttlMs: createDurationMs(500), createdAt: fromNow() } }],
+        postActions: [
+          {
+            effect: {
+              anchor: "bottomRight",
+              color: "#fff",
+              createdAt: fromNow(),
+              driftYPx: 0,
+              fontPx: 10,
+              id: createUiEffectId(asNumber(fromNow())),
+              kind: "floatingText",
+              offsetX: 0,
+              offsetY: 0,
+              text: "ok",
+              ttlMs: createDurationMs(500),
+            },
+            type: "PushUiEffect",
+          },
+        ],
       }),
-      onResolveLock: (): ResolveLockDecision => ({ action: "commit", postActions: [{ type: "ResetBoard" }] }),
+      onResolveLock: (): ResolveLockDecision => ({
+        action: "commit",
+        postActions: [{ type: "ResetBoard" }],
+      }),
       reset: () => void 0,
-    } as any;
+      shouldPromptNext: () => false,
+    };
     gameModeRegistry.register(mode);
 
     const base = makeBaseState();
     const active = createActivePiece("T");
-    const pending = createPendingLock(base.board, active, "hardDrop", fromNow());
-    const resolving = { ...base, currentMode: modeName, pendingLock: pending, status: "resolvingLock" } as GameState;
-    const dispatched: Action[] = [];
-    const { decision } = runLockPipeline(resolving, (a) => dispatched.push(a), dummyAnalyze, fromNow());
+    const pending = createPendingLock(
+      base.board,
+      active,
+      "hardDrop",
+      fromNow(),
+    );
+    const resolving = {
+      ...base,
+      currentMode: modeName,
+      pendingLock: pending,
+      status: "resolvingLock",
+    } as GameState;
+    const dispatched: Array<Action> = [];
+    const { decision } = runLockPipeline(
+      resolving,
+      (a) => dispatched.push(a),
+      dummyAnalyze,
+      fromNow(),
+    );
     expect(decision.action).toBe("commit");
     // Ensure UpdateModeData dispatched before commit branch effects
     expect(dispatched.some((a) => a.type === "UpdateModeData")).toBe(true);

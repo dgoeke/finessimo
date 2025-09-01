@@ -174,7 +174,9 @@ function tryAddOneFromEachGroup(
     const index = indices[i];
 
     if (group && typeof index === "number" && index < group.length) {
-      const cardWithDifficulty = group[index]!;
+      const cardWithDifficulty = group[index] as GuidedCard & {
+        minSequenceLength: number;
+      };
       const { minSequenceLength: _, ...card } = cardWithDifficulty; // Remove the difficulty metric
       result.push(card);
       indices[i] = index + 1;

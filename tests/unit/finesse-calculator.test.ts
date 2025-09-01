@@ -311,7 +311,7 @@ describe("Finesse Calculator (BFS minimality)", () => {
         tx: number,
         tr: Rot,
         c: GameplayConfig,
-        b?: any,
+        b?: unknown,
       ) => Array<string> | null;
     };
     const seq = anyCalc.calculateOptimal(
@@ -321,7 +321,11 @@ describe("Finesse Calculator (BFS minimality)", () => {
       cfg,
       board,
     );
-    expect(Array.isArray(seq) || seq === null).toBe(true);
+    if (seq === null) {
+      expect(seq).toBeNull();
+    } else {
+      expect(Array.isArray(seq)).toBe(true);
+    }
   });
 });
 
@@ -350,8 +354,17 @@ describe("extractFinesseActions", () => {
   });
 
   test("type guards for FinesseResult work as expected", () => {
-    const ok: any = { kind: "optimal", optimalSequences: [["HardDrop"]], playerSequence: ["HardDrop"] };
-    const bad: any = { kind: "faulty", faults: [{ type: "extra_input" }], optimalSequences: [], playerSequence: [] };
+    const ok: unknown = {
+      kind: "optimal",
+      optimalSequences: [["HardDrop"]],
+      playerSequence: ["HardDrop"],
+    };
+    const bad: unknown = {
+      faults: [{ type: "extra_input" }],
+      kind: "faulty",
+      optimalSequences: [],
+      playerSequence: [],
+    };
     expect(isOptimalResult(ok)).toBe(true);
     expect(isFaultyResult(ok)).toBe(false);
     expect(isOptimalResult(bad)).toBe(false);

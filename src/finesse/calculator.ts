@@ -64,12 +64,18 @@ export function assertNever(x: never): never {
 
 // Type guards
 export const isOptimalResult = (
-  r: FinesseResult,
-): r is Extract<FinesseResult, { kind: "optimal" }> => r.kind === "optimal";
+  r: unknown,
+): r is Extract<FinesseResult, { kind: "optimal" }> =>
+  typeof r === "object" &&
+  r !== null &&
+  (r as { kind?: unknown }).kind === "optimal";
 
 export const isFaultyResult = (
-  r: FinesseResult,
-): r is Extract<FinesseResult, { kind: "faulty" }> => r.kind === "faulty";
+  r: unknown,
+): r is Extract<FinesseResult, { kind: "faulty" }> =>
+  typeof r === "object" &&
+  r !== null &&
+  (r as { kind?: unknown }).kind === "faulty";
 
 // ---------- Public calculator interface (unchanged) ----------
 
