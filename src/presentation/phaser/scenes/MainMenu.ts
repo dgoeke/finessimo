@@ -1,5 +1,5 @@
 // PR3: Real Phaser MainMenu scene — typed navigation hooks
-import { Phaser } from "phaser";
+import Phaser from "phaser";
 
 import { dispatch } from "../../../state/signals";
 

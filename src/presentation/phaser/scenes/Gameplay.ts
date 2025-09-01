@@ -1,5 +1,5 @@
 // Phase 4: Deterministic fixed-step loop
-import { Phaser } from "phaser";
+import Phaser from "phaser";
 
 import { DASMachineService } from "../../../input/machines/das";
 import { reducer as coreReducer } from "../../../state/reducer";

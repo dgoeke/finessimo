@@ -1,5 +1,5 @@
 // PR4: Real Phaser Settings scene — maps rexUI (or simple) controls to store actions
-import { Phaser } from "phaser";
+import Phaser from "phaser";
 
 import { dispatch } from "../../../state/signals";
 import { createDurationMs } from "../../../types/brands";

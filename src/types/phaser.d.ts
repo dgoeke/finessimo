@@ -100,5 +100,5 @@ declare module "phaser" {
       rexUI: unknown;
     }
   }
-  export { Phaser };
+  export = Phaser;
 }

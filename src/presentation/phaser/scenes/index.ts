@@ -8,7 +8,7 @@ import { Settings } from "./Settings";
 import { SCENE_KEYS } from "./types";
 
 import type { SceneKey } from "./types";
-import type { Phaser } from "phaser";
+import type Phaser from "phaser";
 
 export { SCENE_KEYS };
 export { Boot, Gameplay, MainMenu, ModeSelect, Results, Settings };

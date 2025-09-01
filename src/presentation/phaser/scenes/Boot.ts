@@ -1,4 +1,4 @@
-import { Phaser } from "phaser";
+import Phaser from "phaser";
 
 import { gameModeRegistry } from "../../../modes";
 import { getActiveRng } from "../../../modes/spawn-service";

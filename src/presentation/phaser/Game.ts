@@ -1,4 +1,4 @@
-import { Phaser } from "phaser";
+import Phaser from "phaser";
 // rexUI scene plugin mapping (ESM). Registered via Game config.
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin.js";
 
