@@ -47,12 +47,14 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
 - src/presentation/phaser/presenter/BoardPresenter.ts — Phase 3: Presenter implementation. `computePlan` (pure) generates `TileDiff`, `PiecePos`, and topOut `CameraFx`/`SoundCue`; `apply` (impure) updates a blitter-backed locked layer and positions active/ghost containers via injected adapters (no Phaser import required yet).
+ - src/presentation/phaser/input/PhaserInputAdapter.ts — Phase 4: Input adapter interface used by Gameplay loop to drain Actions each fixed step (pure contract).
+ - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 
 - src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 1: minimal scene shell with shallow transition helpers (`toSettings`, `toModeSelect`, `toGameplay`). No Phaser import yet.
 - src/presentation/phaser/scenes/Settings.ts — Phase 1: minimal scene shell with `backToMenu()` transition helper. No Phaser import yet.
 - src/presentation/phaser/scenes/ModeSelect.ts — Phase 1: minimal scene shell with `toGameplay()` and `backToMenu()` helpers. No Phaser import yet.
-- src/presentation/phaser/scenes/Gameplay.ts — Phase 1: minimal scene shell with `toResults()` and `backToMenu()` helpers. No Phaser import yet.
+- src/presentation/phaser/scenes/Gameplay.ts — Phase 4: fixed-step deterministic loop (no Phaser import yet). Injects presenter, input adapter, reducer; maps GameState→ViewModel, computes RenderPlan, and applies via presenter.
 - src/presentation/phaser/scenes/Results.ts — Phase 1: minimal scene shell with `backToMenu()` helper. No Phaser import yet.
 - src/presentation/phaser/scenes/types.ts — Phase 1: shared `SceneKey` union, `SceneController` interface, and `SCENE_KEYS` constant (brands not needed here yet).
 - src/presentation/phaser/scenes/index.ts — Phase 1: scene registry exports (`SCENE_KEYS`, `SCENES`, `SCENE_REGISTRY`) for straightforward scene registration/testing without importing Phaser.
@@ -160,3 +162,4 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/presenter/scenes.spec.ts — Phase 1 shallow scene tests: registry/keys presence and minimal transition method behavior using a typed SceneController stub (no Phaser runtime required).
 - tests/presenter/plan.generator.test.ts — Phase 3 pure tests for `BoardPresenter.computePlan`: TileDiff puts/dels on mini boards, PiecePos for active/ghost moves, and topOut FX/Sound transitions.
 - tests/presenter/boardPresenter.apply.test.ts — Phase 3 impure tests using fakes to verify blitter.create/reset/visibility toggling and container.setPosition handling.
+ - tests/presenter/gameplay.loop.test.ts — Phase 4 integration test for fixed-step loop: scripted inputs over steps drive reducer; presenter receives/computes plans and applies container positions.
