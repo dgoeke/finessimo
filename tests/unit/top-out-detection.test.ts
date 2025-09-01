@@ -39,10 +39,9 @@ function createAlmostFullBoard(): Board {
   for (let y = 0; y < 20; y++) {
     for (let x = 0; x < 10; x++) {
       // Leave spaces for the T piece footprint at y=0, but fill everything below
-      if (y === 0 && (x === 4 || x === 5 || x === 6)) {
+      const blockAtSpawnRow = y === 0 && (x === 4 || x === 5 || x === 6);
+      if (blockAtSpawnRow || y > 0) {
         // Block these positions so piece can't move down
-        cells[idx(createGridCoord(x), createGridCoord(y), 10)] = 1;
-      } else if (y > 0) {
         cells[idx(createGridCoord(x), createGridCoord(y), 10)] = 1;
       }
     }

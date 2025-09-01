@@ -177,8 +177,12 @@ function tryAddOneFromEachGroup(
       const cardWithDifficulty = group[index] as GuidedCard & {
         minSequenceLength: number;
       };
-      const { minSequenceLength: _, ...card } = cardWithDifficulty; // Remove the difficulty metric
-      result.push(card);
+      // Drop the difficulty metric while preserving GuidedCard fields
+      result.push({
+        piece: cardWithDifficulty.piece,
+        rot: cardWithDifficulty.rot,
+        x: cardWithDifficulty.x,
+      });
       indices[i] = index + 1;
       addedThisRound = true;
     }

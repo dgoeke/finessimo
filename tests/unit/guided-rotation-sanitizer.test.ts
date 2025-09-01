@@ -97,9 +97,13 @@ describe("Guided deck rotation sanitization", () => {
     const deck = loadGuidedDeck(now);
 
     // Expect only the allowed entries to remain
-    const remainingKeys = Array.from(deck.items.keys()).sort();
+    const remainingKeys = Array.from(deck.items.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
     expect(remainingKeys).toEqual(
-      ["I:left:4", "I:spawn:4", "O:spawn:4", "S:spawn:4", "Z:left:4"].sort(),
+      ["I:left:4", "I:spawn:4", "O:spawn:4", "S:spawn:4", "Z:left:4"].sort(
+        (a, b) => a.localeCompare(b),
+      ),
     );
   });
 });

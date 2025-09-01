@@ -158,9 +158,9 @@ describe("Seven Bag RNG", () => {
       const result = getNextPieces(rng, 5);
 
       expect(result.pieces).toHaveLength(5);
-      result.pieces.forEach((piece) => {
+      for (const piece of result.pieces) {
         expect(ALL_PIECES).toContain(piece);
-      });
+      }
     });
 
     it("should return empty array for zero count", () => {
@@ -178,10 +178,10 @@ describe("Seven Bag RNG", () => {
       expect(result.pieces).toHaveLength(14);
 
       // Should contain each piece exactly twice
-      ALL_PIECES.forEach((piece) => {
+      for (const piece of ALL_PIECES) {
         const count = result.pieces.filter((p) => p === piece).length;
         expect(count).toBe(2);
-      });
+      }
     });
 
     it("should be equivalent to multiple getNextPiece calls", () => {
@@ -230,10 +230,10 @@ describe("Seven Bag RNG", () => {
         }
 
         // Each bag should have all pieces exactly once
-        ALL_PIECES.forEach((piece) => {
+        for (const piece of ALL_PIECES) {
           const count = bagPieces.filter((p) => p === piece).length;
           expect(count).toBe(1);
-        });
+        }
       }
     });
 
@@ -254,10 +254,10 @@ describe("Seven Bag RNG", () => {
       expect(sequence).toHaveLength(21);
 
       // Each piece should appear exactly 3 times
-      ALL_PIECES.forEach((piece) => {
+      for (const piece of ALL_PIECES) {
         const count = sequence.filter((p) => p === piece).length;
         expect(count).toBe(3);
-      });
+      }
     });
 
     it("should produce fair distribution over many bags", () => {
@@ -281,9 +281,9 @@ describe("Seven Bag RNG", () => {
       }
 
       // Each piece should appear exactly 100 times
-      ALL_PIECES.forEach((piece) => {
+      for (const piece of ALL_PIECES) {
         expect(pieceCounts[piece]).toBe(100);
-      });
+      }
     });
   });
 });

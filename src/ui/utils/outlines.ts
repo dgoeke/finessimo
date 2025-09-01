@@ -124,44 +124,34 @@ export function orderEdgesToPaths(
   const paths: Array<OutlinePath> = [];
   const visited = new Set<string>();
 
+  const walkLoopFrom = (
+    startKey: string,
+    adj: Map<string, Array<OrientedEdge>>,
+    seen: Set<string>,
+  ): OutlinePath => {
+    const path: Array<BoundaryVertex> = [];
+    let currentKey = startKey;
+    for (;;) {
+      seen.add(currentKey);
+      const outgoing = adj.get(currentKey);
+      if (outgoing === undefined || outgoing.length === 0) break;
+      const edge = outgoing[0];
+      if (!edge) break;
+      path.push(edge.from);
+      adj.set(currentKey, outgoing.slice(1));
+      const nextKey = `${String(edge.to.x)},${String(edge.to.y)}`;
+      if (nextKey === startKey) break;
+      currentKey = nextKey;
+    }
+    return path;
+  };
+
   // Process all edges to handle potentially disjoint shapes
   for (const [startKey] of adjacency) {
     if (visited.has(startKey)) {
       continue;
     }
-
-    const path: Array<BoundaryVertex> = [];
-    let currentKey = startKey;
-
-    // Walk the edges to form a closed path
-    for (;;) {
-      visited.add(currentKey);
-
-      const outgoing = adjacency.get(currentKey);
-      if (outgoing === undefined || outgoing.length === 0) {
-        break;
-      }
-
-      // For simple closed loops (tetrominoes), there's exactly one outgoing edge
-      const edge = outgoing[0];
-      if (!edge) {
-        break;
-      }
-      path.push(edge.from);
-
-      // Remove used edge to avoid cycles
-      adjacency.set(currentKey, outgoing.slice(1));
-
-      const nextKey = `${String(edge.to.x)},${String(edge.to.y)}`;
-
-      // Check if we've completed the loop
-      if (nextKey === startKey) {
-        break;
-      }
-
-      currentKey = nextKey;
-    }
-
+    const path = walkLoopFrom(startKey, adjacency, visited);
     if (path.length > 0) {
       paths.push(path);
     }

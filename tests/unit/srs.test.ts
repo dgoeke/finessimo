@@ -6,6 +6,15 @@ import { assertDefined } from "../test-helpers";
 
 import type * as SRSModule from "../../src/core/srs";
 
+// Factory for jest.doMock to reduce nested function depth inside tests
+const mockEmptyKickTableFactory = (): Record<string, unknown> => {
+  const actual = jest.requireActual<typeof SRSModule>("../../src/core/srs");
+  return {
+    ...actual,
+    getKickTable: (): Record<string, unknown> => ({}),
+  } as unknown as Record<string, unknown>;
+};
+
 describe("SRS Rotation Logic", () => {
   let emptyBoard: Board;
 
@@ -303,14 +312,7 @@ describe("SRS Rotation Logic", () => {
         getKickTable?: () => Record<string, unknown>;
       };
       const originalKickTable = (global as GlobalWithKickTable).getKickTable;
-      jest.doMock("../../src/core/srs", () => {
-        const actual =
-          jest.requireActual<typeof SRSModule>("../../src/core/srs");
-        return {
-          ...actual,
-          getKickTable: (): Record<string, unknown> => ({}), // Return empty kick table
-        };
-      });
+      jest.doMock("../../src/core/srs", () => mockEmptyKickTableFactory());
 
       // Test that functions handle missing kick data gracefully
       // Note: Since getKickTable is not exported, we'll test with an invalid rotation instead

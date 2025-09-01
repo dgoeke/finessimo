@@ -385,10 +385,9 @@ export function assertValidLockDelayState(
   context?: string,
 ): asserts physics is PhysicsState {
   if (!isValidLockDelayState(physics)) {
-    throw new Error(
-      `Invalid lock delay state${context !== undefined ? ` in ${context}` : ""}: ` +
-        `lockDelay=${JSON.stringify(physics.lockDelay)}`,
-    );
+    const suffix = context !== undefined ? ` in ${context}` : "";
+    const details = `lockDelay=${JSON.stringify(physics.lockDelay)}`;
+    throw new Error(`Invalid lock delay state${suffix}: ${details}`);
   }
 }
 
@@ -405,9 +404,8 @@ export function assertHasActivePiece(
   context?: string,
 ): asserts state is GameState & { active: ActivePiece } {
   if (!hasActivePiece(state)) {
-    throw new Error(
-      `Active piece required${context !== undefined ? ` for ${context}` : ""}`,
-    );
+    const suffix = context !== undefined ? ` for ${context}` : "";
+    throw new Error(`Active piece required${suffix}`);
   }
 }
 

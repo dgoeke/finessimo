@@ -1,3 +1,4 @@
+import { StateMachineInputHandler } from "../../src/input/StateMachineInputHandler";
 import { TouchInputHandler } from "../../src/input/touch";
 import { type Action, type KeyAction } from "../../src/state/types";
 
@@ -139,6 +140,25 @@ describe("TouchInputHandler", () => {
         }),
       );
     });
+
+    test("should dispatch HardDrop and Hold actions", () => {
+      handler.start();
+
+      const testableHandler = handler as unknown as TouchInputHandlerTestable;
+
+      // HardDrop path
+      testableHandler.triggerAction("HardDrop", "down");
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "HardDrop" }),
+      );
+
+      // Hold path
+      mockDispatch.mockClear();
+      testableHandler.triggerAction("Hold", "down");
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "Hold" }),
+      );
+    });
   });
 
   describe("key bindings interface", () => {
@@ -170,6 +190,21 @@ describe("TouchInputHandler", () => {
       expect(updatedBindings.RotateCW).toEqual(["KeyX"]);
       expect(updatedBindings.RotateCCW).toEqual(["KeyZ"]);
       expect(updatedBindings.Hold).toEqual(["KeyC"]);
+    });
+  });
+
+  describe("state machine integration", () => {
+    test("getState proxies to StateMachineInputHandler when set", () => {
+      const sm = new StateMachineInputHandler();
+      handler.setStateMachineInputHandler(sm);
+      const state = handler.getState();
+      expect(state).toEqual(sm.getState());
+    });
+
+    test("update can skip state machine update without error", () => {
+      const sm = new StateMachineInputHandler();
+      handler.setStateMachineInputHandler(sm);
+      expect(() => handler.update({} as never, 0, true)).not.toThrow();
     });
   });
 

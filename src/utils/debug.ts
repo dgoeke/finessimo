@@ -20,12 +20,24 @@ function readWindowDebug(): DebugConfig | null {
     };
     const primary = w.__FINESSIMO_DEBUG__;
     const legacy = w.FINESSIMO_DEBUG;
-    const obj = isObject(primary) ? primary : isObject(legacy) ? legacy : null;
+    let obj: unknown = null;
+    if (isObject(primary)) {
+      obj = primary;
+    } else if (isObject(legacy)) {
+      obj = legacy;
+    }
     if (obj === null) return null;
-    const cfg: DebugConfig = { on: obj["on"] === true };
-    const known = ["guided", "finesse", "occupancy", "selection", "srs"];
+    const rec = obj as Record<string, unknown>;
+    const cfg: DebugConfig = { on: (rec as { on?: unknown }).on === true };
+    const known = [
+      "guided",
+      "finesse",
+      "occupancy",
+      "selection",
+      "srs",
+    ] as const;
     for (const k of known) {
-      cfg[k] = obj[k] === true;
+      cfg[k] = rec[k] === true;
     }
     return cfg;
   } catch {

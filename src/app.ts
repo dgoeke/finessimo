@@ -239,10 +239,11 @@ export class FinessimoApp {
   }
 
   private randomSeed(): Seed {
-    return createSeed(
-      // eslint-disable-next-line no-restricted-syntax -- Date.now() needed for entropy in random seed generation
-      Date.now().toString(36) + Math.random().toString(36).slice(2),
-    );
+    // Use cryptographically-strong randomness for seed generation
+    const rnd = new Uint32Array(2);
+    crypto.getRandomValues(rnd);
+    const [a, b] = Array.from(rnd) as [number, number];
+    return createSeed(`${a.toString(36)}-${b.toString(36)}`);
   }
 
   private initializeState(): GameState {

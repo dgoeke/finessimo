@@ -29,12 +29,10 @@ export class FreePlayMode implements GameMode {
   }
 
   onBeforeSpawn(_state: GameState): { piece?: PieceId } | null {
-    void _state;
     return null; // no override
   }
 
   getGuidance(_state: GameState): ModeGuidance | null {
-    void _state;
     return null; // no special guidance
   }
 
@@ -45,20 +43,14 @@ export class FreePlayMode implements GameMode {
     _finalPosition: ActivePiece,
   ): GameModeResult {
     // FreePlay does not emit textual feedback; overlay renders from FinesseResult
-    void _gameState;
-    void _finesseResult;
-    void _lockedPiece;
-    void _finalPosition;
     return {};
   }
 
   shouldPromptNext(_gameState: GameState): boolean {
-    void _gameState;
     return false;
   }
 
   getNextPrompt(_gameState: GameState): string | null {
-    void _gameState;
     return null;
   }
 
@@ -67,13 +59,10 @@ export class FreePlayMode implements GameMode {
     _lockedPiece: ActivePiece,
     _gameState: GameState,
   ): { targetX: number; targetRot: Rot } | null {
-    void _lockedPiece;
-    void _gameState;
     return null;
   }
 
   getExpectedPiece(_gameState: GameState): PieceId | undefined {
-    void _gameState;
     return undefined;
   }
 
@@ -96,7 +85,6 @@ export class FreePlayMode implements GameMode {
 
   // 7-bag defaults for RNG and preview
   createRng(seed: string, _prev?: PieceRandomGenerator): PieceRandomGenerator {
-    void _prev;
     return createSevenBagRng(seed);
   }
 
@@ -104,7 +92,6 @@ export class FreePlayMode implements GameMode {
     _state: GameState,
     rng: PieceRandomGenerator,
   ): { piece: PieceId; newRng: PieceRandomGenerator } {
-    void _state;
     return rng.getNextPiece();
   }
 
@@ -113,11 +100,10 @@ export class FreePlayMode implements GameMode {
     rng: PieceRandomGenerator,
     count: number,
   ): { pieces: Array<PieceId>; newRng: PieceRandomGenerator } {
-    void _state;
     return rng.getNextPieces(count);
   }
 
   reset(): void {
-    void 0;
+    // Intentionally no-op for free play
   }
 }

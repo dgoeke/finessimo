@@ -158,14 +158,13 @@ const actionHandlers: ActionHandlerMap = {
       timing: action.timing,
     }),
 
-  Lock: (state, action) =>
-    !hasActivePiece(state)
-      ? state
-      : enterResolvingFromActive(
-          state,
-          action.timestampMs,
-          state.physics.isSoftDropping ? "softDrop" : "gravity",
-        ),
+  Lock: (state, action) => {
+    if (!hasActivePiece(state)) return state;
+    const source: LockSource = state.physics.isSoftDropping
+      ? "softDrop"
+      : "gravity";
+    return enterResolvingFromActive(state, action.timestampMs, source);
+  },
 
   // UI overlay effects
   PushUiEffect: (state, action) => ({

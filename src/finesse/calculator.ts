@@ -198,7 +198,7 @@ class BoardAwareFinesseCalculator implements FinesseCalculator {
     _config: GameplayConfig,
     board?: Board,
   ): Array<FinesseAction> | null {
-    void _config;
+    // _config is currently unused; reserved for future tuning hooks
     const b = board ?? createEmptyBoard();
 
     // Define goal by final occupancy equality on the given board.
@@ -248,15 +248,26 @@ class BoardAwareFinesseCalculator implements FinesseCalculator {
       return solutions.length >= MAX_SOLUTIONS;
     };
 
+    const shouldStop = (depth: number, visitCount: number): boolean =>
+      (foundDepth !== undefined && depth > foundDepth) ||
+      visitCount > MAX_VISITS;
+
+    const enqueueIfBetter = (next: Node, depth: number): void => {
+      const k = keyOf(next.piece);
+      const prevBest = bestDepthByState.get(k);
+      if (prevBest === undefined || depth + 1 < prevBest) {
+        bestDepthByState.set(k, depth + 1);
+        q.push(next);
+      }
+    };
+
     while (q.length > 0) {
       const cur = q.shift();
       if (!cur) break;
       const depth = cur.path.length;
       visits++;
 
-      if (foundDepth !== undefined && depth > foundDepth) break;
-      if (visits > MAX_VISITS) break;
-
+      if (shouldStop(depth, visits)) break;
       if (recordIfGoal(cur, depth)) break;
       if (foundDepth !== undefined && depth >= foundDepth) continue;
 
@@ -265,12 +276,7 @@ class BoardAwareFinesseCalculator implements FinesseCalculator {
           path: [...cur.path, step.action],
           piece: step.next,
         };
-        const k = keyOf(next.piece);
-        const prevBest = bestDepthByState.get(k);
-        if (prevBest === undefined || depth + 1 < prevBest) {
-          bestDepthByState.set(k, depth + 1);
-          q.push(next);
-        }
+        enqueueIfBetter(next, depth);
       }
     }
 
@@ -282,7 +288,7 @@ class BoardAwareFinesseCalculator implements FinesseCalculator {
     targetX: number,
     targetRot: Rot,
     playerInputs: Array<FinesseAction>,
-    config: GameplayConfig,
+    _config: GameplayConfig,
   ): FinesseResult {
     // Bypass analysis when player used SoftDrop: we don't judge finesse in this case
     if (playerInputs.some((a) => a === "SoftDrop")) {
@@ -292,7 +298,7 @@ class BoardAwareFinesseCalculator implements FinesseCalculator {
         playerSequence: playerInputs,
       };
     }
-    void config; // config not used by current analysis rules
+    // _config is currently unused by analysis rules
     // NOTE: analyze uses occupancy-equivalent goals (ignore rotation) on an empty board.
     const empty = createEmptyBoard();
     const target: ActivePiece = {

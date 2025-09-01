@@ -88,7 +88,9 @@ describe("Guided deck card ordering", () => {
     const originalCards = generateCards();
 
     // Also verify we have cards from all expected pieces
-    const pieces = [...new Set(originalCards.map((card) => card.piece))].sort();
+    const pieces = [...new Set(originalCards.map((card) => card.piece))].sort(
+      (a, b) => a.localeCompare(b),
+    );
     expect(pieces).toEqual(["I", "J", "L", "O", "S", "T", "Z"]);
 
     // Should have a reasonable number of cards (this is a sanity check)

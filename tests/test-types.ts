@@ -135,12 +135,10 @@ export function createCorruptedRng(
   seed: string,
   corruption: "empty" | "undefined" | "null" = "undefined",
 ): CorruptedRng {
-  const bag: Array<PieceId | undefined | null> =
-    corruption === "empty"
-      ? []
-      : corruption === "undefined"
-        ? [undefined]
-        : [null];
+  let bag: Array<PieceId | undefined | null>;
+  if (corruption === "empty") bag = [];
+  else if (corruption === "undefined") bag = [undefined];
+  else bag = [null];
 
   return {
     bagIndex: 0,

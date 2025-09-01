@@ -153,8 +153,8 @@ describe("cell-projection.ts", () => {
       ];
       const rotations: Array<ActivePiece["rot"]> = ["spawn", "right", "left"];
 
-      pieceTypes.forEach((id) => {
-        rotations.forEach((rot) => {
+      for (const id of pieceTypes) {
+        for (const rot of rotations) {
           const piece: ActivePiece = {
             id,
             rot,
@@ -169,12 +169,12 @@ describe("cell-projection.ts", () => {
           expect(Array.isArray(cells)).toBe(true);
 
           // Verify each cell is a coordinate tuple
-          cells.forEach((cell) => {
+          for (const cell of cells) {
             expect(Array.isArray(cell)).toBe(true);
             expect(cell).toHaveLength(2);
-          });
-        });
-      });
+          }
+        }
+      }
     });
   });
 });

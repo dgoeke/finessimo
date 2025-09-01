@@ -149,11 +149,7 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
       readableActions.push(this.getReadableAction(action));
     }
 
-    this.handleFeedbackAnimation(
-      finesseFeedbackEl,
-      true, // Always show when feedback is enabled
-      isNewFeedback,
-    );
+    this.showFeedbackAnimation(finesseFeedbackEl, isNewFeedback);
 
     finesseFeedbackEl.setAttribute(
       "aria-label",
@@ -161,19 +157,25 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     );
   }
 
-  private handleFeedbackAnimation(
+  private showFeedbackAnimation(
     finesseFeedbackEl: HTMLElement,
-    shouldShow: boolean,
     isNewFeedback: boolean,
   ): void {
-    if (shouldShow && (isNewFeedback || !this.isShowing)) {
+    if (isNewFeedback || !this.isShowing) {
       finesseFeedbackEl.classList.remove("show");
       finesseFeedbackEl.classList.remove("hide");
-      void finesseFeedbackEl.offsetHeight; // Force reflow
+      // Force reflow by reading layout property; store in dataset to mark usage
+      finesseFeedbackEl.dataset["reflow"] = String(
+        finesseFeedbackEl.offsetHeight,
+      );
       finesseFeedbackEl.style.removeProperty("visibility");
       finesseFeedbackEl.classList.add("show");
       this.isShowing = true;
-    } else if (!shouldShow && this.isShowing) {
+    }
+  }
+
+  private hideFeedbackAnimation(finesseFeedbackEl: HTMLElement): void {
+    if (this.isShowing) {
       finesseFeedbackEl.classList.remove("show");
       finesseFeedbackEl.classList.add("hide");
       this.isShowing = false;
@@ -187,10 +189,8 @@ export class FinesseOverlay extends SignalWatcher(LitElement) {
     if (resetState) {
       this.lastFeedback = null;
     }
-    finesseFeedbackEl.classList.remove("show");
-    finesseFeedbackEl.classList.add("hide");
+    this.hideFeedbackAnimation(finesseFeedbackEl);
     finesseFeedbackEl.removeAttribute("aria-label");
-    this.isShowing = false;
   }
 
   private scheduleAutoHide(feedbackEl: HTMLElement): void {

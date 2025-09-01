@@ -443,14 +443,11 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       if (pieceId === "O") {
         expect(newState.active?.rot).toBe("spawn");
       } else {
-        const expectedRot =
-          initialRot === "spawn"
-            ? "right"
-            : initialRot === "right"
-              ? "two"
-              : initialRot === "two"
-                ? "left"
-                : "spawn";
+        let expectedRot: string | undefined;
+        if (initialRot === "spawn") expectedRot = "right";
+        else if (initialRot === "right") expectedRot = "two";
+        else if (initialRot === "two") expectedRot = "left";
+        else expectedRot = "spawn";
         expect(newState.active?.rot).toBe(expectedRot);
       }
     });

@@ -145,14 +145,16 @@ export function pickNextDue(deck: SrsDeck, now: Timestamp): SrsRecord | null {
     const recIsDue = recDue <= (now as number);
     const bestIsDue = bestDue <= (now as number);
 
-    const shouldReplace =
-      recIsDue !== bestIsDue
-        ? recIsDue
-        : recDue !== bestDue
-          ? recDue < bestDue
-          : (key as string) < bestKey;
+    let replace = false;
+    if (recIsDue !== bestIsDue) {
+      replace = recIsDue;
+    } else if (recDue !== bestDue) {
+      replace = recDue < bestDue;
+    } else {
+      replace = (key as string) < bestKey;
+    }
 
-    if (shouldReplace) {
+    if (replace) {
       best = rec;
       bestKey = key as string;
     }

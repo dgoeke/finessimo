@@ -429,39 +429,49 @@ export class TouchInputHandler implements InputHandler {
 
       if (touchData?.zone) {
         event.preventDefault();
-
-        const zone = touchData.zone;
-        zone.element.classList.remove("active");
-
-        const duration = (fromNow() as number) - touchData.startTime;
-        const deltaX = touch.clientX - touchData.startX;
-        const deltaY = touch.clientY - touchData.startY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        // Handle touch end actions
-        if (
-          zone.type === "tap" &&
-          duration < this.maxTapTime &&
-          distance < 20
-        ) {
-          // Already triggered on touch start for immediate response
-        } else if (zone.type === "hold") {
-          // Handle release of hold actions
-          this.triggerAction(zone.action, "up");
-        }
-
-        // If soft drop was engaged via swipe, turn it off on touch end
-        if (touchData.softDropEngaged === true) {
-          if (this.stateMachineInputHandler && this.dispatch) {
-            const timestamp = fromNow() as number;
-            this.stateMachineInputHandler.setSoftDrop(false, timestamp);
-          } else {
-            this.triggerAction("SoftDropDown", "up");
-          }
-        }
+        this.handleTouchEndForZone(touchData.zone, touchData, touch);
       }
 
       this.activeTouches.delete(touch.identifier);
+    }
+  }
+
+  private handleTouchEndForZone(
+    zone: TouchZone,
+    touchData: {
+      startX: number;
+      startY: number;
+      startTime: number;
+      zone: TouchZone | null;
+      hasTriggeredHardDrop?: boolean;
+      softDropEngaged?: boolean;
+    },
+    touch: Touch,
+  ): void {
+    zone.element.classList.remove("active");
+
+    const duration = (fromNow() as number) - touchData.startTime;
+    const deltaX = touch.clientX - touchData.startX;
+    const deltaY = touch.clientY - touchData.startY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Handle touch end actions
+    const isTap = zone.type === "tap";
+    if (isTap && duration < this.maxTapTime && distance < 20) {
+      // Already triggered on touch start for immediate response
+    } else if (zone.type === "hold") {
+      // Handle release of hold actions
+      this.triggerAction(zone.action, "up");
+    }
+
+    // If soft drop was engaged via swipe, turn it off on touch end
+    if (touchData.softDropEngaged === true) {
+      if (this.stateMachineInputHandler && this.dispatch) {
+        const timestamp = fromNow() as number;
+        this.stateMachineInputHandler.setSoftDrop(false, timestamp);
+      } else {
+        this.triggerAction("SoftDropDown", "up");
+      }
     }
   }
 

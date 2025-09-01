@@ -22,26 +22,26 @@ function findCancellationPairs(
 ): Set<number> {
   const toRemove = new Set<number>();
 
-  for (let i = 0; i < events.length - 1; i++) {
-    if (toRemove.has(i)) continue;
-
+  const findPairIndex = (i: number): number => {
     const current = events[i];
-    if (!current) continue;
-
+    if (!current) return -1;
     for (let j = i + 1; j < events.length; j++) {
       if (toRemove.has(j)) continue;
-
       const next = events[j];
       if (!next) continue;
-
       const timeDiff = next.tMs - current.tMs;
-      if (timeDiff > cancelWindowMs) break;
+      if (timeDiff > cancelWindowMs) return -1;
+      if (areOppositeDirections(current.action, next.action)) return j;
+    }
+    return -1;
+  };
 
-      if (areOppositeDirections(current.action, next.action)) {
-        toRemove.add(i);
-        toRemove.add(j);
-        break;
-      }
+  for (let i = 0; i < events.length - 1; i++) {
+    if (toRemove.has(i)) continue;
+    const j = findPairIndex(i);
+    if (j >= 0) {
+      toRemove.add(i);
+      toRemove.add(j);
     }
   }
 

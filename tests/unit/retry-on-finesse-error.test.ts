@@ -34,6 +34,49 @@ describe("Retry on finesse error", () => {
   });
 
   describe("Lock Pipeline", () => {
+    const mockFaultyAnalyzer: (_state: GameState) => {
+      actions: Array<Action>;
+      result: FinesseResult;
+    } = () => ({
+      actions: [
+        {
+          feedback: {
+            faults: [],
+            kind: "faulty",
+            optimalSequences: [["MoveLeft", "HardDrop"]],
+            playerSequence: [],
+          },
+          type: "UpdateFinesseFeedback",
+        },
+      ],
+      result: {
+        faults: [],
+        kind: "faulty",
+        optimalSequences: [["MoveLeft", "HardDrop"]], // Simulate suboptimal play
+        playerSequence: ["HardDrop"],
+      },
+    });
+
+    const mockOptimalAnalyzer: (_state: GameState) => {
+      actions: Array<Action>;
+      result: FinesseResult;
+    } = () => ({
+      actions: [
+        {
+          feedback: {
+            kind: "optimal",
+            optimalSequences: [["HardDrop"]],
+            playerSequence: [],
+          },
+          type: "UpdateFinesseFeedback",
+        },
+      ],
+      result: {
+        kind: "optimal",
+        optimalSequences: [["HardDrop"]],
+        playerSequence: ["HardDrop"],
+      },
+    });
     it("should commit when retryOnFinesseError is disabled", () => {
       // Setup state with retry disabled
       const state = reducer(initialState, {
@@ -52,25 +95,6 @@ describe("Retry on finesse error", () => {
       expect(hardDropState.pendingLock).toBeTruthy();
 
       let resultState = hardDropState;
-      const mockAnalyzer = (_state: GameState) => ({
-        actions: [
-          {
-            feedback: {
-              faults: [],
-              kind: "faulty",
-              optimalSequences: [["MoveLeft", "HardDrop"]],
-              playerSequence: [],
-            },
-            type: "UpdateFinesseFeedback",
-          },
-        ] as Array<Action>,
-        result: {
-          faults: [],
-          kind: "faulty",
-          optimalSequences: [["MoveLeft", "HardDrop"]], // Simulate suboptimal play
-          playerSequence: ["HardDrop"],
-        } as FinesseResult,
-      });
 
       // Run pipeline - should commit despite suboptimal play
       runLockPipeline(
@@ -78,7 +102,7 @@ describe("Retry on finesse error", () => {
         (action) => {
           resultState = reducer(resultState, action);
         },
-        mockAnalyzer,
+        mockFaultyAnalyzer,
         createTimestamp(100),
       );
 
@@ -101,25 +125,6 @@ describe("Retry on finesse error", () => {
       expect(hardDropState.pendingLock?.source).toBe("hardDrop");
 
       let resultState = hardDropState;
-      const mockAnalyzer = (_state: GameState) => ({
-        actions: [
-          {
-            feedback: {
-              faults: [],
-              kind: "faulty",
-              optimalSequences: [["MoveLeft", "HardDrop"]],
-              playerSequence: [],
-            },
-            type: "UpdateFinesseFeedback",
-          },
-        ] as Array<Action>,
-        result: {
-          faults: [],
-          kind: "faulty",
-          optimalSequences: [["MoveLeft", "HardDrop"]], // Simulate suboptimal play
-          playerSequence: ["HardDrop"],
-        } as FinesseResult,
-      });
 
       // Run pipeline - should retry due to suboptimal play
       runLockPipeline(
@@ -127,7 +132,7 @@ describe("Retry on finesse error", () => {
         (action) => {
           resultState = reducer(resultState, action);
         },
-        mockAnalyzer,
+        mockFaultyAnalyzer,
         createTimestamp(100),
       );
 
@@ -150,23 +155,6 @@ describe("Retry on finesse error", () => {
       });
 
       let resultState = hardDropState;
-      const mockAnalyzer = (_state: GameState) => ({
-        actions: [
-          {
-            feedback: {
-              kind: "optimal",
-              optimalSequences: [["HardDrop"]],
-              playerSequence: [],
-            },
-            type: "UpdateFinesseFeedback",
-          },
-        ] as Array<Action>,
-        result: {
-          kind: "optimal",
-          optimalSequences: [["HardDrop"]],
-          playerSequence: ["HardDrop"],
-        } as FinesseResult,
-      });
 
       // Run pipeline - should commit due to optimal play
       runLockPipeline(
@@ -174,7 +162,7 @@ describe("Retry on finesse error", () => {
         (action) => {
           resultState = reducer(resultState, action);
         },
-        mockAnalyzer,
+        mockOptimalAnalyzer,
         createTimestamp(100),
       );
 

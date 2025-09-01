@@ -28,7 +28,7 @@ describe("outline utilities", () => {
           (e) =>
             `${String(e.from.x)},${String(e.from.y)}-${String(e.to.x)},${String(e.to.y)}`,
         )
-        .sort();
+        .sort((a, b) => a.localeCompare(b));
 
       expect(edgeStrings).toEqual([
         "0,0-1,0", // top

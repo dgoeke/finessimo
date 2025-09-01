@@ -1095,7 +1095,7 @@ describe("DAS State Machine", () => {
       expect(actions).toHaveLength(0);
 
       // Now let DAS expire to get to repeating state (using new 100ms DAS time)
-      actions = service.send({ timestamp: 1100, type: "TIMER_TICK" });
+      service.send({ timestamp: 1100, type: "TIMER_TICK" });
       expect(service.getState().state).toBe("repeating");
 
       // Send TIMER_TICK too early for ARR (should hit return branch)
@@ -1112,6 +1112,31 @@ describe("DAS State Machine", () => {
       // Test updateConfig with different event types
       service.send({ direction: 1, timestamp: 1500, type: "KEY_DOWN" }); // Not UPDATE_CONFIG
       expect(service.getState().context.dasMs).toBe(100); // Should remain from the updateConfig call above
+    });
+
+    test("does not emit duplicate non-optimistic TapMove on quick tap (pending tap is handled by input handler)", () => {
+      const service = new DASMachineService();
+      service.updateConfig(100, 20);
+      // Start a key sequence
+      let actions = service.send({
+        direction: -1,
+        timestamp: 1000,
+        type: "KEY_DOWN",
+      });
+      // Optimistic move should be emitted on KEY_DOWN
+      expect(actions.some((a) => a.type === "TapMove" && a.optimistic)).toBe(
+        true,
+      );
+
+      // Release before DAS expiry: machine should not emit a second TapMove here
+      actions = service.send({
+        direction: -1,
+        timestamp: 1050,
+        type: "KEY_UP",
+      });
+      expect(actions.some((a) => a.type === "TapMove" && !a.optimistic)).toBe(
+        false,
+      );
     });
   });
 

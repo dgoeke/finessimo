@@ -32,9 +32,7 @@ class MockRng implements PieceRandomGenerator {
 class MockPreviewMode implements GameMode {
   readonly name = "mockPreview";
 
-  createRng(seed: string, _prev?: PieceRandomGenerator): PieceRandomGenerator {
-    void seed;
-    void _prev;
+  createRng(_seed: string, _prev?: PieceRandomGenerator): PieceRandomGenerator {
     return new MockRng("T");
   }
 
@@ -43,7 +41,6 @@ class MockPreviewMode implements GameMode {
     rng: PieceRandomGenerator,
     count: number,
   ): { pieces: Array<PieceId>; newRng: PieceRandomGenerator } {
-    void _state;
     return rng.getNextPieces(count);
   }
 
@@ -57,7 +54,7 @@ class MockPreviewMode implements GameMode {
     return null;
   }
   reset(): void {
-    void 0;
+    return; // no-op
   }
 }
 

@@ -586,11 +586,7 @@ export class StateMachineInputHandler implements InputHandler {
     if (!this.dispatch) return;
 
     switch (binding) {
-      case "MoveLeft": {
-        this.handleMovementDown(binding, timestamp);
-        this.keyStates.set(event.code, true);
-        break;
-      }
+      case "MoveLeft":
       case "MoveRight": {
         this.handleMovementDown(binding, timestamp);
         this.keyStates.set(event.code, true);
@@ -643,8 +639,6 @@ export class StateMachineInputHandler implements InputHandler {
   private handleKeyUpAction(binding: BindableAction, timestamp: number): void {
     switch (binding) {
       case "MoveLeft":
-        this.handleMovementUp(binding, timestamp);
-        break;
       case "MoveRight":
         this.handleMovementUp(binding, timestamp);
         break;

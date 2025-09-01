@@ -1,18 +1,17 @@
-// eslint.config.js
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import eslintComments from "eslint-plugin-eslint-comments";
 import importX from "eslint-plugin-import-x";
 import perfectionist from "eslint-plugin-perfectionist";
 import promise from "eslint-plugin-promise";
-// Optional extras:
-// import sonarjs from "eslint-plugin-sonarjs"; // cognitive complexity, duplicates
+import sonarjs from "eslint-plugin-sonarjs"; // cognitive complexity, duplicates
 // import unicorn from "eslint-plugin-unicorn";  // many sharp edges, can be noisy
 
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
+  sonarjs.configs.recommended,
 
   // Global language options
   {
@@ -32,7 +31,6 @@ export default tseslint.config(
       "import-x": importX,
       perfectionist,
       promise,
-      // sonarjs,
       // unicorn,
     },
     linterOptions: {
@@ -237,10 +235,7 @@ export default tseslint.config(
   {
     files: ["**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
     rules: {
-      "@typescript-eslint/no-explicit-any": [
-        "error",
-        { fixToUnknown: true, ignoreRestArgs: false },
-      ],
+      "@typescript-eslint/no-explicit-any": "error",
       "no-console": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/ban-ts-comment": ["error", { "ts-ignore": false }],

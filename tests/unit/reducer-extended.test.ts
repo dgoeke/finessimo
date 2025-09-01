@@ -56,24 +56,13 @@ describe("Reducer - Extended Coverage", () => {
         },
       ];
 
-      actions.forEach((action) => {
+      for (const action of actions) {
         expect(() => reducer(initialState, action)).not.toThrow();
-      });
+      }
     });
 
-    it("should return original state for unimplemented actions (no-op)", () => {
-      // Spawn is now implemented, so we test with truly unimplemented actions
-      const unimplementedActions: Array<Action> = [
-        // All actions are now implemented, so this test is no longer relevant
-        // Keeping test but with no actions to test
-      ];
-
-      unimplementedActions.forEach((action) => {
-        const result = reducer(initialState, action);
-        expect(result).toBe(initialState); // Should return exact same reference
-      });
-
-      // Test that Spawn actually works now
+    it("should initialize and spawn correctly (no legacy unimplemented actions)", () => {
+      // Test that Spawn works as implemented
       const spawnResult = reducer(initialState, createTestSpawnAction());
       expect(spawnResult).not.toBe(initialState); // Should create new state
       expect(spawnResult.active).toBeDefined(); // Should spawn a piece
@@ -350,9 +339,9 @@ describe("Reducer - Extended Coverage", () => {
 
       const originalLogLength = currentState.processedInputLog.length;
 
-      moveActions.forEach((action) => {
+      for (const action of moveActions) {
         currentState = reducer(currentState, action);
-      });
+      }
 
       // Reducer should NOT modify processedInputLog - it's managed externally
       expect(currentState.processedInputLog).toHaveLength(originalLogLength);
@@ -489,12 +478,12 @@ describe("Reducer - Extended Coverage", () => {
         { type: "Move" }, // Missing dir/source
       ];
 
-      malformedActions.forEach((action) => {
+      for (const action of malformedActions) {
         // With the new functional pattern, malformed actions should throw
         expect(() =>
           reducer(initialState, action as unknown as Action),
         ).toThrow();
-      });
+      }
     });
 
     it("should handle TapMove with invalid direction", () => {
@@ -521,20 +510,20 @@ describe("Reducer - Extended Coverage", () => {
       // Test only cases that should be handled gracefully
       const handledCorruptStates = [{}];
 
-      handledCorruptStates.forEach((state) => {
+      for (const state of handledCorruptStates) {
         expect(() =>
           reducer(state as InvalidGameState as GameState, {
             timestampMs: createTimestamp(1),
             type: "Tick",
           }),
         ).not.toThrow();
-      });
+      }
     });
 
     it("should handle invalid state defensively", () => {
       const invalidStates = [{}, { tick: "not-a-number" }, { tick: null }];
 
-      invalidStates.forEach((invalidState) => {
+      for (const invalidState of invalidStates) {
         // Should not throw
         expect(() =>
           reducer(invalidState as InvalidGameState as GameState, {
@@ -549,7 +538,7 @@ describe("Reducer - Extended Coverage", () => {
           type: "Tick",
         });
         expect(result).toBe(invalidState);
-      });
+      }
     });
 
     it("should handle invalid TapMove defensively", () => {
@@ -559,7 +548,7 @@ describe("Reducer - Extended Coverage", () => {
         { processedInputLog: null },
       ];
 
-      invalidStates.forEach((invalidState) => {
+      for (const invalidState of invalidStates) {
         expect(() =>
           reducer(
             invalidState as InvalidGameState as GameState,
@@ -572,7 +561,7 @@ describe("Reducer - Extended Coverage", () => {
           createTestTapMoveAction(-1, false),
         );
         expect(result).toBe(invalidState);
-      });
+      }
     });
   });
 

@@ -190,6 +190,30 @@ describe("StateMachineInputHandler", () => {
     });
   });
 
+  describe("safety events", () => {
+    test("blur event resets inputs and clears soft drop", () => {
+      handler.init(dispatchMock);
+      handler.start();
+      handler.update(gameState, 1000);
+
+      // Enable soft drop and a direction
+      handler.setSoftDrop(true, 1000);
+      handler.handleMovement("LeftDown", 1000);
+
+      // Trigger blur (focus loss)
+      dispatchMock.mockClear();
+      window.dispatchEvent(new Event("blur"));
+
+      const state = handler.getState();
+      expect(state.currentDirection).toBeUndefined();
+      expect(state.isSoftDropDown).toBe(false);
+      // Soft drop release should have been dispatched
+      expect(dispatchMock).toHaveBeenCalledWith(
+        expect.objectContaining({ on: false, type: "SoftDrop" }),
+      );
+    });
+  });
+
   describe("public API functionality", () => {
     beforeEach(() => {
       handler.init(dispatchMock);
@@ -268,6 +292,24 @@ describe("StateMachineInputHandler", () => {
           type: "SoftDrop",
         }),
       );
+    });
+
+    test("ignores movement when settings overlay is open", () => {
+      // Simulate settings overlay open
+      document.body.classList.add("settings-open");
+
+      // Ensure handler has dispatch and game state context
+      handler.update(gameState, 1000);
+
+      // Attempt a movement; should be ignored
+      dispatchMock.mockClear();
+      handler.handleMovement("LeftDown", 1000);
+
+      expect(dispatchMock).not.toHaveBeenCalled();
+      // State should remain unchanged
+      const state = handler.getState();
+      expect(state.currentDirection).toBeUndefined();
+      expect(state.isLeftKeyDown).toBe(false);
     });
   });
 

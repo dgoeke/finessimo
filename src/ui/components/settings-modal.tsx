@@ -56,7 +56,7 @@ export class SettingsModal extends LitElement {
     return this;
   }
 
-  static styles = css`
+  static readonly styles = css`
     :host {
       display: none;
     }
@@ -532,12 +532,14 @@ export class SettingsModal extends LitElement {
   }
 
   private renderTimingPanel(): unknown {
-    const sdfValue =
-      this.currentSettings.softDrop === "infinite"
-        ? 41
-        : typeof this.currentSettings.softDrop === "number"
-          ? this.currentSettings.softDrop
-          : 10;
+    let sdfValue: number;
+    if (this.currentSettings.softDrop === "infinite") {
+      sdfValue = 41;
+    } else if (typeof this.currentSettings.softDrop === "number") {
+      sdfValue = this.currentSettings.softDrop;
+    } else {
+      sdfValue = 10;
+    }
     const clampedSdf = Math.max(5, Math.min(41, sdfValue));
     const sdfDisplay = clampedSdf === 41 ? "∞" : `${String(clampedSdf)}x`;
 
@@ -1200,12 +1202,14 @@ export class SettingsModal extends LitElement {
 
   private syncSettingsFromGameState(gameState: GameState): void {
     // Update current settings to match game state
-    const maybeMode =
-      gameState.currentMode === "guided"
-        ? "guided"
-        : gameState.currentMode === "freePlay"
-          ? "freePlay"
-          : undefined;
+    let maybeMode: GameSettings["mode"] | undefined;
+    if (gameState.currentMode === "guided") {
+      maybeMode = "guided";
+    } else if (gameState.currentMode === "freePlay") {
+      maybeMode = "freePlay";
+    } else {
+      maybeMode = undefined;
+    }
     const next = {
       ...this.currentSettings,
       arrMs: gameState.timing.arrMs,

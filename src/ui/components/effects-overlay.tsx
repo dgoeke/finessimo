@@ -21,14 +21,16 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
 
     // Anchor class and absolute offsets
     const anchorClass = `anchor-${e.anchor}`;
-    const posStyle =
-      e.anchor === "topLeft"
-        ? `left: ${String(e.offsetX)}px; top: ${String(e.offsetY)}px;`
-        : e.anchor === "topRight"
-          ? `right: ${String(e.offsetX)}px; top: ${String(e.offsetY)}px;`
-          : e.anchor === "bottomLeft"
-            ? `left: ${String(e.offsetX)}px; bottom: ${String(e.offsetY)}px;`
-            : `right: ${String(e.offsetX)}px; bottom: ${String(e.offsetY)}px;`;
+    let posStyle: string;
+    if (e.anchor === "topLeft") {
+      posStyle = `left: ${String(e.offsetX)}px; top: ${String(e.offsetY)}px;`;
+    } else if (e.anchor === "topRight") {
+      posStyle = `right: ${String(e.offsetX)}px; top: ${String(e.offsetY)}px;`;
+    } else if (e.anchor === "bottomLeft") {
+      posStyle = `left: ${String(e.offsetX)}px; bottom: ${String(e.offsetY)}px;`;
+    } else {
+      posStyle = `right: ${String(e.offsetX)}px; bottom: ${String(e.offsetY)}px;`;
+    }
 
     const durMs =
       (e.ttlMs as unknown as number) !== 0

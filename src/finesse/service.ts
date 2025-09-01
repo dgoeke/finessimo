@@ -32,7 +32,7 @@ export class DefaultFinesseService implements FinesseService {
     mode: GameMode,
     _timestampMs?: number,
   ): Array<Action> {
-    void _timestampMs; // accepted for API compatibility
+    // _timestampMs accepted for API compatibility
     const actions: Array<Action> = [];
 
     // Extract player inputs from processed log

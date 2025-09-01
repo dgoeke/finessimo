@@ -27,7 +27,9 @@ type SchemaKeys = keyof {
 };
 
 // Compile-time test: ensure schema covers all GameSettings fields
-type _SchemaCompletenesss = Expect<Equals<SchemaKeys, keyof GameSettings>>;
+export type _SchemaCompletenesss = Expect<
+  Equals<SchemaKeys, keyof GameSettings>
+>;
 
 // This test will fail to compile if:
 // 1. A field is added to GameSettings but not to the schema
@@ -35,7 +37,6 @@ type _SchemaCompletenesss = Expect<Equals<SchemaKeys, keyof GameSettings>>;
 // 3. Field names don't match exactly
 
 // Export to prevent "unused" warnings
-export type SchemaCompletenessTest = _SchemaCompletenesss;
 
 // Jest requires at least one test, so add a dummy runtime test
 describe("Schema completeness compile-time tests", () => {

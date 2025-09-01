@@ -10,22 +10,21 @@ import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("finesse analysis trigger logic", () => {
+  const createTestState = (): GameState =>
+    reducer(undefined, {
+      seed: createSeed("test"),
+      timestampMs: fromNow(),
+      timing: {
+        gravityEnabled: true,
+        gravityMs: createDurationMs(1000),
+        lockDelayMs: createDurationMs(500),
+      },
+      type: "Init",
+    });
+
   it("should properly detect when a piece becomes inactive (auto-lock scenario)", () => {
     // Test that the app.ts logic for detecting piece lock works
     // This tests the condition: if (prevState.active && !newState.active)
-
-    function createTestState(): GameState {
-      return reducer(undefined, {
-        seed: createSeed("test"),
-        timestampMs: fromNow(),
-        timing: {
-          gravityEnabled: true,
-          gravityMs: createDurationMs(1000),
-          lockDelayMs: createDurationMs(500),
-        },
-        type: "Init",
-      });
-    }
 
     const state = createTestState();
 
@@ -69,19 +68,6 @@ describe("finesse analysis trigger logic", () => {
   });
 
   it("should detect piece lock on HardDrop", () => {
-    function createTestState(): GameState {
-      return reducer(undefined, {
-        seed: createSeed("test"),
-        timestampMs: fromNow(),
-        timing: {
-          gravityEnabled: true,
-          gravityMs: createDurationMs(1000),
-          lockDelayMs: createDurationMs(500),
-        },
-        type: "Init",
-      });
-    }
-
     const state = createTestState();
 
     const stateWithActive: GameState = buildPlayingState(state, {

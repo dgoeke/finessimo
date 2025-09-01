@@ -169,7 +169,7 @@ export const updateContextKeyDown = (
   event: DASEvent,
 ): DASContext => {
   if (event.type === "KEY_DOWN") {
-    return {
+    const next = {
       ...ctx, // IMPORTANT: Always spread existing context
       arrLastTime: undefined, // Reset ARR timer
       dasStartTime: event.timestamp, // Start the DAS timer
@@ -177,6 +177,7 @@ export const updateContextKeyDown = (
       optimisticMoveEmitted: true, // Mark that we emitted optimistic move
       repeats: 0, // Reset catch-up repeats
     };
+    return next;
   }
   return ctx; // No change if event doesn't match
 };
@@ -184,10 +185,9 @@ export const updateContextKeyDown = (
 // Reducer: Handle key up - reset all DAS/ARR state
 export const updateContextKeyUp = (
   ctx: DASContext,
-  event: DASEvent,
+  _event: DASEvent,
 ): DASContext => {
-  void event; // Mark as used for interface compatibility
-  return {
+  const next = {
     ...ctx,
     arrLastTime: undefined, // Clear ARR timer
     dasStartTime: undefined, // Clear DAS timer
@@ -195,6 +195,7 @@ export const updateContextKeyUp = (
     optimisticMoveEmitted: false, // Reset for next key sequence
     repeats: 0, // Clear catch-up repeats
   };
+  return next;
 };
 
 // Reducer: Start the hold/repeat phase - set initial ARR time

@@ -219,8 +219,9 @@ describe("Reducer Edge Cases and Error Conditions", () => {
   describe("Invalid or malformed states", () => {
     it("should handle Lock action with invalid state structure", () => {
       // Create invalid state by omitting required property
-      const { tick: _tick, ...stateWithoutTick } = validState;
-      const invalidState: InvalidGameState = stateWithoutTick;
+      const stateWithoutTick = (({ tick: _tick, ...rest }) => rest)(validState);
+      const invalidState: InvalidGameState =
+        stateWithoutTick as InvalidGameState;
 
       const action: Action = {
         timestampMs: fromNow(),
