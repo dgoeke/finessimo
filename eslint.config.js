@@ -101,6 +101,20 @@ export default tseslint.config(
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
+      // Ban Phaser imports in pure modules (allow only under src/presentation/**)
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "phaser",
+              message:
+                "Phaser is presentation-only. Import it under src/presentation/** only.",
+            },
+          ],
+          patterns: ["phaser/**"],
+        },
+      ],
       "@typescript-eslint/no-deprecated": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -197,6 +211,14 @@ export default tseslint.config(
           allowHigherOrderFunctions: true,
         },
       ],
+    },
+  },
+
+  // Allow Phaser imports within the presentation layer
+  {
+    files: ["src/presentation/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 
