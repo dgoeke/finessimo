@@ -1,5 +1,5 @@
 // PR4: Real Phaser Settings scene — maps rexUI (or simple) controls to store actions
-import Phaser from "phaser";
+import { Phaser } from "phaser";
 
 import { dispatch } from "../../../state/signals";
 import { createDurationMs } from "../../../types/brands";
@@ -8,6 +8,32 @@ import { SCENE_KEYS } from "./types";
 
 import type { GameplayConfig, TimingConfig } from "../../../state/types";
 
+type RexSizer = { add(child: unknown, opts?: unknown): void; layout(): void };
+type RexRoundRect = {
+  setInteractive(): void;
+  on(e: string, cb: () => void): void;
+};
+type RexSlider = { on(e: string, cb: (value: number) => void): void };
+type RexCheckbox = {
+  setChecked(v: boolean): void;
+  on(e: string, cb: (checked: boolean) => void): void;
+};
+type RexUiPlugin = {
+  add: {
+    sizer(config: unknown): RexSizer;
+    label(config: unknown): unknown;
+    slider(config: unknown): RexSlider;
+    roundRectangle(
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radius: number,
+      color: number,
+    ): RexRoundRect;
+    checkbox(config: unknown): RexCheckbox;
+  };
+};
 // Local action type for ports (avoids leaking broad Action union here)
 type SettingsAction =
   | { type: "UpdateTiming"; timing: Partial<TimingConfig> }
@@ -65,12 +91,13 @@ export class Settings extends Phaser.Scene {
     });
     header.setOrigin(0.5, 0.5);
 
-    const column = this.rexUI.add.sizer({
+    const rex = this.rexUI as RexUiPlugin;
+    const column = rex.add.sizer({
       orientation: 1,
       space: { item: 10 },
       x: w / 2,
       y: 60,
-    });
+    }) as unknown as RexUIInternal.Sizer;
     column.add(header, { align: "center" });
 
     const t = initial?.timing ?? {};
@@ -78,13 +105,13 @@ export class Settings extends Phaser.Scene {
     this.buildTimingControls(column, t);
     this.buildGameplayControls(column, g);
 
-    const backBg = this.rexUI.add.roundRectangle(0, 0, 120, 32, 6, 0x223344);
+    const backBg = rex.add.roundRectangle(0, 0, 120, 32, 6, 0x223344);
     const backTxt = this.add.text(0, 0, "< Back", {
       color: "#a0e7ff",
       fontFamily: "monospace",
       fontSize: "14px",
     });
-    const back = this.rexUI.add.label({
+    const back = rex.add.label({
       background: backBg,
       text: backTxt,
     }) as RexUIInternal.Base;
@@ -102,21 +129,25 @@ export class Settings extends Phaser.Scene {
     initial: number;
     onValue: (v: number) => void;
   }): RexUIInternal.Sizer {
-    const row = this.rexUI.add.sizer({ orientation: 0, space: { item: 6 } });
+    const rex = this.rexUI as RexUiPlugin;
+    const row = rex.add.sizer({
+      orientation: 0,
+      space: { item: 6 },
+    }) as unknown as RexUIInternal.Sizer;
     const lbl = this.add.text(0, 0, opts.label, {
       color: "#ffffff",
       fontFamily: "monospace",
       fontSize: "14px",
     });
-    const track = this.rexUI.add.roundRectangle(0, 0, 200, 8, 4, 0x334455);
-    const thumb = this.rexUI.add.roundRectangle(0, 0, 16, 16, 8, 0xaad4ff);
-    const slider = this.rexUI.add.slider({
+    const track = rex.add.roundRectangle(0, 0, 200, 8, 4, 0x334455);
+    const thumb = rex.add.roundRectangle(0, 0, 16, 16, 8, 0xaad4ff);
+    const slider = rex.add.slider({
       thumb,
       track,
       value: (opts.initial - opts.min) / (opts.max - opts.min),
       width: 220,
     });
-    slider.on("valuechange", (value) => {
+    slider.on("valuechange", (value: number) => {
       const v = opts.min + value * (opts.max - opts.min);
       opts.onValue(v);
     });
@@ -236,13 +267,17 @@ export class Settings extends Phaser.Scene {
     initial: boolean,
     onToggle: (on: boolean) => void,
   ): RexUIInternal.Sizer {
-    const row = this.rexUI.add.sizer({ orientation: 0, space: { item: 6 } });
+    const rex = this.rexUI as RexUiPlugin;
+    const row = rex.add.sizer({
+      orientation: 0,
+      space: { item: 6 },
+    }) as unknown as RexUIInternal.Sizer;
     const lbl = this.add.text(0, 0, label, {
       color: "#ffffff",
       fontFamily: "monospace",
       fontSize: "14px",
     });
-    const checkbox = this.rexUI.add.checkbox({ color: 0x88cc88, size: 18 });
+    const checkbox = rex.add.checkbox({ color: 0x88cc88, size: 18 });
     checkbox.setChecked(initial);
     checkbox.on("valuechange", (checked: boolean) => onToggle(checked));
     row.add(lbl);

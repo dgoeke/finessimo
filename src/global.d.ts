@@ -71,7 +71,7 @@ declare global {
       }): Sizer;
       label(config: {
         background?: Phaser.GameObjects.GameObject;
-        text?: Phaser.GameObjects.Text | string;
+        text?: string;
         space?: {
           left?: number;
           right?: number;
