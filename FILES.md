@@ -46,6 +46,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/presenter/types.ts — Phase 0 core presentation types: branded primitives (Px, Col, Row, Ms), ViewModel, RenderPlan union, and Presenter contract (pure computePlan + impure apply).
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
+- src/presentation/phaser/presenter/BoardPresenter.ts — Phase 3: Presenter implementation. `computePlan` (pure) generates `TileDiff`, `PiecePos`, and topOut `CameraFx`/`SoundCue`; `apply` (impure) updates a blitter-backed locked layer and positions active/ghost containers via injected adapters (no Phaser import required yet).
 
 - src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 1: minimal scene shell with shallow transition helpers (`toSettings`, `toModeSelect`, `toGameplay`). No Phaser import yet.
@@ -157,3 +158,5 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/unit/guided-deck-ordering.test.ts — Tests for the FSRS card difficulty ordering algorithm that validates round-robin selection across pieces and proper difficulty-based sorting.
 - tests/presenter/contracts.test.ts — Phase 0 type-only contracts for the Phaser presenter layer: brand shapes, RenderPlan tag exhaustiveness (never guard), Presenter conformance, and `mapGameStateToViewModel` signature visibility.
 - tests/presenter/scenes.spec.ts — Phase 1 shallow scene tests: registry/keys presence and minimal transition method behavior using a typed SceneController stub (no Phaser runtime required).
+- tests/presenter/plan.generator.test.ts — Phase 3 pure tests for `BoardPresenter.computePlan`: TileDiff puts/dels on mini boards, PiecePos for active/ghost moves, and topOut FX/Sound transitions.
+- tests/presenter/boardPresenter.apply.test.ts — Phase 3 impure tests using fakes to verify blitter.create/reset/visibility toggling and container.setPosition handling.
