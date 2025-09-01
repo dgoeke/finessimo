@@ -53,9 +53,9 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
  - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 
 - src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
-- src/presentation/phaser/scenes/MainMenu.ts — Phase 1: minimal scene shell with shallow transition helpers (`toSettings`, `toModeSelect`, `toGameplay`). No Phaser import yet.
-- src/presentation/phaser/scenes/Settings.ts — Phase 1: minimal scene shell with `backToMenu()` transition helper. No Phaser import yet.
-- src/presentation/phaser/scenes/ModeSelect.ts — Phase 1: minimal scene shell with `toGameplay()` and `backToMenu()` helpers. No Phaser import yet.
+- src/presentation/phaser/scenes/MainMenu.ts — Phase 6: menu helpers with typed navigation + quick mode shortcuts. Adds `startMode(name)`, `startFreePlay()`, `startGuided()` that dispatch `SetMode` and start Gameplay.
+- src/presentation/phaser/scenes/Settings.ts — Phase 6: settings mapping helpers that convert primitives to brands and dispatch store actions. Adds `updateTimingMs({...})`, `updateGameplay({...})`, and `applySettings({ timing, gameplay })`.
+- src/presentation/phaser/scenes/ModeSelect.ts — Phase 6: mode list/select helpers. Adds `listModes()` to query registry and `selectMode(name)` to dispatch `SetMode` and start Gameplay.
 - src/presentation/phaser/scenes/Gameplay.ts — Phase 4: fixed-step deterministic loop (no Phaser import yet). Injects presenter, input adapter, reducer; maps GameState→ViewModel, computes RenderPlan, and applies via presenter.
 - src/presentation/phaser/scenes/Results.ts — Phase 1: minimal scene shell with `backToMenu()` helper. No Phaser import yet.
 - src/presentation/phaser/scenes/types.ts — Phase 1: shared `SceneKey` union, `SceneController` interface, and `SCENE_KEYS` constant (brands not needed here yet).

@@ -1,4 +1,6 @@
-// Phase 1: Minimal scene shell (no Phaser import)
+// Phase 6: Main menu helpers — typed navigation + quick mode shortcuts
+import { dispatch } from "../../../state/signals";
+
 import { SCENE_KEYS, type SceneController } from "./types";
 
 export class MainMenu /* extends Phaser.Scene */ {
@@ -18,5 +20,19 @@ export class MainMenu /* extends Phaser.Scene */ {
 
   toGameplay(): void {
     this.scene.start(SCENE_KEYS.Gameplay);
+  }
+
+  // --- Convenience shortcuts for common menu actions ---
+  startMode(modeName: string): void {
+    dispatch({ mode: modeName, type: "SetMode" });
+    this.scene.start(SCENE_KEYS.Gameplay);
+  }
+
+  startFreePlay(): void {
+    this.startMode("freePlay");
+  }
+
+  startGuided(): void {
+    this.startMode("guided");
   }
 }
