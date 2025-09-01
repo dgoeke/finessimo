@@ -57,7 +57,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/scenes/Settings.ts — Phase 6: settings mapping helpers that convert primitives to brands and dispatch store actions. Adds `updateTimingMs({...})`, `updateGameplay({...})`, and `applySettings({ timing, gameplay })`.
 - src/presentation/phaser/scenes/ModeSelect.ts — Phase 6: mode list/select helpers. Adds `listModes()` to query registry and `selectMode(name)` to dispatch `SetMode` and start Gameplay.
 - src/presentation/phaser/scenes/Gameplay.ts — Phase 4: fixed-step deterministic loop (no Phaser import yet). Injects presenter, input adapter, reducer; maps GameState→ViewModel, computes RenderPlan, and applies via presenter.
-- src/presentation/phaser/scenes/Results.ts — Phase 1: minimal scene shell with `backToMenu()` helper. No Phaser import yet.
+- src/presentation/phaser/scenes/Results.ts — Phase 7: Results scene coordination (no Phaser import). Exposes `show(summary, ui)` that drives tweened counters and celebration particles via a typed UI adapter, and binds Retry/Menu to start `Gameplay`/`MainMenu`.
 - src/presentation/phaser/scenes/types.ts — Phase 1: shared `SceneKey` union, `SceneController` interface, and `SCENE_KEYS` constant (brands not needed here yet).
 - src/presentation/phaser/scenes/index.ts — Phase 1: scene registry exports (`SCENE_KEYS`, `SCENES`, `SCENE_REGISTRY`) for straightforward scene registration/testing without importing Phaser.
 
