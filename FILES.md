@@ -47,6 +47,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
 - src/presentation/phaser/presenter/BoardPresenter.ts — Phase 3: Presenter implementation. `computePlan` (pure) generates `TileDiff`, `PiecePos`, and topOut `CameraFx`/`SoundCue`; `apply` (impure) updates a blitter-backed locked layer and positions active/ghost containers via injected adapters (no Phaser import required yet).
+ - src/presentation/phaser/presenter/Effects.ts — Phase 5: Camera FX adapter interface. Maps `RenderPlan.CameraFx` kinds (`fadeIn`, `fadeOut`, `shake`, `zoomTo`) to scene camera/post-FX implementation (no Phaser import).
+ - src/presentation/phaser/presenter/AudioBus.ts — Phase 5: Audio bus adapter interface. Maps `RenderPlan.SoundCue` names (`spawn`, `lock`, `line`, `topout`) to the underlying sound manager.
  - src/presentation/phaser/input/PhaserInputAdapter.ts — Phase 4: Input adapter interface used by Gameplay loop to drain Actions each fixed step (pure contract).
  - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 

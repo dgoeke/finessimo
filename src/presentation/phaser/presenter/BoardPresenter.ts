@@ -1,5 +1,7 @@
 import { toPx } from "./viewModel";
 
+import type { AudioBus } from "./AudioBus";
+import type { CameraFxAdapter } from "./Effects";
 import type {
   Presenter,
   RenderPlan,
@@ -31,6 +33,8 @@ export type BoardPresenterOptions = Readonly<{
   blitter: BlitterLike;
   activeContainer: ContainerLike;
   ghostContainer: ContainerLike;
+  fx?: CameraFxAdapter;
+  audio?: AudioBus;
 }>;
 
 function key(col: Col, row: Row): string {
@@ -194,7 +198,11 @@ export class BoardPresenter implements Presenter {
           this.applyPiecePos(p);
           break;
         case "CameraFx":
+          this.applyCameraFx(p);
+          break;
         case "SoundCue":
+          this.applySoundCue(p);
+          break;
         case "UiHint":
         case "Noop":
           // Handled by other adapters in later phases; no-op for now
@@ -235,6 +243,33 @@ export class BoardPresenter implements Presenter {
     const target =
       p.id === "active" ? this.opts.activeContainer : this.opts.ghostContainer;
     target.setPosition(p.xPx as unknown as number, p.yPx as unknown as number);
+  }
+
+  private applyCameraFx(p: Extract<RenderPlan, { t: "CameraFx" }>): void {
+    const fx = this.opts.fx;
+    if (!fx) return;
+    switch (p.kind) {
+      case "fadeIn":
+        fx.fadeIn(p.ms);
+        return;
+      case "fadeOut":
+        fx.fadeOut(p.ms);
+        return;
+      case "shake":
+        fx.shake(p.ms, p.magnitude);
+        return;
+      case "zoomTo":
+        fx.zoomTo(p.ms, typeof p.magnitude === "number" ? p.magnitude : 1);
+        return;
+      default:
+        this.assertNever(p.kind);
+    }
+  }
+
+  private applySoundCue(p: Extract<RenderPlan, { t: "SoundCue" }>): void {
+    const audio = this.opts.audio;
+    if (!audio) return;
+    audio.play(p.name);
   }
 
   private assertNever(_x: never): void {
