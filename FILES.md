@@ -12,6 +12,11 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/app.ts: Main app orchestrator. 60 FPS game loop with focus-based pausing, state management, finesse analysis integration, lock pipeline invocation, mode switching, settings dispatch. Window focus detection using visibilitychange, focus/blur events, and watchdog for missed events.
 - src/global.d.ts: Global TypeScript declarations and ambient module types.
 
+## Plans & Migration
+
+- plans/PHASER.md — High-level phased plan for migrating to Phaser 3; types and contracts for ViewModel/RenderPlan.
+- plans/phaser/INTEGRATION.md — Detailed PR-by-PR integration plan to fully replace DOM/Lit with Phaser, including file paths, signatures, tests, and quality gates.
+
 ## State
 
 - src/state/types.ts: Core types and interfaces. GameState, Action union (including TapMove, HoldMove, RepeatMove, HoldStart for granular input classification), Stats (20+ metrics), Board, ActivePiece, configs. Includes processedInputLog for finesse analysis. Statistics tracking actions. `retryOnFinesseError` in GameplayConfig. UI effects system with UiEffect union and FloatingTextEffect for arcade-style messages.
