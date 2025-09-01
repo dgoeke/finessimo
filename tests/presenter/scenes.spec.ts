@@ -30,12 +30,13 @@ describe("Phaser Scene Shells (Phase 1)", () => {
   });
 
   it("Boot.create() transitions to MainMenu", () => {
-    const start = jest.fn<(k: SceneKey) => void>();
-    const controller: SceneController = { start };
     const boot = new Boot();
-    boot.scene = controller;
+    const spy = jest
+      .spyOn(boot.scene, "start")
+      .mockImplementation((_: unknown, __?: unknown) => boot.scene);
     boot.create();
-    expect(start).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
+    expect(spy).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
+    spy.mockRestore();
   });
 
   it("MainMenu has shallow transitions", () => {

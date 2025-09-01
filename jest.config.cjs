@@ -51,5 +51,7 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@lit-labs/signals$": "<rootDir>/__mocks__/@lit-labs/signals.ts",
+    // Map Phaser to a light-weight mock for Node/Jest
+    "^phaser$": "<rootDir>/__mocks__/phaser.ts",
   },
 };

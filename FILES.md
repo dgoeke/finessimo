@@ -170,3 +170,4 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/presenter/plan.generator.test.ts — Phase 3 pure tests for `BoardPresenter.computePlan`: TileDiff puts/dels on mini boards, PiecePos for active/ghost moves, and topOut FX/Sound transitions.
 - tests/presenter/boardPresenter.apply.test.ts — Phase 3 impure tests using fakes to verify blitter.create/reset/visibility toggling and container.setPosition handling.
  - tests/presenter/gameplay.loop.test.ts — Phase 4 integration test for fixed-step loop: scripted inputs over steps drive reducer; presenter receives/computes plans and applies container positions.
+ - __mocks__/phaser.ts — Jest manual mock for Phaser used in presenter scene tests to avoid DOM/canvas requirements in Node.
