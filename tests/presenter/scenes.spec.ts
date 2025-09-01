@@ -84,7 +84,8 @@ describe("Phaser Scene Shells (Phase 1)", () => {
     const start = jest.fn<(k: SceneKey) => void>();
     const controller: SceneController = { start };
     const gameplay = new Gameplay();
-    gameplay.scene = controller;
+    // In tests, override Phaser scene controller with our light adapter
+    (gameplay.scene as unknown as SceneController) = controller;
     gameplay.toResults();
     expect(start).toHaveBeenLastCalledWith(SCENE_KEYS.Results);
     gameplay.backToMenu();

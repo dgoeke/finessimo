@@ -52,11 +52,11 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
 - src/presentation/phaser/presenter/BoardPresenter.ts — Phase 3: Presenter implementation. `computePlan` (pure) generates `TileDiff`, `PiecePos`, and topOut `CameraFx`/`SoundCue`; `apply` (impure) updates a blitter-backed locked layer and positions active/ghost containers via injected adapters (no Phaser import required yet).
- - src/presentation/phaser/presenter/Effects.ts — Phase 5: Camera FX adapter interface. Maps `RenderPlan.CameraFx` kinds (`fadeIn`, `fadeOut`, `shake`, `zoomTo`) to scene camera/post-FX implementation (no Phaser import).
- - src/presentation/phaser/presenter/AudioBus.ts — Phase 5: Audio bus adapter interface. Maps `RenderPlan.SoundCue` names (`spawn`, `lock`, `line`, `topout`) to the underlying sound manager.
-- src/presentation/phaser/input/PhaserInputAdapter.ts — Phase 4: Input adapter interface used by Gameplay loop to drain Actions each fixed step (pure contract).
-- src/presentation/phaser/input/PhaserInputAdapterImpl.ts — Phase 5: Phaser keyboard adapter implementing DAS/ARR timing and emitting engine Actions per fixed step.
- - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
+- src/presentation/phaser/presenter/Effects.ts — Phase 5: Camera FX adapter interface. Maps `RenderPlan.CameraFx` kinds (`fadeIn`, `fadeOut`, `shake`, `zoomTo`) to scene camera/post-FX implementation (no Phaser import).
+- src/presentation/phaser/presenter/AudioBus.ts — Phase 5: Audio bus adapter interface. Maps `RenderPlan.SoundCue` names (`spawn`, `lock`, `line`, `topout`) to the underlying sound manager.
+- src/presentation/phaser/input/PhaserInputAdapter.ts — Phase 4: Input adapter interface used by Gameplay loop to drain input events each fixed step (pure contract).
+- src/presentation/phaser/input/PhaserInputAdapterImpl.ts — Phaser keyboard implementation emitting DAS machine events and immediate actions.
+- src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 
 - src/presentation/phaser/scenes/Boot.ts — Phase 1: minimal scene shell; `create()` immediately transitions to MainMenu via typed SceneController placeholder (`this.scene.start("MainMenu")`). No Phaser import yet.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 6: menu helpers with typed navigation + quick mode shortcuts. Adds `startMode(name)`, `startFreePlay()`, `startGuided()` that dispatch `SetMode` and start Gameplay.
@@ -170,5 +170,5 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - tests/presenter/scenes.spec.ts — Phase 1 shallow scene tests: registry/keys presence and minimal transition method behavior using a typed SceneController stub (no Phaser runtime required).
 - tests/presenter/plan.generator.test.ts — Phase 3 pure tests for `BoardPresenter.computePlan`: TileDiff puts/dels on mini boards, PiecePos for active/ghost moves, and topOut FX/Sound transitions.
 - tests/presenter/boardPresenter.apply.test.ts — Phase 3 impure tests using fakes to verify blitter.create/reset/visibility toggling and container.setPosition handling.
- - tests/presenter/gameplay.loop.test.ts — Phase 4 integration test for fixed-step loop: scripted inputs over steps drive reducer; presenter receives/computes plans and applies container positions.
- - __mocks__/phaser.ts — Jest manual mock for Phaser used in presenter scene tests to avoid DOM/canvas requirements in Node.
+- tests/presenter/gameplay.loop.test.ts — Phase 4 integration test for fixed-step loop: scripted inputs over steps drive reducer; presenter receives/computes plans and applies container positions.
+- **mocks**/phaser.ts — Jest manual mock for Phaser used in presenter scene tests to avoid DOM/canvas requirements in Node.

@@ -84,11 +84,7 @@ declare module "phaser" {
       };
       load: { on(e: string, cb: (...a: Array<unknown>) => void): void };
       input: {
-        keyboard: {
-          addKeys<T extends Record<string, number>>(
-            keys: T,
-          ): { [K in keyof T]: Keyboard.Key };
-        };
+        keyboard: { addKey(code: string): Keyboard.Key } | null;
       };
       scene: { start(key: string): void };
       sound: { play(key: string): void };
