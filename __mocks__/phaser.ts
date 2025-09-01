@@ -28,5 +28,6 @@ const PhaserMock = {
   Scene: MockScene,
 } as const;
 
+export { PhaserMock as Phaser };
 export default PhaserMock as unknown as typeof import("phaser");
 

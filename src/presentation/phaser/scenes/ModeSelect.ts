@@ -1,5 +1,5 @@
 // PR3: Real Phaser ModeSelect scene — lists and selects modes
-import Phaser from "phaser";
+import { Phaser } from "phaser";
 
 import { gameModeRegistry } from "../../../modes";
 import { dispatch } from "../../../state/signals";

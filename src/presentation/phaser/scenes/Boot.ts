@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+import { Phaser } from "phaser";
 
 import { gameModeRegistry } from "../../../modes";
 import { getActiveRng } from "../../../modes/spawn-service";
@@ -33,8 +33,8 @@ export class Boot extends Phaser.Scene {
     });
     txt.setOrigin(0.5, 0.5);
 
-    this.load.on("progress", (p: number) => {
-      const pct = Math.round(p * 100);
+    this.load.on("progress", (p: unknown) => {
+      const pct = Math.round((p as number) * 100);
       txt.setText(`Loading… ${String(pct)}%`);
     });
   }
@@ -43,13 +43,13 @@ export class Boot extends Phaser.Scene {
     const seed = createSeed(crypto.randomUUID());
     const defaultMode = gameModeRegistry.get("freePlay");
     const rng = defaultMode ? getActiveRng(defaultMode, seed) : undefined;
-    let initAction: Extract<Action, { type: "Init" }> = {
+    const initAction: Extract<Action, { type: "Init" }> = {
       mode: defaultMode?.name ?? "freePlay",
       seed,
       timestampMs: fromNow(),
       type: "Init",
+      ...(rng ? { rng } : {}),
     };
-    if (rng) initAction = { ...initAction, rng };
     dispatch(initAction);
 
     // Transition to MainMenu after assets are ready

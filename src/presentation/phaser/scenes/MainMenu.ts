@@ -1,9 +1,31 @@
 // PR3: Real Phaser MainMenu scene — typed navigation hooks
-import Phaser from "phaser";
+import { Phaser } from "phaser";
 
 import { dispatch } from "../../../state/signals";
 
 import { SCENE_KEYS } from "./types";
+
+type RexUiPlugin = {
+  add: {
+    sizer(config: unknown): {
+      add(child: unknown, opts?: unknown): void;
+      layout(): void;
+    };
+    roundRectangle(
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radius: number,
+      color: number,
+    ): {
+      setOrigin(x: number, y: number): void;
+      setInteractive(): void;
+      on(e: string, cb: () => void): void;
+    };
+    label(config: unknown): unknown;
+  };
+};
 
 export class MainMenu extends Phaser.Scene {
   constructor() {
@@ -22,7 +44,8 @@ export class MainMenu extends Phaser.Scene {
     });
     header.setOrigin(0.5, 0.5);
 
-    const menu = this.rexUI.add.sizer({
+    const rex = this.rexUI as RexUiPlugin;
+    const menu = rex.add.sizer({
       orientation: 1, // vertical
       space: { item: 8 },
       x: w / 2,
@@ -34,14 +57,14 @@ export class MainMenu extends Phaser.Scene {
       label: string,
       onClick: () => void,
     ): RexUIInternal.Base => {
-      const bg = this.rexUI.add.roundRectangle(0, 0, 160, 36, 8, 0x223344);
+      const bg = rex.add.roundRectangle(0, 0, 160, 36, 8, 0x223344);
       bg.setOrigin(0.5, 0.5);
       const txt = this.add.text(0, 0, label, {
         color: "#e7eaf0",
         fontFamily: "monospace",
         fontSize: "14px",
       });
-      const btn = this.rexUI.add.label({
+      const btn = rex.add.label({
         background: bg,
         text: txt,
       }) as RexUIInternal.Base;
