@@ -322,7 +322,7 @@ export class Gameplay extends Phaser.Scene {
         this.spawnNextPiece();
 
         // Trigger initial render to show the spawned piece
-        const vm = mapGameStateToViewModel(this._state);
+        const vm = mapGameStateToViewModel(this._state, this._vmPrev);
         const plan = this._presenter.computePlan(null, vm);
         this._presenter.apply(plan);
         this._vmPrev = vm;

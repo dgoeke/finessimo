@@ -34,6 +34,9 @@ function makeVM(
   const vm: ViewModel = {
     board,
     hud: { lines: 0, mode: "test", score: 0 },
+    justLocked: false,
+    justSpawned: false,
+    linesJustCleared: 0,
     topOut: opts?.topOut ?? false,
     ...(opts?.active
       ? { active: { cells: opts.active.cells, kind: opts.active.kind } }

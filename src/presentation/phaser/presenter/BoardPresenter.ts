@@ -12,6 +12,45 @@ import type {
   Ms,
 } from "./types";
 
+// Effect magnitude constants for consistent behavior
+const EFFECT_MAGNITUDES = {
+  LINE_BASE_SHAKE: 0.004,
+  LINE_SCALE_FACTOR: 0.002,
+  LOCK_SHAKE: 0.003,
+  SPAWN_ZOOM: 1.05,
+  TOPOUT_SHAKE: 0.005,
+} as const;
+
+// Effect duration constants (in milliseconds)
+const EFFECT_DURATIONS = {
+  LINE_CLEAR_SHAKE_MS: 200,
+  LOCK_SHAKE_MS: 100,
+  SPAWN_ZOOM_MS: 150,
+  TOPOUT_SHAKE_MS: 400,
+} as const;
+
+// Effect builder functions for consistent effect creation
+const createShakeEffect = (ms: number, magnitude: number): RenderPlan => ({
+  kind: "shake",
+  magnitude,
+  ms: ms as Ms,
+  t: "CameraFx",
+});
+
+const createZoomEffect = (ms: number, zoom: number): RenderPlan => ({
+  kind: "zoomTo",
+  magnitude: zoom,
+  ms: ms as Ms,
+  t: "CameraFx",
+});
+
+const createSoundEffect = (
+  name: "spawn" | "lock" | "line" | "topout",
+): RenderPlan => ({
+  name,
+  t: "SoundCue",
+});
+
 // Minimal Phaser-like surface abstractions (for tests, no Phaser import)
 export type BobLike = {
   reset(x: number, y: number, frame?: number): void;
@@ -241,17 +280,56 @@ export class BoardPresenter implements Presenter {
     next: ViewModel,
   ): ReadonlyArray<RenderPlan> {
     const out: Array<RenderPlan> = [];
+
+    // Top-out effects (existing)
     const wasTopOut = prev?.topOut ?? false;
     const isTopOut = next.topOut;
     if (!wasTopOut && isTopOut) {
-      out.push({
-        kind: "shake",
-        magnitude: 0.005,
-        ms: 400 as number as Ms,
-        t: "CameraFx",
-      });
-      out.push({ name: "topout", t: "SoundCue" });
+      out.push(
+        createShakeEffect(
+          EFFECT_DURATIONS.TOPOUT_SHAKE_MS,
+          EFFECT_MAGNITUDES.TOPOUT_SHAKE,
+        ),
+      );
+      out.push(createSoundEffect("topout"));
     }
+
+    // Spawn effects
+    if (next.justSpawned) {
+      out.push(createSoundEffect("spawn"));
+      // Subtle zoom effect on spawn
+      out.push(
+        createZoomEffect(
+          EFFECT_DURATIONS.SPAWN_ZOOM_MS,
+          EFFECT_MAGNITUDES.SPAWN_ZOOM,
+        ),
+      );
+    }
+
+    // Lock effects
+    if (next.justLocked) {
+      out.push(createSoundEffect("lock"));
+      // Small shake on piece lock
+      out.push(
+        createShakeEffect(
+          EFFECT_DURATIONS.LOCK_SHAKE_MS,
+          EFFECT_MAGNITUDES.LOCK_SHAKE,
+        ),
+      );
+    }
+
+    // Line clear effects
+    if (next.linesJustCleared > 0) {
+      out.push(createSoundEffect("line"));
+      // Scale shake intensity with number of lines cleared
+      const intensity =
+        EFFECT_MAGNITUDES.LINE_BASE_SHAKE +
+        (next.linesJustCleared - 1) * EFFECT_MAGNITUDES.LINE_SCALE_FACTOR;
+      out.push(
+        createShakeEffect(EFFECT_DURATIONS.LINE_CLEAR_SHAKE_MS, intensity),
+      );
+    }
+
     return out as ReadonlyArray<RenderPlan>;
   }
 

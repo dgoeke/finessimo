@@ -54,9 +54,10 @@ describe("BoardPresenter.apply — CameraFx & Audio (Phase 5)", () => {
       zoomTo: (ms: Ms, z: number) =>
         calls.push(`zoomTo:${String(ms as unknown as number)}:${String(z)}`),
     } as const;
+
+    type SoundName = "spawn" | "lock" | "line" | "topout";
     const audio = {
-      play: (name: "spawn" | "lock" | "line" | "topout") =>
-        calls.push(`play:${name}`),
+      play: (name: SoundName) => calls.push(`play:${name}`),
     } as const;
 
     const presenter = new BoardPresenter({
@@ -98,6 +99,199 @@ describe("BoardPresenter.apply — CameraFx & Audio (Phase 5)", () => {
         "zoomTo:400:1.5",
         "play:topout",
         "play:spawn",
+      ]),
+    );
+  });
+
+  it("triggers spawn sound and zoom effect when justSpawned is true", () => {
+    const calls: Array<string> = [];
+    const fx = {
+      fadeIn: (ms: Ms) =>
+        calls.push(`fadeIn:${String(ms as unknown as number)}`),
+      fadeOut: (ms: Ms) =>
+        calls.push(`fadeOut:${String(ms as unknown as number)}`),
+      shake: (ms: Ms, mag?: number) =>
+        calls.push(
+          `shake:${String(ms as unknown as number)}:${String(mag ?? "")}`,
+        ),
+      zoomTo: (ms: Ms, z: number) =>
+        calls.push(`zoomTo:${String(ms as unknown as number)}:${String(z)}`),
+    } as const;
+    type SoundName = "spawn" | "lock" | "line" | "topout";
+    const audio = {
+      play: (name: SoundName) => calls.push(`play:${name}`),
+    } as const;
+
+    const presenter = new BoardPresenter({
+      activeContainer: new NopContainer(),
+      audio,
+      blitter: new NopBlitter(),
+      fx,
+      ghostContainer: new NopContainer(),
+      originXPx: 0,
+      originYPx: 0,
+      tileSizePx: 10,
+    });
+
+    const prevVm = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 0,
+      topOut: false,
+    } as const;
+
+    const nextVm = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: true,
+      linesJustCleared: 0,
+      topOut: false,
+    } as const;
+
+    const plan = presenter.computePlan(prevVm, nextVm);
+    presenter.apply(plan);
+
+    expect(calls).toEqual(
+      expect.arrayContaining(["play:spawn", "zoomTo:150:1.05"]),
+    );
+  });
+
+  it("triggers lock sound and shake effect when justLocked is true", () => {
+    const calls: Array<string> = [];
+    const fx = {
+      fadeIn: (ms: Ms) =>
+        calls.push(`fadeIn:${String(ms as unknown as number)}`),
+      fadeOut: (ms: Ms) =>
+        calls.push(`fadeOut:${String(ms as unknown as number)}`),
+      shake: (ms: Ms, mag?: number) =>
+        calls.push(
+          `shake:${String(ms as unknown as number)}:${String(mag ?? "")}`,
+        ),
+      zoomTo: (ms: Ms, z: number) =>
+        calls.push(`zoomTo:${String(ms as unknown as number)}:${String(z)}`),
+    } as const;
+    type SoundName = "spawn" | "lock" | "line" | "topout";
+    const audio = {
+      play: (name: SoundName) => calls.push(`play:${name}`),
+    } as const;
+
+    const presenter = new BoardPresenter({
+      activeContainer: new NopContainer(),
+      audio,
+      blitter: new NopBlitter(),
+      fx,
+      ghostContainer: new NopContainer(),
+      originXPx: 0,
+      originYPx: 0,
+      tileSizePx: 10,
+    });
+
+    const prevVm = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 0,
+      topOut: false,
+    } as const;
+
+    const nextVm = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: true,
+      justSpawned: false,
+      linesJustCleared: 0,
+      topOut: false,
+    } as const;
+
+    const plan = presenter.computePlan(prevVm, nextVm);
+    presenter.apply(plan);
+
+    expect(calls).toEqual(
+      expect.arrayContaining(["play:lock", "shake:100:0.003"]),
+    );
+  });
+
+  it("triggers line clear sound and scaled shake effect when lines are cleared", () => {
+    const calls: Array<string> = [];
+    const fx = {
+      fadeIn: (ms: Ms) =>
+        calls.push(`fadeIn:${String(ms as unknown as number)}`),
+      fadeOut: (ms: Ms) =>
+        calls.push(`fadeOut:${String(ms as unknown as number)}`),
+      shake: (ms: Ms, mag?: number) =>
+        calls.push(
+          `shake:${String(ms as unknown as number)}:${String(mag ?? "")}`,
+        ),
+      zoomTo: (ms: Ms, z: number) =>
+        calls.push(`zoomTo:${String(ms as unknown as number)}:${String(z)}`),
+    } as const;
+    type SoundName = "spawn" | "lock" | "line" | "topout";
+    const audio = {
+      play: (name: SoundName) => calls.push(`play:${name}`),
+    } as const;
+
+    const presenter = new BoardPresenter({
+      activeContainer: new NopContainer(),
+      audio,
+      blitter: new NopBlitter(),
+      fx,
+      ghostContainer: new NopContainer(),
+      originXPx: 0,
+      originYPx: 0,
+      tileSizePx: 10,
+    });
+
+    // Test single line clear
+    const prevVm1 = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 0,
+      topOut: false,
+    } as const;
+
+    const nextVm1 = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 1,
+      topOut: false,
+    } as const;
+
+    const plan1 = presenter.computePlan(prevVm1, nextVm1);
+    presenter.apply(plan1);
+
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        "play:line",
+        "shake:200:0.004", // Base intensity for 1 line
+      ]),
+    );
+
+    // Test double line clear (higher intensity)
+    calls.length = 0; // Reset calls
+    const nextVm2 = {
+      board: [[]],
+      hud: { lines: 0, mode: "test", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 2,
+      topOut: false,
+    } as const;
+
+    const plan2 = presenter.computePlan(prevVm1, nextVm2);
+    presenter.apply(plan2);
+
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        "play:line",
+        "shake:200:0.006", // Increased intensity for 2 lines (0.004 + 1*0.002)
       ]),
     );
   });

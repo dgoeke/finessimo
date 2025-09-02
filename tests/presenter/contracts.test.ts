@@ -65,7 +65,10 @@ export const typeContractsOk = true;
 
 // Map function signature contract (type-level)
 export type _MapSig = Expect<
-  Equals<typeof mapGameStateToViewModel, (s: Readonly<GameState>) => ViewModel>
+  Equals<
+    typeof mapGameStateToViewModel,
+    (s: Readonly<GameState>, prevVm?: ViewModel | null) => ViewModel
+  >
 >;
 
 describe("Presenter contracts (Phase 0)", () => {
@@ -76,6 +79,9 @@ describe("Presenter contracts (Phase 0)", () => {
     const vmNext: ViewModel = {
       board: [],
       hud: { lines: 0, mode: "", score: 0 },
+      justLocked: false,
+      justSpawned: false,
+      linesJustCleared: 0,
       topOut: false,
     } as const;
     const plan = p.computePlan(vmPrev, vmNext);

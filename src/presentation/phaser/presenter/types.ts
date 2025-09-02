@@ -7,6 +7,13 @@ export type Col = number & { readonly __brand: "Col" };
 export type Row = number & { readonly __brand: "Row" };
 export type Ms = number & { readonly __brand: "Ms" };
 
+// Transition detection flags for state changes
+export type Transitions = Readonly<{
+  readonly justSpawned: boolean; // piece just appeared
+  readonly justLocked: boolean; // piece just locked to board
+  readonly linesJustCleared: number; // lines cleared this frame (0 = no lines)
+}>;
+
 // ViewModel — pure projection for rendering
 export type ViewModel = Readonly<{
   readonly board: ReadonlyArray<ReadonlyArray<number>>; // 0..7 indices, [row][col]
@@ -23,7 +30,8 @@ export type ViewModel = Readonly<{
     readonly lines: number;
     readonly mode: string;
   }>;
-}>;
+}> &
+  Transitions;
 
 // RenderPlan — discriminated union of drawing/audio/ui commands
 export type RenderPlan =

@@ -10,7 +10,7 @@ import type { SceneCtx } from "./types";
 import type { RenderOverlay } from "../../../../engine/ui/overlays";
 
 export function updatePresentation(ctx: SceneCtx): void {
-  const vm = mapGameStateToViewModel(ctx.state);
+  const vm = mapGameStateToViewModel(ctx.state, ctx.vmPrev);
   const plan = ctx.presenter.computePlan(ctx.vmPrev, vm);
   ctx.presenter.apply(plan);
   ctx.vmPrev = vm;
