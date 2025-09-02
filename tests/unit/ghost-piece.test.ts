@@ -5,6 +5,7 @@ import {
   type Board,
   type ActivePiece,
   createBoardCells,
+  idx,
 } from "../../src/state/types";
 import { createGridCoord } from "../../src/types/brands";
 
@@ -13,6 +14,8 @@ function createTestBoard(): Board {
   return {
     cells: createBoardCells(),
     height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
     width: 10,
   };
 }
@@ -41,8 +44,8 @@ describe("ghost piece", () => {
 
       // Place some blocks at the bottom
       for (let x = 0; x < 10; x++) {
-        board.cells[19 * 10 + x] = 1; // Fill bottom row
-        board.cells[18 * 10 + x] = 1; // Fill second-to-bottom row
+        board.cells[idx(board, createGridCoord(x), createGridCoord(19))] = 1; // Fill bottom row
+        board.cells[idx(board, createGridCoord(x), createGridCoord(18))] = 1; // Fill second-to-bottom row
       }
 
       const piece: ActivePiece = {
@@ -95,9 +98,9 @@ describe("ghost piece", () => {
       for (let x = 0; x < 10; x++) {
         if (x !== 3 && x !== 4 && x !== 5) {
           // Leave gap for T piece
-          board.cells[17 * 10 + x] = 1;
-          board.cells[18 * 10 + x] = 1;
-          board.cells[19 * 10 + x] = 1;
+          board.cells[idx(board, createGridCoord(x), createGridCoord(17))] = 1;
+          board.cells[idx(board, createGridCoord(x), createGridCoord(18))] = 1;
+          board.cells[idx(board, createGridCoord(x), createGridCoord(19))] = 1;
         }
       }
 

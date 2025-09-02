@@ -3,7 +3,12 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { createSeed, createDurationMs } from "../../src/types/brands";
+import { idx } from "../../src/state/types";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
@@ -22,7 +27,9 @@ describe("Line Clear Edge Cases", () => {
 
     // Set up line clear
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));
@@ -75,7 +82,9 @@ describe("Line Clear Edge Cases", () => {
 
     // Set up line clear
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));
@@ -114,7 +123,9 @@ describe("Line Clear Edge Cases", () => {
 
     // Set up line clear
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));
@@ -151,7 +162,9 @@ describe("Line Clear Edge Cases", () => {
 
     // Create line clear scenario
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));
@@ -190,7 +203,9 @@ describe("Line Clear Edge Cases", () => {
     // Fill multiple rows for successive clears
     for (let y = 18; y < 20; y++) {
       for (let x = 0; x < 6; x++) {
-        state.board.cells[y * 10 + x] = 1;
+        state.board.cells[
+          idx(state.board, createGridCoord(x), createGridCoord(y))
+        ] = 1;
       }
     }
 

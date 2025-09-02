@@ -32,21 +32,23 @@ function createTestState(): GameState {
 
 // Helper to create a board with almost-completed line
 function createBoardWithAlmostCompletedLines(): Board {
-  const cells = createBoardCells();
+  const board: Board = {
+    cells: createBoardCells(),
+    height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
+    width: 10,
+  };
 
   // Fill only the bottom row, leaving gaps for O piece
   for (let x = 0; x < 10; x++) {
     if (x !== 4 && x !== 5) {
       // Leave gaps at x=4,5 for O piece
-      cells[idx(createGridCoord(x), createGridCoord(19), 10)] = 1;
+      board.cells[idx(board, createGridCoord(x), createGridCoord(19))] = 1;
     }
   }
 
-  return {
-    cells,
-    height: 20,
-    width: 10,
-  };
+  return board;
 }
 
 describe("line clear with zero delay", () => {
@@ -97,10 +99,14 @@ describe("line clear with zero delay", () => {
     // Line 19 was completed and cleared
     // The upper part of the O piece at y=18 should have dropped to y=19
     expect(
-      newState.board.cells[idx(createGridCoord(4), createGridCoord(19), 10)],
+      newState.board.cells[
+        idx(newState.board, createGridCoord(4), createGridCoord(19))
+      ],
     ).toBeGreaterThan(0); // O piece remnant
     expect(
-      newState.board.cells[idx(createGridCoord(5), createGridCoord(19), 10)],
+      newState.board.cells[
+        idx(newState.board, createGridCoord(5), createGridCoord(19))
+      ],
     ).toBeGreaterThan(0); // O piece remnant
 
     // All other positions should be empty
@@ -108,7 +114,7 @@ describe("line clear with zero delay", () => {
       if (x !== 4 && x !== 5) {
         expect(
           newState.board.cells[
-            idx(createGridCoord(x), createGridCoord(19), 10)
+            idx(newState.board, createGridCoord(x), createGridCoord(19))
           ],
         ).toBe(0);
       }
@@ -117,7 +123,9 @@ describe("line clear with zero delay", () => {
     // Row 18 should be completely empty now
     for (let x = 0; x < 10; x++) {
       expect(
-        newState.board.cells[idx(createGridCoord(x), createGridCoord(18), 10)],
+        newState.board.cells[
+          idx(newState.board, createGridCoord(x), createGridCoord(18))
+        ],
       ).toBe(0);
     }
   });
@@ -154,10 +162,14 @@ describe("line clear with zero delay", () => {
     // Check that the line was cleared correctly
     // Similar to the auto-lock test - O piece remnants should remain after line clear
     expect(
-      newState.board.cells[idx(createGridCoord(4), createGridCoord(19), 10)],
+      newState.board.cells[
+        idx(newState.board, createGridCoord(4), createGridCoord(19))
+      ],
     ).toBeGreaterThan(0); // O piece remnant
     expect(
-      newState.board.cells[idx(createGridCoord(5), createGridCoord(19), 10)],
+      newState.board.cells[
+        idx(newState.board, createGridCoord(5), createGridCoord(19))
+      ],
     ).toBeGreaterThan(0); // O piece remnant
 
     // All other positions should be empty
@@ -165,7 +177,7 @@ describe("line clear with zero delay", () => {
       if (x !== 4 && x !== 5) {
         expect(
           newState.board.cells[
-            idx(createGridCoord(x), createGridCoord(19), 10)
+            idx(newState.board, createGridCoord(x), createGridCoord(19))
           ],
         ).toBe(0);
       }

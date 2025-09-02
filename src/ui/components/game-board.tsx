@@ -5,8 +5,8 @@ import { customElement, query } from "lit/decorators.js";
 import { PIECES } from "../../core/pieces";
 import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
-import { assertNever } from "../../state/types";
-import { gridCoordAsNumber } from "../../types/brands";
+import { assertNever, idx } from "../../state/types";
+import { gridCoordAsNumber, createGridCoord } from "../../types/brands";
 import {
   lightenColor,
   darkenColor,
@@ -460,7 +460,8 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     for (let y = 0; y < board.height; y++) {
       for (let x = 0; x < board.width; x++) {
-        const cellValue = board.cells[y * board.width + x];
+        const cellValue =
+          board.cells[idx(board, createGridCoord(x), createGridCoord(y))];
         if (cellValue !== undefined && cellValue !== 0) {
           const color = this.getCellColor(cellValue);
           this.drawCell(x, y, color);

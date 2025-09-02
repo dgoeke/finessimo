@@ -7,7 +7,8 @@ import {
   isTopOut,
   spawnWithHold,
 } from "../../src/core/spawning";
-import { type Board, createBoardCells } from "../../src/state/types";
+import { type Board, createBoardCells, idx } from "../../src/state/types";
+import { createGridCoord } from "../../src/types/brands";
 import { assertDefined } from "../test-helpers";
 
 // Helper to create a test board
@@ -15,6 +16,8 @@ function createTestBoard(): Board {
   return {
     cells: createBoardCells(),
     height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
     width: 10,
   };
 }
@@ -66,45 +69,70 @@ describe("spawning", () => {
     });
 
     it("should return false when spawn position has collision", () => {
-      // TODO: Re-implement this test when spawn collision detection is restored
-
-      // This test was updated because spawn collision checking was temporarily disabled
-      // Original test: blocked spawn positions and verified collision detection
-      // Now always returns true due to stubbing
       const board = createTestBoard();
-      expect(canSpawnPiece(board, "T")).toBe(true); // Stub behavior
+
+      // Block spawn area for T piece
+      // T piece spawns at [3,-2] with spawn shape cells: [1,0], [0,1], [1,1], [2,1]
+      // Absolute positions: [4,-2], [3,-1], [4,-1], [5,-1]
+      // Block one of these positions to prevent spawning
+      const blockX = createGridCoord(4);
+      const blockY = createGridCoord(-2);
+      board.cells[idx(board, blockX, blockY)] = 1; // Block cell at (4,-2)
+
+      expect(canSpawnPiece(board, "T")).toBe(false);
     });
 
     it("should handle pieces that spawn above visible board", () => {
-      // TODO: Update this test when spawn collision detection is re-implemented
-
-      // This test now always passes due to stubbing, but logic remains valid
       const board = createTestBoard();
-      expect(canSpawnPiece(board, "T")).toBe(true); // Stub behavior
-      expect(canSpawnPiece(board, "I")).toBe(true); // Stub behavior
+      // Both T and I pieces spawn above visible board (y < 0) but should work on empty board
+      expect(canSpawnPiece(board, "T")).toBe(true);
+      expect(canSpawnPiece(board, "I")).toBe(true);
     });
+
+    // TODO: Add comprehensive vanish zone spawn collision tests when spawn collision detection is re-implemented
+    // These tests should cover:
+    // - Collision detection in vanish zone (-3..-1)
+    // - Proper boundary checking for pieces that spawn partially above vanish zone
+    // - Edge cases where pieces spawn exactly at vanish zone boundaries
+    // - Interaction between vanish zone collisions and visible area collisions
+    // - Different piece types and their spawn positions relative to vanish zone
+    it.todo("should detect collisions in vanish zone");
+    it.todo("should handle pieces spawning partially above vanish zone");
+    it.todo("should respect vanish zone boundaries for spawn collision");
+    it.todo("should handle edge cases at vanish zone boundaries");
+    it.todo("should work correctly for all piece types in vanish zone");
   });
 
   describe("isTopOut", () => {
     it("should return false for empty board", () => {
       const board = createTestBoard();
-
-      // TODO: Update when topout detection is re-implemented
-
-      // These now always return false due to stubbing
+      // Empty board should allow spawning, so not topped out
       expect(isTopOut(board, "T")).toBe(false);
       expect(isTopOut(board, "I")).toBe(false);
     });
 
     it("should return true when piece cannot spawn due to collision", () => {
-      // TODO: Re-implement this test when topout detection is restored
-
-      // This test was updated because topout detection was temporarily disabled
-      // Original test: verified collision-based topout detection
-      // Now always returns false due to stubbing
       const board = createTestBoard();
-      expect(isTopOut(board, "T")).toBe(false); // Stub behavior
+
+      // Block spawn area for T piece - same as canSpawnPiece test
+      const blockX = createGridCoord(4);
+      const blockY = createGridCoord(-2);
+      board.cells[idx(board, blockX, blockY)] = 1; // Block cell at (4,-2)
+
+      expect(isTopOut(board, "T")).toBe(true);
     });
+
+    // TODO: Add comprehensive vanish zone topout detection tests when spawn collision detection is re-implemented
+    // These tests should cover:
+    // - Different topout scenarios in vanish zone vs visible area
+    // - Proper detection when pieces can spawn in vanish zone but not visible area
+    // - Edge cases where topout occurs exactly at vanish zone boundaries
+    // - Lock-out vs block-out detection with vanish zone support
+    // - Interaction between vanish zone state and topout conditions
+    it.todo("should detect vanish zone topout conditions");
+    it.todo("should distinguish lock-out vs block-out with vanish zone");
+    it.todo("should handle vanish zone boundary topout cases");
+    it.todo("should work consistently across all piece types in vanish zone");
   });
 
   describe("spawnWithHold", () => {
@@ -129,29 +157,27 @@ describe("spawning", () => {
     });
 
     it("should return null on top out", () => {
-      // TODO: Re-implement this test when topout detection is restored
-
-      // This test was updated because topout detection was temporarily disabled
-      // Original test: verified spawnWithHold returns null on collision
-      // Now never returns null due to stubbing
       const board = createTestBoard();
+
+      // Block spawn area for T piece
+      const blockX = createGridCoord(4);
+      const blockY = createGridCoord(-2);
+      board.cells[idx(board, blockX, blockY)] = 1; // Block cell at (4,-2)
+
       const result = spawnWithHold(board, "T");
-      expect(result).not.toBeNull(); // Stub behavior
+      expect(result).toBeNull(); // Should return null due to top-out
     });
 
     it("should return null on top out with hold", () => {
-      // TODO: Re-implement this test when topout detection is restored
-
-      // This test was updated because topout detection was temporarily disabled
-      // Original test: verified spawnWithHold returns null on collision with hold
-      // Now never returns null due to stubbing
       const board = createTestBoard();
+
+      // Block spawn area for T piece (the held piece)
+      const blockX = createGridCoord(4);
+      const blockY = createGridCoord(-2);
+      board.cells[idx(board, blockX, blockY)] = 1; // Block cell at (4,-2)
+
       const result = spawnWithHold(board, "L", "T");
-      expect(result).not.toBeNull(); // Stub behavior
-      if (result) {
-        expect(result[0].id).toBe("T"); // Held piece spawns
-        expect(result[1]).toBe("L"); // Next becomes hold
-      }
+      expect(result).toBeNull(); // Should return null because held piece "T" can't spawn
     });
   });
 });

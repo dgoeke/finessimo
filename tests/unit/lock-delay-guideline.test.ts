@@ -4,12 +4,15 @@ import { isAtBottom } from "../../src/core/board";
 import { Airborne } from "../../src/engine/physics/lock-delay.machine";
 import {
   createBoardCells,
+  type Board,
+  type BoardCells,
   type GameState,
   isValidLockDelayState,
   hasActivePiece,
   getLockDelayStartTime,
   getLockDelayResetCount,
   buildPlayingState,
+  idx,
 } from "../../src/state/types";
 import {
   createSeed,
@@ -23,6 +26,23 @@ import {
   createTestTimingConfig,
   createTestGameState,
 } from "../test-helpers";
+
+// Helper to set a cell in raw cells array using board coordinates
+function setCellInArray(
+  cells: Uint8Array,
+  x: number,
+  y: number,
+  value: number,
+) {
+  const tempBoard: Board = {
+    cells: cells as BoardCells,
+    height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
+    width: 10,
+  };
+  cells[idx(tempBoard, createGridCoord(x), createGridCoord(y))] = value;
+}
 
 // Helper to create a test state with ground contact detection
 function createGroundedState(): GameState {
@@ -45,9 +65,9 @@ function createGroundedState(): GameState {
   const cells = createBoardCells();
   cells.set(state.board.cells);
   // Add blocks under the T piece to make it grounded
-  cells[19 * 10 + 3] = 1; // Block below T piece left
-  cells[19 * 10 + 4] = 1; // Block below T piece center
-  cells[19 * 10 + 5] = 1; // Block below T piece right
+  setCellInArray(cells, 3, 19, 1); // Block below T piece left
+  setCellInArray(cells, 4, 19, 1); // Block below T piece center
+  setCellInArray(cells, 5, 19, 1); // Block below T piece right
 
   state = buildPlayingState(
     {
@@ -88,7 +108,7 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       const cells = createBoardCells();
       cells.set(state.board.cells);
       for (let x = 0; x < 10; x++) {
-        cells[19 * 10 + x] = 1; // Fill bottom row
+        setCellInArray(cells, x, 19, 1); // Fill bottom row
       }
       state = buildPlayingState(
         {
@@ -166,7 +186,7 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       // Position I piece horizontally above ground with room to rotate
       const cells = createBoardCells();
       cells.set(state.board.cells);
-      cells[19 * 10 + 4] = 1; // Single block that would touch piece after rotation
+      setCellInArray(cells, 4, 19, 1); // Single block that would touch piece after rotation
 
       state = createTestGameState(
         {
@@ -224,7 +244,7 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       // We'll create ground only under the right side of the T piece
       const cells = createBoardCells();
       cells.set(state.board.cells);
-      cells[19 * 10 + 6] = 1; // Block that will support right side of piece after sideways movement
+      setCellInArray(cells, 6, 19, 1); // Block that will support right side of piece after sideways movement
 
       state = createTestGameState(
         {
@@ -401,9 +421,9 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       const cells = createBoardCells();
       cells.set(state.board.cells);
       // Clear the blocks that were supporting the piece
-      cells[19 * 10 + 3] = 0;
-      cells[19 * 10 + 4] = 0;
-      cells[19 * 10 + 5] = 0;
+      setCellInArray(cells, 3, 19, 0);
+      setCellInArray(cells, 4, 19, 0);
+      setCellInArray(cells, 5, 19, 0);
 
       state = {
         ...state,
@@ -430,15 +450,15 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
 
       // Create ground at bottom row (19) with a T-shaped opening
       for (let x = 0; x < 10; x++) {
-        cells[19 * 10 + x] = 1; // Fill bottom row
+        setCellInArray(cells, x, 19, 1); // Fill bottom row
       }
-      cells[19 * 10 + 4] = 0; // Clear center
-      cells[19 * 10 + 3] = 0; // Clear left
-      cells[19 * 10 + 5] = 0; // Clear right
+      setCellInArray(cells, 4, 19, 0); // Clear center
+      setCellInArray(cells, 3, 19, 0); // Clear left
+      setCellInArray(cells, 5, 19, 0); // Clear right
 
       // Add walls on sides at row 18 to constrain horizontal movement
-      cells[18 * 10 + 2] = 1; // Left wall
-      cells[18 * 10 + 6] = 1; // Right wall
+      setCellInArray(cells, 2, 18, 1); // Left wall
+      setCellInArray(cells, 6, 18, 1); // Right wall
 
       const baseState = createGroundedState();
       const state: GameState = createTestGameState(
@@ -658,7 +678,7 @@ describe("Lock Delay - Tetris Guideline Compliance", () => {
       const cells = createBoardCells();
       cells.set(state.board.cells);
       for (let x = 0; x < 10; x++) {
-        cells[19 * 10 + x] = 1; // Fill bottom row
+        setCellInArray(cells, x, 19, 1); // Fill bottom row
       }
       state = createTestGameState(
         {

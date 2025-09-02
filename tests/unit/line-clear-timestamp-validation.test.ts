@@ -30,14 +30,20 @@ function createStateWithDelay(delayMs: number): GameState {
 }
 
 function boardWithBottomGaps(): Board {
-  const cells = createBoardCells();
+  const board: Board = {
+    cells: createBoardCells(),
+    height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
+    width: 10,
+  };
   // Fill bottom row except gaps at x=4,5 (where O piece at x=3 will land)
   for (let x = 0; x < 10; x++) {
     if (x !== 4 && x !== 5) {
-      cells[idx(createGridCoord(x), createGridCoord(19), 10)] = 1; // bottom row
+      board.cells[idx(board, createGridCoord(x), createGridCoord(19))] = 1; // bottom row
     }
   }
-  return { cells, height: 20, width: 10 };
+  return board;
 }
 
 describe("timestamp validation in line clear scenarios", () => {

@@ -324,6 +324,8 @@ export function createTestGameState(
     board: {
       cells: createBoardCells(),
       height: 20,
+      totalHeight: 23,
+      vanishRows: 3,
       width: 10,
     },
     boardDecorations: null,

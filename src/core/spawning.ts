@@ -2,6 +2,7 @@
 import { type Board, type ActivePiece, type PieceId } from "../state/types";
 import { createGridCoord } from "../types/brands";
 
+import { canPlacePiece } from "./board";
 import { PIECES } from "./pieces";
 
 /**
@@ -22,23 +23,15 @@ export function createActivePiece(pieceId: PieceId): ActivePiece {
 /**
  * Check if a piece can spawn at its default position
  */
-export function canSpawnPiece(_board: Board, _pieceId: PieceId): boolean {
-  // TODO: Re-implement proper spawn collision detection
-
-  // This is a stub that always returns true to allow gameplay to continue
-  // Original logic: checked if canPlacePiece(board, piece) for spawn position
-  return true;
+export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
+  return canPlacePiece(board, createActivePiece(pieceId));
 }
 
 /**
  * Check if the game is topped out (can't spawn new piece)
  */
-export function isTopOut(_board: Board, _pieceId: PieceId): boolean {
-  // TODO: Re-implement proper topout detection
-
-  // This is a stub that always returns false to allow gameplay to continue
-  // Original logic: returned !canSpawnPiece(board, pieceId)
-  return false;
+export function isTopOut(board: Board, pieceId: PieceId): boolean {
+  return !canSpawnPiece(board, pieceId);
 }
 
 /**
@@ -46,22 +39,19 @@ export function isTopOut(_board: Board, _pieceId: PieceId): boolean {
  * Returns [newActivePiece, newHoldPiece] or null if top-out
  */
 export function spawnWithHold(
-  _board: Board,
+  board: Board,
   nextPiece: PieceId,
   currentHold?: PieceId,
 ): [ActivePiece, PieceId | undefined] | null {
-  // TODO: Re-implement proper collision checks for hold spawning
-
-  // This is a stub that always allows spawning to continue gameplay
-  // Original logic: checked canPlacePiece for both next and held pieces
-
   // If no hold piece, just spawn the next piece
   if (currentHold === undefined) {
     const piece = createActivePiece(nextPiece);
+    if (!canPlacePiece(board, piece)) return null; // top-out
     return [piece, undefined];
   }
 
   // Spawn the held piece, next piece becomes new hold
   const heldPiece = createActivePiece(currentHold);
+  if (!canPlacePiece(board, heldPiece)) return null; // top-out
   return [heldPiece, nextPiece];
 }

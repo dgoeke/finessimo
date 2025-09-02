@@ -6,10 +6,10 @@
     "lines": 86
   },
   "src/core/board.ts": {
-    "statements": 98,
-    "branches": 82,
+    "statements": 99,
+    "branches": 83,
     "functions": 100,
-    "lines": 97
+    "lines": 100
   },
   "src/core/other-rngs.ts": {
     "statements": 95,

@@ -40,7 +40,7 @@ describe("Reducer", () => {
       expect(state.board.width).toBe(10);
       expect(state.board.height).toBe(20);
       expect(state.board.cells).toBeInstanceOf(Uint8Array);
-      expect(state.board.cells.length).toBe(200);
+      expect(state.board.cells.length).toBe(230);
       expect(state.active).toBeUndefined();
       expect(state.hold).toBeUndefined();
       expect(state.canHold).toBe(true);

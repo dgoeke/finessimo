@@ -53,7 +53,6 @@ import {
   type GameState,
   type Action,
   type LockSource,
-  type createBoardCells,
   type UiEffect,
   buildResolvingLockState,
   buildPlayingState,
@@ -121,10 +120,10 @@ const actionHandlers: ActionHandlerMap = {
   }),
 
   CreateGarbageRow: (state, action) => {
-    const newCells = shiftUpAndInsertRow(state.board.cells, action.row);
+    const newCells = shiftUpAndInsertRow(state.board, action.row);
     const newBoard = {
       ...state.board,
-      cells: newCells as ReturnType<typeof createBoardCells>,
+      cells: newCells,
     };
 
     // Adjust active Y only while playing; otherwise just update board

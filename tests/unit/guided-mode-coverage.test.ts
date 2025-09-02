@@ -20,7 +20,13 @@ import { createTestPhysicsState } from "../test-helpers";
 const createMockGameState = (overrides: Partial<GameState> = {}): GameState =>
   ({
     active: undefined,
-    board: { cells: createBoardCells(), height: 20, width: 10 },
+    board: {
+      cells: createBoardCells(),
+      height: 20,
+      totalHeight: 23,
+      vanishRows: 3,
+      width: 10,
+    },
     canHold: true,
     currentMode: "guided",
     finesseFeedback: null,

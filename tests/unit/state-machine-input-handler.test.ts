@@ -43,6 +43,8 @@ describe("StateMachineInputHandler", () => {
     const board: Board = {
       cells: createBoardCells(),
       height: 20,
+      totalHeight: 23,
+      vanishRows: 3,
       width: 10,
     };
 
