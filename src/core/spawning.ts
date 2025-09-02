@@ -1,4 +1,10 @@
-import { type Board, type ActivePiece, type PieceId } from "../state/types";
+import {
+  type Board,
+  type ActivePiece,
+  type PieceId,
+  SPAWN_ROWS,
+  isCellBlocked,
+} from "../state/types";
 import { createGridCoord } from "../types/brands";
 
 import { canPlacePiece } from "./board";
@@ -9,13 +15,13 @@ import { PIECES } from "./pieces";
  */
 export function createActivePiece(pieceId: PieceId): ActivePiece {
   const shape = PIECES[pieceId];
-  const [spawnX, spawnY] = shape.spawnTopLeft;
+  const [spawnX] = shape.spawnTopLeft;
 
   return {
     id: pieceId,
     rot: "spawn",
     x: createGridCoord(spawnX),
-    y: createGridCoord(spawnY),
+    y: createGridCoord(-SPAWN_ROWS),
   };
 }
 
@@ -24,6 +30,18 @@ export function createActivePiece(pieceId: PieceId): ActivePiece {
  */
 export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
   const piece = createActivePiece(pieceId);
+  const [spawnX] = PIECES[pieceId].spawnTopLeft;
+
+  for (let dy = 0; dy < SPAWN_ROWS; dy++) {
+    for (let dx = 0; dx < 4; dx++) {
+      if (
+        isCellBlocked(board, createGridCoord(spawnX + dx), createGridCoord(dy))
+      ) {
+        return false;
+      }
+    }
+  }
+
   return canPlacePiece(board, piece);
 }
 

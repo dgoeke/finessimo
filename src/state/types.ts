@@ -23,6 +23,9 @@ export function createBoardCells(): BoardCells {
   return new Uint8Array(200) as BoardCells;
 }
 
+// Number of hidden rows above the visible board where pieces spawn
+export const SPAWN_ROWS = 2;
+
 export type Board = {
   readonly width: 10;
   readonly height: 20;

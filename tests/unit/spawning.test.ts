@@ -88,22 +88,17 @@ describe("spawning", () => {
     it("should handle pieces that spawn above visible board", () => {
       const board = createTestBoard();
 
-      // Pieces spawn above the board and this is allowed
-      // Block top row but pieces should still be able to spawn
+      // Blocking the top visible row should now prevent spawning
       for (let x = 0; x < 10; x++) {
         board.cells[x] = 1; // Block entire top row
       }
-      expect(canSpawnPiece(board, "T")).toBe(true);
+      expect(canSpawnPiece(board, "T")).toBe(false);
 
-      // I piece now spawns fully above the playfield (at y = -2 top-left, row of blocks at y = -1)
-      // Blocking the top visible row should NOT prevent spawning anymore.
-      // This verifies SRS spawn semantics (negative y is not collidable).
-      const iPieceBoard = createTestBoard();
-      iPieceBoard.cells[0 * 10 + 3] = 1; // (3,0)
-      iPieceBoard.cells[0 * 10 + 4] = 1; // (4,0)
-      iPieceBoard.cells[0 * 10 + 5] = 1; // (5,0)
-      iPieceBoard.cells[0 * 10 + 6] = 1; // (6,0)
-      expect(canSpawnPiece(iPieceBoard, "I")).toBe(true);
+      const secondRowBoard = createTestBoard();
+      for (let x = 0; x < 10; x++) {
+        secondRowBoard.cells[10 + x] = 1; // Block second row
+      }
+      expect(canSpawnPiece(secondRowBoard, "T")).toBe(false);
     });
   });
 
@@ -137,6 +132,20 @@ describe("spawning", () => {
       // Test with a piece that spawns lower
       const lowPiece = { ...testPiece, y: createGridCoord(0) }; // Force to spawn at visible board
       expect(canPlacePiece(board, lowPiece)).toBe(false);
+    });
+
+    it("should return true when top spawn rows are occupied", () => {
+      const topRowBoard = createTestBoard();
+      for (let x = 0; x < 10; x++) {
+        topRowBoard.cells[x] = 1;
+      }
+      expect(isTopOut(topRowBoard, "T")).toBe(true);
+
+      const secondRowBoard = createTestBoard();
+      for (let x = 0; x < 10; x++) {
+        secondRowBoard.cells[10 + x] = 1;
+      }
+      expect(isTopOut(secondRowBoard, "T")).toBe(true);
     });
   });
 

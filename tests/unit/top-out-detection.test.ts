@@ -1,5 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
+import { isTopOut } from "../../src/core/spawning";
 import {
   type GameState,
   type Board,
@@ -155,5 +156,30 @@ describe("top-out detection", () => {
 
     expect(newState.status).toBe("playing");
     expect(newState.active).toBeUndefined();
+  });
+
+  it("should detect top-out when spawn rows are occupied", () => {
+    const board: Board = {
+      cells: createBoardCells(),
+      height: 20,
+      width: 10,
+    };
+
+    // Block spawn area in top row
+    for (let x = 3; x < 7; x++) {
+      board.cells[idx(createGridCoord(x), createGridCoord(0), 10)] = 1;
+    }
+    expect(isTopOut(board, "T")).toBe(true);
+
+    // Block spawn area in second row
+    const board2: Board = {
+      cells: createBoardCells(),
+      height: 20,
+      width: 10,
+    };
+    for (let x = 3; x < 7; x++) {
+      board2.cells[idx(createGridCoord(x), createGridCoord(1), 10)] = 1;
+    }
+    expect(isTopOut(board2, "T")).toBe(true);
   });
 });
