@@ -6,8 +6,12 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { type GameState } from "../../src/state/types";
-import { createSeed, createDurationMs } from "../../src/types/brands";
+import { type GameState, idx } from "../../src/state/types";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
@@ -26,7 +30,9 @@ function createStateWithCompleteLine(lineClearDelayMs: number): GameState {
 
   // Fill bottom row leaving space for I piece (4 cells)
   for (let x = 0; x < 6; x++) {
-    state.board.cells[190 + x] = 1; // Bottom row (y=19, x=0-5)
+    state.board.cells[
+      idx(state.board, createGridCoord(x), createGridCoord(19))
+    ] = 1; // Bottom row (y=19, x=0-5)
   }
 
   // Spawn I piece
@@ -72,7 +78,11 @@ describe("Line Clearing Regression Tests", () => {
 
       // Bottom row should be empty (line was cleared)
       for (let x = 0; x < 10; x++) {
-        expect(state.board.cells[190 + x]).toBe(0);
+        expect(
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(19))
+          ],
+        ).toBe(0);
       }
 
       // Physics should not have line clear state set
@@ -99,7 +109,12 @@ describe("Line Clearing Regression Tests", () => {
       // Bottom row should still be filled (not yet cleared)
       let filledCells = 0;
       for (let x = 0; x < 10; x++) {
-        if (state.board.cells[190 + x] !== 0) filledCells++;
+        if (
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(19))
+          ] !== 0
+        )
+          filledCells++;
       }
       expect(filledCells).toBe(10); // All cells should be filled
 
@@ -128,7 +143,11 @@ describe("Line Clearing Regression Tests", () => {
 
       // Bottom row should be empty (line was cleared)
       for (let x = 0; x < 10; x++) {
-        expect(state.board.cells[190 + x]).toBe(0);
+        expect(
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(19))
+          ],
+        ).toBe(0);
       }
 
       // Physics should be reset
@@ -216,7 +235,9 @@ describe("Line Clearing Regression Tests", () => {
       // Fill bottom 2 rows leaving space for horizontal I piece (4 cells)
       for (let y = 18; y < 20; y++) {
         for (let x = 0; x < 6; x++) {
-          state.board.cells[y * 10 + x] = 1;
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(y))
+          ] = 1;
         }
       }
 
@@ -255,8 +276,20 @@ describe("Line Clearing Regression Tests", () => {
 
       // After line clearing, the completed line should be gone and rows should shift down
       // The former partial row 18 should now be at row 19, and row 18 should be empty
-      const row18 = Array.from(state.board.cells.slice(180, 190));
-      const row19 = Array.from(state.board.cells.slice(190, 200));
+      const row18 = Array.from(
+        { length: 10 },
+        (_, x) =>
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(18))
+          ],
+      );
+      const row19 = Array.from(
+        { length: 10 },
+        (_, x) =>
+          state.board.cells[
+            idx(state.board, createGridCoord(x), createGridCoord(19))
+          ],
+      );
 
       // Row 18 should be empty (cleared rows at top get filled with zeros)
       expect(row18).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);

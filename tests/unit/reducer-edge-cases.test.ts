@@ -2,6 +2,7 @@ import {
   type GameState,
   type Action,
   createBoardCells,
+  idx,
 } from "../../src/state/types";
 import { createSeed, createGridCoord } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
@@ -127,10 +128,9 @@ describe("Reducer Edge Cases and Error Conditions", () => {
         for (let y = 1; y <= 4; y++) {
           if (!(x === 4 && y === 2)) {
             // Don't block piece center
-            const idx = y * 10 + x;
-            if (idx >= 0 && idx < 200) {
-              blockedBoard.cells[idx] = 1;
-            }
+            const xCoord = createGridCoord(x);
+            const yCoord = createGridCoord(y);
+            blockedBoard.cells[idx(blockedBoard, xCoord, yCoord)] = 1;
           }
         }
       }

@@ -12,28 +12,56 @@ import type {
 } from "../types/brands";
 import type { Timestamp } from "../types/timestamp";
 
+// Board dimensions and vanish zone constants
+export const BOARD_WIDTH = 10 as const;
+export const VISIBLE_HEIGHT = 20 as const; // rows 0..19
+export const VANISH_ROWS = 3 as const; // rows -3..-1
+export const TOTAL_HEIGHT = 23 as const; // VISIBLE_HEIGHT + VANISH_ROWS
+
 // Board representation with enforced dimensions
 declare const BoardCellsBrand: unique symbol;
-export type BoardCells = Uint8Array & { readonly length: 200 } & {
+export type BoardCells = Uint8Array & { readonly length: 230 } & {
   readonly [BoardCellsBrand]: true;
 };
 
 // BoardCells constructor
 export function createBoardCells(): BoardCells {
-  return new Uint8Array(200) as BoardCells;
+  return new Uint8Array(TOTAL_HEIGHT * BOARD_WIDTH) as BoardCells;
 }
 
 export type Board = {
   readonly width: 10;
-  readonly height: 20;
-  readonly cells: BoardCells; // exactly 200 cells, values: 0..8 (0=empty, 1-7=tetrominos, 8=garbage)
+  readonly height: 20; // visible height only
+  readonly vanishRows: 3; // additional rows above visible area (-3..-1)
+  readonly totalHeight: 23; // total including vanish rows
+  readonly cells: BoardCells; // exactly 230 cells (23×10), values: 0..8 (0=empty, 1-7=tetrominos, 8=garbage)
 };
 
-// Helper for array indexing with explicit width parameter
-export const idx = (x: GridCoord, y: GridCoord, width: 10): number =>
-  gridCoordAsNumber(y) * width + gridCoordAsNumber(x);
+// Helper for array indexing with vanish zone awareness
+export function idx(board: Board, x: GridCoord, y: GridCoord): number {
+  const xNum = gridCoordAsNumber(x);
+  const yNum = gridCoordAsNumber(y);
+  // Storage row 0 corresponds to y = -board.vanishRows
+  const storageRow = yNum + board.vanishRows; // e.g., y = -3 → 0; y = 0 → 3
+  return storageRow * board.width + xNum;
+}
 
-// Collision check with negative y handling and branded coordinates
+// Safe indexer with bounds checking
+export function idxSafe(board: Board, x: GridCoord, y: GridCoord): number {
+  const xNum = gridCoordAsNumber(x);
+  const yNum = gridCoordAsNumber(y);
+  if (
+    xNum < 0 ||
+    xNum >= board.width ||
+    yNum < -board.vanishRows ||
+    yNum >= board.height
+  ) {
+    throw new Error("idxSafe: out-of-bounds");
+  }
+  return idx(board, x, y);
+}
+
+// Collision check with vanish zone support - treats -3..-1 as collidable
 export function isCellBlocked(
   board: Board,
   x: GridCoord,
@@ -42,10 +70,15 @@ export function isCellBlocked(
   const xNum = gridCoordAsNumber(x);
   const yNum = gridCoordAsNumber(y);
 
+  // Out-of-bounds horizontally or below bottom
   if (xNum < 0 || xNum >= board.width) return true;
-  if (yNum >= board.height) return true;
-  if (yNum < 0) return false; // above the board = empty for collision
-  return board.cells[idx(x, y, board.width)] !== 0;
+  if (yNum >= board.height) return true; // below visible bottom → blocked
+
+  // Above the stored top (beyond vanish zone) → blocked
+  if (yNum < -board.vanishRows) return true;
+
+  // Collidable in both vanish (−3..−1) and visible (0..19) ranges
+  return board.cells[idx(board, x, y)] !== 0;
 }
 
 // Pieces and rotation

@@ -1,12 +1,14 @@
-import { createActivePiece, canSpawnPiece } from "../../core/spawning";
+/* eslint-disable sonarjs/todo-tag */
+import { canPlacePiece } from "../../core/board";
+import { createActivePiece } from "../../core/spawning";
 import { Airborne } from "../../engine/physics/lock-delay.machine";
+import { buildTopOutState } from "../../state/types";
 
 import type {
   GameState,
   Action,
   PieceId,
   ActivePiece,
-  TopOutState,
 } from "../../state/types";
 
 function getNextPieceFromQueue(holdQueue: Array<PieceId>): {
@@ -43,13 +45,9 @@ export const handlers = {
       newActive = result.newActive;
     }
 
-    if (!canSpawnPiece(state.board, newActive.id)) {
-      const topOutState: TopOutState = {
-        ...state,
-        active: undefined,
-        status: "topOut" as const,
-      };
-      return topOutState;
+    // Check for topout - cannot place the piece being swapped in
+    if (!canPlacePiece(state.board, newActive)) {
+      return buildTopOutState(state);
     }
 
     return {

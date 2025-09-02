@@ -54,13 +54,13 @@ function createBoardWithCells(filledCells: Array<[number, number]>): Board {
   const newCells = createBoardCells();
 
   // Copy existing cells
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < board.cells.length; i++) {
     newCells[i] = board.cells[i] ?? 0;
   }
 
   for (const [x, y] of filledCells) {
     if (x >= 0 && x < board.width && y >= 0 && y < board.height) {
-      newCells[idx(createGridCoord(x), createGridCoord(y), board.width)] = 1; // Use 1 for filled cell
+      newCells[idx(board, createGridCoord(x), createGridCoord(y))] = 1; // Use 1 for filled cell
     }
   }
 
@@ -183,17 +183,17 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
     expect(initialState.active?.rot).toBe("spawn");
     expect(
       initialState.board.cells[
-        idx(createGridCoord(5), createGridCoord(19), 10)
+        idx(initialState.board, createGridCoord(5), createGridCoord(19))
       ],
     ).toBe(0); // Gap at x=5, y=19
     expect(
       initialState.board.cells[
-        idx(createGridCoord(4), createGridCoord(19), 10)
+        idx(initialState.board, createGridCoord(4), createGridCoord(19))
       ],
     ).toBe(1); // Filled at x=4, y=19
     expect(
       initialState.board.cells[
-        idx(createGridCoord(6), createGridCoord(19), 10)
+        idx(initialState.board, createGridCoord(6), createGridCoord(19))
       ],
     ).toBe(1); // Filled at x=6, y=19
 

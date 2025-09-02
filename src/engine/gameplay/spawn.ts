@@ -1,12 +1,9 @@
+/* eslint-disable sonarjs/todo-tag */
 import { createActivePiece, isTopOut } from "../../core/spawning";
 import { Airborne } from "../../engine/physics/lock-delay.machine";
+import { buildTopOutState } from "../../state/types";
 
-import type {
-  GameState,
-  Action,
-  PieceId,
-  TopOutState,
-} from "../../state/types";
+import type { GameState, Action, PieceId } from "../../state/types";
 
 export const handlers = {
   Spawn: (
@@ -30,13 +27,9 @@ export const handlers = {
       pieceToSpawn = nextFromQueue;
     }
 
+    // Check for topout - piece overlaps existing blocks when spawning
     if (isTopOut(state.board, pieceToSpawn)) {
-      const topOutState: TopOutState = {
-        ...state,
-        active: undefined,
-        status: "topOut" as const,
-      };
-      return topOutState;
+      return buildTopOutState(state);
     }
 
     const newPiece = createActivePiece(pieceToSpawn);
@@ -47,6 +40,8 @@ export const handlers = {
       physics: {
         ...state.physics,
         activePieceSpawnedAt: action.timestampMs,
+        // Reset gravity timer so new piece doesn't auto-drop immediately
+        lastGravityTime: action.timestampMs,
         lockDelay: Airborne(),
       },
     };

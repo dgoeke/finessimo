@@ -1,30 +1,39 @@
+/* eslint-disable sonarjs/todo-tag */
 import { type Board, type ActivePiece, type PieceId } from "../state/types";
-import { createGridCoord } from "../types/brands";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import { canPlacePiece } from "./board";
 import { PIECES } from "./pieces";
+
+// Precompute spawn ActivePiece per PieceId with branded coords
+const SPAWN_ACTIVE: Readonly<Record<PieceId, ActivePiece>> = ((): Readonly<
+  Record<PieceId, ActivePiece>
+> => {
+  const out = {} as Record<PieceId, ActivePiece>;
+  (Object.keys(PIECES) as Array<PieceId>).forEach((id) => {
+    const [x, y] = PIECES[id].spawnTopLeft;
+    out[id] = {
+      id,
+      rot: "spawn",
+      x: createGridCoord(x),
+      y: createGridCoord(y),
+    };
+  });
+  return out;
+})();
 
 /**
  * Create a new active piece at spawn position
  */
 export function createActivePiece(pieceId: PieceId): ActivePiece {
-  const shape = PIECES[pieceId];
-  const [spawnX, spawnY] = shape.spawnTopLeft;
-
-  return {
-    id: pieceId,
-    rot: "spawn",
-    x: createGridCoord(spawnX),
-    y: createGridCoord(spawnY),
-  };
+  return SPAWN_ACTIVE[pieceId];
 }
 
 /**
  * Check if a piece can spawn at its default position
  */
 export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
-  const piece = createActivePiece(pieceId);
-  return canPlacePiece(board, piece);
+  return canPlacePiece(board, createActivePiece(pieceId));
 }
 
 /**
@@ -32,6 +41,24 @@ export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
  */
 export function isTopOut(board: Board, pieceId: PieceId): boolean {
   return !canSpawnPiece(board, pieceId);
+}
+
+/**
+ * Check if a piece is entirely within the vanish zone (all cells y < 0)
+ * Used for lockout detection when a piece locks entirely above the visible area
+ */
+export function isPieceEntirelyInVanishZone(piece: ActivePiece): boolean {
+  const shape = PIECES[piece.id];
+  const cells = shape.cells[piece.rot];
+
+  for (const [, dy] of cells) {
+    const y = gridCoordAsNumber(piece.y) + dy;
+    if (y >= 0) {
+      return false; // At least one cell is in or below the visible area
+    }
+  }
+
+  return true; // All cells are in the vanish zone (y < 0)
 }
 
 /**
@@ -46,18 +73,12 @@ export function spawnWithHold(
   // If no hold piece, just spawn the next piece
   if (currentHold === undefined) {
     const piece = createActivePiece(nextPiece);
-    if (!canPlacePiece(board, piece)) {
-      return null; // Top out
-    }
+    if (!canPlacePiece(board, piece)) return null; // top-out
     return [piece, undefined];
   }
 
-  // Try to spawn the held piece
+  // Spawn the held piece, next piece becomes new hold
   const heldPiece = createActivePiece(currentHold);
-  if (!canPlacePiece(board, heldPiece)) {
-    return null; // Top out
-  }
-
-  // Swap: spawn held piece, next piece becomes new hold
+  if (!canPlacePiece(board, heldPiece)) return null; // top-out
   return [heldPiece, nextPiece];
 }

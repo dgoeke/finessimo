@@ -1,6 +1,11 @@
 import { createEmptyBoard } from "../../src/core/board";
 import { canRotate, tryRotate, getNextRotation } from "../../src/core/srs";
-import { type ActivePiece, type Board, type Rot } from "../../src/state/types";
+import {
+  type ActivePiece,
+  type Board,
+  type Rot,
+  idx,
+} from "../../src/state/types";
 import { createGridCoord } from "../../src/types/brands";
 import { assertDefined } from "../test-helpers";
 
@@ -181,7 +186,9 @@ describe("SRS Rotation Logic", () => {
       // Create a board with some obstacles
       const blockedBoard = createEmptyBoard();
       // Place a block that would interfere with basic rotation
-      blockedBoard.cells[5 * 10 + 2] = 1; // Block at (2, 5)
+      blockedBoard.cells[
+        idx(blockedBoard, createGridCoord(2), createGridCoord(5))
+      ] = 1; // Block at (2, 5)
 
       const tPiece: ActivePiece = {
         id: "T",
@@ -206,7 +213,9 @@ describe("SRS Rotation Logic", () => {
         for (let y = 1; y <= 4; y++) {
           if (!(x === 4 && y === 2)) {
             // Don't block the piece itself
-            fullyBlockedBoard.cells[y * 10 + x] = 1;
+            fullyBlockedBoard.cells[
+              idx(fullyBlockedBoard, createGridCoord(x), createGridCoord(y))
+            ] = 1;
           }
         }
       }
@@ -344,7 +353,9 @@ describe("SRS Rotation Logic", () => {
       // This includes the original position and all kick offsets
       for (let x = 0; x < 10; x++) {
         for (let y = 0; y < 6; y++) {
-          fullyBlockedBoard.cells[y * 10 + x] = 1;
+          fullyBlockedBoard.cells[
+            idx(fullyBlockedBoard, createGridCoord(x), createGridCoord(y))
+          ] = 1;
         }
       }
 

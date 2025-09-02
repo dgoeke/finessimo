@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/todo-tag */
 /**
  * End-to-end integration tests for FinessimoApp
  * Tests the full application stack from keyboard input through game state updates
@@ -973,8 +974,10 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       advanceFrames(ctx, 10);
 
       const newState = getState(ctx);
-      // Game should still be in a valid state after top-out scenario
-      expect(["playing", "topOut", "lineClear"]).toContain(newState.status);
+      // TODO: Remove topOut from expectations when topout detection is restored
+
+      // Game should still be in a valid state after scenario
+      expect(["playing", "lineClear"]).toContain(newState.status);
       expect(newState.active).toBeDefined();
     });
   });
@@ -1062,8 +1065,10 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       advanceFrame(ctx);
       const newState = getState(ctx);
 
+      // TODO: Remove topOut from expectations when topout detection is restored
+
       // Either we have a new piece or game is in a transitional state
-      expect(["playing", "topOut", "lineClear"]).toContain(newState.status);
+      expect(["playing", "lineClear"]).toContain(newState.status);
     });
   });
 });

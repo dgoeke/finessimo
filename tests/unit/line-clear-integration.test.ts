@@ -3,7 +3,12 @@
  */
 
 import { shouldCompleteLineClear } from "../../src/app";
-import { createSeed, createDurationMs } from "../../src/types/brands";
+import { idx } from "../../src/state/types";
+import {
+  createSeed,
+  createDurationMs,
+  createGridCoord,
+} from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
@@ -23,7 +28,9 @@ describe("Line Clear Integration", () => {
 
     // Create line clear scenario
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1; // Bottom row (y=19, x=0-5)
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1; // Bottom row (y=19, x=0-5)
     }
 
     // Spawn I piece and position it
@@ -64,7 +71,11 @@ describe("Line Clear Integration", () => {
 
     // Bottom row should be empty (line was cleared)
     for (let x = 0; x < 10; x++) {
-      expect(state.board.cells[190 + x]).toBe(0);
+      expect(
+        state.board.cells[
+          idx(state.board, createGridCoord(x), createGridCoord(19))
+        ],
+      ).toBe(0);
     }
   });
 
@@ -86,7 +97,9 @@ describe("Line Clear Integration", () => {
 
     // Create and clear a line
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));
@@ -117,7 +130,9 @@ describe("Line Clear Integration", () => {
 
     // Set up line clear
     for (let x = 0; x < 6; x++) {
-      state.board.cells[190 + x] = 1;
+      state.board.cells[
+        idx(state.board, createGridCoord(x), createGridCoord(19))
+      ] = 1;
     }
 
     state = reducer(state, createTestSpawnAction("I"));

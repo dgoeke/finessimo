@@ -31,12 +31,18 @@ function createStateWithDelay(delayMs: number): GameState {
 }
 
 function boardWithBottomGaps(): Board {
-  const cells = createBoardCells();
+  const board: Board = {
+    cells: createBoardCells(),
+    height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
+    width: 10,
+  };
   for (let x = 0; x < 10; x++) {
     if (x !== 4 && x !== 5)
-      cells[idx(createGridCoord(x), createGridCoord(19), 10)] = 1;
+      board.cells[idx(board, createGridCoord(x), createGridCoord(19))] = 1;
   }
-  return { cells, height: 20, width: 10 };
+  return board;
 }
 
 describe("line clear with non-zero delay", () => {
@@ -87,13 +93,13 @@ describe("line clear with non-zero delay", () => {
       if (x === 4 || x === 5) {
         expect(
           completed.board.cells[
-            idx(createGridCoord(x), createGridCoord(19), 10)
+            idx(completed.board, createGridCoord(x), createGridCoord(19))
           ],
         ).toBeGreaterThan(0);
       } else {
         expect(
           completed.board.cells[
-            idx(createGridCoord(x), createGridCoord(19), 10)
+            idx(completed.board, createGridCoord(x), createGridCoord(19))
           ],
         ).toBe(0);
       }

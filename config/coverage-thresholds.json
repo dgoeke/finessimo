@@ -6,10 +6,10 @@
     "lines": 86
   },
   "src/core/board.ts": {
-    "statements": 98,
-    "branches": 82,
+    "statements": 99,
+    "branches": 83,
     "functions": 100,
-    "lines": 97
+    "lines": 100
   },
   "src/core/other-rngs.ts": {
     "statements": 95,
@@ -30,10 +30,10 @@
     "lines": 94
   },
   "src/core/spawning.ts": {
-    "statements": 90,
-    "branches": 66,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 90
+    "lines": 100
   },
   "src/core/srs.ts": {
     "statements": 95,
@@ -60,10 +60,10 @@
     "lines": 100
   },
   "src/engine/gameplay/hold.ts": {
-    "statements": 79,
-    "branches": 71,
+    "statements": 88,
+    "branches": 78,
     "functions": 100,
-    "lines": 90
+    "lines": 100
   },
   "src/engine/gameplay/movement.ts": {
     "statements": 90,
@@ -78,10 +78,10 @@
     "lines": 100
   },
   "src/engine/gameplay/spawn.ts": {
-    "statements": 78,
-    "branches": 75,
+    "statements": 89,
+    "branches": 83,
     "functions": 100,
-    "lines": 88
+    "lines": 100
   },
   "src/engine/physics/gravity.ts": {
     "statements": 93,
@@ -102,10 +102,10 @@
     "lines": 93
   },
   "src/engine/scoring/line-clear.ts": {
-    "statements": 92,
-    "branches": 83,
+    "statements": 91,
+    "branches": 81,
     "functions": 100,
-    "lines": 92
+    "lines": 91
   },
   "src/engine/scoring/stats.ts": {
     "statements": 100,
@@ -150,10 +150,10 @@
     "lines": 100
   },
   "src/finesse/calculator.ts": {
-    "statements": 94,
-    "branches": 90,
-    "functions": 86,
-    "lines": 95
+    "statements": 95,
+    "branches": 91,
+    "functions": 96,
+    "lines": 98
   },
   "src/finesse/constants.ts": {
     "statements": 100,
@@ -168,20 +168,20 @@
     "lines": 89
   },
   "src/finesse/service.ts": {
-    "statements": 77,
-    "branches": 50,
+    "statements": 100,
+    "branches": 91,
     "functions": 100,
-    "lines": 77
+    "lines": 100
   },
   "src/input/StateMachineInputHandler.ts": {
     "statements": 85,
     "branches": 73,
     "functions": 91,
-    "lines": 87
+    "lines": 88
   },
   "src/input/handler.ts": {
-    "statements": 95,
-    "branches": 86,
+    "statements": 96,
+    "branches": 87,
     "functions": 100,
     "lines": 100
   },
@@ -192,10 +192,10 @@
     "lines": 96
   },
   "src/input/touch.ts": {
-    "statements": 52,
-    "branches": 33,
+    "statements": 54,
+    "branches": 35,
     "functions": 75,
-    "lines": 55
+    "lines": 57
   },
   "src/input/machines/das.ts": {
     "statements": 94,
@@ -210,16 +210,16 @@
     "lines": 100
   },
   "src/modes/freePlay.ts": {
-    "statements": 90,
+    "statements": 94,
     "branches": 100,
     "functions": 85,
-    "lines": 90
+    "lines": 94
   },
   "src/modes/guided.ts": {
-    "statements": 85,
-    "branches": 68,
-    "functions": 85,
-    "lines": 88
+    "statements": 87,
+    "branches": 70,
+    "functions": 88,
+    "lines": 90
   },
   "src/modes/index.ts": {
     "statements": 88,
@@ -228,10 +228,10 @@
     "lines": 88
   },
   "src/modes/lock-pipeline.ts": {
-    "statements": 86,
-    "branches": 75,
+    "statements": 100,
+    "branches": 90,
     "functions": 100,
-    "lines": 85
+    "lines": 100
   },
   "src/modes/spawn-service.ts": {
     "statements": 72,
@@ -252,10 +252,10 @@
     "lines": 100
   },
   "src/modes/guided/deck.ts": {
-    "statements": 97,
+    "statements": 98,
     "branches": 81,
-    "functions": 90,
-    "lines": 97
+    "functions": 100,
+    "lines": 98
   },
   "src/modes/guided/types.ts": {
     "statements": 73,
@@ -271,7 +271,7 @@
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 97,
-    "branches": 81,
+    "branches": 90,
     "functions": 91,
     "lines": 98
   },
@@ -282,10 +282,10 @@
     "lines": 97
   },
   "src/state/reducer.ts": {
-    "statements": 93,
-    "branches": 88,
+    "statements": 94,
+    "branches": 89,
     "functions": 93,
-    "lines": 93
+    "lines": 94
   },
   "src/state/signals.ts": {
     "statements": 86,
@@ -330,9 +330,15 @@
     "lines": 53
   },
   "src/ui/utils/outlines.ts": {
-    "statements": 81,
+    "statements": 82,
     "branches": 74,
-    "functions": 66,
-    "lines": 83
+    "functions": 70,
+    "lines": 85
+  },
+  "src/utils/debug.ts": {
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
   }
 }

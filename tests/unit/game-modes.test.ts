@@ -23,7 +23,13 @@ import {
 
 const mockGameState: GameState = {
   active: undefined,
-  board: { cells: createBoardCells(), height: 20, width: 10 },
+  board: {
+    cells: createBoardCells(),
+    height: 20,
+    totalHeight: 23,
+    vanishRows: 3,
+    width: 10,
+  },
   boardDecorations: null,
   canHold: true,
   currentMode: "freePlay",

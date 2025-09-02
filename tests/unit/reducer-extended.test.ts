@@ -260,9 +260,13 @@ describe("Reducer - Extended Coverage", () => {
       const modifiedBoard: Board = {
         cells: createBoardCells(),
         height: 20,
+        totalHeight: 23,
+        vanishRows: 3,
         width: 10,
       };
-      modifiedBoard.cells[idx(createGridCoord(5), createGridCoord(19), 10)] = 1; // Add a block
+      modifiedBoard.cells[
+        idx(modifiedBoard, createGridCoord(5), createGridCoord(19))
+      ] = 1; // Add a block
 
       const stateWithBoard: GameState = {
         ...initialState,
