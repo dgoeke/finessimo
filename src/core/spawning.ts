@@ -5,19 +5,28 @@ import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 import { canPlacePiece } from "./board";
 import { PIECES } from "./pieces";
 
+// Precompute spawn ActivePiece per PieceId with branded coords
+const SPAWN_ACTIVE: Readonly<Record<PieceId, ActivePiece>> = ((): Readonly<
+  Record<PieceId, ActivePiece>
+> => {
+  const out = {} as Record<PieceId, ActivePiece>;
+  (Object.keys(PIECES) as Array<PieceId>).forEach((id) => {
+    const [x, y] = PIECES[id].spawnTopLeft;
+    out[id] = {
+      id,
+      rot: "spawn",
+      x: createGridCoord(x),
+      y: createGridCoord(y),
+    };
+  });
+  return out;
+})();
+
 /**
  * Create a new active piece at spawn position
  */
 export function createActivePiece(pieceId: PieceId): ActivePiece {
-  const shape = PIECES[pieceId];
-  const [spawnX, spawnY] = shape.spawnTopLeft;
-
-  return {
-    id: pieceId,
-    rot: "spawn",
-    x: createGridCoord(spawnX),
-    y: createGridCoord(spawnY),
-  };
+  return SPAWN_ACTIVE[pieceId];
 }
 
 /**
