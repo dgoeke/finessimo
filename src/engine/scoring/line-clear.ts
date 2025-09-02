@@ -1,5 +1,6 @@
 /* eslint-disable sonarjs/todo-tag */
 import { clearLines, getCompletedLines, lockPiece } from "../../core/board";
+import { isPieceEntirelyInVanishZone } from "../../core/spawning";
 import {
   buildPlayingState,
   buildLineClearState,
@@ -17,12 +18,10 @@ import type {
   ActivePiece,
 } from "../../state/types";
 
-function wouldTopOut(_piece: ActivePiece): boolean {
-  // TODO: Re-implement proper topout detection on lock
-
-  // This is a stub that always returns false to allow gameplay to continue
-  // Original logic: checked if any cells of the locked piece are above y=0
-  return false;
+function wouldTopOut(piece: ActivePiece): boolean {
+  // Check if piece locks entirely in vanish zone (all cells y < 0)
+  // This is the lockout condition per modern Tetris guidelines
+  return isPieceEntirelyInVanishZone(piece);
 }
 
 /**

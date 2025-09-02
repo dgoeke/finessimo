@@ -1,6 +1,6 @@
 /* eslint-disable sonarjs/todo-tag */
 import { type Board, type ActivePiece, type PieceId } from "../state/types";
-import { createGridCoord } from "../types/brands";
+import { createGridCoord, gridCoordAsNumber } from "../types/brands";
 
 import { canPlacePiece } from "./board";
 import { PIECES } from "./pieces";
@@ -32,6 +32,24 @@ export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
  */
 export function isTopOut(board: Board, pieceId: PieceId): boolean {
   return !canSpawnPiece(board, pieceId);
+}
+
+/**
+ * Check if a piece is entirely within the vanish zone (all cells y < 0)
+ * Used for lockout detection when a piece locks entirely above the visible area
+ */
+export function isPieceEntirelyInVanishZone(piece: ActivePiece): boolean {
+  const shape = PIECES[piece.id];
+  const cells = shape.cells[piece.rot];
+
+  for (const [, dy] of cells) {
+    const y = gridCoordAsNumber(piece.y) + dy;
+    if (y >= 0) {
+      return false; // At least one cell is in or below the visible area
+    }
+  }
+
+  return true; // All cells are in the vanish zone (y < 0)
 }
 
 /**

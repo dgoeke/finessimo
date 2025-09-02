@@ -56,8 +56,10 @@ import {
   type UiEffect,
   buildResolvingLockState,
   buildPlayingState,
+  buildTopOutState,
   hasActivePiece,
   type ActivePiece,
+  idx,
 } from "./types";
 
 import type { FaultType } from "../finesse/calculator";
@@ -125,6 +127,19 @@ const actionHandlers: ActionHandlerMap = {
       ...state.board,
       cells: newCells,
     };
+
+    // Check if garbage pushed any blocks into vanish zone (topout condition)
+    for (let y = -newBoard.vanishRows; y < 0; y++) {
+      for (let x = 0; x < newBoard.width; x++) {
+        if (
+          newBoard.cells[
+            idx(newBoard, createGridCoord(x), createGridCoord(y))
+          ] !== 0
+        ) {
+          return buildTopOutState({ ...state, board: newBoard });
+        }
+      }
+    }
 
     // Adjust active Y only while playing; otherwise just update board
     if (state.status === "playing") {

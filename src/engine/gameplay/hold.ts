@@ -1,6 +1,8 @@
 /* eslint-disable sonarjs/todo-tag */
+import { canPlacePiece } from "../../core/board";
 import { createActivePiece } from "../../core/spawning";
 import { Airborne } from "../../engine/physics/lock-delay.machine";
+import { buildTopOutState } from "../../state/types";
 
 import type {
   GameState,
@@ -43,10 +45,10 @@ export const handlers = {
       newActive = result.newActive;
     }
 
-    // TODO: Re-implement topout detection for hold
-
-    // This check was removed to allow hold even when spawn position is blocked
-    // Original logic: checked canSpawnPiece(state.board, newActive.id) and returned topOut state
+    // Check for topout - cannot place the piece being swapped in
+    if (!canPlacePiece(state.board, newActive)) {
+      return buildTopOutState(state);
+    }
 
     return {
       ...state,

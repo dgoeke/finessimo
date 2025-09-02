@@ -1,6 +1,7 @@
 /* eslint-disable sonarjs/todo-tag */
-import { createActivePiece } from "../../core/spawning";
+import { createActivePiece, isTopOut } from "../../core/spawning";
 import { Airborne } from "../../engine/physics/lock-delay.machine";
+import { buildTopOutState } from "../../state/types";
 
 import type { GameState, Action, PieceId } from "../../state/types";
 
@@ -26,10 +27,10 @@ export const handlers = {
       pieceToSpawn = nextFromQueue;
     }
 
-    // TODO: Re-implement topout detection for spawn
-
-    // This check was removed to allow pieces to spawn even when board is full
-    // Original logic: checked isTopOut(state.board, pieceToSpawn) and returned topOut state
+    // Check for topout - piece overlaps existing blocks when spawning
+    if (isTopOut(state.board, pieceToSpawn)) {
+      return buildTopOutState(state);
+    }
 
     const newPiece = createActivePiece(pieceToSpawn);
     return {
