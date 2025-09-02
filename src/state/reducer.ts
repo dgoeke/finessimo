@@ -239,6 +239,8 @@ const actionHandlers: ActionHandlerMap = {
       physics: {
         ...state.physics,
         activePieceSpawnedAt: action.timestampMs,
+        // Reset gravity timer on respawn to avoid immediate drop
+        lastGravityTime: action.timestampMs,
         lineClearLines: [],
         lineClearStartTime: null,
         lockDelay: Airborne(),

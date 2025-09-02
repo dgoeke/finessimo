@@ -42,7 +42,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private ctx: CanvasRenderingContext2D | undefined;
   private readonly cellSize = 30;
   private readonly boardWidth = 10;
-  private readonly boardHeight = 20;
+  private readonly visibleHeight = 20; // visible play area (rows 0-19)
+  private readonly vanishRows = 2; // vanish zone (rows -2 to -1)
+  private readonly totalHeight = 22; // total canvas height including vanish zone
   private readonly outlineCache = new Map<string, OutlinePath>();
   private gridCanvas?: OffscreenCanvas;
   private gridCtx?: OffscreenCanvasRenderingContext2D;
@@ -69,7 +71,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Set canvas size
     this.canvas.width = this.boardWidth * this.cellSize;
-    this.canvas.height = this.boardHeight * this.cellSize;
+    this.canvas.height = this.totalHeight * this.cellSize;
 
     // Lit will automatically call updated() after firstUpdated() completes
   }
@@ -149,9 +151,11 @@ export class GameBoard extends SignalWatcher(LitElement) {
       return;
     }
 
-    // Clear canvas
-    this.ctx.fillStyle = "#000000";
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Clear canvas to transparent
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Draw black background only for visible play area (below vanish zone)
+    this.drawPlayAreaBackground();
 
     // Render overlays first (those with z < 1, like column highlight)
     const backgroundOverlays = renderModel.overlays.filter((o) => o.z < 1);
@@ -162,6 +166,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Draw grid
     this.drawGrid();
+
+    // Draw border around visible play area
+    this.drawPlayAreaBorder();
 
     // Render overlays above grid (those with z >= 1)
     const foregroundOverlays = renderModel.overlays.filter((o) => o.z >= 1);
@@ -220,14 +227,16 @@ export class GameBoard extends SignalWatcher(LitElement) {
       const gridX = gridCoordAsNumber(x);
       const gridY = gridCoordAsNumber(y);
 
-      // Only render cells within visible board area
+      // Render cells within board bounds (including vanish zone)
       if (
         gridX >= 0 &&
         gridX < this.boardWidth &&
-        gridY >= 0 &&
-        gridY < this.boardHeight
+        gridY >= -this.vanishRows &&
+        gridY < this.visibleHeight
       ) {
-        this.drawGhostCell(gridX, gridY);
+        // Convert board y coordinate to canvas y coordinate
+        const canvasY = gridY + this.vanishRows;
+        this.drawGhostCell(gridX, canvasY);
       }
     }
 
@@ -258,7 +267,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
   }
 
   /**
-   * Filter cells to only include those within visible board bounds.
+   * Filter cells to only include those within board bounds (including vanish zone).
    */
   private filterValidCells(
     cells: ReadonlyArray<readonly [GridCoord, GridCoord]>,
@@ -276,11 +285,14 @@ export class GameBoard extends SignalWatcher(LitElement) {
       if (
         gridX >= 0 &&
         gridX < this.boardWidth &&
-        gridY >= 0 &&
-        gridY < this.boardHeight
+        gridY >= -this.vanishRows &&
+        gridY < this.visibleHeight
       ) {
-        validCells.push([gridX, gridY]);
-        validGridCells.push([x, y]);
+        // Convert board y coordinate to canvas y coordinate for both arrays
+        const canvasY = gridY + this.vanishRows;
+        validCells.push([gridX, canvasY]);
+        // Also provide canvas coordinates for outline computation
+        validGridCells.push([x, createGridCoord(canvasY)]);
       }
     }
 
@@ -348,7 +360,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     for (const row of overlay.rows) {
       // Only render rows within visible board area
-      if (row >= 0 && row < this.boardHeight) {
+      if (row >= 0 && row < this.visibleHeight) {
         const pixelY = row * this.cellSize;
         this.ctx.fillRect(0, pixelY, this.canvas.width, this.cellSize);
       }
@@ -377,7 +389,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
       // Only render columns within visible board area
       if (column >= 0 && column < this.boardWidth) {
         const pixelX = column * this.cellSize;
-        this.ctx.fillRect(pixelX, 0, this.cellSize, this.canvas.height);
+        const yOffset = this.vanishRows * this.cellSize; // Start at visible area
+        const playAreaHeight = this.visibleHeight * this.cellSize;
+        this.ctx.fillRect(pixelX, yOffset, this.cellSize, playAreaHeight);
       }
     }
 
@@ -401,7 +415,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
       gridX < 0 ||
       gridX >= this.boardWidth ||
       gridY < 0 ||
-      gridY >= this.boardHeight
+      gridY >= this.visibleHeight
     ) {
       return;
     }
@@ -458,13 +472,16 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private renderBoard(board: Board): void {
     if (!this.ctx) return;
 
-    for (let y = 0; y < board.height; y++) {
+    // Render entire board including vanish zone (y=-2 to y=19)
+    for (let y = -this.vanishRows; y < board.height; y++) {
       for (let x = 0; x < board.width; x++) {
         const cellValue =
           board.cells[idx(board, createGridCoord(x), createGridCoord(y))];
         if (cellValue !== undefined && cellValue !== 0) {
           const color = this.getCellColor(cellValue);
-          this.drawCell(x, y, color);
+          // Convert board y coordinate to canvas y coordinate
+          const canvasY = y + this.vanishRows;
+          this.drawCell(x, canvasY, color);
         }
       }
     }
@@ -482,12 +499,16 @@ export class GameBoard extends SignalWatcher(LitElement) {
       const x = piece.x + dx;
       const y = piece.y + dy;
 
-      // Render cells that are within the board width and visible height
-      // Allow rendering above the board (negative y) but clamp to visible area
-      if (x >= 0 && x < this.boardWidth && y < this.boardHeight) {
-        // If y is negative, render at y=0 (top of visible board)
-        const renderY = Math.max(0, y);
-        this.drawCell(x, renderY, shape.color);
+      // Render cells that are within the board width and within range of vanish zone + visible area
+      if (
+        x >= 0 &&
+        x < this.boardWidth &&
+        y >= -this.vanishRows &&
+        y < this.visibleHeight
+      ) {
+        // Convert board y coordinate to canvas y coordinate
+        const canvasY = y + this.vanishRows;
+        this.drawCell(x, canvasY, shape.color);
       }
     }
   }
@@ -669,7 +690,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
       // Create offscreen canvas for grid
       this.gridCanvas = new OffscreenCanvas(
         this.boardWidth * this.cellSize,
-        this.boardHeight * this.cellSize,
+        this.visibleHeight * this.cellSize,
       );
 
       const ctx = this.gridCanvas.getContext("2d");
@@ -698,12 +719,12 @@ export class GameBoard extends SignalWatcher(LitElement) {
       const pixelX = x * this.cellSize;
       ctx.beginPath();
       ctx.moveTo(pixelX, 0);
-      ctx.lineTo(pixelX, this.boardHeight * this.cellSize);
+      ctx.lineTo(pixelX, this.visibleHeight * this.cellSize);
       ctx.stroke();
     }
 
     // Horizontal lines
-    for (let y = 0; y <= this.boardHeight; y++) {
+    for (let y = 0; y <= this.visibleHeight; y++) {
       const pixelY = y * this.cellSize;
       ctx.beginPath();
       ctx.moveTo(0, pixelY);
@@ -715,13 +736,54 @@ export class GameBoard extends SignalWatcher(LitElement) {
   /**
    * Draw the cached grid to the main canvas.
    * Much more efficient than redrawing all the lines each frame.
+   * Grid is positioned in the visible area, below the vanish zone.
    */
   private drawGrid(): void {
     if (!this.ctx) return;
 
-    // Draw the cached grid canvas
+    // Draw the cached grid canvas at the correct y position (below vanish zone)
     const gridCanvas = this.getGridCanvas();
-    this.ctx.drawImage(gridCanvas, 0, 0);
+    const gridYOffset = this.vanishRows * this.cellSize;
+    this.ctx.drawImage(gridCanvas, 0, gridYOffset);
+  }
+
+  /**
+   * Draw black background only for the visible play area (rows 0-19).
+   * Vanish zone remains transparent.
+   */
+  private drawPlayAreaBackground(): void {
+    if (!this.ctx) return;
+
+    const yOffset = this.vanishRows * this.cellSize;
+    const playAreaWidth = this.boardWidth * this.cellSize;
+    const playAreaHeight = this.visibleHeight * this.cellSize;
+
+    this.ctx.fillStyle = "#000000";
+    this.ctx.fillRect(0, yOffset, playAreaWidth, playAreaHeight);
+  }
+
+  /**
+   * Draw a border around the visible play area (rows 0-19).
+   * This replaces the CSS border that was removed from the canvas.
+   */
+  private drawPlayAreaBorder(): void {
+    if (!this.ctx) return;
+
+    const borderWidth = 2;
+    const yOffset = this.vanishRows * this.cellSize;
+    const playAreaWidth = this.boardWidth * this.cellSize;
+    const playAreaHeight = this.visibleHeight * this.cellSize;
+
+    this.ctx.strokeStyle = "#333333"; // Similar to CSS --border color
+    this.ctx.lineWidth = borderWidth;
+
+    // Draw rectangle around the visible play area
+    this.ctx.strokeRect(
+      borderWidth / 2,
+      yOffset + borderWidth / 2,
+      playAreaWidth - borderWidth,
+      playAreaHeight - borderWidth,
+    );
   }
 
   private getCellColor(cellValue: number): string {

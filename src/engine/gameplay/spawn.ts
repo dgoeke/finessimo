@@ -39,6 +39,8 @@ export const handlers = {
       physics: {
         ...state.physics,
         activePieceSpawnedAt: action.timestampMs,
+        // Reset gravity timer so new piece doesn't auto-drop immediately
+        lastGravityTime: action.timestampMs,
         lockDelay: Airborne(),
       },
     };
