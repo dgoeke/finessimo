@@ -1,87 +1,60 @@
 // Phase 4: Deterministic fixed-step loop
 import Phaser from "phaser";
 
-import { PIECES } from "../../../core/pieces";
-import { selectDerivedOverlays } from "../../../engine/selectors/overlays";
-import {
-  createProcessedHardDrop,
-  createProcessedHoldMove,
-  createProcessedRotate,
-  createProcessedSoftDrop,
-  createProcessedTapMove,
-} from "../../../finesse/log";
-import { finesseService } from "../../../finesse/service";
 import { DASMachineService } from "../../../input/machines/das";
 import { gameModeRegistry } from "../../../modes";
 import { freePlayUi } from "../../../modes/freePlay/ui";
 import { guidedUi } from "../../../modes/guided/ui";
-import { runLockPipeline } from "../../../modes/lock-pipeline";
-import { getActiveRng, planPreviewRefill } from "../../../modes/spawn-service";
 import { reducer as coreReducer } from "../../../state/reducer";
 import { getCurrentState, dispatch } from "../../../state/signals";
 import {
   createSeed,
   createDurationMs,
   durationMsAsNumber,
-  gridCoordAsNumber,
-  uiEffectIdAsNumber,
 } from "../../../types/brands";
-import { createTimestamp, fromNow } from "../../../types/timestamp";
+import { fromNow } from "../../../types/timestamp";
 import { PhaserInputAdapterImpl } from "../input/PhaserInputAdapterImpl";
 import { BoardPresenter } from "../presenter/BoardPresenter";
 import { mapGameStateToViewModel } from "../presenter/viewModel";
 import { ms as unbrandMs } from "../utils/unbrand";
 
 import { SimulatedClock } from "./clock";
+import { processActionWithLockPipeline as pipeline_processActionWithLockPipeline } from "./gameplay/lockPipeline";
+import { processFixedTimeStep as loop_processFixedTimeStep } from "./gameplay/loop";
+import {
+  initializeMode as mode_initializeMode,
+  setGameMode as mode_setGameMode,
+} from "./gameplay/mode";
+import {
+  PREVIEW_BOX_COLS,
+  PREVIEW_CELL_PX,
+  setupPreviewsAndHold as prev_setupPreviewsAndHold,
+  updateNextPreviews as prev_updateNextPreviews,
+  updateHoldPreview as prev_updateHoldPreview,
+} from "./gameplay/previews";
 import { SCENE_KEYS } from "./types";
 
 import type { Clock } from "./clock";
-import type { RenderOverlay } from "../../../engine/ui/overlays";
-import type { FinesseResult } from "../../../finesse/calculator";
-import type { DASEvent } from "../../../input/machines/das";
-import type { GameMode as IGameMode } from "../../../modes";
+// type-only imports kept minimal; concrete types come from modules
 import type { ModeUiAdapter } from "../../../modes/types";
 import type { GameState, Action } from "../../../state/types";
 import type { Seed } from "../../../types/brands";
-import type {
-  PhaserInputAdapter,
-  InputEvent,
-} from "../input/PhaserInputAdapter";
+import type { PhaserInputAdapter } from "../input/PhaserInputAdapter";
 import type { AudioBus } from "../presenter/AudioBus";
 import type { CameraFxAdapter } from "../presenter/Effects";
 import type { Presenter, Ms, ViewModel } from "../presenter/types";
+import type { SceneCtx } from "./gameplay/types";
+import type { Timestamp } from "../../../types/timestamp";
+// no direct util imports needed here; handled within modules
 
-type TetrominoPieceId = "I" | "J" | "L" | "O" | "S" | "T" | "Z";
-
-// Preview layout constants
-const PREVIEW_CELL_PX = 12;
-const PREVIEW_BOX_COLS = 4;
-const PREVIEW_BOX_ROWS = 3;
+// Preview layout constants come from previews module to avoid drift
 // Board layout constants
 const BOARD_TILE_PX = 16;
 const SPAWN_EXTRA_ROWS = 3; // allow rendering above board by up to 3 rows
 const BOTTOM_EXTRA_ROWS = 1; // add ~1 grid row margin below the board
 
-// Exported for testing and clarity; encapsulates when line clear should complete
-function shouldCompleteLineClear(state: GameState, nowMs: number): boolean {
-  if (state.status !== "lineClear") return false;
-  if (state.timing.lineClearDelayMs === 0) return false; // Immediate clearing handled in reducer
-  const start = state.physics.lineClearStartTime;
-  if (start === null) return false; // not started
-  return nowMs - start >= state.timing.lineClearDelayMs;
-}
-
-// Simple equality check that handles null values and falls back to JSON comparison for complex objects
-function simpleEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  if (a === undefined || b === undefined) return false;
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return false;
-  }
-}
+// Utility shims for in-file references to moved helpers
+// Utility aliases not needed inside class after refactor
 
 export class Gameplay extends Phaser.Scene {
   // Expose state for tests in isolated mode; mirrors app.ts getState()
@@ -115,10 +88,7 @@ export class Gameplay extends Phaser.Scene {
   private _boardHeightPx = 20 * 16;
   private _effectsTexts = new Map<number, Phaser.GameObjects.Text>();
   private _effectsStart = new Map<number, number>();
-  private _pendingTap: {
-    dir: -1 | 1;
-    t: ReturnType<typeof createTimestamp>;
-  } | null = null;
+  private _pendingTap: { dir: -1 | 1; t: Timestamp } | null = null;
   private _softDropOn = false;
 
   // Type-safe mode names - must include all supported modes
@@ -146,44 +116,92 @@ export class Gameplay extends Phaser.Scene {
     super({ key: SCENE_KEYS.Gameplay });
   }
 
-  private renderFloatingText(
-    effect: Extract<
-      NonNullable<GameState>["uiEffects"][number],
-      { kind: "floatingText" }
-    >,
-    now: number,
-    seen: Set<number>,
-  ): void {
-    const id = uiEffectIdAsNumber(effect.id);
-    seen.add(id);
-    if (!this._effectsStart.has(id)) this._effectsStart.set(id, now);
-    const start = this._effectsStart.get(id) ?? now;
-    let ttl = durationMsAsNumber(effect.ttlMs);
-    if (ttl <= 0) ttl = 1;
-    const p = Math.max(0, Math.min(1, (now - start) / ttl));
-    const alpha = 1 - p;
-    const scaleFrom = effect.scaleFrom ?? 1;
-    const scaleTo = effect.scaleTo ?? 1;
-    const scale = scaleFrom + (scaleTo - scaleFrom) * p;
-    const t = this.ensureEffectText(
-      id,
-      effect.text,
-      effect.color,
-      effect.fontPx,
-      effect.fontWeight,
-    );
-    const pos = this.computeEffectBoardPos(
-      effect.anchor,
-      effect.offsetX,
-      effect.offsetY,
-      effect.driftYPx,
-      p,
-    );
-    t.setOrigin(pos.ox, pos.oy);
-    t.setPosition(pos.x, pos.y);
-    t.setAlpha(alpha);
-    t.setScale(scale);
+  private get ctx(): SceneCtx {
+    if (!this._state || !this._presenter || !this._input) {
+      throw new Error("Scene context not ready");
+    }
+    const ctx: SceneCtx = {
+      boardHeightPx: this._boardHeightPx,
+      clock: this._clock,
+      das: this._das,
+      effectsStart: this._effectsStart,
+      effectsTexts: this._effectsTexts,
+      fixedDt: this._fixedDt,
+      getState: (): GameState => {
+        if (this._state === null) throw new Error("Scene context not ready");
+        return this._state;
+      },
+      holdContainer: this._holdContainer,
+      input: this._input,
+      modeUiAdapters: this._modeUiAdapterRegistry,
+      nextPreviewContainers: this._nextPreviewContainers,
+      originX: this._originX,
+      originY: this._originY,
+      overlayColumns: this._overlayColumns,
+      overlayTargets: this._overlayTargets,
+      pendingTap: this._pendingTap,
+      presenter: this._presenter,
+      randomSeed: (): Seed => this.randomSeed(),
+      reduce: this._reduce,
+      safeDispatch: (a: Action): void => this.safeDispatch(a),
+      scene: this,
+      setPendingTap: (v: { dir: -1 | 1; t: Timestamp } | null): void => {
+        this._pendingTap = v;
+      },
+      setSoftDropOn: (on: boolean): void => {
+        this._softDropOn = on;
+      },
+      setState: (s: GameState): void => {
+        this._state = s;
+      },
+      setVmPrev: (vm: ViewModel | null): void => {
+        this._vmPrev = vm;
+      },
+      softDropOn: this._softDropOn,
+      spawnNextPiece: (): void => this.spawnNextPiece(),
+      state: this._state,
+      tileSize: this._tileSize,
+      vmPrev: this._vmPrev,
+    };
+    Object.defineProperty(ctx, "vmPrev", {
+      configurable: false,
+      enumerable: true,
+      get: (): ViewModel | null => this._vmPrev,
+      set: (vm: ViewModel | null): void => {
+        this._vmPrev = vm;
+      },
+    });
+    Object.defineProperty(ctx, "softDropOn", {
+      configurable: false,
+      enumerable: true,
+      get: (): boolean => this._softDropOn,
+      set: (v: boolean): void => {
+        this._softDropOn = v;
+      },
+    });
+    Object.defineProperty(ctx, "pendingTap", {
+      configurable: false,
+      enumerable: true,
+      get: (): { dir: -1 | 1; t: Timestamp } | null => this._pendingTap,
+      set: (v: { dir: -1 | 1; t: Timestamp } | null): void => {
+        this._pendingTap = v;
+      },
+    });
+    Object.defineProperty(ctx, "state", {
+      configurable: false,
+      enumerable: true,
+      get: (): GameState => {
+        if (this._state === null) throw new Error("Scene context not ready");
+        return this._state;
+      },
+      set: (s: GameState): void => {
+        this._state = s;
+      },
+    });
+    return ctx;
   }
+
+  // Floating text rendering moved to effects module
 
   create(): void {
     // Center the board on screen
@@ -207,7 +225,12 @@ export class Gameplay extends Phaser.Scene {
     });
 
     // Build Next/Hold UI groups
-    this.setupPreviewsAndHold(boardWidthPx, ox, oy);
+    {
+      const { holdContainer, nextPreviewContainers } =
+        prev_setupPreviewsAndHold(this, boardWidthPx, ox, oy);
+      this._nextPreviewContainers = nextPreviewContainers;
+      this._holdContainer = holdContainer;
+    }
 
     // Update debug text periodically (previews are updated immediately in the game loop)
     this.time.addEvent({
@@ -305,11 +328,11 @@ export class Gameplay extends Phaser.Scene {
         this._vmPrev = vm;
 
         // Update previews after initial setup
-        this.updateNextPreviews(
+        prev_updateNextPreviews(
           this._nextPreviewContainers,
           this._state.nextQueue,
         );
-        this.updateHoldPreview(this._holdContainer, this._state.hold ?? null);
+        prev_updateHoldPreview(this._holdContainer, this._state.hold ?? null);
       }
     }
     // Compute content bounds (hold + board + next) and fit camera with padding
@@ -332,69 +355,7 @@ export class Gameplay extends Phaser.Scene {
     });
   }
 
-  private setupPreviewsAndHold(
-    boardWidthPx: number,
-    ox: number,
-    oy: number,
-  ): void {
-    // Add next piece preview area (centered above preview column)
-    const nextScale = 0.65;
-    const nextColumnX = boardWidthPx + ox + 20;
-    // Center label based on preview grid spacing (12px per cell),
-    // which matches how preview sprites are positioned inside the container.
-    const nextCenterX = nextColumnX + (PREVIEW_CELL_PX * PREVIEW_BOX_COLS) / 2;
-    this.add
-      .text(nextCenterX, oy, "Next", {
-        color: "#ffffff",
-        fontFamily: "monospace",
-        fontSize: "14px",
-        resolution: Math.max(2, window.devicePixelRatio),
-      })
-      .setOrigin(0.5, 0);
-
-    // Create containers for next piece previews (show up to 5)
-    this._nextPreviewContainers = [];
-    for (let i = 0; i < 5; i++) {
-      const container = this.add.container(
-        boardWidthPx + ox + 20,
-        oy + 25 + i * 35, // Slightly tighter spacing for 5 pieces
-      );
-      this._nextPreviewContainers.push(container);
-
-      // Add 4 sprites to each container (max tetromino size)
-      for (let j = 0; j < 4; j++) {
-        const sprite = this.add.sprite(0, 0, "tiles", 1);
-        sprite.setOrigin(0, 0); // Align previews to container top-left
-        sprite.setVisible(false);
-        sprite.setScale(nextScale); // Smaller scale for 5 pieces
-        container.add(sprite);
-      }
-    }
-
-    // Create Hold area on the LEFT side of the board, aligned vertically
-    const previewBoxWidthPx = PREVIEW_CELL_PX * PREVIEW_BOX_COLS; // 4 cells wide
-    const holdScale = 0.75;
-    const holdX = ox - 20 - previewBoxWidthPx; // mirror right-side margin (20px)
-    const holdCenterX = holdX + (16 * PREVIEW_BOX_COLS * holdScale) / 2;
-    this.add
-      .text(holdCenterX, oy, "Hold", {
-        color: "#ffffff",
-        fontFamily: "monospace",
-        fontSize: "14px",
-        resolution: Math.max(2, window.devicePixelRatio),
-      })
-      .setOrigin(0.5, 0);
-
-    // Create container for hold piece preview, vertically aligned with first next item
-    this._holdContainer = this.add.container(holdX, oy + 25);
-    for (let i = 0; i < 4; i++) {
-      const sprite = this.add.sprite(0, 0, "tiles", 1);
-      sprite.setOrigin(0, 0); // Align hold piece to container top-left
-      sprite.setVisible(false);
-      sprite.setScale(holdScale); // Smaller for preview
-      this._holdContainer.add(sprite);
-    }
-  }
+  // Previews/hold now live in previews.ts and are wired in create()
 
   private fitCameraToContent(bounds: {
     left: number;
@@ -439,8 +400,9 @@ export class Gameplay extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (!this._state || !this._presenter || !this._input) return;
-    this._accumulator += delta;
     const dt = unbrandMs(this._fixedDt);
+    // Spiral-of-death guard: cap backlog to 10 fixed steps
+    this._accumulator = Math.min(this._accumulator + delta, 10 * dt);
     while (this._accumulator >= dt) {
       this.processFixedTimeStep();
       this._accumulator -= dt;
@@ -448,283 +410,25 @@ export class Gameplay extends Phaser.Scene {
   }
 
   private processFixedTimeStep(): void {
-    this.processInputActions();
-    this.processTickAction();
-
-    if (this.handleAutoRestartIfTopOut()) return;
-
-    this.updateModeUi();
-    this.updatePresentation();
+    loop_processFixedTimeStep(this.ctx);
     this.checkGameOverState();
-    this.handleAutoSpawn();
   }
 
-  private processInputActions(): void {
-    if (!this._input || !this._state) return;
-    const events = this._input.drainEvents(this._fixedDt);
-    const actions: Array<Action> = [];
-    for (const e of events) {
-      if (this.isDasEvent(e)) {
-        actions.push(...this.processDasEvent(e));
-      } else {
-        actions.push(e);
-      }
-    }
-    for (const a of actions) {
-      const pair = this.withProcessedIfNeeded(a);
-      for (const step of pair) {
-        this._state = this.processActionWithLockPipeline(this._state, step);
-      }
-    }
-  }
+  // Input handling moved to gameplay/input
 
-  private processDasEvent(e: DASEvent): Array<Action> {
-    const out: Array<Action> = [];
-    if (e.type === "KEY_DOWN") {
-      const ctxDir = this._das.getState().context.direction;
-      if (ctxDir !== undefined && ctxDir !== e.direction) {
-        const upActions = this._das.send({
-          direction: ctxDir,
-          timestamp: e.timestamp,
-          type: "KEY_UP",
-        });
-        out.push(...upActions);
-      }
-    }
-    const dasActions = this._das.send(e);
-    for (const a of dasActions) {
-      if (this.isTapMove(a) && a.optimistic) {
-        this._pendingTap = { dir: a.dir, t: a.timestampMs };
-      }
-      if (a.type === "HoldStart") this._pendingTap = null;
-    }
-    if (e.type === "KEY_UP") {
-      const p = this._pendingTap;
-      if (p !== null && p.dir === e.direction) {
-        const entry = createProcessedTapMove(p.dir, p.t);
-        out.push({ entry, type: "AppendProcessed" });
-        this._pendingTap = null;
-      }
-    }
-    out.push(...dasActions);
-    return out;
-  }
+  // Tick handling moved to gameplay/loop
 
-  private withProcessedIfNeeded(action: Action): ReadonlyArray<Action> {
-    // Only log finesse actions during active gameplay
-    if (
-      !this._state ||
-      this._state.status !== "playing" ||
-      !this._state.active
-    ) {
-      return [action];
-    }
-    if (action.type === "TapMove") {
-      if (action.optimistic) return [action];
-      const entry = createProcessedTapMove(action.dir, action.timestampMs);
-      return [{ entry, type: "AppendProcessed" }, action];
-    }
-    if (action.type === "HoldStart") {
-      const entry = createProcessedHoldMove(action.dir, action.timestampMs);
-      return [{ entry, type: "AppendProcessed" }, action];
-    }
-    if (action.type === "Rotate") {
-      const entry = createProcessedRotate(action.dir, action.timestampMs);
-      return [{ entry, type: "AppendProcessed" }, action];
-    }
-    if (action.type === "HardDrop") {
-      const entry = createProcessedHardDrop(action.timestampMs);
-      return [{ entry, type: "AppendProcessed" }, action];
-    }
-    if (action.type === "SoftDrop") {
-      if (action.on === this._softDropOn) return [action];
-      this._softDropOn = action.on;
-      const entry = createProcessedSoftDrop(action.on, action.timestampMs);
-      return [{ entry, type: "AppendProcessed" }, action];
-    }
-    return [action];
-  }
+  // Presentation updates moved to gameplay/presentation
 
-  private processTickAction(): void {
-    if (!this._state) return;
-    this._clock.tick(this._fixedDt);
-    const currentTime = unbrandMs(this._clock.nowMs());
+  // Overlay drawing moved to gameplay/presentation
 
-    // Always dispatch Tick with timestamp; physics/LD depend on deterministic timing
-    this._state = this.processActionWithLockPipeline(this._state, {
-      timestampMs: createTimestamp(currentTime),
-      type: "Tick",
-    });
+  // Overlay column highlights moved to gameplay/presentation
 
-    // Check if line clear delay has completed
-    if (shouldCompleteLineClear(this._state, currentTime)) {
-      this._state = this.processActionWithLockPipeline(this._state, {
-        type: "CompleteLineClear",
-      });
-    }
-  }
+  // Overlay target drawing moved to gameplay/presentation
 
-  private updatePresentation(): void {
-    if (!this._state || !this._presenter) return;
-    const vm = mapGameStateToViewModel(this._state);
-    const plan = this._presenter.computePlan(this._vmPrev, vm);
-    this._presenter.apply(plan);
-    this._vmPrev = vm;
+  // UI effects moved to gameplay/effects
 
-    // Update next piece previews immediately after state changes
-    this.updateNextPreviews(this._nextPreviewContainers, this._state.nextQueue);
-
-    // Update hold piece preview immediately after state changes
-    this.updateHoldPreview(this._holdContainer, this._state.hold ?? null);
-
-    // Draw guided overlays (column highlight + target)
-    this.drawOverlays();
-    this.drawUiEffects();
-  }
-
-  private drawOverlays(): void {
-    if (!this._state) return;
-    const overlays: ReadonlyArray<RenderOverlay> = selectDerivedOverlays(
-      this._state,
-    );
-    // Clear layers
-    this._overlayColumns?.clear();
-    this._overlayTargets?.clear();
-
-    // Draw column highlights first (background overlay)
-    this.drawColumnHighlights(overlays);
-    // Draw targets (foreground overlay)
-    this.drawTargets(overlays);
-  }
-
-  private drawColumnHighlights(overlays: ReadonlyArray<RenderOverlay>): void {
-    const g = this._overlayColumns;
-    if (!g) return;
-    for (const ov of overlays) {
-      if (ov.kind !== "column-highlight") continue;
-      const colorStr = ov.color ?? "#ffffff";
-      const color = this.hexToNumber(colorStr);
-      const alpha = ov.intensity ?? 0.08;
-      g.fillStyle(color, alpha);
-      for (const col of ov.columns) {
-        const x = this._originX + col * this._tileSize;
-        const y = this._originY;
-        g.fillRect(x, y, this._tileSize, this._boardHeightPx);
-      }
-    }
-  }
-
-  private drawTargets(overlays: ReadonlyArray<RenderOverlay>): void {
-    const g = this._overlayTargets;
-    if (!g) return;
-    for (const ov of overlays) {
-      if (ov.kind !== "target") continue;
-      const color = this.hexToNumber(ov.color ?? "#60a5fa");
-      const alpha = ov.alpha ?? 0.6;
-      g.lineStyle(2, color, alpha);
-      for (const [cx, cy] of ov.cells) {
-        const x = this._originX + gridCoordAsNumber(cx) * this._tileSize;
-        const y = this._originY + gridCoordAsNumber(cy) * this._tileSize;
-        g.strokeRect(x, y, this._tileSize, this._tileSize);
-      }
-    }
-  }
-
-  private drawUiEffects(): void {
-    if (!this._state) return;
-    const now = unbrandMs(this._clock.nowMs());
-    const seen = new Set<number>();
-    // screen-space dimensions are accessed via this.scale in helpers
-
-    for (const effect of this._state.uiEffects) {
-      if (effect.kind !== "floatingText") continue;
-      this.renderFloatingText(effect, now, seen);
-    }
-
-    // Cleanup texts for effects no longer present
-    for (const [id, obj] of this._effectsTexts) {
-      if (!seen.has(id)) {
-        obj.destroy();
-        this._effectsTexts.delete(id);
-        this._effectsStart.delete(id);
-      }
-    }
-  }
-
-  private ensureEffectText(
-    id: number,
-    text: string,
-    color: string,
-    fontPx: number,
-    fontWeight?: number | string,
-  ): Phaser.GameObjects.Text {
-    let t = this._effectsTexts.get(id);
-    if (t) return t;
-    t = this.add.text(0, 0, text, {
-      color,
-      fontFamily: "monospace",
-      fontSize: `${String(fontPx)}px`,
-      ...(fontWeight !== undefined ? ({ fontStyle: "bold" } as const) : {}),
-    });
-    t.setDepth(1000);
-    // World-anchored so it moves with the board/camera
-    t.setScrollFactor(1);
-    this._effectsTexts.set(id, t);
-    return t;
-  }
-
-  private computeEffectBoardPos(
-    anchor: "topLeft" | "topRight" | "bottomLeft" | "bottomRight",
-    offX: number,
-    offY: number,
-    driftYPx: number,
-    p: number,
-  ): { x: number; y: number; ox: number; oy: number } {
-    const drift = driftYPx;
-    const boardW = 10 * this._tileSize;
-    const boardH = this._boardHeightPx;
-    const x0 = this._originX;
-    const y0 = this._originY;
-    const mx = Math.max(0, Math.floor(this._tileSize * 0.5));
-    const my = Math.max(0, Math.floor(this._tileSize * 0.5));
-    switch (anchor) {
-      case "topLeft":
-        return {
-          ox: 0,
-          oy: 0,
-          x: x0 + mx + offX,
-          y: y0 + my + offY - drift * p,
-        };
-      case "topRight":
-        return {
-          ox: 1,
-          oy: 0,
-          x: x0 + boardW - mx - offX,
-          y: y0 + my + offY - drift * p,
-        };
-      case "bottomLeft":
-        return {
-          ox: 0,
-          oy: 1,
-          x: x0 + mx + offX,
-          y: y0 + boardH - my - offY - drift * p,
-        };
-      case "bottomRight":
-      default:
-        return {
-          ox: 1,
-          oy: 1,
-          x: x0 + boardW - mx - offX,
-          y: y0 + boardH - my - offY - drift * p,
-        };
-    }
-  }
-
-  private hexToNumber(hex: string): number {
-    const s = hex.startsWith("#") ? hex.slice(1) : hex;
-    const n = Number.parseInt(s, 16);
-    return Number.isFinite(n) ? n : 0xffffff;
-  }
+  // effect text helpers moved to effects.ts
 
   private checkGameOverState(): void {
     if (!this._state) return;
@@ -733,122 +437,19 @@ export class Gameplay extends Phaser.Scene {
     }
   }
 
-  private handleAutoSpawn(): void {
-    if (!this._state || this._state.active || this._state.status !== "playing")
-      return;
-    this.spawnNextPiece();
-  }
+  // Auto-spawn moved to gameplay/loop
 
-  private handleAutoRestartIfTopOut(): boolean {
-    if (!this._state || this._state.status !== "topOut") return false;
-    const { currentMode, gameplay, timing } = this._state;
-    const seed = this.randomSeed();
+  // Auto-restart moved to gameplay/loop
 
-    // Reinitialize with retained stats
-    this._state = this._reduce(this._state, {
-      gameplay,
-      mode: currentMode,
-      retainStats: true,
-      seed,
-      timestampMs: fromNow(),
-      timing,
-      type: "Init",
-    });
+  // Mode UI update moved to gameplay/mode
 
-    // Dispatch to global state
-    this.safeDispatch({
-      gameplay,
-      mode: currentMode,
-      retainStats: true,
-      seed,
-      timestampMs: fromNow(),
-      timing,
-      type: "Init",
-    });
+  // Mode guidance moved to gameplay/mode
 
-    // Spawn the first piece for the restarted game
-    this.spawnNextPiece();
-    return true;
-  }
+  // Mode adapter data update moved to gameplay/mode
 
-  private updateModeUi(): void {
-    if (!this._state) return;
-    const mode = gameModeRegistry.get(this._state.currentMode);
-    if (!mode) return;
+  // shallowEqual moved to gameplay/utils
 
-    this.updateModeGuidance(mode);
-    this.updateModeAdapterData();
-    this.updateBoardDecorations(mode);
-  }
-
-  private updateModeGuidance(mode: IGameMode): void {
-    if (!this._state) return;
-    if (typeof mode.getGuidance === "function") {
-      const guidance = mode.getGuidance(this._state) ?? null;
-      const prev = this._state.guidance ?? null;
-      if (!simpleEqual(guidance, prev)) {
-        // Update local state and dispatch to global state
-        this._state = this._reduce(this._state, {
-          guidance,
-          type: "UpdateGuidance",
-        });
-        this.safeDispatch({ guidance, type: "UpdateGuidance" });
-      }
-    }
-  }
-
-  private updateModeAdapterData(): void {
-    if (!this._state) return;
-    const modeName = this._state
-      .currentMode as keyof typeof this._modeUiAdapterRegistry;
-    const adapter = this._modeUiAdapterRegistry[modeName];
-    const derivedUi = adapter.computeDerivedUi(this._state);
-    if (derivedUi === null) return;
-
-    const currentModeData =
-      typeof this._state.modeData === "object" && this._state.modeData !== null
-        ? (this._state.modeData as Record<string, unknown>)
-        : {};
-    const mergedModeData = { ...currentModeData, ...derivedUi };
-
-    if (!this.shallowEqual(mergedModeData, currentModeData)) {
-      this._state = this._reduce(this._state, {
-        data: mergedModeData,
-        type: "UpdateModeData",
-      });
-      this.safeDispatch({ data: mergedModeData, type: "UpdateModeData" });
-    }
-  }
-
-  private shallowEqual(
-    a: Record<string, unknown>,
-    b: Record<string, unknown>,
-  ): boolean {
-    if (a === b) return true;
-    const aKeys = Object.keys(a);
-    const bKeys = Object.keys(b);
-    if (aKeys.length !== bKeys.length) return false;
-    for (const k of aKeys) {
-      if (a[k] !== b[k]) return false;
-    }
-    return true;
-  }
-
-  private updateBoardDecorations(mode: IGameMode): void {
-    if (!this._state) return;
-    if (typeof mode.getBoardDecorations === "function") {
-      const decorations = mode.getBoardDecorations(this._state) ?? null;
-      const prev = this._state.boardDecorations ?? null;
-      if (!simpleEqual(decorations, prev)) {
-        // Update local state and dispatch to global state
-        this._state = this._reduce(this._state, {
-          decorations,
-          type: "UpdateBoardDecorations",
-        });
-        this.safeDispatch({ decorations, type: "UpdateBoardDecorations" });
-      }
-    }
-  }
+  // Board decorations moved to gameplay/mode
 
   toResults(): void {
     // Compute summary from current game state
@@ -893,141 +494,15 @@ export class Gameplay extends Phaser.Scene {
 
   // Public method to change game mode
   setGameMode(modeName: string): void {
-    const mode = gameModeRegistry.get(modeName);
-    if (!mode || !this._state) return;
-
-    // Get mode's initial config before reinitialization to avoid race condition
-    const modeConfig =
-      typeof mode.initialConfig === "function" ? mode.initialConfig() : {};
-
-    // Merge current settings with mode-provided defaults to smooth transitions
-    const { gameplay, timing } = this._state;
-    const mergedGameplay = { ...gameplay, ...modeConfig.gameplay };
-    const mergedTiming = { ...timing, ...modeConfig.timing };
-    const seed = this.randomSeed();
-
-    // Reinitialize with correct merged config
-    this._state = this._reduce(this._state, {
-      gameplay: mergedGameplay,
-      mode: modeName,
-      retainStats: true, // Keep stats across mode switches
-      seed,
-      timestampMs: fromNow(),
-      timing: mergedTiming,
-      type: "Init",
-    });
-
-    // Dispatch to global state
-    this.safeDispatch({
-      gameplay: mergedGameplay,
-      mode: modeName,
-      retainStats: true,
-      seed,
-      timestampMs: fromNow(),
-      timing: mergedTiming,
-      type: "Init",
-    });
-
-    // Apply remaining mode-specific activation (prompt, hooks, RNG)
-    // Skip applyModeInitialConfig since we already applied it during Init
-    this.applyModePrompt(mode);
-    this.runModeActivationHook(mode);
-    this.setupModeRng(mode);
-
-    // Spawn the first piece for the new mode
-    this.spawnNextPiece();
+    mode_setGameMode(this.ctx, modeName);
   }
 
   // Initialize a game mode with its configuration and activation hooks
   private initializeMode(modeName: string): void {
-    const mode = gameModeRegistry.get(modeName);
-    if (!mode) return;
-
-    this.applyModeInitialConfig(mode);
-    this.applyModePrompt(mode);
-    this.runModeActivationHook(mode);
-    this.setupModeRng(mode);
+    mode_initializeMode(this.ctx, modeName);
   }
 
-  private applyModeInitialConfig(mode: IGameMode): void {
-    if (!this._state || typeof mode.initialConfig !== "function") return;
-
-    const modeConfig = mode.initialConfig();
-    const { gameplay, timing } = this._state;
-
-    // Merge current settings with mode-provided defaults
-    const mergedGameplay = { ...gameplay, ...modeConfig.gameplay };
-    const mergedTiming = { ...timing, ...modeConfig.timing };
-
-    // Apply timing updates
-    if (modeConfig.timing) {
-      this._state = this._reduce(this._state, {
-        timing: mergedTiming,
-        type: "UpdateTiming",
-      });
-      this.safeDispatch({ timing: mergedTiming, type: "UpdateTiming" });
-    }
-
-    // Apply gameplay updates
-    if (modeConfig.gameplay) {
-      this._state = this._reduce(this._state, {
-        gameplay: mergedGameplay,
-        type: "UpdateGameplay",
-      });
-      this.safeDispatch({ gameplay: mergedGameplay, type: "UpdateGameplay" });
-    }
-  }
-
-  private applyModePrompt(mode: IGameMode): void {
-    if (!this._state || !mode.shouldPromptNext(this._state)) return;
-    const prompt = mode.getNextPrompt(this._state);
-    if (prompt !== null) {
-      this._state = this._reduce(this._state, {
-        prompt,
-        type: "UpdateModePrompt",
-      });
-      this.safeDispatch({ prompt, type: "UpdateModePrompt" });
-    }
-  }
-
-  private runModeActivationHook(mode: IGameMode): void {
-    if (!this._state || typeof mode.onActivated !== "function") return;
-    const activation = mode.onActivated(this._state);
-    if (activation.modeData !== undefined) {
-      this._state = this._reduce(this._state, {
-        data: activation.modeData,
-        type: "UpdateModeData",
-      });
-      this.safeDispatch({ data: activation.modeData, type: "UpdateModeData" });
-    }
-    if (Array.isArray(activation.postActions)) {
-      const acts = activation.postActions as ReadonlyArray<Action>;
-      for (const act of acts) {
-        this._state = this.processActionWithLockPipeline(this._state, act);
-        this.safeDispatch(act);
-      }
-    }
-  }
-
-  private setupModeRng(mode: IGameMode): void {
-    if (!this._state) return;
-
-    const desired = Math.max(5, this._state.gameplay.nextPieceCount ?? 5);
-    const seededRng = getActiveRng(mode, this.randomSeed(), this._state.rng);
-    const { newRng, pieces } =
-      typeof mode.getPreview === "function"
-        ? mode.getPreview(this._state, seededRng, desired)
-        : seededRng.getNextPieces(desired);
-
-    this._state = this._reduce(this._state, {
-      pieces,
-      rng: newRng,
-      type: "ReplacePreview",
-    });
-    this.safeDispatch({ pieces, rng: newRng, type: "ReplacePreview" });
-    // Ensure we have enough pieces after initial setup
-    this._state = this.ensurePreviewFilled(this._state);
-  }
+  // Mode helpers delegated to gameplay/mode; wrappers removed as unused
 
   private randomSeed(): Seed {
     // Use cryptographically-strong randomness for seed generation
@@ -1037,22 +512,7 @@ export class Gameplay extends Phaser.Scene {
     return createSeed(`${a.toString(36)}-${b.toString(36)}`);
   }
 
-  private ensurePreviewFilled(state: GameState): GameState {
-    const mode = gameModeRegistry.get(state.currentMode);
-    const desired = Math.max(5, state.gameplay.nextPieceCount ?? 5);
-    const refill = planPreviewRefill(state, mode, desired);
-    if (!refill || refill.pieces.length === 0) return state;
-
-    const refillAction = {
-      pieces: refill.pieces,
-      rng: refill.newRng,
-      type: "RefillPreview" as const,
-    };
-
-    const reduced = this._reduce(state, refillAction);
-    this.safeDispatch(refillAction);
-    return reduced;
-  }
+  // Preview refill handled inside lock pipeline and mode.setupModeRng
 
   // Settings update methods for future Settings scene integration
   updateTimingSettings(
@@ -1156,205 +616,6 @@ export class Gameplay extends Phaser.Scene {
     state: GameState,
     action: Action,
   ): GameState {
-    // Apply the action through the reducer
-    const prevQueueLen = state.nextQueue.length;
-    let newState = this._reduce(state, action);
-
-    // Lock resolution happens outside the reducer to keep core pure and pluggable
-    if (
-      newState.status === "resolvingLock" &&
-      action.type !== "CommitLock" &&
-      action.type !== "RetryPendingLock"
-    ) {
-      // Run the lock pipeline to make commit/retry decision
-      runLockPipeline(
-        newState,
-        (pipelineAction) => {
-          newState = this._reduce(newState, pipelineAction);
-        },
-        this.createFinesseAnalyzer(),
-        fromNow(),
-      );
-    }
-
-    // If preview shrank, top it up once using the active mode policy
-    if (newState.nextQueue.length < prevQueueLen) {
-      newState = this.ensurePreviewFilled(newState);
-    }
-
-    return newState;
-  }
-
-  private createFinesseAnalyzer(): (state: GameState) => {
-    result: FinesseResult;
-    actions: Array<Action>;
-  } {
-    // Type guard for UpdateFinesseFeedback action
-    const isFinesseUpdateAction = (
-      action: Action,
-    ): action is Extract<Action, { type: "UpdateFinesseFeedback" }> => {
-      return action.type === "UpdateFinesseFeedback";
-    };
-
-    return (state: GameState) => {
-      const currentMode = gameModeRegistry.get(state.currentMode);
-      if (!currentMode || !state.pendingLock) {
-        return {
-          actions: [],
-          result: {
-            kind: "optimal",
-            optimalSequences: [],
-            playerSequence: [],
-          },
-        };
-      }
-
-      // Get the analysis actions from the service
-      const activePiece = state.pendingLock.finalPos;
-      const actions = finesseService.analyzePieceLock(
-        state,
-        activePiece,
-        currentMode,
-        state.pendingLock.timestampMs,
-      );
-
-      // Extract FinesseResult from the analysis actions with type safety
-      const finesseUpdateAction = actions.find(isFinesseUpdateAction);
-      const result: FinesseResult = finesseUpdateAction?.feedback ?? {
-        kind: "optimal",
-        optimalSequences: [],
-        playerSequence: [],
-      };
-
-      return { actions, result };
-    };
-  }
-
-  private isDasEvent(e: InputEvent): e is DASEvent {
-    return (
-      e.type === "KEY_DOWN" ||
-      e.type === "KEY_UP" ||
-      e.type === "TIMER_TICK" ||
-      e.type === "UPDATE_CONFIG"
-    );
-  }
-
-  // Narrowing helper for TapMove actions
-  private isTapMove(a: Action): a is Extract<Action, { type: "TapMove" }> {
-    return a.type === "TapMove";
-  }
-
-  private pieceKindToFrame(kind?: TetrominoPieceId): 1 | 2 | 3 | 4 | 5 | 6 | 7 {
-    function assertNever(x: never): never {
-      throw new Error(`Unexpected: ${String(x)}`);
-    }
-    if (kind === undefined) return 1;
-    switch (kind) {
-      case "I":
-        return 1; // Cyan
-      case "J":
-        return 2; // Blue
-      case "L":
-        return 3; // Orange
-      case "O":
-        return 4; // Yellow
-      case "S":
-        return 5; // Green
-      case "T":
-        return 6; // Purple
-      case "Z":
-        return 7; // Red
-      default:
-        return assertNever(kind);
-    }
-  }
-
-  private updateNextPreviews(
-    containers: Array<Phaser.GameObjects.Container>,
-    nextQueue: ReadonlyArray<TetrominoPieceId>,
-  ): void {
-    // Hide all sprites first
-    containers.forEach((container) => {
-      container.list.forEach((sprite) => {
-        if (sprite instanceof Phaser.GameObjects.Sprite) {
-          sprite.setVisible(false);
-        }
-      });
-    });
-
-    // Show pieces for each position in queue (up to 5)
-    for (let i = 0; i < Math.min(containers.length, nextQueue.length); i++) {
-      const pieceId = nextQueue[i];
-      const container = containers[i];
-      if (
-        pieceId !== undefined &&
-        container !== undefined &&
-        pieceId in PIECES
-      ) {
-        this.renderPieceInContainer(container, pieceId, true);
-      }
-    }
-  }
-
-  private updateHoldPreview(
-    container: Phaser.GameObjects.Container | null,
-    holdPiece: TetrominoPieceId | null,
-  ): void {
-    if (!container) return;
-
-    // Hide all sprites first
-    container.list.forEach((sprite) => {
-      if (sprite instanceof Phaser.GameObjects.Sprite) {
-        sprite.setVisible(false);
-      }
-    });
-
-    // Show hold piece if one exists
-    if (holdPiece !== null && holdPiece in PIECES) {
-      this.renderPieceInContainer(container, holdPiece, false);
-    }
-  }
-
-  private renderPieceInContainer(
-    container: Phaser.GameObjects.Container,
-    pieceId: TetrominoPieceId,
-    center: boolean,
-  ): void {
-    const piece = PIECES[pieceId];
-    const spawnCells = piece.cells.spawn; // Use spawn rotation for preview
-    // Compute bounding box to normalize and optionally center inside a 4x3 box
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-    for (const [cx, cy] of spawnCells) {
-      if (cx < minX) minX = cx;
-      if (cy < minY) minY = cy;
-      if (cx > maxX) maxX = cx;
-      if (cy > maxY) maxY = cy;
-    }
-    const widthCells = maxX - minX + 1;
-    const heightCells = maxY - minY + 1;
-    const offsetCellsX = center ? (PREVIEW_BOX_COLS - widthCells) / 2 : 0;
-    const offsetCellsY = center ? (PREVIEW_BOX_ROWS - heightCells) / 2 : 0;
-    const frame = this.pieceKindToFrame(pieceId);
-    const sprites = container.list.filter(
-      (o): o is Phaser.GameObjects.Sprite =>
-        o instanceof Phaser.GameObjects.Sprite,
-    );
-
-    // Position sprites based on piece shape
-    for (let i = 0; i < Math.min(spawnCells.length, sprites.length); i++) {
-      const cell = spawnCells[i];
-      const sprite = sprites[i];
-      if (cell && sprite) {
-        // Position relative to container origin, scaled and optionally centered
-        const relX = (cell[0] - minX + offsetCellsX) * PREVIEW_CELL_PX;
-        const relY = (cell[1] - minY + offsetCellsY) * PREVIEW_CELL_PX;
-        sprite.setPosition(relX, relY);
-        sprite.setFrame(frame);
-        sprite.setVisible(true);
-      }
-    }
+    return pipeline_processActionWithLockPipeline(this.ctx, state, action);
   }
 }

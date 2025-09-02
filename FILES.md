@@ -62,7 +62,16 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 6: menu helpers with typed navigation + quick mode shortcuts. Adds `startMode(name)`, `startFreePlay()`, `startGuided()` that dispatch `SetMode` and start Gameplay.
 - src/presentation/phaser/scenes/Settings.ts — Phase 6: settings mapping helpers that convert primitives to brands and dispatch store actions. Adds `updateTimingMs({...})`, `updateGameplay({...})`, and `applySettings({ timing, gameplay })`.
 - src/presentation/phaser/scenes/ModeSelect.ts — Phase 6: mode list/select helpers. Adds `listModes()` to query registry and `selectMode(name)` to dispatch `SetMode` and start Gameplay.
-- src/presentation/phaser/scenes/Gameplay.ts — Phase 5: real Phaser.Scene wiring BoardPresenter, InputAdapterImpl, and deterministic fixed-step loop with CameraFX and AudioBus adapters.
+- src/presentation/phaser/scenes/Gameplay.ts — Phase 5: real Phaser.Scene wiring BoardPresenter, InputAdapterImpl, and deterministic fixed-step loop with CameraFX and AudioBus adapters. Refactored into thin orchestrator calling gameplay/* modules.
+  - src/presentation/phaser/scenes/gameplay/types.ts — SceneCtx + TetrominoPieceId. Context object passed to pure helpers (state getter/setter, clocks, adapters, presenter, layout/cache, RNG + dispatch bridges).
+  - src/presentation/phaser/scenes/gameplay/utils.ts — Pure helpers: shouldCompleteLineClear, simpleEqual, shallowEqual, hexToNumber, assertNever.
+  - src/presentation/phaser/scenes/gameplay/input.ts — Input pipeline: isDasEvent/isTapMove guards, processInputActions, processDasEvent. Produces Action stream + AppendProcessed entries and feeds lock pipeline.
+  - src/presentation/phaser/scenes/gameplay/loop.ts — Fixed-step loop helpers: processFixedTimeStep, processTickAction, handleAutoRestartIfTopOut, handleAutoSpawn. Maintains deterministic Tick ordering.
+  - src/presentation/phaser/scenes/gameplay/presentation.ts — Presentation updates: updatePresentation, drawOverlays, drawTargets, drawColumnHighlights.
+  - src/presentation/phaser/scenes/gameplay/previews.ts — Next/Hold previews: setupPreviewsAndHold, updateNextPreviews, updateHoldPreview, renderPieceInContainer.
+  - src/presentation/phaser/scenes/gameplay/mode.ts — Mode wiring: initializeMode, setGameMode, applyModeInitialConfig, applyModePrompt, runModeActivationHook, setupModeRng, updateModeUi.
+  - src/presentation/phaser/scenes/gameplay/lockPipeline.ts — Orchestrates reducer + lock pipeline: processActionWithLockPipeline, createFinesseAnalyzer.
+  - src/presentation/phaser/scenes/gameplay/effects.ts — UI effects rendering: drawUiEffects and renderFloatingText.
 - src/presentation/phaser/utils/unbrand.ts — Presentation-layer unbranding helper (Ms → number) to avoid scattered double-casts in Phaser glue.
 - src/presentation/phaser/scenes/Results.ts — Phase 7: Results scene coordination (no Phaser import). Exposes `show(summary, ui)` that drives tweened counters and celebration particles via a typed UI adapter, and binds Retry/Menu to start `Gameplay`/`MainMenu`.
 - src/presentation/phaser/scenes/types.ts — Phase 1: shared `SceneKey` union, `SceneController` interface, and `SCENE_KEYS` constant (brands not needed here yet).
