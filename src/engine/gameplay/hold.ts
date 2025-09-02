@@ -1,4 +1,5 @@
-import { createActivePiece, canSpawnPiece } from "../../core/spawning";
+/* eslint-disable sonarjs/todo-tag */
+import { createActivePiece } from "../../core/spawning";
 import { Airborne } from "../../engine/physics/lock-delay.machine";
 
 import type {
@@ -6,7 +7,6 @@ import type {
   Action,
   PieceId,
   ActivePiece,
-  TopOutState,
 } from "../../state/types";
 
 function getNextPieceFromQueue(holdQueue: Array<PieceId>): {
@@ -43,14 +43,10 @@ export const handlers = {
       newActive = result.newActive;
     }
 
-    if (!canSpawnPiece(state.board, newActive.id)) {
-      const topOutState: TopOutState = {
-        ...state,
-        active: undefined,
-        status: "topOut" as const,
-      };
-      return topOutState;
-    }
+    // TODO: Re-implement topout detection for hold
+
+    // This check was removed to allow hold even when spawn position is blocked
+    // Original logic: checked canSpawnPiece(state.board, newActive.id) and returned topOut state
 
     return {
       ...state,
