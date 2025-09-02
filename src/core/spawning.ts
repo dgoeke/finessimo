@@ -30,21 +30,9 @@ export function createActivePiece(pieceId: PieceId): ActivePiece {
  */
 export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
   const piece = createActivePiece(pieceId);
-  const shape = PIECES[pieceId];
   
-  // Check only the cells that the piece actually occupies at spawn
-  for (const [dx, dy] of shape.cells.spawn) {
-    const absoluteX = piece.x + dx;
-    const absoluteY = piece.y + dy;
-    
-    // Only check cells within the spawn buffer (top 2 rows)
-    if (absoluteY >= 0 && absoluteY < SPAWN_ROWS) {
-      if (isCellBlocked(board, createGridCoord(absoluteX), createGridCoord(absoluteY))) {
-        return false;
-      }
-    }
-  }
-
+  // Simply check if the piece can be placed at its spawn position
+  // This handles all collision detection including the spawn buffer rows
   return canPlacePiece(board, piece);
 }
 
