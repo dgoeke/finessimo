@@ -138,6 +138,28 @@ export function lockDelayResetCountAsNumber(
 
 // Conversion helpers for interop at boundaries
 export const durationMsAsNumber = (d: DurationMs): number => d as number;
+
+// Percentage brand for values that must be 0-100
+declare const PercentageBrand: unique symbol;
+export type Percentage = number & { readonly [PercentageBrand]: true };
+
+export const createPercentage = (n: number): Percentage => {
+  if (n < 0 || n > 100 || !Number.isFinite(n)) {
+    throw new Error(`Percentage must be 0-100, got ${String(n)}`);
+  }
+  return n as Percentage;
+};
+
+export const percentageAsNumber = (p: Percentage): number => p as number;
+
+// UnbrandedMs brand for explicitly unbranded milliseconds
+declare const UnbrandedMsBrand: unique symbol;
+export type UnbrandedMs = number & { readonly [UnbrandedMsBrand]: true };
+
+export const createUnbrandedMs = (ms: DurationMs): UnbrandedMs =>
+  durationMsAsNumber(ms) as UnbrandedMs;
+
+export const unbrandedMsAsNumber = (ms: UnbrandedMs): number => ms as number;
 export const gridCoordAsNumber = (g: GridCoord): number => g as number;
 export const cellValueAsNumber = (c: CellValue): number => c as number;
 export const frameAsNumber = (f: Frame): number => f as number;

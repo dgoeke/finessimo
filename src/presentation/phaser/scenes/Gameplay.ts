@@ -12,6 +12,7 @@ import {
   createDurationMs,
   durationMsAsNumber,
 } from "../../../types/brands";
+import { createDelayedEffect, isDelayedEffect } from "../../../types/effects";
 import { fromNow } from "../../../types/timestamp";
 import { PhaserInputAdapterImpl } from "../input/PhaserInputAdapterImpl";
 import { BoardPresenter } from "../presenter/BoardPresenter";
@@ -20,7 +21,10 @@ import { ms as unbrandMs } from "../utils/unbrand";
 
 import { SimulatedClock } from "./clock";
 import { processActionWithLockPipeline as pipeline_processActionWithLockPipeline } from "./gameplay/lockPipeline";
-import { processFixedTimeStep as loop_processFixedTimeStep } from "./gameplay/loop";
+import {
+  processFixedTimeStep as loop_processFixedTimeStep,
+  computeResultsSummary,
+} from "./gameplay/loop";
 import {
   initializeMode as mode_initializeMode,
   setGameMode as mode_setGameMode,
@@ -39,12 +43,14 @@ import type { Clock } from "./clock";
 import type { ModeUiAdapter } from "../../../modes/types";
 import type { GameState, Action } from "../../../state/types";
 import type { Seed } from "../../../types/brands";
+import type { Timestamp } from "../../../types/timestamp";
 import type { PhaserInputAdapter } from "../input/PhaserInputAdapter";
 import type { AudioBus } from "../presenter/AudioBus";
 import type { CameraFxAdapter } from "../presenter/Effects";
 import type { Presenter, Ms, ViewModel } from "../presenter/types";
 import type { SceneCtx } from "./gameplay/types";
-import type { Timestamp } from "../../../types/timestamp";
+import type { ResultsSummary } from "./Results";
+import type { Effect } from "../../../types/effects";
 // no direct util imports needed here; handled within modules
 
 // Preview layout constants come from previews module to avoid drift
@@ -282,15 +288,8 @@ export class Gameplay extends Phaser.Scene {
       ghost.add(ghostSprite);
     }
 
-    const fx: CameraFxAdapter = {
-      fadeIn: (ms) => this.cameras.main.fadeIn(unbrandMs(ms)),
-      fadeOut: (ms) => this.cameras.main.fadeOut(unbrandMs(ms)),
-      shake: (ms, mag) => this.cameras.main.shake(unbrandMs(ms), mag ?? 0.005),
-      zoomTo: (ms, z) => this.cameras.main.zoomTo(z, unbrandMs(ms)),
-    };
-    const audio: AudioBus = {
-      play: (name) => this.sound.play(name),
-    };
+    const fx = this.createCameraFx();
+    const audio = this.createAudioBus();
 
     this._presenter = new BoardPresenter({
       activeContainer: active,
@@ -432,8 +431,23 @@ export class Gameplay extends Phaser.Scene {
 
   private checkGameOverState(): void {
     if (!this._state) return;
-    if (this._state.status === "topOut") {
-      this.time.delayedCall(1000, () => this.toResults());
+    const effect = this.createResultsTransitionEffect(this._state);
+    if (effect) {
+      this.interpretEffect(effect);
+    }
+  }
+
+  private createResultsTransitionEffect(state: GameState): Effect | null {
+    if (state.status !== "topOut") return null;
+
+    return createDelayedEffect(createDurationMs(1000), () => this.toResults());
+  }
+
+  private interpretEffect(effect: Effect): void {
+    if (isDelayedEffect(effect)) {
+      this.time.delayedCall(durationMsAsNumber(effect.delayMs), effect.action);
+    } else {
+      effect.action();
     }
   }
 
@@ -452,39 +466,30 @@ export class Gameplay extends Phaser.Scene {
   // Board decorations moved to gameplay/mode
 
   toResults(): void {
-    // Compute summary from current game state
-    const summary = this.computeResultsSummary();
+    // Compute summary from current game state using loop module
+    const summary: ResultsSummary = computeResultsSummary(this._state);
     this.scene.start(SCENE_KEYS.Results, { summary });
   }
 
-  private computeResultsSummary(): {
-    linesCleared: number;
-    piecesPlaced: number;
-    accuracyPercentage: number;
-    timePlayedMs: number;
-  } {
-    if (!this._state) {
-      return {
-        accuracyPercentage: 0,
-        linesCleared: 0,
-        piecesPlaced: 0,
-        timePlayedMs: 0,
-      };
-    }
-
-    const stats = this._state.stats;
-    const linesCleared = stats.linesCleared;
-    const piecesPlaced = stats.piecesPlaced;
-    const timePlayedMs = durationMsAsNumber(stats.timePlayedMs);
-
-    // Use the pre-calculated accuracy percentage from stats
-    const accuracyPercentage = Math.round(stats.accuracyPercentage);
-
+  private createCameraFx(): CameraFxAdapter {
     return {
-      accuracyPercentage,
-      linesCleared,
-      piecesPlaced,
-      timePlayedMs,
+      fadeIn: (ms) => this.cameras.main.fadeIn(unbrandMs(ms)),
+      fadeOut: (ms) => this.cameras.main.fadeOut(unbrandMs(ms)),
+      shake: (ms, mag) => this.cameras.main.shake(unbrandMs(ms), mag ?? 0.005),
+      zoomTo: (ms, z) => this.cameras.main.zoomTo(z, unbrandMs(ms)),
+    };
+  }
+
+  private createAudioBus(): AudioBus {
+    return {
+      play: (
+        name: Parameters<AudioBus["play"]>[0],
+      ): ReturnType<AudioBus["play"]> => {
+        // Guard playback to avoid warnings/errors when audio is not preloaded yet
+        if (this.cache.audio.exists(name)) {
+          this.sound.play(name);
+        }
+      },
     };
   }
 

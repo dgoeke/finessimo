@@ -1,14 +1,18 @@
 // Phase 7: Results scene — animated counters & particle effects
 import Phaser from "phaser";
 
+import { percentageAsNumber, unbrandedMsAsNumber } from "../../../types/brands";
+
 import { SCENE_KEYS } from "./types";
+
+import type { Percentage, UnbrandedMs } from "../../../types/brands";
 
 // Summary data projected from GameState.stats by the caller.
 export type ResultsSummary = Readonly<{
   linesCleared: number;
   piecesPlaced: number;
-  accuracyPercentage: number; // 0..100
-  timePlayedMs: number; // raw milliseconds
+  accuracyPercentage: Percentage; // 0..100 enforced at construction
+  timePlayedMs: UnbrandedMs; // Explicit unbranding marker
 }>;
 
 type RexUiPlugin = {
@@ -28,7 +32,12 @@ type RexUiPlugin = {
       setInteractive(): void;
       on(e: string, cb: () => void): void;
     };
-    label(config: unknown): unknown;
+    label(config: {
+      background: unknown;
+      text: unknown;
+      x?: number;
+      y?: number;
+    }): unknown;
   };
 };
 
@@ -145,8 +154,7 @@ export class Results extends Phaser.Scene {
     }
   }
 
-  private showResults(summary: ResultsSummary | null): void {
-    if (!summary) return;
+  private showResults(summary: ResultsSummary): void {
     const duration = 800; // ms per counter
 
     // Animate lines counter
@@ -187,14 +195,15 @@ export class Results extends Phaser.Scene {
           const val = Math.floor(tween.getValue() ?? 0);
           accuracyCounter.setText(`${String(val)}%`);
         },
-        to: Math.round(summary.accuracyPercentage),
+        to: Math.round(percentageAsNumber(summary.accuracyPercentage)),
       });
     }
 
     // Animate time counter
     const timeCounter = this._counters.get("time");
     if (timeCounter) {
-      const seconds = Math.floor(summary.timePlayedMs) / 1000;
+      const seconds =
+        Math.floor(unbrandedMsAsNumber(summary.timePlayedMs)) / 1000;
       this.tweens.addCounter({
         delay: 600,
         duration,

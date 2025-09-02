@@ -1,4 +1,10 @@
-import { createTimestamp, fromNow } from "../../../../types/timestamp";
+import {
+  createPercentage,
+  createUnbrandedMs,
+  createDurationMs,
+} from "../../../../types/brands";
+import { mapOption } from "../../../../types/option";
+import { createTimestamp } from "../../../../types/timestamp";
 import { ms as unbrandMs } from "../../utils/unbrand";
 
 import { processInputActions } from "./input";
@@ -8,7 +14,9 @@ import { updatePresentation } from "./presentation";
 import { shouldCompleteLineClear } from "./utils";
 
 import type { SceneCtx } from "./types";
-import type { Action } from "../../../../state/types";
+import type { Action, GameState } from "../../../../state/types";
+import type { Option } from "../../../../types/option";
+import type { ResultsSummary } from "../Results";
 
 export function processFixedTimeStep(ctx: SceneCtx): void {
   // Input → actions (includes DAS) and Tick
@@ -43,26 +51,16 @@ export function processTickAction(ctx: SceneCtx): void {
   }
 }
 
-export function handleAutoRestartIfTopOut(ctx: SceneCtx): boolean {
-  const s = ctx.state;
-  if (s.status !== "topOut") return false;
-  const { currentMode, gameplay, timing } = s;
-  const seed = ctx.randomSeed();
+export function handleAutoRestartIfTopOut(_ctx: SceneCtx): boolean {
+  // For now, we handle auto-restart in loop but the scene will transition to Results
+  // The actual transition is handled by checkGameOverState in the Gameplay scene
+  return false;
+}
 
-  const init: Action = {
-    gameplay,
-    mode: currentMode,
-    retainStats: true,
-    seed,
-    timestampMs: fromNow(),
-    timing,
-    type: "Init",
-  };
-  const next = ctx.reduce(s, init);
-  ctx.setState(next);
-  ctx.safeDispatch(init);
-  ctx.spawnNextPiece();
-  return true;
+export function handleTopOutTransition(ctx: SceneCtx): boolean {
+  // Allow the scene to handle the transition to Results
+  // This function can be used to determine if we should transition
+  return ctx.state.status === "topOut";
 }
 
 export function handleAutoSpawn(ctx: SceneCtx): void {
@@ -70,4 +68,26 @@ export function handleAutoSpawn(ctx: SceneCtx): void {
   if (s.status !== "playing") return;
   if (s.active) return;
   ctx.spawnNextPiece();
+}
+
+export function computeResultsSummary(
+  state: Option<GameState>,
+): ResultsSummary {
+  return mapOption(
+    state,
+    (s) => ({
+      accuracyPercentage: createPercentage(
+        Math.round(s.stats.accuracyPercentage),
+      ),
+      linesCleared: s.stats.linesCleared,
+      piecesPlaced: s.stats.piecesPlaced,
+      timePlayedMs: createUnbrandedMs(s.stats.timePlayedMs),
+    }),
+    {
+      accuracyPercentage: createPercentage(0),
+      linesCleared: 0,
+      piecesPlaced: 0,
+      timePlayedMs: createUnbrandedMs(createDurationMs(0)),
+    },
+  );
 }

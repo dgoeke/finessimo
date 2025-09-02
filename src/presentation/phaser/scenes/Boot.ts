@@ -23,8 +23,8 @@ export class Boot extends Phaser.Scene {
     // Generate visual assets at runtime
     this.ensureGeneratedTilesTexture();
 
-    // Generate audio placeholders at runtime for spawn/lock/line/topout
-    this.ensureGeneratedAudioPlaceholders();
+    // Audio placeholders removed: invalid data URLs were causing decode errors.
+    // Real audio assets should be loaded here when available.
 
     // Show a simple progress text while loading (even if nothing to load yet)
     const w = this.scale.width;
@@ -101,25 +101,5 @@ export class Boot extends Phaser.Scene {
     }
   }
 
-  private ensureGeneratedAudioPlaceholders(): void {
-    // For now, just register empty sound keys so the audio system doesn't error
-    // Audio keys expected by AudioBus: spawn, lock, line, topout
-    // In a real implementation, this would load actual audio files or generate Web Audio sounds
-    const soundKeys = ["spawn", "lock", "line", "topout"] as const;
-
-    // Phaser will gracefully handle missing sounds, so we don't need to actually create audio
-    // This ensures the sound keys exist in the cache to prevent runtime errors
-    for (const key of soundKeys) {
-      // Register a silent placeholder - the sound system will handle missing assets
-      try {
-        // Use a minimal data URL for a silent sound
-        this.load.audio(key, [
-          "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
-        ]);
-      } catch (error) {
-        // Audio loading failed - Phaser will handle gracefully
-        console.warn(`Could not register sound placeholder for ${key}:`, error);
-      }
-    }
-  }
+  // Note: Valid audio should be loaded via this.load.audio(...) when assets are ready.
 }
