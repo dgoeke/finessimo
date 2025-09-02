@@ -147,6 +147,24 @@ describe("spawning", () => {
       }
       expect(isTopOut(secondRowBoard, "T")).toBe(true);
     });
+
+    it("should handle different piece spawn footprints correctly", () => {
+      const board = createTestBoard();
+      
+      // Test that different pieces have different spawn footprints
+      // I piece spans 4 columns at spawn: columns 3,4,5,6 at y=-1
+      // Block column 2 - should not affect I piece
+      board.cells[2] = 1;
+      expect(canSpawnPiece(board, "I")).toBe(true);
+      
+      // Block column 7 - should not affect I piece
+      board.cells[7] = 1;  
+      expect(canSpawnPiece(board, "I")).toBe(true);
+      
+      // Block within I piece footprint at spawn - should fail
+      board.cells[4] = 1; // Column 4, row 0 (where I piece would be when moved down)
+      expect(canSpawnPiece(board, "I")).toBe(false);
+    });
   });
 
   describe("spawnWithHold", () => {

@@ -30,13 +30,16 @@ export function createActivePiece(pieceId: PieceId): ActivePiece {
  */
 export function canSpawnPiece(board: Board, pieceId: PieceId): boolean {
   const piece = createActivePiece(pieceId);
-  const [spawnX] = PIECES[pieceId].spawnTopLeft;
-
-  for (let dy = 0; dy < SPAWN_ROWS; dy++) {
-    for (let dx = 0; dx < 4; dx++) {
-      if (
-        isCellBlocked(board, createGridCoord(spawnX + dx), createGridCoord(dy))
-      ) {
+  const shape = PIECES[pieceId];
+  
+  // Check only the cells that the piece actually occupies at spawn
+  for (const [dx, dy] of shape.cells.spawn) {
+    const absoluteX = piece.x + dx;
+    const absoluteY = piece.y + dy;
+    
+    // Only check cells within the spawn buffer (top 2 rows)
+    if (absoluteY >= 0 && absoluteY < SPAWN_ROWS) {
+      if (isCellBlocked(board, createGridCoord(absoluteX), createGridCoord(absoluteY))) {
         return false;
       }
     }

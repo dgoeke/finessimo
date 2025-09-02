@@ -182,4 +182,34 @@ describe("top-out detection", () => {
     }
     expect(isTopOut(board2, "T")).toBe(true);
   });
+
+  it("should not false top-out when blocks are adjacent but not within piece footprint", () => {
+    // This test verifies the fix for the spawn collision check issue
+    // where blocks adjacent to but not within the piece spawn footprint 
+    // were causing false top-outs
+    
+    const board: Board = {
+      cells: createBoardCells(),
+      height: 20,
+      width: 10,
+    };
+
+    // T piece spawns at (3, -2) and has spawn cells at relative positions:
+    // [1,0], [0,1], [1,1], [2,1] 
+    // So absolute positions are: (4,-2), (3,-1), (4,-1), (5,-1)
+    // When checking spawn buffer (y >= 0), only (3,0), (4,0), (5,0) would be checked
+    
+    // Block column 6 in the top row - this should NOT cause a false top-out
+    // since the T piece only occupies columns 3-5 at spawn
+    board.cells[idx(createGridCoord(6), createGridCoord(0), 10)] = 1;
+    expect(isTopOut(board, "T")).toBe(false);
+    
+    // Similarly for column 2
+    board.cells[idx(createGridCoord(2), createGridCoord(0), 10)] = 1;
+    expect(isTopOut(board, "T")).toBe(false);
+    
+    // But blocking the actual spawn footprint should still cause top-out
+    board.cells[idx(createGridCoord(4), createGridCoord(0), 10)] = 1;
+    expect(isTopOut(board, "T")).toBe(true);
+  });
 });
