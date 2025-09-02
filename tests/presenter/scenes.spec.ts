@@ -34,7 +34,8 @@ describe("Phaser Scene Shells (Phase 1)", () => {
     const spy = jest
       .spyOn(boot.scene, "start")
       .mockImplementation((_: unknown, __?: unknown) => boot.scene);
-    boot.create();
+    // Boot.create is async in runtime; in this light test harness, ignore the promise
+    void boot.create();
     expect(spy).toHaveBeenCalledWith(SCENE_KEYS.MainMenu);
     spy.mockRestore();
   });

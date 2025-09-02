@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { shouldCompleteLineClear } from "../../src/app";
+import { shouldCompleteLineClear } from "../../src/presentation/phaser/scenes/gameplay/utils";
 import {
   type GameState,
   type Board,

@@ -8,8 +8,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Root Application
 
-- src/main.ts: Browser entrypoint. Initializes FinessimoApp on DOM ready.
-- src/app.ts: Main app orchestrator. 60 FPS game loop with focus-based pausing, state management, finesse analysis integration, lock pipeline invocation, mode switching, settings dispatch. Window focus detection using visibilitychange, focus/blur events, and watchdog for missed events.
+- src/main.ts — Browser entrypoint. Renders a light skeleton and lazily imports the Phaser game (`createGame`) to avoid eagerly loading heavy chunks. Starts `Boot` scene after game creation.
+- src/app.ts — Legacy DOM app orchestrator (unused in Phaser mode). 60 FPS loop, focus-based pausing, state management, finesse analysis, lock pipeline, mode switching, settings dispatch.
 - src/global.d.ts: Global TypeScript declarations and ambient module types.
 
 ## Plans & Migration
@@ -47,7 +47,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 
 ## Presentation (Phaser)
 
- - src/presentation/phaser/Game.ts — Real Phaser game factory. Configures AUTO renderer, pixelArt/roundPixels, FIT scaling, and registers rexUI as a scene plugin. Exposes `createGame(parent, width, height)`.
+ - src/presentation/phaser/Game.ts — Real Phaser game factory. Configures AUTO renderer, pixelArt/roundPixels, RESIZE scaling, and registers rexUI as a scene plugin. Registers only `Boot` up-front; other scenes are lazily registered at runtime. Exposes `createGame(parent, width, height)`.
 - src/presentation/phaser/presenter/types.ts — Phase 0 core presentation types: branded primitives (Px, Col, Row, Ms), ViewModel, RenderPlan union, and Presenter contract (pure computePlan + impure apply).
 - src/presentation/phaser/presenter/Presenter.ts — Phase 0 NoopPresenter implementing the Presenter contract. `computePlan` returns a single `{ t: "Noop" }` entry; `apply` is a no-op.
 - src/presentation/phaser/presenter/viewModel.ts — Phase 2: pure `mapGameStateToViewModel` implementation projecting core GameState to ViewModel (board grid, active/ghost cells, topOut, HUD) with small brand helpers `toCol`, `toRow`, `toPx`.
@@ -58,7 +58,7 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/input/PhaserInputAdapterImpl.ts — Phaser keyboard implementation emitting DAS machine events and immediate actions.
 - src/presentation/phaser/scenes/clock.ts — Phase 4: `Clock` abstraction and `SimulatedClock` for deterministic timestamps in tests and headless runs.
 
-- src/presentation/phaser/scenes/Boot.ts — Real Phaser.Scene. `preload()` generates a minimal colored tile spritesheet at runtime (ensuring visible blocks without external assets) and `create()` dispatches Init (mode+seed) then starts MainMenu.
+- src/presentation/phaser/scenes/Boot.ts — Real Phaser.Scene. `preload()` generates a minimal colored tile spritesheet; `create()` dispatches Init (mode+seed), lazily registers other scenes in a real Phaser runtime, then starts `MainMenu`.
 - src/presentation/phaser/scenes/MainMenu.ts — Phase 6: menu helpers with typed navigation + quick mode shortcuts. Adds `startMode(name)`, `startFreePlay()`, `startGuided()` that dispatch `SetMode` and start Gameplay.
 - src/presentation/phaser/scenes/Settings.ts — Phase 6: settings mapping helpers that convert primitives to brands and dispatch store actions. Adds `updateTimingMs({...})`, `updateGameplay({...})`, and `applySettings({ timing, gameplay })`.
 - src/presentation/phaser/scenes/ModeSelect.ts — Phase 6: mode list/select helpers. Adds `listModes()` to query registry and `selectMode(name)` to dispatch `SetMode` and start Gameplay.
@@ -75,7 +75,8 @@ This file provides a quick, high-level map of all TypeScript files under src/ an
 - src/presentation/phaser/utils/unbrand.ts — Presentation-layer unbranding helper (Ms → number) to avoid scattered double-casts in Phaser glue.
 - src/presentation/phaser/scenes/Results.ts — Phase 7: Results scene coordination (no Phaser import). Exposes `show(summary, ui)` that drives tweened counters and celebration particles via a typed UI adapter, and binds Retry/Menu to start `Gameplay`/`MainMenu`.
 - src/presentation/phaser/scenes/types.ts — Phase 1: shared `SceneKey` union, `SceneController` interface, and `SCENE_KEYS` constant (brands not needed here yet).
-- src/presentation/phaser/scenes/index.ts — Phase 1: scene registry exports (`SCENE_KEYS`, `SCENES`, `SCENE_REGISTRY`) for straightforward scene registration/testing without importing Phaser.
+- src/presentation/phaser/scenes/index.ts — Phase 1: static scene registry exports (`SCENE_KEYS`, `SCENES`, `SCENE_REGISTRY`) used by tests. Runtime scene registration is handled lazily.
+ - src/presentation/phaser/scenes/registerLazy.ts — Runtime scene registration via dynamic imports (code-splitting). Adds `MainMenu`, `Settings`, `ModeSelect`, `Gameplay`, and `Results` to the game on demand.
 
 ## Input
 

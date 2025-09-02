@@ -2,7 +2,7 @@ import Phaser from "phaser";
 // rexUI scene plugin mapping (ESM). Registered via Game config.
 import RexUIPlugin from "phaser3-rex-plugins/templates/ui/ui-plugin.js";
 
-import { SCENES_FOR_CONFIG } from "./scenes";
+import { Boot } from "./scenes/Boot";
 
 export function createGame(
   parent: HTMLElement,
@@ -28,8 +28,8 @@ export function createGame(
       autoCenter: Phaser.Scale.CENTER_BOTH,
       mode: Phaser.Scale.RESIZE,
     },
-    // Register scenes using the typed registry (no unsafe casts)
-    scene: SCENES_FOR_CONFIG,
+    // Register only Boot up-front; other scenes are lazy-registered from Boot
+    scene: [Boot],
     type: Phaser.AUTO,
     width,
   };

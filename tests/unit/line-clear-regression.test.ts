@@ -5,7 +5,7 @@
  * when lineClearDelayMs > 0, causing game softlock.
  */
 
-import { shouldCompleteLineClear } from "../../src/app";
+import { shouldCompleteLineClear } from "../../src/presentation/phaser/scenes/gameplay/utils";
 import { type GameState } from "../../src/state/types";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";

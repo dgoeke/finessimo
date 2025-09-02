@@ -42,7 +42,7 @@ export class Boot extends Phaser.Scene {
     });
   }
 
-  create(): void {
+  async create(): Promise<void> {
     const seed = createSeed(crypto.randomUUID());
     const defaultMode = gameModeRegistry.get("freePlay");
     const rng = defaultMode ? getActiveRng(defaultMode, seed) : undefined;
@@ -55,7 +55,17 @@ export class Boot extends Phaser.Scene {
     };
     dispatch(initAction);
 
-    // Transition to MainMenu after assets are ready
+    // Lazily register other scenes when running inside a real Phaser.Game
+    const maybeGame: unknown = this.game as unknown;
+    if (
+      maybeGame !== null &&
+      maybeGame !== undefined &&
+      typeof maybeGame === "object" &&
+      "scene" in (maybeGame as Record<string, unknown>)
+    ) {
+      const { registerLazyScenes } = await import("./registerLazy");
+      await registerLazyScenes(this.game);
+    }
     this.scene.start(SCENE_KEYS.MainMenu);
   }
 

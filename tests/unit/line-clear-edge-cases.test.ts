@@ -2,7 +2,7 @@
  * Edge case tests for line clearing that might occur in real gameplay
  */
 
-import { shouldCompleteLineClear } from "../../src/app";
+import { shouldCompleteLineClear } from "../../src/presentation/phaser/scenes/gameplay/utils";
 import { createSeed, createDurationMs } from "../../src/types/brands";
 import { createTimestamp, fromNow } from "../../src/types/timestamp";
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";

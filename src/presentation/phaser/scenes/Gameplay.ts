@@ -352,6 +352,9 @@ export class Gameplay extends Phaser.Scene {
     this.events.once("shutdown", () => {
       this.scale.off("resize", this._onResize, this);
     });
+
+    // Set up focus/visibility handling for game pause behavior
+    this.setupFocusHandling();
   }
 
   // Previews/hold now live in previews.ts and are wired in create()
@@ -622,5 +625,95 @@ export class Gameplay extends Phaser.Scene {
     action: Action,
   ): GameState {
     return pipeline_processActionWithLockPipeline(this.ctx, state, action);
+  }
+
+  private setupFocusHandling(): void {
+    // Handle game pause when window loses focus or becomes hidden
+    // This replaces the focus handling that was in the deleted app.ts
+
+    // Phaser built-in visibility events
+    this.game.events.on("blur", this.handleGameBlur, this);
+    this.game.events.on("focus", this.handleGameFocus, this);
+    this.sys.game.events.on("hidden", this.handleGameHidden, this);
+    this.sys.game.events.on("visible", this.handleGameVisible, this);
+
+    // Also listen to document visibility changes for additional coverage
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    window.addEventListener("focus", this.handleWindowFocus);
+    window.addEventListener("blur", this.handleWindowBlur);
+
+    // Clean up event listeners when scene shuts down
+    this.events.once("shutdown", () => {
+      this.game.events.off("blur", this.handleGameBlur, this);
+      this.game.events.off("focus", this.handleGameFocus, this);
+      this.sys.game.events.off("hidden", this.handleGameHidden, this);
+      this.sys.game.events.off("visible", this.handleGameVisible, this);
+      document.removeEventListener(
+        "visibilitychange",
+        this.handleVisibilityChange,
+      );
+      window.removeEventListener("focus", this.handleWindowFocus);
+      window.removeEventListener("blur", this.handleWindowBlur);
+    });
+  }
+
+  private handleGameBlur = (): void => {
+    // Game lost focus - pause if needed
+    this.updateGamePauseState();
+  };
+
+  private handleGameFocus = (): void => {
+    // Game regained focus - unpause if appropriate
+    this.updateGamePauseState();
+  };
+
+  private handleGameHidden = (): void => {
+    // Game is hidden (tab switched, minimized, etc.) - pause
+    this.updateGamePauseState();
+  };
+
+  private handleGameVisible = (): void => {
+    // Game is visible again - unpause if appropriate
+    this.updateGamePauseState();
+  };
+
+  private handleVisibilityChange = (): void => {
+    // Document visibility changed - check if we should pause/unpause
+    this.updateGamePauseState();
+  };
+
+  private handleWindowFocus = (): void => {
+    // Window gained focus - check if we should unpause
+    this.updateGamePauseState();
+  };
+
+  private handleWindowBlur = (): void => {
+    // Window lost focus - pause
+    this.updateGamePauseState();
+  };
+
+  private updateGamePauseState(): void {
+    // Determine if game should be paused based on visibility and focus
+    const shouldPause = !this.isGameActive();
+
+    if (shouldPause) {
+      // Pause the scene's time and physics
+      this.scene.pause();
+    } else {
+      // Resume the scene
+      this.scene.resume();
+    }
+  }
+
+  private isGameActive(): boolean {
+    // Game is active when:
+    // - Document is visible
+    // - Window/tab has focus
+    // - Game is focused (Phaser internal state)
+    return (
+      document.visibilityState === "visible" &&
+      document.hasFocus() &&
+      this.game.hasFocus
+    );
   }
 }
