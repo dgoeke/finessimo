@@ -48,6 +48,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private readonly outlineCache = new Map<string, OutlinePath>();
   private gridCanvas?: OffscreenCanvas;
   private gridCtx?: OffscreenCanvasRenderingContext2D;
+  // Quick vertical tween for +1 cell gravity/soft-drop steps (UI-only)
+  private tweenStartTick: number | undefined;
+  private tweenMagnitudeCells: number | undefined;
+  private readonly tweenDurationTicks = 3; // ~33ms at 60Hz
   private lastRenderState?: {
     active: GameState["active"];
     board: GameState["board"];
@@ -92,10 +96,44 @@ export class GameBoard extends SignalWatcher(LitElement) {
       overlays: renderModel.overlays,
     };
 
+    // Detect motion to start short tweens (soft-drop only)
+    if (this.lastRenderState) {
+      const prevActive = this.lastRenderState.active;
+      const nextActive = currentRenderState.active;
+      if (!prevActive || !nextActive) {
+        this.resetTweens();
+      } else {
+        this.updateVerticalTween(
+          prevActive,
+          nextActive,
+          currentRenderState.tick,
+        );
+      }
+    }
+
     // Only re-render if the relevant state has actually changed
     if (this.hasStateChanged(currentRenderState)) {
       this.renderGameBoard(gameState, renderModel);
       this.lastRenderState = currentRenderState;
+    }
+  }
+
+  // Reset vertical tween
+  private resetTweens(): void {
+    this.tweenStartTick = undefined;
+    this.tweenMagnitudeCells = undefined;
+  }
+
+  // Start/adjust vertical tween for soft drop only
+  private updateVerticalTween(
+    prev: ActivePiece,
+    next: ActivePiece,
+    tick: number,
+  ): void {
+    const dy = gridCoordAsNumber(next.y) - gridCoordAsNumber(prev.y);
+    if (dy >= 1) {
+      this.tweenStartTick = tick;
+      this.tweenMagnitudeCells = Math.min(dy, 3);
     }
   }
 
@@ -176,7 +214,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Render active piece (active piece is not an overlay, always renders on top)
     if (gameState.active) {
-      this.renderActivePiece(gameState.active);
+      this.renderActivePiece(gameState.active, gameState.tick);
     }
   }
 
@@ -487,7 +525,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     }
   }
 
-  private renderActivePiece(piece: ActivePiece): void {
+  private renderActivePiece(piece: ActivePiece, tick: number): void {
     if (!this.ctx) return;
 
     const shape = PIECES[piece.id];
@@ -495,22 +533,77 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     this.ctx.fillStyle = shape.color;
 
+    const yOffsetPx = this.computeVerticalOffsetPx(tick);
+    const offsetYCells = yOffsetPx / this.cellSize;
+    const offsetXCells = 0;
+    const isTweeningVertically =
+      this.tweenStartTick !== undefined &&
+      tick - this.tweenStartTick >= 0 &&
+      tick - this.tweenStartTick < this.tweenDurationTicks;
+
     for (const [dx, dy] of cells) {
       const x = piece.x + dx;
       const y = piece.y + dy;
 
-      // Render cells that are within the board width and within range of vanish zone + visible area
-      if (
-        x >= 0 &&
-        x < this.boardWidth &&
-        y >= -this.vanishRows &&
-        y < this.visibleHeight
-      ) {
-        // Convert board y coordinate to canvas y coordinate
-        const canvasY = y + this.vanishRows;
-        this.drawCell(x, canvasY, shape.color);
+      // Render cells only if within board bounds (including vanish zone)
+      if (this.isWithinBounds(x, y)) {
+        // Convert board y coordinate to canvas y coordinate (+ fractional tween offset)
+        const canvasY = y + this.vanishRows + offsetYCells;
+        const canvasX = x + offsetXCells;
+        if (isTweeningVertically) {
+          this.drawCellSimple(canvasX, canvasY, shape.color);
+        } else {
+          this.drawCell(canvasX, canvasY, shape.color);
+        }
       }
     }
+  }
+
+  // Simplified cell draw (no stroke or edge highlights) to avoid shimmer during tween
+  private drawCellSimple(x: number, y: number, color: string): void {
+    if (!this.ctx) return;
+
+    const pixelX = x * this.cellSize;
+    const pixelY = y * this.cellSize;
+
+    const gradient = this.ctx.createLinearGradient(
+      pixelX,
+      pixelY,
+      pixelX + this.cellSize,
+      pixelY + this.cellSize,
+    );
+    gradient.addColorStop(0, lightenColor(color, 0.3));
+    gradient.addColorStop(1, darkenColor(color, 0.2));
+
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
+  }
+
+  // Helpers to keep renderActivePiece simple (reduce complexity)
+  private computeVerticalOffsetPx(tick: number): number {
+    if (this.tweenStartTick === undefined) return 0;
+    const elapsed = tick - this.tweenStartTick;
+    if (elapsed >= 0 && elapsed < this.tweenDurationTicks) {
+      const t = elapsed / this.tweenDurationTicks; // 0..1
+      const easeOutQuad = 1 - (1 - t) * (1 - t);
+      const magnitude = this.tweenMagnitudeCells ?? 1;
+      const raw = -this.cellSize * magnitude * (1 - easeOutQuad);
+      return Math.round(raw); // quantize to integer pixels to avoid shimmer
+    }
+    this.tweenStartTick = undefined;
+    this.tweenMagnitudeCells = undefined;
+    return 0;
+  }
+
+  // No horizontal tweening
+
+  private isWithinBounds(x: number, y: number): boolean {
+    return (
+      x >= 0 &&
+      x < this.boardWidth &&
+      y >= -this.vanishRows &&
+      y < this.visibleHeight
+    );
   }
 
   private drawCell(x: number, y: number, color: string): void {
