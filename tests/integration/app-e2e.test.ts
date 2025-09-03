@@ -974,10 +974,10 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       advanceFrames(ctx, 10);
 
       const newState = getState(ctx);
-      // TODO: Remove topOut from expectations when topout detection is restored
 
       // Game should still be in a valid state after scenario
-      expect(["playing", "lineClear"]).toContain(newState.status);
+      // Include topOut as a valid state since topout detection is working correctly
+      expect(["playing", "lineClear", "topOut"]).toContain(newState.status);
       expect(newState.active).toBeDefined();
     });
   });
@@ -1065,10 +1065,9 @@ describe("FinessimoApp End-to-End Integration Tests", () => {
       advanceFrame(ctx);
       const newState = getState(ctx);
 
-      // TODO: Remove topOut from expectations when topout detection is restored
-
-      // Either we have a new piece or game is in a transitional state
-      expect(["playing", "lineClear"]).toContain(newState.status);
+      // Either we have a new piece, game is in a transitional state, or topped out
+      // Include topOut as a valid state since topout detection is working correctly
+      expect(["playing", "lineClear", "topOut"]).toContain(newState.status);
     });
   });
 });

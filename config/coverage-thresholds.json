@@ -24,10 +24,17 @@
     "lines": 100
   },
   "src/core/rng.ts": {
+<<<<<<< HEAD
     "statements": 94,
     "branches": 80,
     "functions": 81,
     "lines": 94
+=======
+    "statements": 98,
+    "branches": 80,
+    "functions": 90,
+    "lines": 98
+>>>>>>> 779fb14 (Add unit tests for viewport rendering and brands-render types)
   },
   "src/core/spawning.ts": {
     "statements": 100,
@@ -132,10 +139,17 @@
     "lines": 95
   },
   "src/engine/ui/effects.ts": {
+<<<<<<< HEAD
     "statements": 53,
     "branches": 25,
     "functions": 25,
     "lines": 53
+=======
+    "statements": 100,
+    "branches": 75,
+    "functions": 100,
+    "lines": 100
+>>>>>>> 779fb14 (Add unit tests for viewport rendering and brands-render types)
   },
   "src/engine/ui/overlays.ts": {
     "statements": 100,
@@ -234,10 +248,17 @@
     "lines": 100
   },
   "src/modes/spawn-service.ts": {
+<<<<<<< HEAD
     "statements": 72,
     "branches": 57,
     "functions": 75,
     "lines": 76
+=======
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+>>>>>>> 779fb14 (Add unit tests for viewport rendering and brands-render types)
   },
   "src/modes/types.ts": {
     "statements": 92,
@@ -360,10 +381,17 @@
     "lines": 100
   },
   "src/ui/types/brands-render.ts": {
+<<<<<<< HEAD
     "statements": 98,
     "branches": 100,
     "functions": 94,
     "lines": 96
+=======
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+>>>>>>> 779fb14 (Add unit tests for viewport rendering and brands-render types)
   },
   "src/ui/utils/colors.ts": {
     "statements": 100,
@@ -382,5 +410,14 @@
     "branches": 77,
     "functions": 80,
     "lines": 86
+<<<<<<< HEAD
+=======
+  },
+  "src/utils/debug.ts": {
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
+>>>>>>> 779fb14 (Add unit tests for viewport rendering and brands-render types)
   }
 }
