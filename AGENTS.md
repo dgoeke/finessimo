@@ -28,7 +28,6 @@ You have access to **MCP language server tools** that provide IDE-like capabilit
 - `mcp__language-server__hover` — inspect inferred types/docs at a position
 - `mcp__language-server__references` — list all usages of a symbol
 - `mcp__language-server__rename_symbol` — safe global rename with reference updates
-- `mcp__language-server__edit_file` — apply minimal line-scoped edits
 
 **Rules (must follow)**
 1. **Default to MCP** for “where is X?”, “who uses X?”, “what type is X?”, “why is this error?” and refactors.  
@@ -46,24 +45,6 @@ You have access to **MCP language server tools** that provide IDE-like capabilit
 4) **Diff Plan** → file:lines, minimal changes, side-effect boundaries  
 5) `edit_file` → surgical, reversible edits only  
 6) `diagnostics` (and `references` if rename) → verify green
-
-**Response format (always)**
-- **Summary** — one sentence goal/outcome  
-- **Tool Trace** — bullet list of MCP calls with key params  
-- **Analysis** — what types/defs/refs revealed  
-- **Diff Plan** — file-and-line scoped plan  
-- **Edits** — apply with `edit_file` (include patch snippet)  
-- **Post-check** — results from `diagnostics`; follow-ups/tests to run
-
-> **Example (mini)**
-> - Tool Trace:  
->   - `diagnostics("src/rng.ts") → error TS2322 at 40:6`  
->   - `definition(symbol="shuffle") → src/utils/array.ts:12`  
->   - `hover(file="src/utils/array.ts", pos=12:18) → type T`  
->   - `references(symbol="shuffle") → tests + 2 call sites`  
-> - Diff Plan: Narrow generic constraint and guard undefined before swap.  
-> - Edits: `edit_file("src/utils/array.ts", lines 8–20)`  
-> - Post-check: `diagnostics(["src/utils/array.ts","src/rng.ts"]) → 0 errors`
 
 ---
 

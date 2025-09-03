@@ -4,6 +4,12 @@ Purpose: a concise, accurate inventory of every TypeScript/TSX file in `src/` wi
 
 Note: core logic is pure and functional; side effects live in input handlers and UI boundaries per DESIGN.md.
 
+## Docs
+
+- DESIGN.md: Architecture, principles, and gameplay data flow.
+- FILES.md: This file — codebase map and conventions.
+- GAMEPLAY.md: Refactor plan for `game-board.tsx` — types-first split into pure render modules (overlays, cells, grid cache, tween, viewport) and a thin orchestration component.
+
 ## Root
 
 - src/main.ts: Browser entrypoint; registers components, waits for shell, boots `FinessimoApp` and exposes it on `window`.
@@ -97,6 +103,14 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/components/piece-preview.tsx: Next queue panel; draws up to N preview tetrominoes.
 - src/ui/components/stats-panel.tsx: Aggregated stats readout (PPM/LPM, accuracy, session, placements, faults).
 - src/ui/components/settings-modal.tsx: Settings UI (timing/gameplay/finesse/controls); key‑rebinding UX.
+- src/ui/renderers/cells.ts: Pure cell rendering functions for board and active piece display (extracted from game-board.tsx).
+- src/ui/renderers/grid-cache.ts: Offscreen grid rendering cache for efficient 60Hz board drawing.
+- src/ui/renderers/outline-cache.ts: Pure outline cache implementation for efficient overlay rendering with memoized path computations.
+- src/ui/renderers/overlays.ts: Pure overlay rendering functions with exhaustive switch handling and outline cache interface (extracted from game-board.tsx).
+- src/ui/renderers/tween.ts: Pure vertical piece animation logic (TweenState, easing, smooth 60Hz tweening).
+- src/ui/renderers/viewport.ts: Pure viewport rendering functions for background and border display (extracted from game-board.tsx).
+- src/ui/types/board-render-frame.ts: Unified render frame type containing all state needed for board rendering.
+- src/ui/types/brands-render.ts: Render coordinate brands (CellSizePx, BoardViewport) and conversion helpers.
 - src/ui/utils/colors.ts: Color math/palette helpers (lighten/darken/normalize, gradients, style helpers).
 - src/ui/utils/dom.ts: Typed DOM queries for app elements (shell, board frame, settings modal).
 - src/ui/utils/outlines.ts: Pure geometry: compute perimeter edges/paths from grid cells for clean piece outlines.
@@ -104,4 +118,3 @@ Note: core logic is pure and functional; side effects live in input handlers and
 ## Utilities
 
 - src/utils/debug.ts: Opt‑in debug logging with topic filters (window/localStorage toggles).
-
