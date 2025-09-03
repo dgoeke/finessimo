@@ -253,6 +253,10 @@ export default tseslint.config(
       "no-console": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/ban-ts-comment": ["error", { "ts-ignore": false }],
+      "@typescript-eslint/unbound-method": "off", // Allow Jest mock method references
+      "@typescript-eslint/no-unsafe-assignment": "off", // Allow mock call data access
+      "@typescript-eslint/no-unsafe-member-access": "off", // Allow mock property access
+      "@typescript-eslint/restrict-plus-operands": "off", // Allow arithmetic with mock data
       // If using Vitest/Jest, consider eslint-plugin-jest and its flat config here.
     },
   },

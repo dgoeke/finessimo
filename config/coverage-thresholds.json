@@ -127,7 +127,7 @@
   },
   "src/engine/selectors/overlays.ts": {
     "statements": 91,
-    "branches": 82,
+    "branches": 83,
     "functions": 100,
     "lines": 95
   },
@@ -317,11 +317,53 @@
     "functions": 66,
     "lines": 83
   },
+  "src/ui/renderers/cells.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/renderers/grid-cache.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/renderers/outline-cache.ts": {
+    "statements": 92,
+    "branches": 75,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/renderers/overlays.ts": {
+    "statements": 98,
+    "branches": 92,
+    "functions": 100,
+    "lines": 98
+  },
+  "src/ui/renderers/tween.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/renderers/viewport.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/ui/types/brands-render.ts": {
+    "statements": 98,
+    "branches": 100,
+    "functions": 94,
+    "lines": 96
+  },
   "src/ui/utils/colors.ts": {
-    "statements": 76,
-    "branches": 77,
-    "functions": 66,
-    "lines": 76
+    "statements": 100,
+    "branches": 88,
+    "functions": 100,
+    "lines": 100
   },
   "src/ui/utils/dom.ts": {
     "statements": 53,
@@ -330,15 +372,9 @@
     "lines": 53
   },
   "src/ui/utils/outlines.ts": {
-    "statements": 82,
-    "branches": 74,
-    "functions": 70,
-    "lines": 85
-  },
-  "src/utils/debug.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 84,
+    "branches": 77,
+    "functions": 80,
+    "lines": 86
   }
 }
