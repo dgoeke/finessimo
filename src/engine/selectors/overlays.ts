@@ -183,6 +183,9 @@ export function selectColumnHighlightOverlay(
   // Only active in guided mode
   if (s.currentMode !== "guided") return null;
 
+  // Check if column highlight is enabled
+  if (!(s.gameplay.guidedColumnHighlightEnabled ?? true)) return null;
+
   // Check for active piece
   if (!isPlaying(s) || !s.active) return null;
 

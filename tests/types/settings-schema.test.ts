@@ -18,6 +18,7 @@ type SchemaKeys = keyof {
   gravityMs: unknown;
   finesseCancelMs: unknown;
   ghostPieceEnabled: unknown;
+  guidedColumnHighlightEnabled: unknown;
   nextPieceCount: unknown;
   finesseFeedbackEnabled: unknown;
   finesseBoopEnabled: unknown;

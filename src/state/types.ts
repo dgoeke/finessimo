@@ -104,6 +104,7 @@ export type GameplayConfig = {
   finesseCancelMs: DurationMs; // default: 50ms
   // Visual/gameplay toggles used by UI renderers
   ghostPieceEnabled?: boolean; // default true
+  guidedColumnHighlightEnabled?: boolean; // default true - show column highlight in guided mode
   nextPieceCount?: number; // default 5 (preview count)
   holdEnabled: boolean; // required - whether hold piece functionality is available
   // Finesse toggles

@@ -23,6 +23,7 @@ export type GameSettings = {
   gravityMs: number;
   finesseCancelMs: number;
   ghostPieceEnabled: boolean;
+  guidedColumnHighlightEnabled: boolean;
   nextPieceCount: number;
 
   // Finesse settings
@@ -728,6 +729,17 @@ export class SettingsModal extends LitElement {
           <label>
             <input
               type="checkbox"
+              id="guided-column-highlight-enabled"
+              .checked=${this.currentSettings.guidedColumnHighlightEnabled}
+            />
+            Column highlight in Guided mode
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <label>
+            <input
+              type="checkbox"
               id="finesse-boop-enabled"
               .checked=${this.currentSettings.finesseBoopEnabled}
             />
@@ -1018,6 +1030,13 @@ export class SettingsModal extends LitElement {
     if (finesseFeedbackInput)
       newSettings.finesseFeedbackEnabled = finesseFeedbackInput.checked;
 
+    const guidedColumnHighlightInput = this.querySelector<HTMLInputElement>(
+      "#guided-column-highlight-enabled",
+    );
+    if (guidedColumnHighlightInput)
+      newSettings.guidedColumnHighlightEnabled =
+        guidedColumnHighlightInput.checked;
+
     const finesseBoopInput = this.querySelector<HTMLInputElement>(
       "#finesse-boop-enabled",
     );
@@ -1065,6 +1084,7 @@ export class SettingsModal extends LitElement {
       ghostPieceEnabled: true,
       gravityEnabled: true,
       gravityMs: 750,
+      guidedColumnHighlightEnabled: true,
       lineClearDelayMs: 125,
       lockDelayMs: 500,
       mode: "guided",
@@ -1121,6 +1141,8 @@ export class SettingsModal extends LitElement {
     // Gameplay settings
     gravityEnabled: (v: unknown): v is boolean => typeof v === "boolean",
     gravityMs: (v: unknown): v is number => typeof v === "number" && v >= 0,
+    guidedColumnHighlightEnabled: (v: unknown): v is boolean =>
+      typeof v === "boolean",
     // Controls (handled separately in loadStoreFromStorage)
     keyBindings: (_v: unknown): _v is never => false, // Skip - handled separately
     lineClearDelayMs: (v: unknown): v is number =>
@@ -1220,6 +1242,8 @@ export class SettingsModal extends LitElement {
       ghostPieceEnabled: gameState.gameplay.ghostPieceEnabled ?? true,
       gravityEnabled: gameState.timing.gravityEnabled,
       gravityMs: gameState.timing.gravityMs,
+      guidedColumnHighlightEnabled:
+        gameState.gameplay.guidedColumnHighlightEnabled ?? true,
       lineClearDelayMs: gameState.timing.lineClearDelayMs,
       lockDelayMs: gameState.timing.lockDelayMs,
       mode: maybeMode,
