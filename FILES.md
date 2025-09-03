@@ -15,6 +15,7 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/main.ts: Browser entrypoint; registers components, waits for shell, boots `FinessimoApp` and exposes it on `window`.
 - src/app.ts: App orchestrator; 60 Hz loop, reducer/dispatch wiring, lock pipeline, mode/UI adapter hooks, settings integration.
 - src/global.d.ts: Ambient typing for `window.finessimoApp`.
+- src/persistence/settings.ts: LocalStorage adapter for settings; loads/saves and serializes from engine state to persisted store.
 
 ## Types
 
@@ -109,7 +110,6 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/components/settings/slider.tsx: Interactive slider with drag gestures, inline editing, and branded value types.
 - src/ui/components/settings/button.tsx: Flat button component with primary/danger/default variants.
 - src/ui/components/keybinding-modal.tsx: Modal for configuring key bindings; keyboard event capture during rebinding with proper event isolation.
-- src/ui/components/settings-modal.tsx: Settings UI (timing/gameplay/finesse/controls); key‑rebinding UX.
 - src/ui/renderers/cells.ts: Pure cell rendering functions for board and active piece display (extracted from game-board.tsx).
 - src/ui/renderers/grid-cache.ts: Offscreen grid rendering cache for efficient 60Hz board drawing.
 - src/ui/renderers/outline-cache.ts: Pure outline cache implementation for efficient overlay rendering with memoized path computations.

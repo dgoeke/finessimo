@@ -2,8 +2,6 @@
  * Typed DOM query utilities to centralize and type-safe DOM access
  */
 
-import type { SettingsModal } from "../components/settings-modal";
-
 /**
  * Type-safe querySelector for custom elements with known types
  */
@@ -12,10 +10,10 @@ export function queryCustomElement(selector: string): Element | null {
 }
 
 /**
- * Get settings modal element with proper typing
+ * Get settings view element with proper typing
  */
-export function getSettingsModal(): SettingsModal | null {
-  return document.querySelector("settings-modal");
+export function getSettingsView(): Element | null {
+  return document.querySelector("settings-view");
 }
 
 /**

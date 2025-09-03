@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
-    "statements": 83,
-    "branches": 69,
-    "functions": 78,
-    "lines": 86
+    "statements": 77,
+    "branches": 66,
+    "functions": 74,
+    "lines": 78
   },
   "src/core/board.ts": {
     "statements": 99,
@@ -186,10 +186,10 @@
     "lines": 100
   },
   "src/input/keyboard.ts": {
-    "statements": 90,
+    "statements": 89,
     "branches": 80,
-    "functions": 90,
-    "lines": 96
+    "functions": 85,
+    "lines": 95
   },
   "src/input/touch.ts": {
     "statements": 54,
@@ -268,6 +268,12 @@
     "branches": 95,
     "functions": 100,
     "lines": 100
+  },
+  "src/persistence/settings.ts": {
+    "statements": 89,
+    "branches": 74,
+    "functions": 100,
+    "lines": 96
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 97,

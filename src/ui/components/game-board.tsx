@@ -4,6 +4,12 @@ import { customElement, query } from "lit/decorators.js";
 
 import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
+import {
+  BOARD_WIDTH,
+  TOTAL_HEIGHT,
+  VISIBLE_HEIGHT,
+  VANISH_ROWS,
+} from "../../state/types";
 import { renderBoardCells, renderActivePieceCells } from "../renderers/cells";
 import { createGridCache } from "../renderers/grid-cache";
 import { createOutlineCache } from "../renderers/outline-cache";
@@ -50,10 +56,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
   @query("canvas") private canvas!: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | undefined;
   private readonly cellSize = 30;
-  private readonly boardWidth = 10;
-  private readonly visibleHeight = 20; // visible play area (rows 0-19)
-  private readonly vanishRows = 2; // vanish zone (rows -2 to -1)
-  private readonly totalHeight = 22; // total canvas height including vanish zone
+  private readonly boardWidth = BOARD_WIDTH; // 10
+  private readonly visibleHeight = VISIBLE_HEIGHT; // rows 0..19
+  private readonly vanishRows = VANISH_ROWS; // rows -3..-1
+  private readonly totalHeight = TOTAL_HEIGHT; // 23
 
   // Phase 1: Branded viewport configuration
   private readonly viewport: BoardViewport = {

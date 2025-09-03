@@ -8,7 +8,7 @@ import "./piece-hold";
 import "./piece-preview";
 import "./stats-panel";
 import "./tabbed-panel";
-import "./settings-modal";
+import "./settings-view";
 import "./keybinding-modal";
 
 @customElement("finessimo-shell")
@@ -44,9 +44,6 @@ export class FinessimoShell extends LitElement {
 
       <!-- Finesse overlay positioned as fixed overlay -->
       <finesse-overlay></finesse-overlay>
-
-      <!-- Settings modal overlay -->
-      <settings-modal></settings-modal>
 
       <!-- Keybinding modal overlay -->
       <keybinding-modal></keybinding-modal>

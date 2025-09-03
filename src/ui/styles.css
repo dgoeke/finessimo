@@ -835,68 +835,7 @@ body.touch-active .app.shell {
   flex-direction: column;
 }
 
-/* Help icon + tooltip */
-.mode-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.help-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--text-dim, #9aa3b2);
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-dim, #9aa3b2);
-  position: relative;
-}
-
-.help-icon:hover {
-  border-color: var(--accent, #22d3ee);
-  color: var(--accent, #22d3ee);
-}
-
-.finessimo-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 100%;
-  margin-left: 8px;
-  background: var(--bg-elev-1, #1a1d23);
-  border: 1px solid var(--border, #333);
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text, #e7eaf0);
-  white-space: nowrap;
-  z-index: 1001;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.1s ease-in-out;
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.3));
-  transform: translate(-10px, 10px);
-}
-
-.finessimo-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  border: 6px solid transparent;
-  border-top-color: var(--bg-elev-1, #1a1d23);
-}
-
-.help-icon:hover .finessimo-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transition-delay: 0.1s;
-}
+/* Help icon + tooltip (legacy from settings-modal) removed */
 
 .settings-header {
   display: flex;
