@@ -34,6 +34,7 @@ export const defaultGameplayConfig: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
   finesseFeedbackEnabled: true,
   ghostPieceEnabled: true,
+  guidedColumnHighlightEnabled: true,
   holdEnabled: true,
   nextPieceCount: 5,
   retryOnFinesseError: false,

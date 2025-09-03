@@ -715,6 +715,9 @@ export class FinessimoApp {
       gameplay.finesseCancelMs = createDurationMs(newSettings.finesseCancelMs);
     if (newSettings.ghostPieceEnabled !== undefined)
       gameplay.ghostPieceEnabled = newSettings.ghostPieceEnabled;
+    if (newSettings.guidedColumnHighlightEnabled !== undefined)
+      gameplay.guidedColumnHighlightEnabled =
+        newSettings.guidedColumnHighlightEnabled;
     if (newSettings.nextPieceCount !== undefined)
       gameplay.nextPieceCount = newSettings.nextPieceCount;
     if (newSettings.finesseFeedbackEnabled !== undefined)

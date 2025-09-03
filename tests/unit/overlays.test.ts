@@ -189,6 +189,24 @@ describe("overlays.ts", () => {
         expect(overlay.columns.length).toBeGreaterThan(0);
       }
     });
+
+    it("should return null when column highlight is disabled", () => {
+      const guidedStateWithDisabledHighlight: GameState = createTestGameState(
+        {
+          currentMode: "guided",
+          gameplay: {
+            ...basePlayingState.gameplay,
+            guidedColumnHighlightEnabled: false,
+          },
+        },
+        { active: mockActivePiece },
+      );
+
+      const overlay = selectColumnHighlightOverlay(
+        guidedStateWithDisabledHighlight,
+      );
+      expect(overlay).toBeNull();
+    });
   });
 
   describe("selectDerivedOverlays", () => {
