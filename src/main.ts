@@ -8,7 +8,7 @@ import "./ui/components/finesse-overlay.tsx";
 import "./ui/components/piece-hold.tsx";
 import "./ui/components/piece-preview.tsx";
 import "./ui/components/stats-panel.tsx";
-import "./ui/components/settings-modal.tsx";
+import "./ui/components/settings-view.tsx";
 
 // Main entry point
 function main(): void {

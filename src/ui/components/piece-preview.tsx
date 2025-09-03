@@ -127,7 +127,7 @@ export class PiecePreview extends SignalWatcher(LitElement) {
     displayCount: number,
   ): void {
     const actualDisplayCount = Math.max(
-      1,
+      0,
       Math.min(this.previewCount, Math.floor(displayCount)),
     );
     const count = Math.min(

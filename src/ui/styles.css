@@ -835,68 +835,7 @@ body.touch-active .app.shell {
   flex-direction: column;
 }
 
-/* Help icon + tooltip */
-.mode-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.help-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--text-dim, #9aa3b2);
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-dim, #9aa3b2);
-  position: relative;
-}
-
-.help-icon:hover {
-  border-color: var(--accent, #22d3ee);
-  color: var(--accent, #22d3ee);
-}
-
-.finessimo-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 100%;
-  margin-left: 8px;
-  background: var(--bg-elev-1, #1a1d23);
-  border: 1px solid var(--border, #333);
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text, #e7eaf0);
-  white-space: nowrap;
-  z-index: 1001;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.1s ease-in-out;
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.3));
-  transform: translate(-10px, 10px);
-}
-
-.finessimo-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  border: 6px solid transparent;
-  border-top-color: var(--bg-elev-1, #1a1d23);
-}
-
-.help-icon:hover .finessimo-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transition-delay: 0.1s;
-}
+/* Help icon + tooltip (legacy from settings-modal) removed */
 
 .settings-header {
   display: flex;
@@ -1108,7 +1047,7 @@ body.touch-active .app.shell {
 }
 
 .keybind-label {
-  font-weight: 500;
+  font-weight: 200;
   color: var(--text);
 }
 
@@ -1268,5 +1207,371 @@ piece-preview {
 
 /* Stats panel component */
 stats-panel {
+  display: block;
+}
+
+/* Tabbed panel component */
+tabbed-panel {
+  display: block;
+}
+
+.tabbed-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-header {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: var(--text);
+}
+
+.tab-button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.tab-content {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Settings view component */
+settings-view {
+  display: block;
+}
+
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section-title {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-row .settings-checkbox {
+  flex: none;
+  min-width: fit-content;
+}
+
+.settings-row .settings-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Settings checkbox component */
+settings-checkbox {
+  display: block;
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.settings-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-indicator {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  background: transparent;
+}
+
+.settings-checkbox.checked .checkbox-indicator {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkbox-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Settings dropdown component */
+settings-dropdown {
+  display: block;
+}
+
+.settings-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg-elev-1);
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.15s ease;
+}
+
+.dropdown-trigger:hover {
+  background: var(--bg-elev-2);
+}
+
+.dropdown-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.15s ease;
+}
+
+.settings-dropdown.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.dropdown-option {
+  width: 100%;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.dropdown-option:hover {
+  background: var(--bg-elev-1);
+}
+
+.dropdown-option.selected {
+  background: var(--primary);
+  color: white;
+}
+
+/* Settings slider component */
+settings-slider {
+  display: block;
+}
+
+.settings-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 0;
+  min-width: 0;
+}
+
+.slider-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  min-width: 60px;
+  line-height: 1.4;
+}
+
+.slider-label:empty {
+  display: none;
+}
+
+.settings-slider.no-label {
+  justify-content: flex-end;
+}
+
+.settings-slider.no-label .slider-label {
+  display: none;
+}
+
+.slider-value-container {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.slider-value {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+  user-select: none;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  white-space: nowrap;
+}
+
+.slider-value:hover {
+  background: var(--bg-elev-1);
+}
+
+.settings-slider.dragging .slider-value {
+  background: var(--primary);
+  color: white;
+  cursor: grabbing;
+}
+
+.slider-input {
+  width: 60px;
+  padding: 2px 4px;
+  background: var(--bg-elev-1);
+  border: 1px solid var(--primary);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  text-align: right;
+}
+
+.slider-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(124, 140, 251, 0.2);
+}
+
+/* Settings button component */
+settings-button {
+  display: block;
+}
+
+.settings-button {
+  width: 100%;
+  padding: 6px 12px;
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-button:hover {
+  background: var(--bg-elev-2);
+  border-color: var(--primary);
+}
+
+.settings-button.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.settings-button.primary:hover {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+}
+
+.settings-button.danger {
+  background: transparent;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.settings-button.danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.settings-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-button:disabled:hover {
+  background: var(--bg-elev-1);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Keybinding Modal Styles */
+keybinding-modal {
+  display: none;
+}
+
+keybinding-modal[visible] {
   display: block;
 }

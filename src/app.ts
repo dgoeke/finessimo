@@ -1,12 +1,14 @@
 import { type FinesseResult } from "./finesse/calculator";
 import { finesseService } from "./finesse/service";
-import { KeyboardInputHandler } from "./input/keyboard";
+import { KeyboardInputHandler, type KeyBindings } from "./input/keyboard";
+import { loadBindingsFromStorage } from "./input/keyboard";
 import { TouchInputHandler } from "./input/touch";
 import { gameModeRegistry } from "./modes";
 import { freePlayUi } from "./modes/freePlay/ui";
 import { guidedUi } from "./modes/guided/ui";
 import { runLockPipeline } from "./modes/lock-pipeline";
 import { getActiveRng, planPreviewRefill } from "./modes/spawn-service";
+import { loadSettings, saveSettings } from "./persistence/settings";
 import { reducer } from "./state/reducer";
 import { gameStateSignal } from "./state/signals";
 import {
@@ -17,11 +19,11 @@ import {
 } from "./state/types";
 import { createSeed, createDurationMs, type Seed } from "./types/brands";
 import { createTimestamp, fromNow } from "./types/timestamp";
-import { getSettingsModal } from "./ui/utils/dom";
+import { getSettingsView } from "./ui/utils/dom";
 
 import type { GameMode as IGameMode } from "./modes";
 import type { ModeUiAdapter } from "./modes/types";
-import type { GameSettings } from "./ui/components/settings-modal";
+import type { GameSettings } from "./ui/types/settings";
 
 // Type-safe mode names - must include all supported modes
 // Keep in sync with registered modes in gameModeRegistry
@@ -60,7 +62,8 @@ export class FinessimoApp {
   private gameState: GameState;
   private keyboardInputHandler: KeyboardInputHandler;
   private touchInputHandler?: TouchInputHandler;
-  private settingsModal: ReturnType<typeof getSettingsModal> = null;
+  private settingsView: Element | null = null;
+  private bootSettings: Partial<GameSettings> | null = null;
   private isRunning = false;
   private isActive = true;
   private rafId: number | null = null;
@@ -68,26 +71,13 @@ export class FinessimoApp {
   private lastFrameTime = 0;
   private readonly targetFrameTime = 1000 / 60; // 60 FPS
   private readonly INACTIVE_POLL_MS = 500;
+  private pendingModeChange: string | null = null;
 
   // Compute if the game should be actively running
   private computeActive(): boolean {
-    // Run only when tab is visible, window focused, and settings modal closed
-    // to avoid burning CPU and to pause gameplay predictably while configuring.
-    return (
-      document.visibilityState === "visible" &&
-      document.hasFocus() &&
-      !(this.settingsModal?.visible ?? false)
-    );
+    // Run only when tab is visible and window focused (legacy modal gating removed)
+    return document.visibilityState === "visible" && document.hasFocus();
   }
-
-  // Event handlers for settings modal
-  private handleSettingsOpened = (): void => {
-    this.updateActive();
-  };
-
-  private handleSettingsClosed = (): void => {
-    this.updateActive();
-  };
 
   // Event handlers for visibility and focus changes
   private handleVisibilityChange = (): void => {
@@ -268,6 +258,9 @@ export class FinessimoApp {
 
     // Initialize input handlers
     this.keyboardInputHandler.init(this.dispatch.bind(this));
+    // Load persisted keybindings before starting handlers
+    const persistedBindings = loadBindingsFromStorage();
+    this.keyboardInputHandler.setKeyBindings(persistedBindings);
     this.keyboardInputHandler.start();
 
     if (this.touchInputHandler) {
@@ -276,17 +269,21 @@ export class FinessimoApp {
       this.touchInputHandler.setStateMachineInputHandler(
         this.keyboardInputHandler.getStateMachineInputHandler(),
       );
+      this.touchInputHandler.setKeyBindings(persistedBindings);
       this.touchInputHandler.start();
     }
 
-    // Hook up settings modal so input/activity gating reflects UI state
-    this.initializeSettingsModal();
+    // Initialize settings-view listeners if available
+    this.initializeSettingsUi();
 
-    // Apply persisted settings so controls/timing are correct before first frame
-    this.applyPersistedSettings();
-
-    // Setup settings button
-    this.setupSettingsButton();
+    // Load persisted settings and apply to engine
+    const persisted = loadSettings();
+    this.bootSettings = { ...persisted, keyBindings: persistedBindings };
+    if (Object.keys(persisted).length > 0) {
+      this.handleSettingsChange(persisted);
+    }
+    // Push settings to settings-view if already connected
+    this.pushSettingsToSettingsView();
 
     // Robust focus/visibility detection ensures gameplay pauses predictably
     this.setupVisibilityListeners();
@@ -325,21 +322,15 @@ export class FinessimoApp {
 
   destroy(): void {
     this.stop();
-    // Remove settings event listeners if modal exists
-    if (this.settingsModal) {
-      this.settingsModal.removeEventListener(
-        "settings-change",
-        this.handleSettingsChangeEvent,
-      );
-      this.settingsModal.removeEventListener(
-        "settings-opened",
-        this.handleSettingsOpened,
-      );
-      this.settingsModal.removeEventListener(
-        "settings-closed",
-        this.handleSettingsClosed,
-      );
-    }
+    // Remove settings-view event listeners
+    this.removeSettingsViewListeners();
+
+    // Remove settings-view-connected listener if still active
+    document.removeEventListener(
+      "settings-view-connected",
+      this.handleSettingsViewConnected as EventListener,
+    );
+
     // Remove visibility and focus event listeners to prevent leaks
     document.removeEventListener(
       "visibilitychange",
@@ -459,6 +450,8 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
+    const wasResolvingLock = this.gameState.status === "resolvingLock";
+
     // Apply the action through the reducer
     let newState = reducer(this.gameState, action);
 
@@ -488,6 +481,17 @@ export class FinessimoApp {
     if (newState.nextQueue.length < prevQueueLen) {
       this.ensurePreviewFilled(newState);
     }
+
+    // Process any pending mode change after lock resolution completes
+    if (
+      wasResolvingLock &&
+      newState.status !== "resolvingLock" &&
+      this.pendingModeChange !== null
+    ) {
+      const pendingMode = this.pendingModeChange;
+      this.pendingModeChange = null;
+      this.applyModeChange(pendingMode);
+    }
   }
 
   // Public method to get current state (for debugging)
@@ -497,6 +501,21 @@ export class FinessimoApp {
 
   // Public method to change game mode
   setGameMode(modeName: string): void {
+    const mode = gameModeRegistry.get(modeName);
+    if (!mode) return;
+
+    // If the game is currently resolving a lock, defer the mode change
+    // to avoid race conditions with the lock pipeline
+    if (this.gameState.status === "resolvingLock") {
+      this.pendingModeChange = modeName;
+      return;
+    }
+
+    this.applyModeChange(modeName);
+  }
+
+  // Internal method to actually apply the mode change
+  private applyModeChange(modeName: string): void {
     const mode = gameModeRegistry.get(modeName);
     if (!mode) return;
 
@@ -575,54 +594,64 @@ export class FinessimoApp {
     this.updateActive();
   }
 
-  // Initialize settings modal and event handling
-  private initializeSettingsModal(): void {
-    this.settingsModal = getSettingsModal();
-    if (this.settingsModal) {
-      this.settingsModal.addEventListener(
-        "settings-change",
-        this.handleSettingsChangeEvent,
-      );
-      this.settingsModal.addEventListener(
-        "settings-opened",
-        this.handleSettingsOpened,
-      );
-      this.settingsModal.addEventListener(
-        "settings-closed",
-        this.handleSettingsClosed,
+  // Initialize settings-view event handling
+  private initializeSettingsUi(): void {
+    // Initialize settings-view integration - listen for when it becomes available
+    this.settingsView = getSettingsView();
+    if (this.settingsView) {
+      this.setupSettingsViewListeners();
+    } else {
+      // Listen for settings-view to become available
+      document.addEventListener(
+        "settings-view-connected",
+        this.handleSettingsViewConnected as EventListener,
       );
     }
   }
 
-  // Apply persisted settings on startup
-  private applyPersistedSettings(): void {
-    if (!this.settingsModal) return;
+  private setupSettingsViewListeners(): void {
+    if (!this.settingsView) return;
 
-    try {
-      const initialSettings = this.settingsModal.getCurrentSettings();
-      const initialKeyBindings = this.settingsModal.getCurrentKeyBindings();
-      const toApply: Partial<GameSettings> = {
-        ...initialSettings,
-        keyBindings: initialKeyBindings,
-      };
-      this.handleSettingsChange(toApply);
-      // Prime the input handler timing with the current game state's timing
-      this.keyboardInputHandler.applyTiming(this.gameState.timing);
-    } catch {
-      /* ignore persisted settings errors */
-    }
+    this.settingsView.addEventListener(
+      "update-timing",
+      this.handleUpdateTiming as EventListener,
+    );
+    this.settingsView.addEventListener(
+      "update-gameplay",
+      this.handleUpdateGameplay as EventListener,
+    );
+    this.settingsView.addEventListener(
+      "set-mode",
+      this.handleSetMode as EventListener,
+    );
+    this.settingsView.addEventListener(
+      "update-keybindings",
+      this.handleUpdateKeybindings as EventListener,
+    );
+
+    // Send initial settings snapshot to the settings view for UI consistency
+    this.pushSettingsToSettingsView();
   }
 
-  // Setup settings button handler
-  private setupSettingsButton(): void {
-    const settingsButton = document.getElementById("open-settings");
-    if (settingsButton) {
-      settingsButton.addEventListener("click", () => {
-        if (this.settingsModal) {
-          this.settingsModal.show();
-        }
-      });
-    }
+  private removeSettingsViewListeners(): void {
+    if (!this.settingsView) return;
+
+    this.settingsView.removeEventListener(
+      "update-timing",
+      this.handleUpdateTiming as EventListener,
+    );
+    this.settingsView.removeEventListener(
+      "update-gameplay",
+      this.handleUpdateGameplay as EventListener,
+    );
+    this.settingsView.removeEventListener(
+      "set-mode",
+      this.handleSetMode as EventListener,
+    );
+    this.settingsView.removeEventListener(
+      "update-keybindings",
+      this.handleUpdateKeybindings as EventListener,
+    );
   }
 
   // Setup focus and visibility change listeners
@@ -638,10 +667,55 @@ export class FinessimoApp {
     window.addEventListener("pagehide", this.handlePageHide);
   }
 
-  // Event handler for settings-change events from the Lit component
-  private handleSettingsChangeEvent = (event: Event): void => {
-    const customEvent = event as CustomEvent<Partial<GameSettings>>;
-    this.handleSettingsChange(customEvent.detail);
+  // settings-modal removed; no generic settings-change handler needed
+
+  // Event handlers for settings-view direct game engine events
+  private handleUpdateTiming = (
+    event: CustomEvent<Partial<TimingConfig>>,
+  ): void => {
+    // Debug: console.log("App received update-timing:", event.detail);
+    this.dispatch({ timing: event.detail, type: "UpdateTiming" });
+    this.persistAllSettings();
+  };
+
+  private handleUpdateGameplay = (
+    event: CustomEvent<Partial<GameplayConfig>>,
+  ): void => {
+    // Debug: console.log("App received update-gameplay:", event.detail);
+    this.dispatch({ gameplay: event.detail, type: "UpdateGameplay" });
+    this.persistAllSettings();
+  };
+
+  private handleSetMode = (event: CustomEvent<string>): void => {
+    // Debug: console.log("App received set-mode:", event.detail);
+    this.setGameMode(event.detail);
+    this.persistAllSettings();
+  };
+
+  private handleUpdateKeybindings = (event: CustomEvent<KeyBindings>): void => {
+    // Debug: console.log("App received update-keybindings:", event.detail);
+    this.keyboardInputHandler.setKeyBindings(event.detail);
+    if (this.touchInputHandler) {
+      this.touchInputHandler.setKeyBindings(event.detail);
+    }
+    this.persistAllSettings();
+  };
+
+  private handleSettingsViewConnected = (
+    event: CustomEvent<{ settingsView?: Element }>,
+  ): void => {
+    const settingsView = event.detail.settingsView;
+    if (settingsView) {
+      this.settingsView = settingsView;
+      this.setupSettingsViewListeners();
+      // Remove the listener since we found the settings-view
+      document.removeEventListener(
+        "settings-view-connected",
+        this.handleSettingsViewConnected as EventListener,
+      );
+      // Push initial settings after connecting
+      this.pushSettingsToSettingsView();
+    }
   };
 
   // Helper method to spawn the appropriate piece based on current mode
@@ -659,6 +733,25 @@ export class FinessimoApp {
     this.dispatch({ timestampMs: now, type: "Spawn" });
   }
 
+  private pushSettingsToSettingsView(): void {
+    if (!this.settingsView || !this.bootSettings) return;
+    const target = this.settingsView as unknown as {
+      applySettings?: (s: Partial<GameSettings>) => void;
+    };
+    if (typeof target.applySettings === "function") {
+      target.applySettings(this.bootSettings);
+    }
+  }
+
+  private persistAllSettings(): void {
+    try {
+      const bindings = this.keyboardInputHandler.getKeyBindings();
+      saveSettings(this.gameState, bindings);
+    } catch {
+      // ignore persistence errors
+    }
+  }
+
   // Maintain preview queue length using mode-owned RNG
   private ensurePreviewFilled(state: GameState = this.gameState): void {
     const mode = gameModeRegistry.get(state.currentMode);
@@ -674,7 +767,7 @@ export class FinessimoApp {
   }
 
   // Handle settings changes
-  private handleSettingsChange(newSettings: Partial<GameSettings>): void {
+  handleSettingsChange(newSettings: Partial<GameSettings>): void {
     this.updateTimingSettings(newSettings);
     this.updateGameplaySettings(newSettings);
     this.updateKeyBindings(newSettings);

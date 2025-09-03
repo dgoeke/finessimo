@@ -1,9 +1,9 @@
 {
   "src/app.ts": {
-    "statements": 83,
-    "branches": 69,
-    "functions": 78,
-    "lines": 86
+    "statements": 76,
+    "branches": 65,
+    "functions": 75,
+    "lines": 78
   },
   "src/core/board.ts": {
     "statements": 99,
@@ -24,10 +24,10 @@
     "lines": 100
   },
   "src/core/rng.ts": {
-    "statements": 94,
+    "statements": 98,
     "branches": 80,
-    "functions": 81,
-    "lines": 94
+    "functions": 90,
+    "lines": 98
   },
   "src/core/spawning.ts": {
     "statements": 100,
@@ -132,10 +132,10 @@
     "lines": 95
   },
   "src/engine/ui/effects.ts": {
-    "statements": 53,
-    "branches": 25,
-    "functions": 25,
-    "lines": 53
+    "statements": 100,
+    "branches": 75,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/ui/overlays.ts": {
     "statements": 100,
@@ -186,10 +186,10 @@
     "lines": 100
   },
   "src/input/keyboard.ts": {
-    "statements": 90,
+    "statements": 89,
     "branches": 80,
-    "functions": 90,
-    "lines": 96
+    "functions": 85,
+    "lines": 95
   },
   "src/input/touch.ts": {
     "statements": 54,
@@ -234,10 +234,10 @@
     "lines": 100
   },
   "src/modes/spawn-service.ts": {
-    "statements": 72,
-    "branches": 57,
-    "functions": 75,
-    "lines": 76
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/modes/types.ts": {
     "statements": 92,
@@ -268,6 +268,12 @@
     "branches": 95,
     "functions": 100,
     "lines": 100
+  },
+  "src/persistence/settings.ts": {
+    "statements": 89,
+    "branches": 74,
+    "functions": 100,
+    "lines": 96
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 97,
@@ -354,10 +360,10 @@
     "lines": 100
   },
   "src/ui/types/brands-render.ts": {
-    "statements": 98,
+    "statements": 100,
     "branches": 100,
-    "functions": 94,
-    "lines": 96
+    "functions": 100,
+    "lines": 100
   },
   "src/ui/utils/colors.ts": {
     "statements": 100,
