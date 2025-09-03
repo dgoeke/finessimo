@@ -58,7 +58,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private readonly cellSize = 30;
   private readonly boardWidth = BOARD_WIDTH; // 10
   private readonly visibleHeight = VISIBLE_HEIGHT; // rows 0..19
-  private readonly vanishRows = VANISH_ROWS; // rows -3..-1
+  private readonly vanishRows = VANISH_ROWS - 1; // we intentionally don't render the top vanish row
   private readonly totalHeight = TOTAL_HEIGHT; // 23
 
   // Phase 1: Branded viewport configuration

@@ -71,6 +71,7 @@ export class FinessimoApp {
   private lastFrameTime = 0;
   private readonly targetFrameTime = 1000 / 60; // 60 FPS
   private readonly INACTIVE_POLL_MS = 500;
+  private pendingModeChange: string | null = null;
 
   // Compute if the game should be actively running
   private computeActive(): boolean {
@@ -449,6 +450,8 @@ export class FinessimoApp {
   }
 
   private dispatch(action: Action): void {
+    const wasResolvingLock = this.gameState.status === "resolvingLock";
+
     // Apply the action through the reducer
     let newState = reducer(this.gameState, action);
 
@@ -478,6 +481,17 @@ export class FinessimoApp {
     if (newState.nextQueue.length < prevQueueLen) {
       this.ensurePreviewFilled(newState);
     }
+
+    // Process any pending mode change after lock resolution completes
+    if (
+      wasResolvingLock &&
+      newState.status !== "resolvingLock" &&
+      this.pendingModeChange !== null
+    ) {
+      const pendingMode = this.pendingModeChange;
+      this.pendingModeChange = null;
+      this.applyModeChange(pendingMode);
+    }
   }
 
   // Public method to get current state (for debugging)
@@ -487,6 +501,21 @@ export class FinessimoApp {
 
   // Public method to change game mode
   setGameMode(modeName: string): void {
+    const mode = gameModeRegistry.get(modeName);
+    if (!mode) return;
+
+    // If the game is currently resolving a lock, defer the mode change
+    // to avoid race conditions with the lock pipeline
+    if (this.gameState.status === "resolvingLock") {
+      this.pendingModeChange = modeName;
+      return;
+    }
+
+    this.applyModeChange(modeName);
+  }
+
+  // Internal method to actually apply the mode change
+  private applyModeChange(modeName: string): void {
     const mode = gameModeRegistry.get(modeName);
     if (!mode) return;
 

@@ -518,7 +518,7 @@ export class SettingsView extends LitElement {
           label="# Next Pieces"
           .value=${this.settings.gameplay.nextPieceCount ?? 5}
           .min=${0}
-          .max=${7}
+          .max=${5}
           .step=${1}
           unit=""
           @slider-change=${this.handlePreviewCountChange}
