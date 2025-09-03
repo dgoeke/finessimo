@@ -117,10 +117,62 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Get current state from the signal (reactive subscription)
     const gameState = gameStateSignal.get();
-    const boardState = stateSelectors.getBoardState(gameState);
-    const renderModel = selectBoardRenderModel(gameState);
 
-    // Phase 1: Build typed render frame (type-level only for now)
+    // Only recompute selectors if state has actually changed to avoid unnecessary work
+    let boardState: ReturnType<typeof stateSelectors.getBoardState>;
+    let renderModel: ReturnType<typeof selectBoardRenderModel>;
+    let currentRenderState: {
+      active: GameState["active"];
+      board: GameState["board"];
+      overlays: ReadonlyArray<RenderOverlay>;
+      tick: GameState["tick"];
+    };
+
+    if (!this.lastRenderState) {
+      // First render - always compute state
+      boardState = stateSelectors.getBoardState(gameState);
+      renderModel = selectBoardRenderModel(gameState);
+      currentRenderState = {
+        active: boardState.active,
+        board: boardState.board,
+        overlays: renderModel.overlays,
+        tick: boardState.tick,
+      };
+    } else {
+      // For subsequent renders, first do a quick check if tick changed
+      const quickState = {
+        active: gameState.active,
+        board: gameState.board,
+        // Use empty array as placeholder for overlays comparison
+        overlays: [] as ReadonlyArray<RenderOverlay>,
+        tick: gameState.tick,
+      };
+
+      if (this.hasStateChanged(quickState)) {
+        // State changed - recompute selectors
+        boardState = stateSelectors.getBoardState(gameState);
+        renderModel = selectBoardRenderModel(gameState);
+        currentRenderState = {
+          active: boardState.active,
+          board: boardState.board,
+          overlays: renderModel.overlays,
+          tick: boardState.tick,
+        };
+      } else {
+        // State hasn't changed - reuse previous computed values for rendering
+        boardState = {
+          active: this.lastRenderState.active,
+          board: this.lastRenderState.board,
+          tick: this.lastRenderState.tick,
+        } as ReturnType<typeof stateSelectors.getBoardState>;
+        renderModel = { overlays: this.lastRenderState.overlays } as ReturnType<
+          typeof selectBoardRenderModel
+        >;
+        currentRenderState = this.lastRenderState;
+      }
+    }
+
+    // Phase 1: Build typed render frame
     const renderFrame: BoardRenderFrame = {
       active: boardState.active,
       board: boardState.board,
@@ -128,14 +180,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
       tick: boardState.tick,
       viewport: this.viewport,
     } as const;
-
-    // Combine board state with overlay data for change detection
-    const currentRenderState = {
-      active: boardState.active,
-      board: boardState.board,
-      overlays: renderModel.overlays,
-      tick: boardState.tick,
-    };
 
     // Update tween state using pure functions
     if (this.lastRenderState) {
@@ -151,10 +195,11 @@ export class GameBoard extends SignalWatcher(LitElement) {
       );
     }
 
-    // Only re-render if the relevant state has actually changed
+    // Always render the canvas to support animations and ensure visual consistency
+    this.renderGameBoard(renderFrame);
+
+    // Update lastRenderState only if state actually changed
     if (this.hasStateChanged(currentRenderState)) {
-      // Render using the complete render frame
-      this.renderGameBoard(renderFrame);
       this.lastRenderState = currentRenderState;
     }
   }
@@ -193,7 +238,9 @@ export class GameBoard extends SignalWatcher(LitElement) {
   }
 
   protected render(): unknown {
-    return html`<canvas></canvas>`;
+    // Read signal to establish reactive subscription; expose tick as data attribute
+    const { tick } = gameStateSignal.get();
+    return html`<canvas data-tick=${tick}></canvas>`;
   }
 
   private renderGameBoard(renderFrame: BoardRenderFrame): void {

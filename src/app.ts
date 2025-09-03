@@ -518,10 +518,6 @@ export class FinessimoApp {
 
     // Spawn the first piece for the new mode
     this.spawnNextPiece();
-
-    // Force an immediate frame so the newly spawned piece renders right away
-    // (avoids waiting for the next scheduled Tick)
-    this.dispatch({ timestampMs: fromNow(), type: "Tick" });
   }
 
   private applyModePrompt(mode: IGameMode): void {
