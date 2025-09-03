@@ -6,7 +6,11 @@ import { PIECES } from "../../core/pieces";
 import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
 import { assertNever, idx } from "../../state/types";
-import { gridCoordAsNumber, createGridCoord } from "../../types/brands";
+import {
+  gridCoordAsNumber,
+  createGridCoord,
+  durationMsAsNumber,
+} from "../../types/brands";
 import {
   lightenColor,
   darkenColor,
@@ -48,6 +52,13 @@ export class GameBoard extends SignalWatcher(LitElement) {
   private readonly outlineCache = new Map<string, OutlinePath>();
   private gridCanvas?: OffscreenCanvas;
   private gridCtx?: OffscreenCanvasRenderingContext2D;
+  // Quick vertical tween for +1 cell gravity/soft-drop steps (UI-only)
+  private tweenStartTick: number | undefined;
+  private tweenMagnitudeCells: number | undefined;
+  private readonly tweenDurationTicks = 2; // ~33ms at 60Hz
+  // Quick horizontal tween for left/right (ARR > 0 only)
+  private tweenStartTickX: number | undefined;
+  private tweenMagnitudeCellsX: number | undefined; // signed: -left, +right
   private lastRenderState?: {
     active: GameState["active"];
     board: GameState["board"];
@@ -92,10 +103,99 @@ export class GameBoard extends SignalWatcher(LitElement) {
       overlays: renderModel.overlays,
     };
 
+    // Detect motion to start short tweens (vertical for gravity/soft-drop, horizontal for ARR>0)
+    if (this.lastRenderState) {
+      const prevActive = this.lastRenderState.active;
+      const nextActive = currentRenderState.active;
+      if (!prevActive || !nextActive) {
+        this.resetTweens();
+      } else {
+        this.updateVerticalTween(
+          prevActive,
+          nextActive,
+          currentRenderState.tick,
+          gameState,
+        );
+        this.updateHorizontalTween(
+          prevActive,
+          nextActive,
+          currentRenderState.tick,
+          gameState,
+        );
+      }
+    }
+
     // Only re-render if the relevant state has actually changed
     if (this.hasStateChanged(currentRenderState)) {
       this.renderGameBoard(gameState, renderModel);
       this.lastRenderState = currentRenderState;
+    }
+  }
+
+  // Reset both vertical and horizontal tweens
+  private resetTweens(): void {
+    this.tweenStartTick = undefined;
+    this.tweenMagnitudeCells = undefined;
+    this.tweenStartTickX = undefined;
+    this.tweenMagnitudeCellsX = undefined;
+  }
+
+  // Start/adjust vertical tween for gravity/soft drop
+  private updateVerticalTween(
+    prev: ActivePiece,
+    next: ActivePiece,
+    tick: number,
+    s: GameState,
+  ): void {
+    const dy = gridCoordAsNumber(next.y) - gridCoordAsNumber(prev.y);
+    if (dy === 1) {
+      this.tweenStartTick = tick;
+      this.tweenMagnitudeCells = 1;
+      return;
+    }
+    if (dy > 1) {
+      const isSoft = s.physics.isSoftDropping;
+      const isInfinite = s.timing.softDrop === "infinite";
+      if (isSoft && !isInfinite) {
+        this.tweenStartTick = tick;
+        this.tweenMagnitudeCells = Math.min(dy, 3);
+      } else {
+        // Hard drop or infinite soft drop – skip tween
+        this.tweenStartTick = undefined;
+        this.tweenMagnitudeCells = undefined;
+      }
+    }
+    // dy === 0 → keep any existing vertical tween running
+  }
+
+  // Start/adjust horizontal tween for ARR>0 repeats (avoid animating rotation kicks)
+  private updateHorizontalTween(
+    prev: ActivePiece,
+    next: ActivePiece,
+    tick: number,
+    s: GameState,
+  ): void {
+    const dx = gridCoordAsNumber(next.x) - gridCoordAsNumber(prev.x);
+    const dy = gridCoordAsNumber(next.y) - gridCoordAsNumber(prev.y);
+    const sameRot = prev.rot === next.rot;
+    const arrMs = durationMsAsNumber(s.timing.arrMs);
+
+    if (dx !== 0 && dy === 0 && sameRot) {
+      if (arrMs > 0) {
+        this.tweenStartTickX = tick;
+        this.tweenMagnitudeCellsX = Math.sign(dx) * Math.min(Math.abs(dx), 3);
+      } else {
+        // Instant movement policy
+        this.tweenStartTickX = undefined;
+        this.tweenMagnitudeCellsX = undefined;
+      }
+      return;
+    }
+
+    // Cancel horizontal tween on rotation kicks or diagonal moves
+    if (!sameRot || dy !== 0) {
+      this.tweenStartTickX = undefined;
+      this.tweenMagnitudeCellsX = undefined;
     }
   }
 
@@ -159,7 +259,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Render overlays first (those with z < 1, like column highlight)
     const backgroundOverlays = renderModel.overlays.filter((o) => o.z < 1);
-    this.renderOverlays(backgroundOverlays);
+    this.renderOverlays(backgroundOverlays, gameState.tick);
 
     // Render board
     this.renderBoard(gameState.board);
@@ -172,11 +272,11 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Render overlays above grid (those with z >= 1)
     const foregroundOverlays = renderModel.overlays.filter((o) => o.z >= 1);
-    this.renderOverlays(foregroundOverlays);
+    this.renderOverlays(foregroundOverlays, gameState.tick);
 
     // Render active piece (active piece is not an overlay, always renders on top)
     if (gameState.active) {
-      this.renderActivePiece(gameState.active);
+      this.renderActivePiece(gameState.active, gameState.tick);
     }
   }
 
@@ -184,7 +284,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
    * Renders all overlays in z-order using the unified overlay system.
    * Each overlay type has its own specialized rendering logic.
    */
-  private renderOverlays(overlays: ReadonlyArray<RenderOverlay>): void {
+  private renderOverlays(
+    overlays: ReadonlyArray<RenderOverlay>,
+    tick: number,
+  ): void {
     if (!this.ctx) return;
 
     for (const overlay of overlays) {
@@ -202,7 +305,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
           this.renderEffectDotOverlay(overlay);
           break;
         case "column-highlight":
-          this.renderColumnHighlightOverlay(overlay);
+          this.renderColumnHighlightOverlay(overlay, tick);
           break;
         default:
           assertNever(overlay);
@@ -374,6 +477,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
    */
   private renderColumnHighlightOverlay(
     overlay: Extract<RenderOverlay, { kind: "column-highlight" }>,
+    tick: number,
   ): void {
     if (!this.ctx) return;
 
@@ -385,10 +489,13 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.globalAlpha = intensity;
     this.ctx.fillStyle = color;
 
+    // Apply the same horizontal tween offset as the active piece to keep lockstep
+    const offsetXPx = this.computeHorizontalOffsetPx(tick);
+
     for (const column of overlay.columns) {
       // Only render columns within visible board area
       if (column >= 0 && column < this.boardWidth) {
-        const pixelX = column * this.cellSize;
+        const pixelX = column * this.cellSize + offsetXPx;
         const yOffset = this.vanishRows * this.cellSize; // Start at visible area
         const playAreaHeight = this.visibleHeight * this.cellSize;
         this.ctx.fillRect(pixelX, yOffset, this.cellSize, playAreaHeight);
@@ -487,7 +594,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
     }
   }
 
-  private renderActivePiece(piece: ActivePiece): void {
+  private renderActivePiece(piece: ActivePiece, tick: number): void {
     if (!this.ctx) return;
 
     const shape = PIECES[piece.id];
@@ -495,22 +602,57 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     this.ctx.fillStyle = shape.color;
 
+    const offsetYCells = this.computeVerticalOffsetPx(tick) / this.cellSize;
+    const offsetXCells = this.computeHorizontalOffsetPx(tick) / this.cellSize;
+
     for (const [dx, dy] of cells) {
       const x = piece.x + dx;
       const y = piece.y + dy;
 
-      // Render cells that are within the board width and within range of vanish zone + visible area
-      if (
-        x >= 0 &&
-        x < this.boardWidth &&
-        y >= -this.vanishRows &&
-        y < this.visibleHeight
-      ) {
-        // Convert board y coordinate to canvas y coordinate
-        const canvasY = y + this.vanishRows;
-        this.drawCell(x, canvasY, shape.color);
+      // Render cells only if within board bounds (including vanish zone)
+      if (this.isWithinBounds(x, y)) {
+        // Convert board y coordinate to canvas y coordinate (+ fractional tween offset)
+        const canvasY = y + this.vanishRows + offsetYCells;
+        const canvasX = x + offsetXCells;
+        this.drawCell(canvasX, canvasY, shape.color);
       }
     }
+  }
+
+  // Helpers to keep renderActivePiece simple (reduce complexity)
+  private computeVerticalOffsetPx(tick: number): number {
+    if (this.tweenStartTick === undefined) return 0;
+    const elapsed = tick - this.tweenStartTick;
+    if (elapsed >= 0 && elapsed < this.tweenDurationTicks) {
+      const progress = elapsed / this.tweenDurationTicks;
+      const magnitude = this.tweenMagnitudeCells ?? 1;
+      return -this.cellSize * magnitude * (1 - progress);
+    }
+    this.tweenStartTick = undefined;
+    this.tweenMagnitudeCells = undefined;
+    return 0;
+  }
+
+  private computeHorizontalOffsetPx(tick: number): number {
+    if (this.tweenStartTickX === undefined) return 0;
+    const elapsedX = tick - this.tweenStartTickX;
+    if (elapsedX >= 0 && elapsedX < this.tweenDurationTicks) {
+      const progressX = elapsedX / this.tweenDurationTicks;
+      const magnitudeX = this.tweenMagnitudeCellsX ?? 0;
+      return -this.cellSize * magnitudeX * (1 - progressX);
+    }
+    this.tweenStartTickX = undefined;
+    this.tweenMagnitudeCellsX = undefined;
+    return 0;
+  }
+
+  private isWithinBounds(x: number, y: number): boolean {
+    return (
+      x >= 0 &&
+      x < this.boardWidth &&
+      y >= -this.vanishRows &&
+      y < this.visibleHeight
+    );
   }
 
   private drawCell(x: number, y: number, color: string): void {
