@@ -117,4 +117,4 @@ Note: core logic is pure and functional; side effects live in input handlers and
 
 ## Utilities
 
-- src/utils/debug.ts: Opt‑in debug logging with topic filters (window/localStorage toggles).
+_(No utility files currently in this directory)_
