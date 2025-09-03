@@ -102,6 +102,13 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/components/piece-hold.tsx: Hold panel; draws held piece and disabled states.
 - src/ui/components/piece-preview.tsx: Next queue panel; draws up to N preview tetrominoes.
 - src/ui/components/stats-panel.tsx: Aggregated stats readout (PPM/LPM, accuracy, session, placements, faults).
+- src/ui/components/tabbed-panel.tsx: Container with tabs for Stats and Settings views, replaces stats-panel in finessimo-shell.
+- src/ui/components/settings-view.tsx: Settings panel with game mode, gameplay, and handling sections; conditional rendering based on mode.
+- src/ui/components/settings/checkbox.tsx: Checkbox component with color state changes and immediate event dispatch.
+- src/ui/components/settings/dropdown.tsx: Flat dropdown component with click-to-expand menu and keyboard support.
+- src/ui/components/settings/slider.tsx: Interactive slider with drag gestures, inline editing, and branded value types.
+- src/ui/components/settings/button.tsx: Flat button component with primary/danger/default variants.
+- src/ui/components/keybinding-modal.tsx: Modal for configuring key bindings; keyboard event capture during rebinding with proper event isolation.
 - src/ui/components/settings-modal.tsx: Settings UI (timing/gameplay/finesse/controls); key‑rebinding UX.
 - src/ui/renderers/cells.ts: Pure cell rendering functions for board and active piece display (extracted from game-board.tsx).
 - src/ui/renderers/grid-cache.ts: Offscreen grid rendering cache for efficient 60Hz board drawing.
@@ -111,6 +118,7 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/renderers/viewport.ts: Pure viewport rendering functions for background and border display (extracted from game-board.tsx).
 - src/ui/types/board-render-frame.ts: Unified render frame type containing all state needed for board rendering.
 - src/ui/types/brands-render.ts: Render coordinate brands (CellSizePx, BoardViewport) and conversion helpers.
+- src/ui/types/settings.ts: Settings data types with branded values (DAS, ARR, etc.), game mode definitions, keybinding support, and tab state management.
 - src/ui/utils/colors.ts: Color math/palette helpers (lighten/darken/normalize, gradients, style helpers).
 - src/ui/utils/dom.ts: Typed DOM queries for app elements (shell, board frame, settings modal).
 - src/ui/utils/outlines.ts: Pure geometry: compute perimeter edges/paths from grid cells for clean piece outlines.
