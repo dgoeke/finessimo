@@ -6,11 +6,7 @@ import { PIECES } from "../../core/pieces";
 import { selectBoardRenderModel } from "../../engine/selectors/board-render";
 import { gameStateSignal, stateSelectors } from "../../state/signals";
 import { assertNever, idx } from "../../state/types";
-import {
-  gridCoordAsNumber,
-  createGridCoord,
-  durationMsAsNumber,
-} from "../../types/brands";
+import { gridCoordAsNumber, createGridCoord } from "../../types/brands";
 import {
   lightenColor,
   darkenColor,
@@ -55,10 +51,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
   // Quick vertical tween for +1 cell gravity/soft-drop steps (UI-only)
   private tweenStartTick: number | undefined;
   private tweenMagnitudeCells: number | undefined;
-  private readonly tweenDurationTicks = 2; // ~33ms at 60Hz
-  // Quick horizontal tween for left/right (ARR > 0 only)
-  private tweenStartTickX: number | undefined;
-  private tweenMagnitudeCellsX: number | undefined; // signed: -left, +right
+  private readonly tweenDurationTicks = 3; // ~33ms at 60Hz
   private lastRenderState?: {
     active: GameState["active"];
     board: GameState["board"];
@@ -103,7 +96,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
       overlays: renderModel.overlays,
     };
 
-    // Detect motion to start short tweens (vertical for gravity/soft-drop, horizontal for ARR>0)
+    // Detect motion to start short tweens (soft-drop only)
     if (this.lastRenderState) {
       const prevActive = this.lastRenderState.active;
       const nextActive = currentRenderState.active;
@@ -114,13 +107,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
           prevActive,
           nextActive,
           currentRenderState.tick,
-          gameState,
-        );
-        this.updateHorizontalTween(
-          prevActive,
-          nextActive,
-          currentRenderState.tick,
-          gameState,
         );
       }
     }
@@ -132,70 +118,22 @@ export class GameBoard extends SignalWatcher(LitElement) {
     }
   }
 
-  // Reset both vertical and horizontal tweens
+  // Reset vertical tween
   private resetTweens(): void {
     this.tweenStartTick = undefined;
     this.tweenMagnitudeCells = undefined;
-    this.tweenStartTickX = undefined;
-    this.tweenMagnitudeCellsX = undefined;
   }
 
-  // Start/adjust vertical tween for gravity/soft drop
+  // Start/adjust vertical tween for soft drop only
   private updateVerticalTween(
     prev: ActivePiece,
     next: ActivePiece,
     tick: number,
-    s: GameState,
   ): void {
     const dy = gridCoordAsNumber(next.y) - gridCoordAsNumber(prev.y);
-    if (dy === 1) {
+    if (dy >= 1) {
       this.tweenStartTick = tick;
-      this.tweenMagnitudeCells = 1;
-      return;
-    }
-    if (dy > 1) {
-      const isSoft = s.physics.isSoftDropping;
-      const isInfinite = s.timing.softDrop === "infinite";
-      if (isSoft && !isInfinite) {
-        this.tweenStartTick = tick;
-        this.tweenMagnitudeCells = Math.min(dy, 3);
-      } else {
-        // Hard drop or infinite soft drop – skip tween
-        this.tweenStartTick = undefined;
-        this.tweenMagnitudeCells = undefined;
-      }
-    }
-    // dy === 0 → keep any existing vertical tween running
-  }
-
-  // Start/adjust horizontal tween for ARR>0 repeats (avoid animating rotation kicks)
-  private updateHorizontalTween(
-    prev: ActivePiece,
-    next: ActivePiece,
-    tick: number,
-    s: GameState,
-  ): void {
-    const dx = gridCoordAsNumber(next.x) - gridCoordAsNumber(prev.x);
-    const dy = gridCoordAsNumber(next.y) - gridCoordAsNumber(prev.y);
-    const sameRot = prev.rot === next.rot;
-    const arrMs = durationMsAsNumber(s.timing.arrMs);
-
-    if (dx !== 0 && dy === 0 && sameRot) {
-      if (arrMs > 0) {
-        this.tweenStartTickX = tick;
-        this.tweenMagnitudeCellsX = Math.sign(dx) * Math.min(Math.abs(dx), 3);
-      } else {
-        // Instant movement policy
-        this.tweenStartTickX = undefined;
-        this.tweenMagnitudeCellsX = undefined;
-      }
-      return;
-    }
-
-    // Cancel horizontal tween on rotation kicks or diagonal moves
-    if (!sameRot || dy !== 0) {
-      this.tweenStartTickX = undefined;
-      this.tweenMagnitudeCellsX = undefined;
+      this.tweenMagnitudeCells = Math.min(dy, 3);
     }
   }
 
@@ -259,7 +197,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Render overlays first (those with z < 1, like column highlight)
     const backgroundOverlays = renderModel.overlays.filter((o) => o.z < 1);
-    this.renderOverlays(backgroundOverlays, gameState.tick);
+    this.renderOverlays(backgroundOverlays);
 
     // Render board
     this.renderBoard(gameState.board);
@@ -272,7 +210,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     // Render overlays above grid (those with z >= 1)
     const foregroundOverlays = renderModel.overlays.filter((o) => o.z >= 1);
-    this.renderOverlays(foregroundOverlays, gameState.tick);
+    this.renderOverlays(foregroundOverlays);
 
     // Render active piece (active piece is not an overlay, always renders on top)
     if (gameState.active) {
@@ -284,10 +222,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
    * Renders all overlays in z-order using the unified overlay system.
    * Each overlay type has its own specialized rendering logic.
    */
-  private renderOverlays(
-    overlays: ReadonlyArray<RenderOverlay>,
-    tick: number,
-  ): void {
+  private renderOverlays(overlays: ReadonlyArray<RenderOverlay>): void {
     if (!this.ctx) return;
 
     for (const overlay of overlays) {
@@ -305,7 +240,7 @@ export class GameBoard extends SignalWatcher(LitElement) {
           this.renderEffectDotOverlay(overlay);
           break;
         case "column-highlight":
-          this.renderColumnHighlightOverlay(overlay, tick);
+          this.renderColumnHighlightOverlay(overlay);
           break;
         default:
           assertNever(overlay);
@@ -477,7 +412,6 @@ export class GameBoard extends SignalWatcher(LitElement) {
    */
   private renderColumnHighlightOverlay(
     overlay: Extract<RenderOverlay, { kind: "column-highlight" }>,
-    tick: number,
   ): void {
     if (!this.ctx) return;
 
@@ -489,13 +423,10 @@ export class GameBoard extends SignalWatcher(LitElement) {
     this.ctx.globalAlpha = intensity;
     this.ctx.fillStyle = color;
 
-    // Apply the same horizontal tween offset as the active piece to keep lockstep
-    const offsetXPx = this.computeHorizontalOffsetPx(tick);
-
     for (const column of overlay.columns) {
       // Only render columns within visible board area
       if (column >= 0 && column < this.boardWidth) {
-        const pixelX = column * this.cellSize + offsetXPx;
+        const pixelX = column * this.cellSize;
         const yOffset = this.vanishRows * this.cellSize; // Start at visible area
         const playAreaHeight = this.visibleHeight * this.cellSize;
         this.ctx.fillRect(pixelX, yOffset, this.cellSize, playAreaHeight);
@@ -602,8 +533,13 @@ export class GameBoard extends SignalWatcher(LitElement) {
 
     this.ctx.fillStyle = shape.color;
 
-    const offsetYCells = this.computeVerticalOffsetPx(tick) / this.cellSize;
-    const offsetXCells = this.computeHorizontalOffsetPx(tick) / this.cellSize;
+    const yOffsetPx = this.computeVerticalOffsetPx(tick);
+    const offsetYCells = yOffsetPx / this.cellSize;
+    const offsetXCells = 0;
+    const isTweeningVertically =
+      this.tweenStartTick !== undefined &&
+      tick - this.tweenStartTick >= 0 &&
+      tick - this.tweenStartTick < this.tweenDurationTicks;
 
     for (const [dx, dy] of cells) {
       const x = piece.x + dx;
@@ -614,9 +550,33 @@ export class GameBoard extends SignalWatcher(LitElement) {
         // Convert board y coordinate to canvas y coordinate (+ fractional tween offset)
         const canvasY = y + this.vanishRows + offsetYCells;
         const canvasX = x + offsetXCells;
-        this.drawCell(canvasX, canvasY, shape.color);
+        if (isTweeningVertically) {
+          this.drawCellSimple(canvasX, canvasY, shape.color);
+        } else {
+          this.drawCell(canvasX, canvasY, shape.color);
+        }
       }
     }
+  }
+
+  // Simplified cell draw (no stroke or edge highlights) to avoid shimmer during tween
+  private drawCellSimple(x: number, y: number, color: string): void {
+    if (!this.ctx) return;
+
+    const pixelX = x * this.cellSize;
+    const pixelY = y * this.cellSize;
+
+    const gradient = this.ctx.createLinearGradient(
+      pixelX,
+      pixelY,
+      pixelX + this.cellSize,
+      pixelY + this.cellSize,
+    );
+    gradient.addColorStop(0, lightenColor(color, 0.3));
+    gradient.addColorStop(1, darkenColor(color, 0.2));
+
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(pixelX, pixelY, this.cellSize, this.cellSize);
   }
 
   // Helpers to keep renderActivePiece simple (reduce complexity)
@@ -624,27 +584,18 @@ export class GameBoard extends SignalWatcher(LitElement) {
     if (this.tweenStartTick === undefined) return 0;
     const elapsed = tick - this.tweenStartTick;
     if (elapsed >= 0 && elapsed < this.tweenDurationTicks) {
-      const progress = elapsed / this.tweenDurationTicks;
+      const t = elapsed / this.tweenDurationTicks; // 0..1
+      const easeOutQuad = 1 - (1 - t) * (1 - t);
       const magnitude = this.tweenMagnitudeCells ?? 1;
-      return -this.cellSize * magnitude * (1 - progress);
+      const raw = -this.cellSize * magnitude * (1 - easeOutQuad);
+      return Math.round(raw); // quantize to integer pixels to avoid shimmer
     }
     this.tweenStartTick = undefined;
     this.tweenMagnitudeCells = undefined;
     return 0;
   }
 
-  private computeHorizontalOffsetPx(tick: number): number {
-    if (this.tweenStartTickX === undefined) return 0;
-    const elapsedX = tick - this.tweenStartTickX;
-    if (elapsedX >= 0 && elapsedX < this.tweenDurationTicks) {
-      const progressX = elapsedX / this.tweenDurationTicks;
-      const magnitudeX = this.tweenMagnitudeCellsX ?? 0;
-      return -this.cellSize * magnitudeX * (1 - progressX);
-    }
-    this.tweenStartTickX = undefined;
-    this.tweenMagnitudeCellsX = undefined;
-    return 0;
-  }
+  // No horizontal tweening
 
   private isWithinBounds(x: number, y: number): boolean {
     return (
