@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { live } from "lit/directives/live.js";
 
-// Game engine types
 import { defaultKeyBindings } from "../../input/keyboard";
 import { createDurationMs } from "../../types/brands";
 
@@ -463,7 +463,7 @@ export class SettingsView extends LitElement {
       <div class="settings-section">
         <settings-dropdown
           .options=${this.getGameModeOptions()}
-          .value=${this.settings.mode}
+          .value=${live(this.settings.mode)}
           @dropdown-change=${this.handleGameModeChange}
         ></settings-dropdown>
         ${this.renderGameModeSpecificSettings()}
