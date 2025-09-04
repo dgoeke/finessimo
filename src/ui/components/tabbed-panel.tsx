@@ -26,14 +26,18 @@ export class TabbedPanel extends LitElement {
           <button
             class="tab-button ${this.activeTab === "stats" ? "active" : ""}"
             @click=${(): void => this.handleTabClick("stats")}
+            aria-label="Stats"
+            title="Stats"
           >
-            Stats
+            📊
           </button>
           <button
             class="tab-button ${this.activeTab === "settings" ? "active" : ""}"
             @click=${(): void => this.handleTabClick("settings")}
+            aria-label="Settings"
+            title="Settings"
           >
-            Settings
+            ⚙️
           </button>
         </div>
 
