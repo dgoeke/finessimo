@@ -29,7 +29,7 @@ export class TabbedPanel extends LitElement {
             aria-label="Stats"
             title="Stats"
           >
-            📊
+            ▦
           </button>
           <button
             class="tab-button ${this.activeTab === "settings" ? "active" : ""}"
@@ -37,7 +37,7 @@ export class TabbedPanel extends LitElement {
             aria-label="Settings"
             title="Settings"
           >
-            ⚙️
+            ⊙
           </button>
         </div>
 
