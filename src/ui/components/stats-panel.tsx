@@ -39,9 +39,8 @@ export class StatsPanel extends LitElement {
 
     return html`
       ${this.renderPerformanceSection(stats)}
-      ${this.renderAccuracySection(stats)} ${this.renderSessionSection(stats)}
-      ${this.renderPlacementSection(stats)}
-      ${this.renderLineClearSection(stats)} ${this.renderFaultsSection(stats)}
+      ${this.renderAccuracySection(stats)} ${this.renderPlacementSection(stats)}
+      ${this.renderLineClearSection(stats)}
     `;
   }
 
@@ -99,30 +98,6 @@ export class StatsPanel extends LitElement {
     `;
   }
 
-  private renderSessionSection(stats: GameState["stats"]): unknown {
-    return html`
-      <div class="stat-section session">
-        <h4>Session</h4>
-        <div class="stat-row">
-          <span class="stat-label">Time Played:</span>
-          <span class="stat-value time-value"
-            >${this.formatDuration(stats.timePlayedMs)}</span
-          >
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Total Sessions:</span>
-          <span class="stat-value sessions-value">${stats.totalSessions}</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Longest Session:</span>
-          <span class="stat-value longest-value"
-            >${this.formatDuration(stats.longestSessionMs)}</span
-          >
-        </div>
-      </div>
-    `;
-  }
-
   private renderPlacementSection(stats: GameState["stats"]): unknown {
     return html`
       <div class="stat-section placement">
@@ -168,58 +143,11 @@ export class StatsPanel extends LitElement {
           <span class="stat-value triple-value">${stats.tripleLines}</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Tetrises:</span>
+          <span class="stat-label">Quads:</span>
           <span class="stat-value tetris-value">${stats.tetrisLines}</span>
         </div>
       </div>
     `;
-  }
-
-  private renderFaultsSection(stats: GameState["stats"]): unknown {
-    return html`
-      <div class="stat-section faults">
-        <h4>Faults</h4>
-        <div class="stat-row">
-          <span class="stat-label">Total:</span>
-          <span class="stat-value total-faults">${stats.totalFaults}</span>
-        </div>
-        <div class="fault-breakdown">
-          ${this.renderFaultBreakdown(stats.faultsByType)}
-        </div>
-      </div>
-    `;
-  }
-
-  private renderFaultBreakdown(
-    faultsByType: GameState["stats"]["faultsByType"],
-  ): unknown {
-    const entries = Object.entries(faultsByType);
-    if (entries.length === 0) {
-      return html`<div class="stat-row">
-        <span class="stat-label">None</span>
-      </div>`;
-    }
-
-    return entries.map(
-      ([type, count]) => html`
-        <div class="stat-row">
-          <span class="stat-label">${type}:</span>
-          <span class="stat-value">${count}</span>
-        </div>
-      `,
-    );
-  }
-
-  // Helper methods for formatting statistics
-  private formatDuration(ms: number): string {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-
-    if (hours > 0) {
-      return `${String(hours)}:${String(minutes % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-    }
-    return `${String(minutes)}:${String(seconds % 60).padStart(2, "0")}`;
   }
 
   private formatPercentage(value: number): string {
