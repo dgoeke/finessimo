@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 
 import "./finesse-overlay";
+import "./coachOverlay";
 import "./game-board";
 import "./effects-overlay";
 import "./piece-hold";
@@ -44,6 +45,9 @@ export class FinessimoShell extends LitElement {
 
       <!-- Finesse overlay positioned as fixed overlay -->
       <finesse-overlay></finesse-overlay>
+
+      <!-- Coach overlay positioned as fixed overlay -->
+      <coach-overlay></coach-overlay>
 
       <!-- Keybinding modal overlay -->
       <keybinding-modal></keybinding-modal>
