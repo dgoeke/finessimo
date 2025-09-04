@@ -4,28 +4,6 @@
 
 ---
 
-## What changed in this revision
-
-**Purpose of this rewrite:** tighten the design around existing repo types, fold in the proposals from `plan_updates.md`, and remove ambiguity.
-
-**Key fixes & alignments**
-
-- **Type alignment with `src/types/brands.ts` and `src/types/timestamp.ts`:**
-  - Replaced ad‑hoc `GridX`/`GridY` with **`GridCoord`**.
-  - Replaced `Rot` numeric union with repo’s **`Rot = "spawn" | "right" | "two" | "left"`** (see `types.ts`).
-  - Use **`DurationMs`** brand from `brands.ts`.
-  - Use **`Seed`** **as a branded `string`** (repo), not a number.
-  - Use **`Timestamp`** from `types/timestamp.ts` where needed.
-  - Reuse **`ModeGuidance`** for UI targeting instead of inventing a parallel shape.
-- **API surface:** `recommendMove` now has a pure, immutable **context** to support hysteresis (avoids thrash between plans). Backward‑compatible wrapper preserved.
-- **Template system:** introduces **composition via patches** (`extendTemplate`) so opener variants are small overrides of a common base.
-- **Scoring & confidence:** adopts **margin‑based confidence with fragility weighting** and **bounded decay**; adds plan hysteresis rules.
-- **Anti‑patterns:** formalizes **hazards** (first‑class) with severity; hazards inform both scoring and the rationale text.
-- **Executor output:** introduces **placement clustering** (by `rot` and contiguous `x` spans) with a **Pareto filter** on utility vs. finesse cost for UI hints.
-- **Consistency:** removes redefinitions of `GameState`/`Board`; the design refers to existing repo types.
-
----
-
 ## Table of Contents
 
 1. [Motivation & Scope](#motivation--scope)
@@ -164,7 +142,7 @@ export type Template = Readonly<{
 }>;
 ```
 
-### Composition via patches (`plan_updates.md`)
+### Composition via patches
 
 Treat variants as **small overrides** of a common base. Left‑to‑right deterministic merge:
 

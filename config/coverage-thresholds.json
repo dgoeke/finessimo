@@ -43,7 +43,7 @@
   },
   "src/engine/init.ts": {
     "statements": 100,
-    "branches": 85,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -272,6 +272,30 @@
   "src/persistence/settings.ts": {
     "statements": 89,
     "branches": 74,
+    "functions": 100,
+    "lines": 96
+  },
+  "src/policy/index.ts": {
+    "statements": 93,
+    "branches": 63,
+    "functions": 44,
+    "lines": 93
+  },
+  "src/policy/planner.ts": {
+    "statements": 88,
+    "branches": 75,
+    "functions": 95,
+    "lines": 90
+  },
+  "src/policy/templates/_compose.ts": {
+    "statements": 83,
+    "branches": 78,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/policy/templates/index.ts": {
+    "statements": 96,
+    "branches": 77,
     "functions": 100,
     "lines": 96
   },
