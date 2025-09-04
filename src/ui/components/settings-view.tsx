@@ -360,7 +360,6 @@ export class SettingsView extends LitElement {
   private emitGameEngineEvents(changes: Partial<SettingsState>): void {
     // Emit timing changes only if timing was changed
     if (changes.timing) {
-      // Debug: console.log("Emitting update-timing:", changes.timing);
       this.dispatchEvent(
         new CustomEvent("update-timing", {
           bubbles: true,
@@ -372,7 +371,6 @@ export class SettingsView extends LitElement {
 
     // Emit gameplay changes only if gameplay was changed
     if (changes.gameplay) {
-      // Debug: console.log("Emitting update-gameplay:", changes.gameplay);
       this.dispatchEvent(
         new CustomEvent("update-gameplay", {
           bubbles: true,
@@ -384,7 +382,6 @@ export class SettingsView extends LitElement {
 
     // Emit mode changes only if mode was changed
     if (changes.mode !== undefined) {
-      // Debug: console.log("Emitting set-mode:", changes.mode);
       this.dispatchEvent(
         new CustomEvent("set-mode", {
           bubbles: true,
@@ -396,7 +393,6 @@ export class SettingsView extends LitElement {
 
     // Emit keybinding changes only if keyBindings was changed
     if (changes.keyBindings) {
-      // Debug: console.log("Emitting update-keybindings:", changes.keyBindings);
       this.dispatchEvent(
         new CustomEvent("update-keybindings", {
           bubbles: true,
@@ -409,7 +405,6 @@ export class SettingsView extends LitElement {
 
   private emitAllSettings(): void {
     // Emit all current settings on initialization
-    // Debug: console.log("Emitting all initial settings");
     if (Object.keys(this.settings.timing).length > 0) {
       this.dispatchEvent(
         new CustomEvent("update-timing", {

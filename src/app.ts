@@ -673,7 +673,6 @@ export class FinessimoApp {
   private handleUpdateTiming = (
     event: CustomEvent<Partial<TimingConfig>>,
   ): void => {
-    // Debug: console.log("App received update-timing:", event.detail);
     this.dispatch({ timing: event.detail, type: "UpdateTiming" });
     this.persistAllSettings();
   };
@@ -681,19 +680,16 @@ export class FinessimoApp {
   private handleUpdateGameplay = (
     event: CustomEvent<Partial<GameplayConfig>>,
   ): void => {
-    // Debug: console.log("App received update-gameplay:", event.detail);
     this.dispatch({ gameplay: event.detail, type: "UpdateGameplay" });
     this.persistAllSettings();
   };
 
   private handleSetMode = (event: CustomEvent<string>): void => {
-    // Debug: console.log("App received set-mode:", event.detail);
     this.setGameMode(event.detail);
     this.persistAllSettings();
   };
 
   private handleUpdateKeybindings = (event: CustomEvent<KeyBindings>): void => {
-    // Debug: console.log("App received update-keybindings:", event.detail);
     this.keyboardInputHandler.setKeyBindings(event.detail);
     if (this.touchInputHandler) {
       this.touchInputHandler.setKeyBindings(event.detail);

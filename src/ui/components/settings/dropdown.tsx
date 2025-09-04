@@ -43,7 +43,6 @@ export class SettingsDropdown extends LitElement {
   };
 
   private selectOption(value: string): void {
-    this.isOpen = false;
     if (value !== this.value) {
       this.dispatchEvent(
         new CustomEvent("dropdown-change", {
@@ -53,6 +52,7 @@ export class SettingsDropdown extends LitElement {
         }),
       );
     }
+    this.isOpen = false;
   }
 
   private getCurrentLabel(): string {
