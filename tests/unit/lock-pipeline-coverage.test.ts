@@ -24,6 +24,7 @@ function makeBaseState(): GameState {
   const gameplay: GameplayConfig = {
     finesseCancelMs: createDurationMs(50),
     holdEnabled: false,
+    openingCoachingEnabled: false,
   };
   const board = createEmptyBoard();
   const now = fromNow();

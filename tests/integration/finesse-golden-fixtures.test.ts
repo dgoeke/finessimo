@@ -10,6 +10,7 @@ import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
   holdEnabled: true,
+  openingCoachingEnabled: false,
 };
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {

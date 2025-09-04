@@ -84,6 +84,15 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/srs/fsrs-adapter.ts: FSRS adapter: branded deck/record types, scheduler bridge, rating/update, serialize/deserialize.
 - src/srs/storage.ts: Load/save guided deck to `localStorage` with migration/sanitization.
 
+## Policy (opener training system)
+
+- src/policy/index.ts: Main policy orchestrator; template ranking, hysteresis, suggestion generation.
+- src/policy/planner.ts: Policy planning logic; template evaluation and selection with hazard detection.
+- src/policy/types.ts: Policy domain types (`Template`, `Suggestion`, `Intent`, `Placement`, `PolicyContext`).
+- src/policy/templates/index.ts: Base templates for TKI/PCO/Neither opener strategies with caching and utility functions.
+- src/policy/templates/_compose.ts: Template composition utilities; `extendTemplate` for creating variants with patch-based overrides.
+- src/policy/templates/variants.ts: Additional template variants using `extendTemplate` infrastructure; PCO edge and transition variants.
+
 ## Input (side‑effects at the edge)
 
 - src/input/handler.ts: Input handler contract, normalization utilities, and a `MockInputHandler` for tests/dev.
@@ -99,6 +108,7 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/components/finessimo-shell.tsx: Top‑level layout; mounts board, overlays, hold/preview, stats, settings modal.
 - src/ui/components/game-board.tsx: Canvas board renderer; draws grid/active piece; renders overlay union in z‑order.
 - src/ui/components/finesse-overlay.tsx: HUD showing suggested finesse sequence; optional audio cue; auto‑hide.
+- src/ui/components/coachOverlay.tsx: Coaching overlay displaying policy suggestion rationales; auto‑hide with transitions.
 - src/ui/components/effects-overlay.tsx: Renders floating text effects sourced from `uiEffects`.
 - src/ui/components/piece-hold.tsx: Hold panel; draws held piece and disabled states.
 - src/ui/components/piece-preview.tsx: Next queue panel; draws up to N preview tetrominoes.
@@ -122,6 +132,12 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/utils/colors.ts: Color math/palette helpers (lighten/darken/normalize, gradients, style helpers).
 - src/ui/utils/dom.ts: Typed DOM queries for app elements (shell, board frame, settings modal).
 - src/ui/utils/outlines.ts: Pure geometry: compute perimeter edges/paths from grid cells for clean piece outlines.
+
+## Scenarios (opener training system)
+
+- src/scenarios/cards.ts: ScenarioCard types and registry; 6+ training scenarios spanning TKI/PCO easy/mid difficulty variants.
+- src/scenarios/generators.ts: Deterministic sequence generators; `queueFromSeed`, `boardFromScenario` using existing RNG infrastructure.
+- src/scenarios/srs.ts: Spaced repetition scheduler; SM-2-like algorithm with Grade types and ReviewState management.
 
 ## Utilities
 

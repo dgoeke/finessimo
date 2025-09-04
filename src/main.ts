@@ -5,6 +5,7 @@ import { getFinessimoShell } from "./ui/utils/dom";
 import "./ui/components/finessimo-shell.tsx";
 import "./ui/components/game-board.tsx";
 import "./ui/components/finesse-overlay.tsx";
+import "./ui/components/coachOverlay.tsx";
 import "./ui/components/piece-hold.tsx";
 import "./ui/components/piece-preview.tsx";
 import "./ui/components/stats-panel.tsx";

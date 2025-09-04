@@ -66,6 +66,7 @@ describe("StateMachineInputHandler", () => {
       ghostPieceEnabled: true,
       holdEnabled: true,
       nextPieceCount: 5,
+      openingCoachingEnabled: false,
     };
 
     const stats: Stats = {

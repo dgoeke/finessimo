@@ -36,6 +36,7 @@ import {
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
   holdEnabled: true,
+  openingCoachingEnabled: false,
 };
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {
@@ -117,6 +118,7 @@ describe("Finesse Calculator - Soft Drop Scenarios", () => {
         gameplay: {
           finesseCancelMs: createDurationMs(50),
           holdEnabled: true,
+          openingCoachingEnabled: false,
         },
         guidance: null,
         hold: undefined,

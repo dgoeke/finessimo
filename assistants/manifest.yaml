@@ -6,7 +6,7 @@ project:
     - path: DESIGN.md
     - path: FILES.md
   repo_rules:
-    precommit_cmd: "npm run ci"
+    precommit_cmd: "npm run check"
     no_suppressions: true
   core_principles:
     - "Functional architecture: immutable state + pure reducers"
