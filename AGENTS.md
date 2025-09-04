@@ -142,9 +142,9 @@ export const isTimestamp = (u: unknown): u is Timestamp =>
 ### Build tools available
 
 * `npm run typecheck` — runs `tsc` to check types only
-* `npm run lint:fix` — runs lint, auto-orders imports, fixes safe issues
+* `npm run lint` — runs lint, auto-orders imports, fixes safe issues
 * `npm run test` — runs all unit tests
-* `npm run ci` — wrapper for the above
+* `npm run check` — wrapper for the above
 
 ---
 
@@ -248,7 +248,7 @@ src/modes/newMode.ts   (missing from FILES.md)
 git commit -m "fix bug"
 
 # ✅ Always run
-npm run ci
+npm run check
 git commit -m "fix bug"
 ```
 **Generic agent guidance**

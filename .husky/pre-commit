@@ -7,7 +7,7 @@ echo "🛠️ Running pre-commit checks..."
 STAGED_FILES=$(git diff --name-only --cached)
 
 # Run the project's pre-commit task (may format/fix files)
-npm run pre-commit
+npm run check
 
 # Collect unstaged changes produced by the pre-commit task
 UNSTAGED_CHANGED=$(git diff --name-only)
