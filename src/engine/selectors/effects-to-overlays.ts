@@ -72,6 +72,16 @@ function convertEffectToOverlay(effect: UiEffect): RenderOverlay | null {
       return effectDotOverlay;
     }
 
+    case "finesseResultCard":
+      // FinesseResultCardEffect is handled by the effects-overlay component
+      // that reads directly from uiEffects. No RenderOverlay needed.
+      return null;
+
+    case "finesseResultCardClear":
+      // FinesseResultCardClearEffect is handled by the effects-overlay component
+      // that reads directly from uiEffects. No RenderOverlay needed.
+      return null;
+
     default:
       return assertNever(effect);
   }

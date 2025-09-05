@@ -108,6 +108,7 @@ Purpose: concise, accurate inventory of all source files in `src/` with one‑li
 
 - src/ui/renderers/cells.ts: Draw board cells and active piece cells; color mapping.
 - src/ui/renderers/grid-cache.ts: Offscreen grid cache for visible play area.
+- src/ui/renderers/mini-board.ts: Pure rendering functions for mini board visualization (bottom 5 rows) used in finesse result cards.
 - src/ui/renderers/outline-cache.ts: Memoized outline path computation for target overlays.
 - src/ui/renderers/overlays.ts: Exhaustive overlay renderer (ghost/target/line‑flash/effect‑dot/column‑highlight).
 - src/ui/renderers/tween.ts: Pure tween state for vertical piece animations.
@@ -139,6 +140,7 @@ Purpose: concise, accurate inventory of all source files in `src/` with one‑li
 - src/ui/styles/components/modals.css: Settings + keybinding modal styles.
 - src/ui/styles/effects/animations.css: Keyframe animations for overlays/effects.
 - src/ui/styles/effects/finesse.css: Finesse feedback overlay, action icons.
+- src/ui/styles/effects/finesse-result-card.css: Styles for finesse result card component with mini board and sequence comparison.
 - src/ui/styles/lit-components/board.css: Web component styles for board/hold/preview.
 - src/ui/styles/lit-components/settings.css: Styles for settings components.
 - src/ui/styles/responsive/breakpoints.css: Media queries and responsive adjustments.

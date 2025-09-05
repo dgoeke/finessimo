@@ -8,7 +8,10 @@ import {
   type PieceId,
   type ModeGuidance,
   type BoardDecorations,
+  type FinesseResultCardClearEffect,
 } from "../../state/types";
+import { createUiEffectId, createDurationMs } from "../../types/brands";
+import { fromNow } from "../../types/timestamp";
 import {
   type GameMode,
   type GameModeResult,
@@ -48,7 +51,18 @@ export class FreePlayMode implements GameMode {
     _finalPosition: ActivePiece,
   ): GameModeResult {
     // FreePlay does not emit textual feedback; overlay renders from FinesseResult
-    return {};
+    // However, we need to clear any lingering result cards from guided mode
+    const timestamp = fromNow();
+    const clearEffect: FinesseResultCardClearEffect = {
+      createdAt: timestamp,
+      id: createUiEffectId(timestamp as unknown as number),
+      kind: "finesseResultCardClear",
+      ttlMs: createDurationMs(0),
+    };
+
+    return {
+      postActions: [{ effect: clearEffect, type: "PushUiEffect" }],
+    };
   }
 
   shouldPromptNext(_gameState: GameState): boolean {

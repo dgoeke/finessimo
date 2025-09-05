@@ -232,7 +232,36 @@ export type FinesseBoopEffect = Readonly<{
   createdAt: Timestamp;
 }>;
 
-export type UiEffect = FloatingTextEffect | LineFlashEffect | FinesseBoopEffect;
+/**
+ * Finesse result card effect - displays a card with mini board and finesse comparison
+ */
+export type FinesseResultCardEffect = Readonly<{
+  kind: "finesseResultCard";
+  id: UiEffectId;
+  targetPiece: ActivePiece; // Target position to visualize
+  optimalSequences: ReadonlyArray<ReadonlyArray<FinesseAction>>;
+  playerSequence: ReadonlyArray<FinesseAction>;
+  rating?: "again" | "hard" | "good" | "easy"; // SRS rating from guided mode
+  ttlMs: DurationMs; // How long to display (use Infinity to persist until next spawn)
+  createdAt: Timestamp;
+}>;
+
+/**
+ * Finesse result card clear effect - clears any active finesse result card
+ */
+export type FinesseResultCardClearEffect = Readonly<{
+  kind: "finesseResultCardClear";
+  id: UiEffectId;
+  ttlMs: DurationMs; // Should be 0 for immediate clear
+  createdAt: Timestamp;
+}>;
+
+export type UiEffect =
+  | FloatingTextEffect
+  | LineFlashEffect
+  | FinesseBoopEffect
+  | FinesseResultCardEffect
+  | FinesseResultCardClearEffect;
 
 // Lock delay state ADT - makes invalid combinations unrepresentable
 export type LockDelayState =

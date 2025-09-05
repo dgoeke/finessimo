@@ -33,6 +33,7 @@ export const handlers = {
     }
 
     const newPiece = createActivePiece(pieceToSpawn);
+
     return {
       ...state,
       active: newPiece,

@@ -1,6 +1,9 @@
 import { dropToBottom, createEmptyBoard } from "../../core/board";
 import { PIECES } from "../../core/pieces";
-import { type FinesseResult } from "../../engine/finesse/calculator";
+import {
+  type FinesseResult,
+  extractFinesseActionsFromProcessed,
+} from "../../engine/finesse/calculator";
 import { getActionIcon } from "../../engine/finesse/constants";
 import {
   type GameState,
@@ -11,6 +14,7 @@ import {
   type Action,
   type BoardDecorations,
   type Board,
+  type FinesseAction,
 } from "../../state/types";
 import {
   createGridCoord,
@@ -210,6 +214,27 @@ export class GuidedMode implements GameMode {
     return { effect, type: "PushUiEffect" };
   }
 
+  private createResultCardEffect(
+    rating: Rating,
+    finesseResult: FinesseResult,
+    targetPiece: ActivePiece,
+    playerSequence: ReadonlyArray<FinesseAction>,
+  ): NonNullable<GameModeResult["postActions"]>[0] {
+    const createdAt = fromNow();
+    const effect = {
+      createdAt,
+      id: createUiEffectId(createdAt as number),
+      kind: "finesseResultCard" as const,
+      optimalSequences: finesseResult.optimalSequences,
+      playerSequence,
+      rating,
+      targetPiece,
+      ttlMs: createDurationMs(Number.MAX_SAFE_INTEGER), // Persist until next spawn
+    } as const;
+
+    return { effect, type: "PushUiEffect" };
+  }
+
   onPieceLocked(
     gameState: GameState,
     finesseResult: FinesseResult,
@@ -281,9 +306,22 @@ export class GuidedMode implements GameMode {
     // Persist updated deck
     saveGuidedDeck(newDeck);
 
+    // Extract player sequence for result card
+    const playerSequence = extractFinesseActionsFromProcessed(
+      gameState.processedInputLog,
+    );
+
     return {
       modeData: { deck: newDeck, gradingConfig },
-      postActions: [this.createFeedbackEffect(rating, finesseResult)],
+      postActions: [
+        this.createFeedbackEffect(rating, finesseResult),
+        this.createResultCardEffect(
+          rating,
+          finesseResult,
+          targetFinal,
+          playerSequence,
+        ),
+      ],
     };
   }
 

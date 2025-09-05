@@ -24,6 +24,7 @@
 /* Animation, transitions, and visual effects */
 @import "./effects/animations.css";
 @import "./effects/finesse.css";
+@import "./effects/finesse-result-card.css";
 
 /* === LIT COMPONENTS === */
 /* Web component specific styles */

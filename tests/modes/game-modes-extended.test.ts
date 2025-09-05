@@ -62,7 +62,7 @@ const mockState = (): GameState =>
   });
 
 describe("FreePlayMode - extended", () => {
-  test("FreePlay returns no textual feedback for suboptimal sequences", () => {
+  test("FreePlay returns no textual feedback for suboptimal sequences but emits clear effect", () => {
     const mode = new FreePlayMode();
     const state = mockState();
 
@@ -85,7 +85,13 @@ describe("FreePlayMode - extended", () => {
       { id: "T", rot: "spawn", x: createGridCoord(3), y: createGridCoord(0) },
       { id: "T", rot: "spawn", x: createGridCoord(0), y: createGridCoord(0) },
     );
-    expect(out).toEqual({});
+    expect(out).toHaveProperty("postActions");
+    expect(out.postActions).toHaveLength(1);
+    expect(out.postActions?.[0]).toHaveProperty("type", "PushUiEffect");
+    expect(out.postActions?.[0]).toHaveProperty(
+      "effect.kind",
+      "finesseResultCardClear",
+    );
   });
 
   test("target and expected piece helpers are null/undefined", () => {
