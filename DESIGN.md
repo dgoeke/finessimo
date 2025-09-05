@@ -26,7 +26,8 @@ UI (Lit components, signals)
 ### Reactivity & Rendering
 
 - `@lit-labs/signals` exposes a single `gameStateSignal`. Reducer updates this signal; components subscribe to slices via selectors in `src/state/signals.ts`.
-- All canvas/dom drawing lives inside UI components. No imperative rendering in the app core.
+- Board rendering (`src/ui/components/game-board.tsx`) pulls a unified `BoardRenderModel` from `src/engine/selectors/board-render.ts` and renders via pure renderers in `src/ui/renderers/*` (cells/overlays/grid/tween/viewport).
+- All canvas/DOM drawing lives inside UI components. No imperative rendering in the app core.
 
 ### Input Handling
 
@@ -34,7 +35,7 @@ UI (Lit components, signals)
 - Touch: `TouchInputHandler` translates gestures to the same engine actions; uses the same state machine for consistent timing.
 - Input handler is the only stateful/timerful module. It emits engine `Action`s and appends normalized `ProcessedAction` entries for finesse analysis via `{ type: "AppendProcessed" }`. The reducer never reads device state.
 
-Soft rules for processed logging (implemented in `src/finesse/log.ts`):
+Soft rules for processed logging (implemented in `src/engine/finesse/log.ts`):
 
 - TapMove: log only on key-up (non-optimistic).
 - HoldMove: log once on hold start (DAS); never log repeats.
@@ -59,7 +60,7 @@ Soft rules for processed logging (implemented in `src/finesse/log.ts`):
 - Soft drop: When held and `softDrop !== "infinite"`, pulses are dispatched at an interval derived from gravity/softDrop. Logging uses `SoftDropState` to emit only transitions (on/off), deduping periodic pulses.
 - Process gating: Inputs are ignored for logging unless there is an active piece and `status === "playing"` (`shouldProcessInCurrentState`).
 - Key binding discipline: Uses `KeyboardEvent.code` and always `preventDefault()` for bound keys. Maintains per-code pressed state to avoid duplicate downs; rejects `event.repeat`.
-- Blocking behavior: While the settings modal is open (`<body>.settings-open`), gameplay inputs are ignored; key-up is still handled to clear internal pressed state safely.
+- Blocking behavior: While the settings UI is open, gameplay inputs are ignored; key‑up is still handled to clear internal pressed state safely.
 - Touch parity: Touch gestures call `handleMovement(Left/Right, Down/Up)` and `setSoftDrop(on/off, t)` to drive the same DAS machine and logging rules.
 
 ## Types-First Model
@@ -91,9 +92,9 @@ Statuses:
 
 Key fields:
 
-- `board: { width: 10; height: 20; cells: BoardCells }` where `BoardCells` is a branded `Uint8Array & { length: 200 }`.
+- `board: { width: 10; height: 20; totalHeight: 23; vanishRows: 3; cells: BoardCells }` where `BoardCells` is a branded `Uint8Array & { length: 230 }`.
 - `active?: ActivePiece` where `x,y` are `GridCoord` and rotations are `"spawn" | "right" | "two" | "left"`.
-- `physics: { lastGravityTime; lockDelayStartTime; isSoftDropping; ... }`.
+- `physics: { lastGravityTime; lockDelay: LockDelayState; isSoftDropping; lineClearStartTime | null; lineClearLines: number[]; activePieceSpawnedAt | null }` (lock‑delay modeled as an ADT: `Airborne` | `Grounded`).
 - `processedInputLog: ReadonlyArray<ProcessedAction>` per-piece, cleared post-analysis.
 - `finesseFeedback: FinesseResult | null`, `modePrompt: string | null`, `guidance?: ModeGuidance | null`.
 - `rng: PieceRandomGenerator` (interface); actual RNG can be provided/owned by mode.
@@ -130,12 +131,12 @@ Helper:
 - Dispatches all analysis actions (includes `UpdateFinesseFeedback`, `RecordPieceLock`, and `ClearInputLog`).
 - Asks the active mode for a decision via `onResolveLock` and then dispatches `CommitLock` or `RetryPendingLock`.
 
-## Finesse Analysis (src/finesse/\*.ts)
+## Finesse Analysis (src/engine/finesse/*.ts)
 
 - `ProcessedAction` log is the single source of truth for player inputs.
 - `extractFinesseActionsFromProcessed` maps processed actions to abstract `FinesseAction` domain: `MoveLeft`, `MoveRight`, `DASLeft`, `DASRight`, `RotateCW`, `RotateCCW`, `SoftDrop`, `HardDrop`.
-- `BfsFinesseCalculator` computes optimal sequences on an empty board using movement/rotation primitives and adds an implicit `HardDrop` at goal.
-- `DefaultFinesseService` resolves the analysis target from the mode (guidance/target hooks), merges calculator and mode-specific faults, and emits reducer actions. It does not mutate state.
+- `BoardAwareFinesseCalculator` computes minimal sequences using a board‑aware BFS and appends an implicit `HardDrop` at goal; soft drop inputs bypass analysis (treated as optimal).
+- `DefaultFinesseService` resolves the analysis target from the active mode (guidance/target hooks) and emits reducer actions: `UpdateFinesseFeedback`, `RecordPieceLock`, `ClearInputLog`.
 
 ## Modes (src/modes/\*.ts)
 
@@ -158,9 +159,9 @@ Helper:
 
 ## Settings & Persistence
 
-- Settings modal emits a single `settings-change` event with partial settings; the app converts to branded types and dispatches `UpdateTiming`/`UpdateGameplay`.
-- Keybindings persist to `localStorage` (managed in `src/input/keyboard.ts`); `KeyboardEvent.code` matching supports all keys including standalone modifiers.
-- When the modal is open, `<body>` has `settings-open`; input handlers ignore gameplay keys.
+- Settings view (`settings-view`) emits granular, typed events: `update-timing`, `update-gameplay`, `set-mode`, `update-keybindings`. The app (`src/app/app.ts`) converts to branded types and dispatches `UpdateTiming`/`UpdateGameplay`/`SetMode`.
+- Game settings persistence is handled in `src/app/settings.ts` (merged nested store). Keybindings persist in `src/input/keyboard/bindings.ts` under the same consolidated key.
+- While settings UI is active, gameplay inputs are ignored by handlers; key‑up is still processed to clear state safely.
 
 ## Determinism & Timing
 
@@ -171,9 +172,9 @@ Helper:
 ## Testing & Quality Gate
 
 - Strict TS config: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `useUnknownInCatchVariables`, etc.
-- ESLint flat config enforces no default exports, import ordering, promise discipline, and no-explicit-any (with typed alternatives). No TS/ESLint suppressions are allowed; fix root causes.
-- Tests: Jest unit tests for utilities (e.g., KeyBindingManager), reducer flows, and compile-time invariants under `tests/types` using `Equals`/`Expect` to lock down unions and branded constraints.
-- Pre-commit gate: `npm run pre-commit` runs typecheck, lint (fix), tests, formatting. Changes must pass with zero lint errors.
+- ESLint flat config; no TS/ESLint suppressions are allowed — fix root causes.
+- Tests: Jest unit tests for utilities (e.g., KeyBindingManager), reducer flows, and compile‑time invariants under `tests/types` using `Equals`/`Expect` to lock down unions and branded constraints.
+- One‑shot all checks: `npm run check` (clean → typecheck → lint → test:coverage → format). CI uses `npm run ci`.
 
 ## Conventions
 
@@ -345,7 +346,7 @@ export const KICKS_I: Record<
 
 The goal is to convert a raw series of `InputEvent`s into a clean sequence of `KeyAction`s representing player intent.
 
-**Algorithm:**
+**Algorithm (implemented in `src/input/handler.ts`):**
 
 1.  Filter the log, keeping only `LeftDown`, `RightDown`, `Rotate*`, `Hold`, and `HardDrop` events.
 2.  Iterate through the filtered events. If a directional input (e.g., `LeftDown`) is followed by its opposite (`RightDown`) within the `finesseCancelMs` window (e.g., 50ms), discard both events. This is best handled with a stack or a lookahead buffer.
@@ -356,57 +357,51 @@ The goal is to convert a raw series of `InputEvent`s into a clean sequence of `K
 The optimal input sequence is found by performing a Breadth-First Search (BFS) on the state space.
 
 - **Nodes:** Unique piece states defined by `(x, y, rot)`.
-- **Graph Edges:** The search expands from a node by applying abstract "player intents," each with a cost of 1. These edges represent the minimal actions a player can take, not raw game ticks.
-  - `TapLeft`: Moves piece 1 unit left.
-  - `TapRight`: Moves piece 1 unit right.
-  - `HoldLeft`: Moves piece to collide with the left wall.
-  - `HoldRight`: Moves piece to collide with the right wall.
-  - `RotateCW`, `RotateCCW`.
+- **Graph Edges:** Abstract finesse actions (cost 1 each), not raw ticks:
+  - `MoveLeft` / `MoveRight` (one‑cell step)
+  - `DASLeft` / `DASRight` (to wall)
+  - `RotateCW` / `RotateCCW`
 - **Goal:** The search finds the shortest path(s) from the spawn state to the final locked `(x, rot)` state.
 
 ### Output
 
-```typescript
-export interface FinesseResult {
-  optimalSequences: KeyAction[][]; // Can be multiple paths of the same length
-  playerSequence: KeyAction[]; // normalized
-  isOptimal: boolean;
-  faults: Fault[]; // Fault type to be defined
-}
+```ts
+// Union result used across engine + UI
+export type FinesseResult =
+  | { kind: "optimal"; optimalSequences: Array<Array<FinesseAction>>; playerSequence: Array<FinesseAction> }
+  | { kind: "faulty"; faults: Array<{ type: FaultType; description?: string; position?: number }>; optimalSequences: Array<Array<FinesseAction>>; playerSequence: Array<FinesseAction> };
 ```
 
-## Directory Structure
+## Directory Structure (overview)
 
 ```
 src/
-  core/
-    pieces.ts        // PIECES constants, shape data
-    srs.ts           // Rotation and kick logic (all kick tables)
-    board.ts         // Board operations, collision
-    rng.ts           // 7-bag randomizer
-  state/
-    types.ts         // All TypeScript interfaces
-    reducer.ts       // Pure state transitions
-    actions.ts       // Action creators
-    selectors.ts     // State queries
-  input/
-    handler.ts       // STATEFUL keyboard/touch/DAS/ARR logic
-    recorder.ts      // Input logging
-  finesse/
-    analyzer.ts      // Post-lock analysis
-    calculator.ts    // BFS optimal path finder
-    normalizer.ts    // Input normalization (uses cancellation setting)
-  modes/
-    index.ts         // Mode interface and registry
-    freePlay.ts
-    targeted.ts
-  ui/
-    canvas.ts        // Board renderer
-    hud.ts           // UI elements
-  app.ts             // Main game loop
-  main.ts            // Entry point
-tests/
-  unit/
-  integration/
-  fixtures/
+  app/                     # App orchestrator + settings persistence
+  core/                    # Board mechanics, SRS, RNGs, spawning
+    rng/
+  engine/                  # Reducers, physics, scoring, selectors
+    finesse/               # Calculator, service, logging helpers
+    gameplay/              # Movement/rotation/spawn/hold handlers
+    physics/               # Gravity + lock-delay ADT/machine
+    scoring/
+    selectors/
+    ui/                    # Overlay model/types utilities
+    util/
+  input/                   # Keyboard/touch handlers + DAS machine
+    keyboard/
+    machines/
+    touch/
+    utils/
+  modes/                   # Free-play / Guided + RNG hooks, pipeline
+    free-play/
+    guided/
+  state/                   # Types, reducer, signals
+  types/                   # Branded primitives + timestamp
+  ui/                      # Components (Lit), renderers, types, utils, styles
+    components/
+    renderers/
+    types/
+    utils/
+    styles/
+  main.ts                  # Entry point
 ```

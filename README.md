@@ -13,9 +13,9 @@ If you want the deep dive, see `DESIGN.md` (architecture) and `FILES.md` (map).
 ## Quality Gates ✅
 
 - `npm run typecheck` — TypeScript only (no emit)
-- `npm run lint` — Lint (no fixes) • `npm run lint:fix` to auto‑fix
+- `npm run lint` — Lint (fixes enabled by default in local dev)
 - `npm run test` — Jest unit tests
-- One‑shot all checks: `npm run pre-commit` (clean → typecheck → lint:fix → test → format)
+- One‑shot all checks: `npm run check` (clean → typecheck → lint → test:coverage → format)
 
 Other handy scripts 🛠️
 
@@ -37,16 +37,19 @@ The architecture is functional, deterministic, and types‑first.
 
 ### Key Files & Folders 📁
 
-- `src/app.ts` — App loop, wiring, lock pipeline, mode switching, settings dispatch.
+- `src/app/app.ts` — App loop, wiring, lock pipeline, mode switching, settings bridge.
+- `src/app/settings.ts` — Load/save settings to localStorage (merged nested store).
 - `src/state/types.ts` — Brands, `GameState` union, `Action` union, `ProcessedAction`, stats.
-- `src/state/reducer.ts` — Pure reducer; physics timestamps; pending‑lock seam; derived stats.
+- `src/state/reducer.ts` — Pure reducer; physics post‑step integration; pending‑lock seam; derived stats.
 - `src/state/signals.ts` — Global signal + selectors + reducer‑backed dispatch.
-- `src/input/StateMachineInputHandler.ts` — Keyboard/touch over DAS/ARR; logging rules.
+- `src/input/keyboard/handler.ts` — Keyboard over DAS/ARR; logging rules.
+- `src/input/touch/handler.ts` — Touch overlay/gestures over shared DAS.
 - `src/input/machines/das.ts` — Robot3 DAS machine (idle → charging → repeating).
-- `src/finesse/*` — BFS calculator, pure service, processed‑log helpers.
-- `src/modes/*` — Mode contracts/registry (FreePlay, Guided), spawn/RNG/guidance hooks, lock decisions.
-- `src/core/*` — Board ops, SRS rotation, RNGs, spawning/top‑out.
-- `src/ui/*` — Lit components, canvas rendering, settings modal, audio.
+- `src/engine/finesse/*` — Board‑aware BFS calculator, pure service, processed‑log helpers.
+- `src/modes/*` — Mode contracts/registry (FreePlay, Guided), RNG/preview/guidance hooks, lock decisions.
+- `src/core/*` — Board ops, SRS rotation, RNGs (`core/rng/*`), spawning/top‑out.
+- `src/ui/components/*` — Lit components (board, overlays, settings, panels).
+- `src/ui/renderers/*` — Pure canvas renderers (cells/overlays/grid/tween/viewport).
 - `src/types/*` — Branded primitives (`DurationMs`, `GridCoord`, `Seed`, …) and `Timestamp` utilities.
 
 ### Working Agreements 🤝
@@ -55,7 +58,7 @@ The architecture is functional, deterministic, and types‑first.
 - Types‑first: Encode invariants with brands and discriminated unions. Use `assertNever` for exhaustiveness.
 - Immutability: Never mutate in reducers; always return new objects/arrays.
 - No suppressions: Don’t add `@ts-ignore` or ESLint disables — fix the types instead.
-- Run the gates: `npm run pre-commit` before committing.
+- Run the gates: `npm run check` before committing.
 
 ## License 📜
 
