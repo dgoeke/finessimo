@@ -283,10 +283,19 @@ export class FinessimoApp {
       this.handleSettingsChange(persisted);
     }
     // Push settings to settings-view if already connected
+    // Push settings to settings-view if already connected
     this.pushSettingsToSettingsView();
 
     // Robust focus/visibility detection ensures gameplay pauses predictably
     this.setupVisibilityListeners();
+
+    // Run activation hook for the current mode at boot to seed modeData
+    {
+      const mode = gameModeRegistry.get(this.gameState.currentMode);
+      if (mode) {
+        this.runModeActivationHook(mode);
+      }
+    }
 
     // Spawn initial piece
     this.spawnNextPiece();
@@ -409,6 +418,8 @@ export class FinessimoApp {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
       if (!simpleEqual(guidance, prev)) {
+        // Surface guidance updates in console alongside coaching overlay updates
+        console.warn("[Guidance] Updated:", guidance);
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }
@@ -815,6 +826,8 @@ export class FinessimoApp {
       gameplay.finesseBoopEnabled = newSettings.finesseBoopEnabled;
     if (newSettings.retryOnFinesseError !== undefined)
       gameplay.retryOnFinesseError = newSettings.retryOnFinesseError;
+    if (newSettings.openingCoachingEnabled !== undefined)
+      gameplay.openingCoachingEnabled = newSettings.openingCoachingEnabled;
 
     if (Object.keys(gameplay).length > 0) {
       this.dispatch({ gameplay, type: "UpdateGameplay" });

@@ -134,7 +134,7 @@ export const isTimestamp = (u: unknown): u is Timestamp =>
 
 ## Build & quality gate
 
-* Always run `npm run ci` before considering any change done.
+* Always run `npm run check` before considering any change done.
 * Do **not** introduce TypeScript/ESLint suppressions (e.g., `// @ts-ignore`, `// eslint-disable-next-line`). Fix root causes instead.
 * You will not be allowed to add code that reduces test coverage or type safety. If that happens, the `git commit` command will be rejected.
 * To confirm test coverage is sufficient, run `npm run test:coverage`; it will exit non-zero if coverage drops.

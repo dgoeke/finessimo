@@ -23,6 +23,7 @@ type SchemaKeys = keyof {
   finesseFeedbackEnabled: unknown;
   finesseBoopEnabled: unknown;
   retryOnFinesseError: unknown;
+  openingCoachingEnabled: unknown;
   keyBindings: unknown;
   mode: unknown;
 };

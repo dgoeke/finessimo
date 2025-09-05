@@ -50,10 +50,7 @@ export class CoachOverlay extends SignalWatcher(LitElement) {
   private updateCoachFeedback(gameState: GameState): void {
     const feedbackEl = this.feedbackEl;
     if (!feedbackEl) return;
-
     // Extract policy output from game state
-    // Note: This assumes policy output will be available in game state
-    // The actual integration may store it differently
     const policyOutput = this.extractPolicyOutput(gameState);
     const suggestion = policyOutput?.suggestion;
     const rationale = suggestion?.rationale;
@@ -67,8 +64,7 @@ export class CoachOverlay extends SignalWatcher(LitElement) {
   }
 
   private extractPolicyOutput(gameState: GameState): PolicyOutput | null {
-    // Policy integration is handled by accessing modeData or a future dedicated field
-    // For now, check if modeData contains policy output
+    // Policy integration is handled by accessing modeData from FreePlay mode
     const modeData = gameState.modeData;
 
     if (
@@ -122,7 +118,7 @@ export class CoachOverlay extends SignalWatcher(LitElement) {
     isNewSuggestion: boolean,
   ): void {
     this.showFeedbackAnimation(feedbackEl, isNewSuggestion);
-
+    // Update aria-label for accessibility; visible content is rendered by Lit
     feedbackEl.setAttribute("aria-label", `Coaching suggestion: ${rationale}`);
   }
 
@@ -180,6 +176,13 @@ export class CoachOverlay extends SignalWatcher(LitElement) {
   }
 
   private renderCoachFeedback(gameState: GameState): unknown {
+    // Only render coaching content if enabled
+    if (!gameState.gameplay.openingCoachingEnabled) {
+      return html`
+        <div class="coach-feedback-overlay" style="display: none;"></div>
+      `;
+    }
+
     const policyOutput = this.extractPolicyOutput(gameState);
     const suggestion = policyOutput?.suggestion;
     const rationale = suggestion?.rationale;
@@ -187,7 +190,9 @@ export class CoachOverlay extends SignalWatcher(LitElement) {
     if (rationale === undefined || rationale.trim().length === 0) {
       return html`
         <div class="coach-feedback-overlay">
-          Coaching suggestions will appear here
+          <div class="coach-rationale">
+            Coaching suggestions will appear here
+          </div>
         </div>
       `;
     }

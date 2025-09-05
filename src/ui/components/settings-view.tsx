@@ -117,6 +117,8 @@ export class SettingsView extends LitElement {
       next.finesseBoopEnabled = s.finesseBoopEnabled;
     if (s.retryOnFinesseError !== undefined)
       next.retryOnFinesseError = s.retryOnFinesseError;
+    if (s.openingCoachingEnabled !== undefined)
+      next.openingCoachingEnabled = s.openingCoachingEnabled;
     return next;
   }
 
@@ -129,6 +131,7 @@ export class SettingsView extends LitElement {
         ghostPieceEnabled: true,
         guidedColumnHighlightEnabled: true,
         nextPieceCount: 5,
+        openingCoachingEnabled: false,
         retryOnFinesseError: false,
       },
       keyBindings: defaultKeyBindings(),
@@ -234,6 +237,17 @@ export class SettingsView extends LitElement {
       gameplay: {
         ...this.settings.gameplay,
         retryOnFinesseError: event.detail.checked,
+      },
+    });
+  };
+
+  private handleOpeningCoachingChange = (
+    event: CustomEvent<{ checked: boolean }>,
+  ): void => {
+    this.updateSetting({
+      gameplay: {
+        ...this.settings.gameplay,
+        openingCoachingEnabled: event.detail.checked,
       },
     });
   };
@@ -608,6 +622,11 @@ export class SettingsView extends LitElement {
             label="Retry on miss"
             .checked=${this.settings.gameplay.retryOnFinesseError ?? false}
             @checkbox-change=${this.handleRetryOnMissChange}
+          ></settings-checkbox>
+          <settings-checkbox
+            label="Opening Coaching"
+            .checked=${this.settings.gameplay.openingCoachingEnabled ?? false}
+            @checkbox-change=${this.handleOpeningCoachingChange}
           ></settings-checkbox>
         `;
       }

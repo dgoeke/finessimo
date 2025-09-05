@@ -99,11 +99,6 @@ export function nextReview(
 
 ### 6) Acceptance criteria
 
-- `tsc` clean; tests green.
+- `npm run check` clean
 - At least **6** scenarios spanning TKI/PCO easy/mid.
 - Calling `recommendMove` on a scenario produces a rationale string; HUD shows it.
-
-### 7) Risks & mitigations
-
-- Over‑fitted scenarios → add light noise constraints (e.g., `maxGarbage`).
-- SRS too aggressive → clamp `ease` and intervals.

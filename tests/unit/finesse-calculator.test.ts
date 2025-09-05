@@ -33,6 +33,7 @@ import { assertDefined, createTestSpawnAction } from "../test-helpers";
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),
   holdEnabled: true,
+  openingCoachingEnabled: false,
 };
 
 function spawnPiece(id: keyof typeof PIECES): ActivePiece {

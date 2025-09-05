@@ -84,6 +84,15 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/srs/fsrs-adapter.ts: FSRS adapter: branded deck/record types, scheduler bridge, rating/update, serialize/deserialize.
 - src/srs/storage.ts: Load/save guided deck to `localStorage` with migration/sanitization.
 
+## Policy (opener training system)
+
+- src/policy/index.ts: Main policy orchestrator; template ranking, hysteresis, suggestion generation.
+- src/policy/planner.ts: Policy planning logic; template evaluation and selection with hazard detection.
+- src/policy/types.ts: Policy domain types (`Template`, `Suggestion`, `Intent`, `Placement`, `PolicyContext`).
+- src/policy/templates/index.ts: Base templates for TKI/PCO/Neither opener strategies with caching and utility functions.
+- src/policy/templates/_compose.ts: Template composition utilities; `extendTemplate` for creating variants with patch-based overrides.
+- src/policy/templates/variants.ts: Additional template variants using `extendTemplate` infrastructure; PCO edge and transition variants.
+
 ## Input (side‑effects at the edge)
 
 - src/input/handler.ts: Input handler contract, normalization utilities, and a `MockInputHandler` for tests/dev.
