@@ -2,6 +2,7 @@
 // Chapter 1: Minimal TKI, PCO, and Neither templates
 
 import { canPlacePiece, dropToBottom } from "../../core/board";
+import { PIECES } from "../../core/pieces";
 import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
 
 import { extendTemplate } from "./_compose";
@@ -87,26 +88,88 @@ function createPlacementKey(placement: Placement): string {
   return `${gridCoordAsNumber(placement.x).toString()},${placement.rot},${useHoldStr}`;
 }
 
-// Helper to test single position and add if valid
-function addValidPlacement(
-  placements: Array<Placement>,
-  seen: Set<string>,
-  board: GameState["board"],
-  testPiece: ActivePiece,
-): void {
-  const dropped = dropToBottom(board, testPiece);
-  if (canPlacePiece(board, dropped)) {
-    const placement: Placement = {
-      rot: dropped.rot,
-      x: dropped.x,
-    };
+// Remove unused helper function - inline placement logic in main generation function
 
-    const key = createPlacementKey(placement);
-    if (!seen.has(key)) {
-      seen.add(key);
-      placements.push(placement);
+/**
+ * Helper to generate placements for a single piece without hold logic
+ */
+function generateSinglePiecePlacements(
+  state: GameState,
+  pieceId: PieceId,
+): ReadonlyArray<Placement> {
+  const placements: Array<Placement> = [];
+  const seen = new Set<string>();
+  const rotations: Array<Rot> = ["spawn", "right", "two", "left"];
+  const piece = PIECES[pieceId];
+  const [, spawnY] = piece.spawnTopLeft;
+
+  const context = {
+    board: state.board,
+    pieceId,
+    placements,
+    seen,
+    spawnY,
+  };
+
+  for (const rot of rotations) {
+    for (let x = 0; x < 10; x++) {
+      tryPlacementAtColumn(context, rot, x);
+      // Continue to next column regardless of success
     }
   }
+
+  return placements;
+}
+
+/**
+ * Try to place a piece at a specific column and rotation
+ * Uses proper drop-to-bottom mechanics to find where piece would actually land
+ */
+function tryPlacementAtColumn(
+  context: {
+    board: GameState["board"];
+    pieceId: PieceId;
+    spawnY: number;
+    placements: Array<Placement>;
+    seen: Set<string>;
+  },
+  rot: Rot,
+  x: number,
+): boolean {
+  // Start from spawn position
+  const spawnPiece: ActivePiece = {
+    id: context.pieceId,
+    rot,
+    x: createGridCoord(x),
+    y: createGridCoord(context.spawnY),
+  };
+
+  // Check if spawn position is even valid (piece can enter the field)
+  if (!canPlacePiece(context.board, spawnPiece)) {
+    return false; // Can't even spawn here
+  }
+
+  // Drop to bottom to find actual landing position
+  const droppedPiece = dropToBottom(context.board, spawnPiece);
+  
+  // Verify the dropped position is valid (safety check)
+  if (!canPlacePiece(context.board, droppedPiece)) {
+    return false; // Something went wrong
+  }
+
+  const placement: Placement = {
+    pieceId: context.pieceId,
+    rot: droppedPiece.rot,
+    useHold: false,
+    x: droppedPiece.x,
+  };
+
+  const key = createPlacementKey(placement);
+  if (!context.seen.has(key)) {
+    context.seen.add(key);
+    context.placements.push(placement);
+  }
+  return true; // Successfully added placement
 }
 
 // Simplified placement generation with reduced complexity (internal, unmemoized)
@@ -115,45 +178,31 @@ function generateLegalPlacementsInternal(
   pieceId: PieceId,
   includeHold = false,
 ): ReadonlyArray<Placement> {
-  const placements: Array<Placement> = [];
-  const seen = new Set<string>();
-  const rotations: Array<Rot> = ["spawn", "right", "two", "left"];
+  const placements = generateSinglePiecePlacements(state, pieceId);
+  const allPlacements = [...placements];
 
-  // Test all positions and rotations
-  for (const rot of rotations) {
-    for (let x = 0; x < 10; x++) {
-      const testPiece: ActivePiece = {
-        id: pieceId,
-        rot,
-        x: createGridCoord(x),
-        y: createGridCoord(0),
-      };
-
-      addValidPlacement(placements, seen, state.board, testPiece);
-    }
-  }
-
-  // Add hold variants if requested and different piece available
+  // Add hold variants if requested and available
   if (includeHold && state.active && state.canHold) {
-    // Create a simplified state for hold placement generation
-    const holdPlacements = generateLegalPlacementsInternal(
-      state,
-      state.active.id,
-      false,
-    );
+    const holdPieceId = state.hold ?? (state.nextQueue[0] ?? state.active.id);
+    const holdPlacements = generateSinglePiecePlacements(state, holdPieceId);
+    const seen = new Set(allPlacements.map(createPlacementKey));
 
-    holdPlacements.forEach((placement) => {
-      const holdPlacement: Placement = { ...placement, useHold: true };
+    for (const placement of holdPlacements) {
+      const holdPlacement: Placement = { 
+        ...placement, 
+        pieceId: holdPieceId, 
+        useHold: true 
+      };
       const key = createPlacementKey(holdPlacement);
 
       if (!seen.has(key)) {
         seen.add(key);
-        placements.push(holdPlacement);
+        allPlacements.push(holdPlacement);
       }
-    });
+    }
   }
 
-  return placements;
+  return allPlacements;
 }
 
 // Placement generation cache

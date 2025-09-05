@@ -19,6 +19,7 @@ import {
   formatRationale,
   clearMemoCache,
 } from "./planner";
+import { suggestBySearch, defaultSearchConfig } from "./search";
 import { BASE_TEMPLATES, clearTemplateCache } from "./templates/index";
 
 import type {
@@ -70,7 +71,7 @@ function scorePlan(template: Template, state: GameState): PlanScore {
  */
 function collectPlacementCandidates(
   template: Template,
-  state: GameState,
+  state: GameState
 ): ReadonlyArray<{ placement: Placement; utility: number }> {
   const steps = template.nextStep(state);
   const candidates: Array<{ placement: Placement; utility: number }> = [];
@@ -125,7 +126,7 @@ function createDefaultPolicyContext(): PolicyContext {
  */
 export function recommendMove(
   state: GameState,
-  ctx: PolicyContext = createDefaultPolicyContext(),
+  ctx: PolicyContext = createDefaultPolicyContext()
 ): PolicyOutput {
   // Evaluate all templates - assert that we have templates available
   if (BASE_TEMPLATES.length === 0) {
@@ -160,8 +161,48 @@ export function recommendMove(
     bestScore,
     secondScore,
     ctx,
-    state,
+    state
   );
+
+  if (chosenTemplate.opener === "Neither") {
+    const sr = suggestBySearch(state, defaultSearchConfig);
+
+    // Reuse your confidence scheme if you prefer; here's a simple margin version:
+    const confidence = Math.max(
+      0.1,
+      Math.min(0.99, 0.6 + (sr.bestScore - sr.secondBestScore))
+    );
+
+    // Build suggestion object conditionally to satisfy exactOptionalPropertyTypes
+    const baseSuggestion = {
+      confidence,
+      intent: "Neither" as const,
+      placement: sr.best,
+      planId: "search/basic",
+      rationale: "Flat, low-risk placement (search)",
+    };
+    
+    const suggestion: Suggestion = sr.groups 
+      ? { ...baseSuggestion, groups: sr.groups }
+      : baseSuggestion;
+
+    // Create a minimal template for "Neither" case
+    const neitherTemplate: Template = {
+      id: "search/basic",
+      nextStep: () => [],
+      opener: "Neither",
+      preconditions: () => ({ feasible: true, notes: [] }),
+    };
+
+    const nextCtx = updatePolicyContext(
+      ctx,
+      neitherTemplate,
+      sr.bestScore,
+      sr.secondBestScore
+    );
+
+    return { nextCtx, suggestion };
+  }
 
   // Collect all placement candidates for clustering
   const candidates = collectPlacementCandidates(chosenTemplate, state);
@@ -169,7 +210,7 @@ export function recommendMove(
   // Extract placement array and utility function for clustering
   const candidatePlacements = candidates.map((c) => c.placement);
   const utilityLookup = new Map(
-    candidates.map((c) => [c.placement, c.utility]),
+    candidates.map((c) => [c.placement, c.utility])
   );
   const utility = (p: Placement): number => utilityLookup.get(p) ?? 0;
   const finesseCost = (p: Placement): number => calculateFinesseCost(p);
@@ -178,7 +219,7 @@ export function recommendMove(
   const nonDominatedPlacements = paretoFilter(
     candidatePlacements,
     utility,
-    finesseCost,
+    finesseCost
   );
 
   // Generate placement groups using clustering
@@ -186,7 +227,7 @@ export function recommendMove(
     nonDominatedPlacements,
     utility,
     finesseCost,
-    gridCoordAsNumber,
+    gridCoordAsNumber
   );
 
   // Get placement for chosen template (fallback to original method)
@@ -197,7 +238,7 @@ export function recommendMove(
     bestScore,
     secondScore,
     state,
-    chosenTemplate,
+    chosenTemplate
   );
 
   // Score the chosen template to get hazards for rationale
@@ -220,7 +261,7 @@ export function recommendMove(
     ctx,
     chosenTemplate,
     bestScore,
-    secondScore,
+    secondScore
   );
 
   return {

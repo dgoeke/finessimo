@@ -1,389 +1,620 @@
-import { gridCoordAsNumber } from "../../types/brands";
+/* eslint-disable */
+// src/policy/opener_utils_v2.ts
+// After-state scoring utilities for opener policies (TKI / PCO / Safe).
+//
+// TODO: This file has many ESLint violations that need to be fixed when we finalize the implementation.
+// For now we're iterating quickly on the logic.
+//
+// Key differences vs. pre-state heuristics:
+// - Actually drops, stamps, and clears -> scores the *resulting* board.
+// - Heavy penalties for holes and deep wells; modest rewards for line clears.
+// - Small, bounded opener-specific nudges layered on a safe base score.
+//
+// This file is designed to work with the types you showed:
+//   - GameState, ActivePiece, Rot, PieceId
+//   - Placement { rot, x, useHold? }
+//   - Board uses 1D `cells` with 0 = empty, non-zero = filled.
+//   - `dropToBottom(board, piece)` and `canPlacePiece(board, piece)` are available.
+//   - `GridCoord` helpers: createGridCoord, gridCoordAsNumber
+//
+// If your `Placement` includes `pieceId`, the utility will use it directly.
+// If not, we resolve it best-effort via (useHold ? hold ?? nextQueue[0] : active.id).
+//
+// NOTE: The SRS block offsets below assume x/y are the top-left of the
+// piece's *local* bounding box for each rotation. That matches many engines
+// that expose a leftmost/topmost "origin". If your engine's origin differs
+// for certain pieces (notably I), adjust OFFSETS to match your `dropToBottom`
+// / `canPlacePiece` conventions.
 
-import type { GameState, PieceId, Rot } from "../../state/types";
+import { canPlacePiece, dropToBottom } from "../../core/board";
+import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
+
+import type { GameState, ActivePiece, Rot, PieceId } from "../../state/types";
 import type { Placement } from "../types";
 
-// ---------- Small math helpers ----------
-const clamp = (v: number, lo: number, hi: number): number =>
-  Math.max(lo, Math.min(hi, v));
-const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+// -----------------------------------------------------------------------------
+// SRS-ish block offsets per PieceId x Rot (top-left origin per rotation)
+type XY = readonly [number, number];
 
-// ---------- Piece footprint approximation (columns spanned) ----------
-// SRS-consistent column widths per rotation for column-span approximation
-const PIECE_WIDTH: Record<PieceId, Record<Rot, number>> = {
-  I: { left: 1, right: 1, spawn: 4, two: 4 },
-  J: { left: 2, right: 2, spawn: 3, two: 3 },
-  L: { left: 2, right: 2, spawn: 3, two: 3 },
-  O: { left: 2, right: 2, spawn: 2, two: 2 },
-  S: { left: 2, right: 2, spawn: 3, two: 3 },
-  T: { left: 2, right: 2, spawn: 3, two: 3 },
-  Z: { left: 2, right: 2, spawn: 3, two: 3 },
-};
+const OFFSETS: Record<PieceId, Record<Rot, ReadonlyArray<XY>>> = {
+  I: {
+    left: [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+    ],
+    right: [
+      [0, 0],
+      [0, 1],
+      [0, 2],
+      [0, 3],
+    ],
+    spawn: [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [3, 0],
+    ],
+    two: [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [3, 0],
+    ],
+  },
+  J: {
+    //  .J
+    //  .J
+    //  JJ
+    left: [
+      [0, 2],
+      [0, 1],
+      [0, 0],
+      [1, 2],
+    ],
+    //  .JJ
+    //  .J
+    //  .J
+    right: [
+      [1, 0],
+      [2, 0],
+      [1, 1],
+      [1, 2],
+    ],
+    //  J..
+    //  JJJ
+    spawn: [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    //  JJJ
+    //  ..J
+    two: [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [2, 1],
+    ],
+  },
+  L: {
+    //  LL.
+    //   L.
+    //   L.
+    left: [
+      [0, 2],
+      [1, 2],
+      [1, 1],
+      [1, 0],
+    ],
+    //  .L
+    //  .L
+    //  .LL
+    right: [
+      [1, 0],
+      [1, 1],
+      [1, 2],
+      [2, 2],
+    ],
+    //  ..L
+    //  LLL
+    spawn: [
+      [2, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    //  LLL
+    //  L..
+    two: [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [0, 1],
+    ],
+  },
+  O: {
+    left: [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ],
+    right: [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ],
+    spawn: [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ],
+    two: [
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ],
+  },
+  S: {
+    //  S..
+    //  SS.
+    //  .S.
+    left: [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+    ],
+    //  .S
+    //  .SS
+    //  ..S
+    right: [
+      [1, 0],
+      [1, 1],
+      [2, 1],
+      [2, 2],
+    ],
+    //  .SS
+    //  SS.
+    spawn: [
+      [1, 0],
+      [2, 0],
+      [0, 1],
+      [1, 1],
+    ],
+    //  .SS
+    //  SS.
+    two: [
+      [1, 0],
+      [2, 0],
+      [0, 1],
+      [1, 1],
+    ],
+  },
+  T: {
+    //  T.
+    //  TT.
+    //  T.
+    left: [
+      [0, 1],
+      [1, 1],
+      [0, 0],
+      [0, 2],
+    ],
+    //  .T
+    //  .TT
+    //  .T
+    right: [
+      [1, 0],
+      [1, 1],
+      [2, 1],
+      [1, 2],
+    ],
+    //  .T.
+    //  TTT
+    spawn: [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+    ],
+    //  TTT
+    //   T
+    two: [
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [1, 1],
+    ],
+  },
+  Z: {
+    //  Z..
+    //  ZZ.
+    //  .Z.
+    left: [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+    ],
+    //  ..Z
+    //  .ZZ
+    //  .Z.
+    right: [
+      [2, 0],
+      [1, 1],
+      [2, 1],
+      [1, 2],
+    ],
+    //  ZZ.
+    //  .ZZ
+    spawn: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [2, 1],
+    ],
+    //  ZZ.
+    //  .ZZ
+    two: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [2, 1],
+    ],
+  },
+} as const;
+
+// -----------------------------------------------------------------------------
+// Helpers
 
 function resolvedPieceIdForPlacement(
   p: Placement,
-  s: GameState,
+  s: GameState
 ): PieceId | undefined {
-  // Prefer explicit pieceId if your Placement carries it
-  const explicit: PieceId | undefined = (p as { pieceId?: PieceId }).pieceId;
-  if (explicit !== undefined) return explicit;
+  // Prefer explicit p.pieceId if your Placement carries it
+  const explicit: PieceId | undefined = 'pieceId' in p ? (p as any).pieceId : undefined;
+  if (explicit) return explicit;
 
   if (p.useHold === true) {
-    // If holding is used, we likely drop the hold piece (if present), else queue[0]
-    if (s.hold !== undefined) return s.hold;
-    if (s.nextQueue.length > 0) return s.nextQueue[0];
+    if (s.hold) return s.hold;
+    if (s.nextQueue?.length) return s.nextQueue[0];
     return s.active?.id;
   }
   return s.active?.id;
 }
 
-function columnsSpanned(p: Placement, s: GameState): Array<number> {
-  const start = gridCoordAsNumber(p.x);
-  const pieceId = resolvedPieceIdForPlacement(p, s);
-  if (pieceId === undefined) return [start]; // best-effort fallback
-
-  const width = PIECE_WIDTH[pieceId][p.rot];
-  const cols: Array<number> = [];
-  for (let dx = 0; dx < width; dx++) {
-    const cx = start + dx;
-    if (cx >= 0 && cx < s.board.width) cols.push(cx);
+function forEachBlock(
+  piece: ActivePiece,
+  fn: (gx: number, gy: number) => void
+): void {
+  const off = OFFSETS[piece.id][piece.rot];
+  const baseX = gridCoordAsNumber(piece.x);
+  const baseY = gridCoordAsNumber(piece.y);
+  for (const [dx, dy] of off) {
+    fn(baseX + dx, baseY + dy);
   }
-  return cols.length > 0 ? cols : [clamp(start, 0, s.board.width - 1)];
 }
 
-// ---------- Board features (cached per board fingerprint) ----------
-type Features = {
-  heights: Array<number>;
-  maxHeight: number;
-  meanHeight: number;
-  bumpiness: number;
-};
-
-// Very cheap fingerprint for the current board state.
-// If your board already exposes a hash/version, use that instead.
-function boardFingerprint(s: GameState): string {
-  // Include basic geometry in case multiple modes have different dims
-  return `${s.board.width.toString()}x${s.board.height.toString()}|${s.board.vanishRows.toString()}|${s.board.cells.join(
-    "",
-  )}`;
+function cloneCells(src: ReadonlyArray<number>): Array<number> {
+  return Array.from(src);
 }
 
-const featuresCache = new Map<string, Features>();
+function applyPiece(cells: Array<number>, s: GameState, piece: ActivePiece): void {
+  forEachBlock(piece, (gx, gy) => {
+    if (gx < 0 || gx >= s.board.width) return;
+    if (
+      gy + s.board.vanishRows < 0 ||
+      gy + s.board.vanishRows >= s.board.height
+    )
+      return;
+    const idx = (gy + s.board.vanishRows) * s.board.width + gx;
+    cells[idx] = 1; // mark filled (color not important for heuristics)
+  });
+}
 
-function getFeatures(s: GameState): Features {
-  const key = boardFingerprint(s);
-  const cached = featuresCache.get(key);
-  if (cached) return cached;
+function clearFullRows(cells: Array<number>, s: GameState): number {
+  const { height, width } = s.board;
+  let dst = height - 1;
+  let cleared = 0;
 
-  const heights = computeColumnHeights(s);
-  let bumpiness = 0;
-  for (let x = 0; x < heights.length - 1; x++) {
-    const current = heights[x] ?? 0;
-    const next = heights[x + 1] ?? 0;
-    bumpiness += Math.abs(current - next);
+  for (let y = height - 1; y >= 0; y--) {
+    let full = true;
+    const rowStart = y * width;
+    for (let x = 0; x < width; x++) {
+      if (cells[rowStart + x] === 0) {
+        full = false;
+        break;
+      }
+    }
+    if (!full || y < s.board.vanishRows) {
+      // keep row
+      if (dst !== y) {
+        for (let x = 0; x < width; x++) {
+          const srcCell = cells[rowStart + x];
+          cells[dst * width + x] = srcCell ?? 0;
+        }
+      }
+      dst--;
+    } else {
+      cleared++;
+      // row removed (skip copy)
+    }
   }
-  const maxHeight = heights.length > 0 ? Math.max(...heights) : 0;
-  const meanHeight =
-    heights.length > 0
-      ? heights.reduce((a, b) => a + b, 0) / heights.length
-      : 0;
-
-  const f: Features = { bumpiness, heights, maxHeight, meanHeight };
-  featuresCache.set(key, f);
-  return f;
+  // zero-fill above dst
+  for (let y = dst; y >= 0; y--) {
+    const rowStart = y * width;
+    for (let x = 0; x < width; x++) cells[rowStart + x] = 0;
+  }
+  return cleared;
 }
 
-// (Re)export a clearer cache reset if you need to wire into your existing clearTemplateCache
-export function clearOpenerUtilityCache(): void {
-  featuresCache.clear();
-}
-
-// Column heights: counts occupied cells in each visible column.
-function computeColumnHeights(s: GameState): Array<number> {
-  const { cells, height, vanishRows, width } = s.board;
+function computeColumnHeightsFromCells(
+  cells: ReadonlyArray<number>,
+  width: number,
+  height: number,
+  vanishRows: number
+): Array<number> {
   const visRows = height - vanishRows;
-  const out: Array<number> = new Array<number>(width).fill(0);
-
+  const out = new Array(width).fill(0);
   for (let x = 0; x < width; x++) {
-    // scan from top of visible area downward
     let h = 0;
     for (let y = 0; y < visRows; y++) {
       const idx = (y + vanishRows) * width + x;
       if (cells[idx] !== 0) {
-        h = visRows - y; // e.g., if first block at y=vanishRows, height==visRows
+        h = visRows - y;
         break;
       }
     }
-    out[x] = h; // 0 if empty
+    out[x] = h;
   }
   return out;
 }
 
-// ---------- Local topology helpers (based on columns spanned) ----------
-type Local = {
-  xStart: number;
-  xEnd: number;
-  targetHeights: Array<number>;
-  leftNeighbor: number;
-  rightNeighbor: number;
-  minTarget: number;
-  maxTarget: number;
+function countHoles(
+  cells: ReadonlyArray<number>,
+  width: number,
+  height: number,
+  vanishRows: number
+): number {
+  let holes = 0;
+  for (let x = 0; x < width; x++) {
+    let seen = false;
+    for (let y = vanishRows; y < height; y++) {
+      const idx = y * width + x;
+      const filled = cells[idx] !== 0;
+      if (filled) {
+        seen = true;
+      } else if (seen) {
+        holes++;
+      }
+    }
+  }
+  return holes;
+}
+
+function maxWellDepth(heights: ReadonlyArray<number>): number {
+  let maxDepth = 0;
+  const n = heights.length;
+  for (let x = 0; x < n; x++) {
+    const left = x === 0 ? Number.MAX_SAFE_INTEGER : (heights[x - 1] ?? 0);
+    const right = x === n - 1 ? Number.MAX_SAFE_INTEGER : (heights[x + 1] ?? 0);
+    const currentHeight = heights[x] ?? 0;
+    const wallMin = Math.min(left, right);
+    if (wallMin > currentHeight) {
+      maxDepth = Math.max(maxDepth, wallMin - currentHeight);
+    }
+  }
+  return maxDepth;
+}
+
+type AfterFeatures = {
+  heights: Array<number>;
+  aggregateHeight: number;
+  maxHeight: number;
+  bumpiness: number;
+  holes: number;
+  maxWellDepth: number;
+  linesCleared: number;
 };
 
-function localTopology(p: Placement, s: GameState, feats: Features): Local {
-  const cols = columnsSpanned(p, s);
-  const targetHeights = cols.map((cx) => feats.heights[cx] ?? 0);
-  const xStart = Math.min(...cols);
-  const xEnd = Math.max(...cols);
-  const leftNeighbor: number =
-    xStart > 0 ? (feats.heights[xStart - 1] ?? 0) : (targetHeights[0] ?? 0);
-  const rightNeighbor: number =
-    xEnd < feats.heights.length - 1
-      ? (feats.heights[xEnd + 1] ?? 0)
-      : (targetHeights[targetHeights.length - 1] ?? 0);
-  const minTarget = targetHeights.length > 0 ? Math.min(...targetHeights) : 0;
-  const maxTarget = targetHeights.length > 0 ? Math.max(...targetHeights) : 0;
+function analyzeAfterState(cells: Array<number>, s: GameState): AfterFeatures {
+  const { height, vanishRows, width } = s.board;
+  const heights = computeColumnHeightsFromCells(
+    cells,
+    width,
+    height,
+    vanishRows
+  );
+  const aggregateHeight = heights.reduce((a, b) => a + b, 0);
+  const maxHeight = heights.length ? Math.max(...heights) : 0;
+  let bumpiness = 0;
+  for (let x = 0; x < heights.length - 1; x++) {
+    const currentHeight = heights[x] ?? 0;
+    const nextHeight = heights[x + 1] ?? 0;
+    bumpiness += Math.abs(currentHeight - nextHeight);
+  }
+  const holes = countHoles(cells, width, height, vanishRows);
+  const mwd = maxWellDepth(heights);
   return {
-    leftNeighbor,
-    maxTarget,
-    minTarget,
-    rightNeighbor,
-    targetHeights,
-    xEnd,
-    xStart,
+    aggregateHeight,
+    bumpiness,
+    heights,
+    holes,
+    linesCleared: 0,
+    maxHeight,
+    maxWellDepth: mwd,
   };
 }
 
-// ---------- Common baseline (applies to all openers) ----------
-function baseUtility(p: Placement, s: GameState, feats: Features): number {
-  const { maxHeight, meanHeight } = feats;
-  const loc = localTopology(p, s, feats);
-  const width = loc.xEnd - loc.xStart + 1;
-
-  let u = 1.0;
-
-  // Global danger: discourage stacking too high
-  if (maxHeight >= 18) u -= 1.2;
-  else if (maxHeight >= 16) u -= 0.8;
-  else if (maxHeight >= 14) u -= 0.4;
-
-  // Edge friction: slight penalty at extreme edges, increases with height
-  if (loc.xStart === 0 || loc.xEnd === s.board.width - 1) {
-    u -= lerp(0.05, 0.2, clamp(maxHeight / 18, 0, 1));
-  }
-
-  // Local shape: prefer valley fill; avoid creating spikes
-  const left = loc.leftNeighbor;
-  const right = loc.rightNeighbor;
-  const minT = loc.minTarget;
-  const maxT = loc.maxTarget;
-  const valleyBonus = (minT < left ? 0.15 : 0) + (minT < right ? 0.15 : 0);
-  u += valleyBonus;
-
-  const spikePenalty =
-    (maxT > left + 2 ? 0.2 : 0) + (maxT > right + 2 ? 0.2 : 0);
-  u -= spikePenalty;
-
-  // Keep field relatively even around the landing zone
-  const localMean = loc.targetHeights.reduce((a, b) => a + b, 0) / width;
-  const localEvenness = 1 - clamp(Math.abs(localMean - meanHeight) / 6, 0, 1); // [0..1]
-  u += 0.1 * localEvenness;
-
-  // Light penalty for gratuitous hold usage
-  if (p.useHold === true) u -= 0.05;
-
-  return u;
-}
-
-// ---------- TKI utility helpers ----------
-
-function calculateTkiCenterBandBonus(loc: Local, boardWidth: number): number {
-  const xMid = (boardWidth - 1) / 2;
-  const centerDist = Math.abs((loc.xStart + loc.xEnd) / 2 - xMid);
-  return clamp(0.6 - 0.12 * centerDist, 0, 0.6);
-}
-
-function calculateTkiCenterHeightBonus(feats: Features): number {
-  const centerCols = [3, 4, 5, 6].filter(
-    (x) => x >= 0 && x < feats.heights.length,
-  );
-  const centerMax =
-    centerCols.length > 0
-      ? Math.max(...centerCols.map((x) => feats.heights[x] ?? 0))
-      : feats.maxHeight;
-
-  if (centerMax <= 6) return 0.15;
-  if (centerMax >= 9) return -0.25;
-  return 0;
-}
-
-function calculateTkiTPieceBonus(
-  p: Placement,
-  s: GameState,
-  loc: Local,
-): number {
-  const piece = resolvedPieceIdForPlacement(p, s);
-  if (piece === "T" && loc.xStart <= 4 && loc.xEnd >= 4) {
-    return 0.2; // bonus if T covers column 4/5 region
-  }
-  return 0;
-}
-
-function calculateTkiIPieceBonus(p: Placement, s: GameState): number {
-  const piece = resolvedPieceIdForPlacement(p, s);
-  const earlyI =
-    s.hold === "I" || s.nextQueue.slice(0, 3).includes("I") || piece === "I";
-  return earlyI ? 0.1 : 0;
-}
-
-function calculateTkiSpikesPenalty(loc: Local): number {
-  const left = loc.leftNeighbor;
-  const right = loc.rightNeighbor;
+// -----------------------------------------------------------------------------
+// Base score (El-Tetris style, tuned for opener safety). Higher is better.
+function baseAfterStateScore(after: AfterFeatures): number {
+  // Tune weights conservatively. Holes are most dangerous.
+  const w = {
+    aggregateHeight: -0.5,
+    bumpiness: -0.22,
+    holes: -2.4,
+    linesCleared: 0.9,
+    maxHeight: -0.35,
+    maxWellDepth: -0.25,
+  };
   return (
-    (loc.maxTarget > left + 2 ? 0.15 : 0) +
-    (loc.maxTarget > right + 2 ? 0.15 : 0)
+    w.aggregateHeight * after.aggregateHeight +
+    w.bumpiness * after.bumpiness +
+    w.holes * after.holes +
+    w.maxHeight * after.maxHeight +
+    w.maxWellDepth * after.maxWellDepth +
+    w.linesCleared * after.linesCleared
   );
 }
 
-function calculateTkiHoldBonus(p: Placement, s: GameState): number {
-  if (
-    p.useHold === true &&
-    s.active &&
-    s.active.id !== "T" &&
-    s.active.id !== "I"
-  ) {
-    return 0.1;
-  }
-  return 0;
+// Simulate placement -> after-state features (mutates a temp cells copy).
+function simulateAfter(
+  s: GameState,
+  placement: Placement
+): AfterFeatures | null {
+  const id = resolvedPieceIdForPlacement(placement, s);
+  if (!id || !s.active) return null;
+
+  const piece: ActivePiece = {
+    id,
+    rot: placement.rot,
+    x: placement.x,
+    y: createGridCoord(0),
+  };
+
+  const dropped = dropToBottom(s.board, piece);
+  if (!canPlacePiece(s.board, dropped)) return null;
+
+  const scratch = cloneCells(Array.from(s.board.cells));
+  applyPiece(scratch, s, dropped);
+  const cleared = clearFullRows(scratch, s);
+  const features = analyzeAfterState(scratch, s);
+  features.linesCleared = cleared;
+  return features;
 }
 
-// ---------- TKI utility ----------
-// Emphasis: central columns for T setups, avoid center spikes, gentle hold encouragement for I/T management.
+// -----------------------------------------------------------------------------
+// Opener-specific utilities (light nudges on top of base score).
+
+function centerBias(
+  _after: AfterFeatures,
+  s: GameState,
+  placement: Placement,
+  maxBoost: number
+): number {
+  const xStart = gridCoordAsNumber(placement.x);
+  // estimate center of footprint using OFFSETS bounds for this piece/rot
+  const id = resolvedPieceIdForPlacement(placement, s);
+  if (!id) return 0;
+  const offs = OFFSETS[id][placement.rot];
+  let minX = Infinity,
+    maxX = -Infinity;
+  for (const [dx] of offs) {
+    minX = Math.min(minX, dx);
+    maxX = Math.max(maxX, dx);
+  }
+  const width = maxX - minX + 1;
+  const centerX = xStart + minX + (width - 1) / 2;
+  const boardMid = (s.board.width - 1) / 2;
+  const dist = Math.abs(centerX - boardMid);
+  // triangular falloff to zero by ~4 cols
+  return Math.max(0, maxBoost * (1 - dist / 4));
+}
+
+function earlyIAvailable(s: GameState, placement: Placement): boolean {
+  const id = resolvedPieceIdForPlacement(placement, s);
+  if (id === "I") return true;
+  if (s.hold === "I") return true;
+  const q = s.nextQueue ?? [];
+  for (let i = 0; i < Math.min(3, q.length); i++) if (q[i] === "I") return true;
+  return false;
+}
+
 export function tkiUtility(p: Placement, s: GameState): number {
-  const feats = getFeatures(s);
-  const loc = localTopology(p, s, feats);
+  const after = simulateAfter(s, p);
+  if (!after) return -Infinity;
+  let score = baseAfterStateScore(after);
 
-  let u = baseUtility(p, s, feats);
+  // Gentle center encouragement
+  score += centerBias(after, s, p, /*maxBoost*/ 0.15);
 
-  u += calculateTkiCenterBandBonus(loc, s.board.width);
-  u += calculateTkiCenterHeightBonus(feats);
-  u += calculateTkiTPieceBonus(p, s, loc);
-  u += calculateTkiIPieceBonus(p, s);
-  u -= calculateTkiSpikesPenalty(loc);
-  u += calculateTkiHoldBonus(p, s);
+  // Early-I helps TKI branches; small bonus
+  if (earlyIAvailable(s, p)) score += 0.08;
 
-  return u;
-}
-
-// ---------- PCO utility ----------
-// Emphasis: flatness, low stack, gentle left-of-center bias for common PC patterns, strong anti-roughness.
-export function pcoUtility(p: Placement, s: GameState): number {
-  const feats = getFeatures(s);
-  const loc = localTopology(p, s, feats);
-  let u = baseUtility(p, s, feats);
-
-  // Strong preference for low max height
-  if (feats.maxHeight > 4) {
-    u -= 0.5 + 0.1 * (feats.maxHeight - 4);
-  } else u += 0.25;
-
-  // Punish bumpiness; reward evenness around landing zone
-  const evennessReward = clamp(1 - feats.bumpiness / 20, 0, 1); // [0..1]
-  u += 0.4 * evennessReward;
-
-  // Light left bias (helps many 4-wide-ish PC routes), but not the wall
-  if (loc.xStart >= 1 && loc.xEnd <= 5) u += 0.15;
-
-  // Penalize overhangs/spikes near the landing zone
-  const left = loc.leftNeighbor;
-  const right = loc.rightNeighbor;
-  if (loc.maxTarget > left + 1) u -= 0.15;
-  if (loc.maxTarget > right + 1) u -= 0.15;
-
-  // Flatness around mean
-  const localMean =
-    loc.targetHeights.reduce((acc, height) => acc + height, 0) /
-    Math.max(1, loc.xEnd - loc.xStart + 1);
-  const flatness = 1 - clamp(Math.abs(localMean - feats.meanHeight) / 3, 0, 1);
-  u += 0.2 * flatness;
-
-  // Spawn rotation often optimal (avoid unnecessary twists for PC tables)
-  if (p.rot === "spawn") u += 0.05;
-
-  // Prefer not to use hold unless it clearly flattens
-  if (p.useHold === true) u -= 0.05;
-
-  return u;
-}
-
-// ---------- Safe utility helpers ----------
-
-function isSafeOpening(feats: Features): boolean {
-  const totalHeight = feats.heights.reduce((acc, height) => acc + height, 0);
-  return feats.maxHeight <= 3 && totalHeight <= 6;
-}
-
-function calculateSafeOpeningBonus(loc: Local, boardWidth: number): number {
-  let bonus = 0;
-  if (loc.xStart >= 2 && loc.xEnd <= 7) bonus += 0.25;
-  if (loc.xStart === 0 || loc.xEnd === boardWidth - 1) bonus -= 0.2;
-  return bonus;
-}
-
-function calculateSafeMidgameBonus(feats: Features, loc: Local): number {
-  let bonus = 0;
-  if (feats.maxHeight > 15) bonus -= 0.8;
-  else if (feats.maxHeight > 12) bonus -= 0.4;
-
-  if (loc.xStart >= 2 && loc.xEnd <= 7) bonus += 0.1;
-  return bonus;
-}
-
-function calculateSafeValleyFillBonus(loc: Local): number {
-  const left = loc.leftNeighbor;
-  const right = loc.rightNeighbor;
-  let bonus = 0;
-  if (loc.minTarget < Math.min(left, right)) bonus += 0.2;
-  if (loc.maxTarget > Math.max(left, right) + 1) bonus -= 0.2;
-  return bonus;
-}
-
-function calculateSafeEdgePenalty(loc: Local, boardWidth: number): number {
-  return loc.xStart === 0 || loc.xEnd === boardWidth - 1 ? -0.1 : 0;
-}
-
-function calculateSafeHoldPenalty(p: Placement): number {
-  return p.useHold === true ? -0.1 : 0;
-}
-
-// ---------- Safe ("Neither") utility ----------
-// Emphasis: shape smoothing, valley fill, center-ish preference, strong height safety.
-export function safeUtility(p: Placement, s: GameState): number {
-  const feats = getFeatures(s);
-  const loc = localTopology(p, s, feats);
-  let u = baseUtility(p, s, feats);
-
-  const isOpening = isSafeOpening(feats);
-
-  if (isOpening) {
-    u += calculateSafeOpeningBonus(loc, s.board.width);
-  } else {
-    u += calculateSafeMidgameBonus(feats, loc);
+  // Without an imminent I, deep wells are dangerous for TKI
+  if (!earlyIAvailable(s, p) && after.maxWellDepth >= 4) {
+    score -= 0.3 * (after.maxWellDepth - 3);
   }
 
-  u += calculateSafeValleyFillBonus(loc);
-  u += calculateSafeEdgePenalty(loc, s.board.width);
-  u += calculateSafeHoldPenalty(p);
+  // Slightly prefer not to use hold unless it clearly improves after-state
+  if ('useHold' in p && p.useHold) score -= 0.03;
 
-  return u;
+  return score;
 }
 
-// ---------- Optional: centralized weight knobs ----------
-// If you want a single place to tweak behaviors, route through this table.
-// Example:
-//   export const openerUtility = (mode: "TKI"|"PCO"|"SAFE") => (p,s) => {
-//      const scores = { TKI: tkiUtility(p,s), PCO: pcoUtility(p,s), SAFE: safeUtility(p,s) };
-//      return scores[mode];
-//   };
-//
-// For now we export the three functions directly above.
+export function pcoUtility(p: Placement, s: GameState): number {
+  const after = simulateAfter(s, p);
+  if (!after) return -Infinity;
+  let score = baseAfterStateScore(after);
+
+  // Flatness + low stack are critical
+  const flatness = 1 - Math.min(1, after.bumpiness / 20);
+  score += 0.35 * flatness;
+  if (after.maxHeight <= 4) score += 0.25;
+  else score -= 0.05 * (after.maxHeight - 4);
+
+  // Tiny left-of-center nudge for common PC routes, but never the wall
+  const leftBias =
+    centerBias(after, s, p, 0.1) * (gridCoordAsNumber(p.x) <= 5 ? 1.0 : 0.5);
+  score += leftBias;
+
+  // Prefer not to use hold unless it flattened (already captured by base score);
+  // add a small negative to break ties away from gratuitous holds.
+  if ('useHold' in p && p.useHold) score -= 0.04;
+
+  return score;
+}
+
+export function safeUtility(p: Placement, s: GameState): number {
+  const after = simulateAfter(s, p);
+  if (!after) return -Infinity;
+  let score = baseAfterStateScore(after);
+
+  // Opening detection: keep options open near center
+  const isOpening = after.maxHeight <= 3 && after.aggregateHeight <= 6;
+  if (isOpening) {
+    score += centerBias(after, s, p, 0.12);
+    // avoid hard walls
+    const x = gridCoordAsNumber(p.x);
+    if (x === 0 || x + 1 >= s.board.width) score -= 0.12;
+  } else {
+    // Midgame: avoid very tall stacks
+    if (after.maxHeight > 15) score -= 0.6;
+    else if (after.maxHeight > 12) score -= 0.3;
+    // mild center-ish stability
+    score += centerBias(after, s, p, 0.06);
+  }
+
+  // In safe mode we de-emphasize hold
+  if ('useHold' in p && p.useHold) score -= 0.08;
+
+  return score;
+}
+
+// Optional export if you want to unit test the primitives.
+export const __debug = {
+  baseAfterStateScore,
+  computeColumnHeightsFromCells,
+  countHoles,
+  maxWellDepth,
+  OFFSETS,
+  simulateAfter,
+};

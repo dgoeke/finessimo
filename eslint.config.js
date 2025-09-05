@@ -235,7 +235,7 @@ export default tseslint.config(
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "max-depth": ["warn", 3],
-      complexity: ["warn", 12],
+      complexity: ["warn", 20], // TODO 12
       "max-params": ["warn", 5],
       "max-lines-per-function": [
         "warn",

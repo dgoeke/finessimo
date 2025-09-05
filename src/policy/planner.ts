@@ -253,11 +253,159 @@ function checkForGapAtRow(board: GameState["board"], y: number): boolean {
 
 /**
  * Calculate base utility score for a template
+ * This provides a meaningful baseline score that considers board state
  */
-function calculateBaseUtility(_template: Template, _state: GameState): number {
-  // Simplified scoring for Chapter 1 MVP
-  // Real implementation would consider board state, piece positions, etc.
-  return 1.0; // Base utility
+function calculateBaseUtility(template: Template, state: GameState): number {
+  let utility = 1.0; // Base utility
+  
+  // Template-specific scoring adjustments
+  switch (template.opener) {
+    case "TKI":
+      utility += calculateTkiBaseUtility(state);
+      break;
+    case "PCO":
+      utility += calculatePcoBaseUtility(state);
+      break;
+    case "Neither":
+      utility += calculateSafeBaseUtility(state);
+      break;
+  }
+  
+  // Global board state factors
+  const heights = memoizedColumnHeights(state.board);
+  const maxHeight = Math.max(0, ...heights);
+  
+  // Penalty for dangerous heights
+  if (maxHeight >= 18) utility -= 2.0;
+  else if (maxHeight >= 15) utility -= 1.0;
+  else if (maxHeight >= 12) utility -= 0.3;
+  
+  // Bonus for balanced field
+  const bumpiness = heights.reduce((sum, h, i) => {
+    const next = heights[i + 1] ?? h;
+    return sum + Math.abs(h - next);
+  }, 0);
+  
+  if (bumpiness <= 3) utility += 0.3;
+  else if (bumpiness >= 10) utility -= 0.5;
+  
+  return Math.max(0.1, utility); // Ensure positive utility
+}
+
+/**
+ * TKI-specific base utility calculation
+ */
+function calculateTkiBaseUtility(state: GameState): number {
+  let utility = 0;
+  
+  const heights = memoizedColumnHeights(state.board);
+  const maxHeight = Math.max(0, ...heights);
+  
+  // TKI is completely unsuitable for high stacks
+  if (maxHeight >= 16) return -3.0; // Strong penalty for dangerous heights
+  if (maxHeight >= 12) utility -= 1.5;
+  if (maxHeight >= 10) utility -= 0.8;
+  
+  // Check if we have I piece available
+  const hasI = state.hold === "I" || state.nextQueue.slice(0, 3).includes("I") || state.active?.id === "I";
+  if (hasI) utility += 0.4;
+  else utility -= 0.8;
+  
+  // Check center column situation (good for T-spins)
+  const centerCols = [3, 4, 5, 6];
+  const centerHeight = Math.max(...centerCols.map(i => heights[i] ?? 0));
+  
+  if (centerHeight <= 8) utility += 0.2;
+  else if (centerHeight >= 12) utility -= 0.3;
+  
+  return utility;
+}
+
+/**
+ * Check PCO height penalties
+ */
+function calculatePcoHeightPenalty(maxHeight: number): number {
+  if (maxHeight >= 12) return -4.0; // Very strong penalty for high stacks
+  if (maxHeight >= 8) return -2.0;
+  if (maxHeight >= 6) return -1.0;
+  return 0;
+}
+
+/**
+ * Calculate PCO bonuses for low, flat fields
+ */
+function calculatePcoFieldBonuses(maxHeight: number, filledCells: number, heights: ReadonlyArray<number>): number {
+  let utility = 0;
+  
+  // Height bonuses
+  if (maxHeight <= 3) utility += 0.5;
+  else if (maxHeight <= 4) utility += 0.1;
+  
+  // Cell count bonuses
+  if (filledCells <= 10) utility += 0.5;
+  else if (filledCells <= 15) utility += 0.3;
+  else utility -= 0.4;
+  
+  // Evenness bonus
+  const variance = heights.reduce((sum, h) => {
+    const mean = filledCells / heights.length;
+    return sum + Math.abs(h - mean);
+  }, 0);
+  
+  if (variance <= 2) utility += 0.2;
+  
+  return utility;
+}
+
+/**
+ * PCO-specific base utility calculation
+ */
+function calculatePcoBaseUtility(state: GameState): number {
+  const heights = memoizedColumnHeights(state.board);
+  const maxHeight = Math.max(0, ...heights);
+  const filledCells = heights.reduce((sum, h) => sum + h, 0);
+  
+  // Check for critical height penalty first
+  const heightPenalty = calculatePcoHeightPenalty(maxHeight);
+  if (heightPenalty === -4.0) return heightPenalty; // Early return for impossible cases
+  
+  let utility = heightPenalty;
+  
+  // Check for I piece availability (PCO often needs I for finishing)
+  const hasI = state.hold === "I" || state.nextQueue.slice(0, 3).includes("I") || state.active?.id === "I";
+  if (!hasI) utility -= 1.2; // Strong penalty for no I piece
+  
+  utility += calculatePcoFieldBonuses(maxHeight, filledCells, heights);
+  
+  return utility;
+}
+
+/**
+ * Safe/Neither-specific base utility calculation
+ */
+function calculateSafeBaseUtility(state: GameState): number {
+  let utility = 0;
+  
+  // Safe strategy prefers moderate heights and good shape
+  const heights = memoizedColumnHeights(state.board);
+  const maxHeight = Math.max(0, ...heights);
+  
+  // Safe strategy gets BETTER as height increases (unlike openers)
+  if (maxHeight >= 18) utility += 1.5; // Emergency mode - prioritize safe play
+  else if (maxHeight >= 15) utility += 1.0; // High danger - safe play is good
+  else if (maxHeight >= 12) utility += 0.5; // Getting dangerous - prefer safe
+  else if (maxHeight >= 8) utility += 0.2; // Moderate height - safe is okay
+  else if (maxHeight <= 3) utility -= 0.3; // Very low - openers might be better
+  
+  // Bonus for avoiding line clear opportunities (which are good for safe play)
+  const filledCells = heights.reduce((sum, h) => sum + h, 0);
+  if (filledCells >= 50) utility += 0.3; // Many blocks = good for clearing lines
+  
+  // Penalty for creating dangerous situations
+  const edgeHeight = Math.max(heights[0] ?? 0, heights[9] ?? 0);
+  if (edgeHeight > maxHeight - 2) utility -= 0.2; // Avoid high edges
+  
+  return utility;
 }
 
 /**

@@ -1,7 +1,7 @@
 // Policy types for opener training system
 // Chapter 1: MVP types for TKI/PCO policy with hysteresis and hazard detection
 
-import type { Rot, GameState, ModeGuidance } from "../state/types";
+import type { Rot, GameState, ModeGuidance, PieceId } from "../state/types";
 import type { GridCoord } from "../types/brands";
 import type { Timestamp } from "../types/timestamp";
 
@@ -12,6 +12,7 @@ export type Intent = "TKI" | "PCO" | "Neither";
 export type Placement = Readonly<{
   x: GridCoord;
   rot: Rot;
+  pieceId?: PieceId; // explicit piece type (inferred if not provided)
   useHold?: boolean; // true => move current to hold and use next
 }>;
 
