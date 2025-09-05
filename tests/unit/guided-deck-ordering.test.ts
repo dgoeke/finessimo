@@ -14,7 +14,6 @@ describe("Guided deck card ordering", () => {
     const gameplayConfig: GameplayConfig = {
       finesseCancelMs: createDurationMs(50),
       holdEnabled: false,
-      openingCoachingEnabled: false,
     };
 
     // Calculate difficulty for each card
@@ -104,7 +103,6 @@ describe("Guided deck card ordering", () => {
     const gameplayConfig: GameplayConfig = {
       finesseCancelMs: createDurationMs(50),
       holdEnabled: false,
-      openingCoachingEnabled: false,
     };
 
     // Check that the first few cards are among the easiest

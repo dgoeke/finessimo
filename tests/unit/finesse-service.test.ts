@@ -40,7 +40,6 @@ describe("FinesseService", () => {
       gameplay: {
         finesseCancelMs: createDurationMs(50),
         holdEnabled: true,
-        openingCoachingEnabled: false,
       },
       processedInputLog: processedActions,
     };
@@ -75,7 +74,6 @@ describe("FinesseService", () => {
       gameplay: {
         finesseCancelMs: createDurationMs(50),
         holdEnabled: true,
-        openingCoachingEnabled: false,
       },
       processedInputLog: processedActions,
     };

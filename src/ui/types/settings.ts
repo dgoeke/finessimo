@@ -24,9 +24,6 @@ export type GameSettings = {
   finesseBoopEnabled: boolean;
   retryOnFinesseError: boolean;
 
-  // Opening coaching settings
-  openingCoachingEnabled: boolean;
-
   // Controls
   keyBindings?: KeyBindings;
   // Minimal playtest toggle

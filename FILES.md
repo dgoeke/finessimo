@@ -140,7 +140,7 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/styles/components/controls.css: Touch controls, zones, buttons, gesture handling.
 - src/ui/styles/components/modals.css: Settings modal, keybinding modal, dialog styles.
 - src/ui/styles/effects/animations.css: CSS keyframe animations (floatUpFade, etc.).
-- src/ui/styles/effects/overlays.css: Coaching overlay, feedback positioning.
+- src/ui/styles/effects/overlays.css: Overlay positioning utilities.
 - src/ui/styles/effects/finesse.css: Finesse feedback overlay, action icons.
 - src/ui/styles/lit-components/board.css: Web component styles for game-board, piece-hold, etc.
 - src/ui/styles/lit-components/settings.css: Settings components (checkbox, slider, dropdown, etc.).

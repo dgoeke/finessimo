@@ -15,7 +15,6 @@ describe("Guided finesse table generator", () => {
     const gameplayConfig: GameplayConfig = {
       finesseCancelMs: createDurationMs(50),
       holdEnabled: false,
-      openingCoachingEnabled: false,
     };
 
     type Row = {

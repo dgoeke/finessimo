@@ -335,7 +335,6 @@ export function createTestGameState(
     gameplay: {
       finesseCancelMs: createDurationMs(50),
       holdEnabled: true,
-      openingCoachingEnabled: false,
     },
     guidance: null,
     hold: undefined,

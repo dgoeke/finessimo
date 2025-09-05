@@ -37,7 +37,6 @@ export const defaultGameplayConfig: GameplayConfig = {
   guidedColumnHighlightEnabled: true,
   holdEnabled: true,
   nextPieceCount: 5,
-  openingCoachingEnabled: false,
   retryOnFinesseError: false,
 };
 

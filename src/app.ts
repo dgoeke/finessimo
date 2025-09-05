@@ -418,7 +418,7 @@ export class FinessimoApp {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
       if (!simpleEqual(guidance, prev)) {
-        // Surface guidance updates in console alongside coaching overlay updates
+        // Surface guidance updates in console
         console.warn("[Guidance] Updated:", guidance);
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
@@ -826,8 +826,6 @@ export class FinessimoApp {
       gameplay.finesseBoopEnabled = newSettings.finesseBoopEnabled;
     if (newSettings.retryOnFinesseError !== undefined)
       gameplay.retryOnFinesseError = newSettings.retryOnFinesseError;
-    if (newSettings.openingCoachingEnabled !== undefined)
-      gameplay.openingCoachingEnabled = newSettings.openingCoachingEnabled;
 
     if (Object.keys(gameplay).length > 0) {
       this.dispatch({ gameplay, type: "UpdateGameplay" });

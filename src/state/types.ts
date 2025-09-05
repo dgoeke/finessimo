@@ -111,8 +111,6 @@ export type GameplayConfig = {
   finesseFeedbackEnabled?: boolean; // default true
   finesseBoopEnabled?: boolean; // default false
   retryOnFinesseError?: boolean; // default false - retry piece on hard drop finesse errors
-  // Opening coaching toggle
-  openingCoachingEnabled: boolean; // default false - show opening coaching HUD in freeplay
 };
 
 export type SoftDropSpeed = number | "infinite";

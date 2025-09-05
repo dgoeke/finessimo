@@ -30,7 +30,6 @@ type SerializedGameplay = Partial<{
   finesseFeedbackEnabled: boolean;
   finesseBoopEnabled: boolean;
   retryOnFinesseError: boolean;
-  openingCoachingEnabled: boolean;
 }>;
 
 type PersistedStore = Partial<{
@@ -139,7 +138,6 @@ function extractGameplayNested(
     "finesseFeedbackEnabled",
     "finesseBoopEnabled",
     "retryOnFinesseError",
-    "openingCoachingEnabled",
   ] as const) {
     const v = g[k];
     if (isBoolean(v)) (out as Record<string, unknown>)[k] = v;
@@ -177,7 +175,6 @@ function extractFromFlat(
     "finesseFeedbackEnabled",
     "finesseBoopEnabled",
     "retryOnFinesseError",
-    "openingCoachingEnabled",
   ] as const) {
     const v = store[k];
     if (isBoolean(v)) (out as Record<string, unknown>)[k] = v;
@@ -223,7 +220,6 @@ function serializeSettingsFromState(
     gameplay.finesseBoopEnabled = g.finesseBoopEnabled;
   if (g.retryOnFinesseError !== undefined)
     gameplay.retryOnFinesseError = g.retryOnFinesseError;
-  gameplay.openingCoachingEnabled = g.openingCoachingEnabled;
 
   return {
     gameplay,
