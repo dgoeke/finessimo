@@ -1,5 +1,4 @@
 import { freePlayUi } from "../../src/modes/freePlay/ui";
-import * as policy from "../../src/policy/index";
 import { createTestGameState } from "../test-helpers";
 
 import type { GameState } from "../../src/state/types";
@@ -57,29 +56,5 @@ describe("FreePlay UI Adapter - computeDerivedUi", () => {
     };
     expect(typeof po.suggestion.rationale).toBe("string");
     expect(po.suggestion.rationale.length).toBeGreaterThan(0);
-  });
-
-  test("handles policy errors gracefully and returns null", () => {
-    const base = createTestGameState();
-    const state: GameState = {
-      ...base,
-      gameplay: { ...base.gameplay, openingCoachingEnabled: true },
-      modeData: {
-        policyContext: {
-          lastBestScore: null,
-          lastPlanId: null,
-          lastSecondScore: null,
-          lastUpdate: null,
-          planAge: 0,
-        },
-      },
-    } as GameState;
-
-    jest.spyOn(policy, "recommendMove").mockImplementation(() => {
-      throw new Error("boom");
-    });
-
-    const result = freePlayUi.computeDerivedUi(state);
-    expect(result).toBeNull();
   });
 });

@@ -1,10 +1,16 @@
 // Planner implementation with scoring, hazards, confidence, and hysteresis
-// Chapter 1: MVP planner with 3 hazards
+// Chapter 3: Enhanced planner with branching, rollout, and graceful fallback
 
 import { createGridCoord } from "../types/brands";
 import { fromNow } from "../types/timestamp";
 
+import {
+  shouldUseRollout,
+  compareTemplatesWithRollout,
+  DEFAULT_ROLLOUT_DEPTH,
+} from "./rollout";
 import { BASE_TEMPLATES } from "./templates/index";
+// import { silhouetteProgress } from "./silhouettes"; // Available for future use
 
 import type { Template, Hazard, PolicyContext, Placement } from "./types";
 import type { GameState } from "../state/types";
@@ -44,6 +50,95 @@ export const SWITCH_MARGIN = 0.2;
 export const MIN_PLAN_AGE = 2;
 export const LOW_CONF = 0.4;
 export const ACCEPT_MIN_CONF = 0.35;
+
+// Constants for branching and rollout
+export const MAX_PLAN_HISTORY_DEPTH = 2; // Prevent infinite branch loops
+export const ROLLOUT_TIE_THRESHOLD = 0.05; // Use rollout when scores are this close
+
+// Enhanced PolicyContext with plan history tracking
+type EnhancedPolicyContext = PolicyContext & {
+  readonly planHistory?: ReadonlyArray<string> | undefined;
+};
+
+/**
+ * Check if a plan ID is already in the plan history to prevent loops
+ */
+function isInPlanHistory(planId: string, ctx: EnhancedPolicyContext): boolean {
+  return ctx.planHistory?.includes(planId) ?? false;
+}
+
+/**
+ * Add a plan ID to the history, maintaining maximum depth
+ */
+function addToPlanHistory(
+  planId: string,
+  ctx: EnhancedPolicyContext,
+): ReadonlyArray<string> {
+  const currentHistory = ctx.planHistory ?? [];
+  const newHistory = [planId, ...currentHistory];
+  return newHistory.slice(0, MAX_PLAN_HISTORY_DEPTH);
+}
+
+/**
+ * Reset plan history when branching occurs
+ */
+function resetPlanHistory(newPlanId: string): ReadonlyArray<string> {
+  return [newPlanId];
+}
+
+/**
+ * Attempt to find a viable branch when current template becomes infeasible
+ */
+function findViableBranch(
+  template: Template,
+  state: GameState,
+  ctx: EnhancedPolicyContext,
+): Template | null {
+  // Check if template has branching capability
+  if (!template.branch) {
+    return null;
+  }
+
+  // Get available branches
+  const branches = template.branch(state);
+  if (branches.length === 0) {
+    return null;
+  }
+
+  // Find first viable branch that's not in plan history
+  for (const branch of branches) {
+    if (isInPlanHistory(branch.id, ctx)) {
+      continue; // Skip branches that would cause loops
+    }
+
+    const preconditions = branch.preconditions(state);
+    if (preconditions.feasible) {
+      return branch; // Found viable branch
+    }
+  }
+
+  return null; // No viable branches
+}
+
+/**
+ * Attempt graceful exit when template and branches are non-viable
+ */
+function attemptGracefulExit(
+  template: Template,
+  state: GameState,
+): Template | null {
+  if (!template.gracefulExit) {
+    return null;
+  }
+
+  const fallback = template.gracefulExit(state);
+  if (fallback === null) {
+    return null;
+  }
+
+  const preconditions = fallback.preconditions(state);
+  return preconditions.feasible ? fallback : null;
+}
 
 // Hazard definitions - start with 3 core hazards
 const HAZARDS: ReadonlyArray<Hazard> = [
@@ -286,6 +381,98 @@ function calculateConfidence(
 }
 
 /**
+ * Enhanced template selection with rollout tie-breaking
+ */
+function selectTemplateWithRollout(
+  templates: ReadonlyArray<Template>,
+  state: GameState,
+): { template: Template; score: number; secondScore: number } {
+  if (templates.length === 0) {
+    throw new Error("No templates available for selection");
+  }
+
+  // Calculate base scores for all templates
+  const scoredTemplates = templates.map((template) => ({
+    baseScore: calculateTemplateBaseScore(template, state),
+    template,
+  }));
+
+  // Sort by base score
+  scoredTemplates.sort((a, b) => b.baseScore - a.baseScore);
+
+  const best = scoredTemplates[0];
+  const second = scoredTemplates[1];
+
+  if (!best) {
+    throw new Error("No best template found despite non-empty array");
+  }
+
+  // If there's no second template, return best
+  if (!second) {
+    return {
+      score: best.baseScore,
+      secondScore: -Infinity,
+      template: best.template,
+    };
+  }
+
+  // Check if rollout is needed for tie-breaking
+  if (shouldUseRollout(best.baseScore, second.baseScore)) {
+    const rolloutResult = compareTemplatesWithRollout(
+      { baseScore: best.baseScore, template: best.template },
+      { baseScore: second.baseScore, template: second.template },
+      state,
+      DEFAULT_ROLLOUT_DEPTH,
+    );
+    return {
+      score: rolloutResult.score,
+      secondScore:
+        rolloutResult.score === best.baseScore
+          ? second.baseScore
+          : best.baseScore,
+      template: rolloutResult.winner,
+    };
+  }
+
+  return {
+    score: best.baseScore,
+    secondScore: second.baseScore,
+    template: best.template,
+  };
+}
+
+/**
+ * Calculate template base score including hazards and preconditions
+ */
+function calculateTemplateBaseScore(
+  template: Template,
+  state: GameState,
+): number {
+  const baseUtility = calculateBaseUtility(template, state);
+  const preconditions = template.preconditions(state);
+  const hazards = calculateHazards(template, state);
+
+  let score = baseUtility;
+
+  // Add precondition score delta
+  if (preconditions.scoreDelta !== undefined) {
+    score += preconditions.scoreDelta;
+  }
+
+  // Apply hazard penalties
+  for (const hazard of hazards) {
+    score += hazard.penalty;
+  }
+
+  // Penalize infeasible templates heavily
+  if (!preconditions.feasible) {
+    score -= 10;
+  }
+
+  return score;
+}
+
+/**
  * Choose plan with hysteresis to avoid thrashing
  */
 function chooseWithHysteresis(
@@ -295,22 +482,61 @@ function chooseWithHysteresis(
   ctx: PolicyContext,
   state: GameState,
 ): Template {
-  // If no previous plan, use best
-  if (ctx.lastPlanId === null) {
-    return bestTemplate;
+  // Convert to enhanced context for internal use
+  const enhancedCtx: EnhancedPolicyContext = {
+    ...ctx,
+    planHistory: (ctx as EnhancedPolicyContext).planHistory ?? undefined,
+  };
+
+  const result = chooseWithHysteresisEnhanced(
+    bestTemplate,
+    bestScore,
+    _secondScore,
+    enhancedCtx,
+    state,
+  );
+
+  return result.template;
+}
+
+/**
+ * Handle infeasible current template with branching or fallback
+ */
+function handleInfeasibleTemplate(
+  currentTemplate: Template,
+  state: GameState,
+  ctx: EnhancedPolicyContext,
+  bestTemplate: Template,
+): { template: Template; isBranching: boolean } {
+  // Current plan is no longer viable - try branching
+  const viableBranch = findViableBranch(currentTemplate, state, ctx);
+  if (viableBranch) {
+    return { isBranching: true, template: viableBranch };
   }
 
-  // Find current template
-  const currentTemplate = BASE_TEMPLATES.find((t) => t.id === ctx.lastPlanId);
-
-  // If we can't find current template, use best
-  if (!currentTemplate) {
-    return bestTemplate;
+  // Try graceful exit
+  const fallback = attemptGracefulExit(currentTemplate, state);
+  if (fallback) {
+    return { isBranching: true, template: fallback };
   }
 
+  // No viable branch or fallback - use best available
+  return { isBranching: false, template: bestTemplate };
+}
+
+/**
+ * Evaluate switch conditions for hysteresis
+ */
+function evaluateSwitchConditions(
+  bestTemplate: Template,
+  bestScore: number,
+  ctx: EnhancedPolicyContext,
+  state: GameState,
+  currentTemplate: Template,
+): { template: Template; isBranching: boolean } {
   // If best template is same as current, keep it
   if (bestTemplate.id === ctx.lastPlanId) {
-    return bestTemplate;
+    return { isBranching: false, template: bestTemplate };
   }
 
   // Calculate switch margin requirement
@@ -335,19 +561,55 @@ function chooseWithHysteresis(
 
   // Make switch decision - prioritize low confidence switches
   if (confidenceIsLow && marginGap > 0) {
-    return bestTemplate; // Low confidence, any improvement helps
+    return { isBranching: false, template: bestTemplate };
   }
 
   if (hasMargin && planIsOld) {
-    return bestTemplate; // Clear improvement
+    return { isBranching: false, template: bestTemplate };
   }
 
-  // Stick with current plan - return the current template, not best
-  return currentTemplate;
+  // Stick with current plan
+  return { isBranching: false, template: currentTemplate };
 }
 
 /**
- * Update policy context with new plan results
+ * Enhanced hysteresis selection with branching support
+ */
+function chooseWithHysteresisEnhanced(
+  bestTemplate: Template,
+  bestScore: number,
+  _secondScore: number,
+  ctx: EnhancedPolicyContext,
+  state: GameState,
+): { template: Template; isBranching: boolean } {
+  // If no previous plan, use best
+  if (ctx.lastPlanId === null) {
+    return { isBranching: false, template: bestTemplate };
+  }
+
+  // Find current template
+  const currentTemplate = BASE_TEMPLATES.find((t) => t.id === ctx.lastPlanId);
+  if (!currentTemplate) {
+    return { isBranching: false, template: bestTemplate };
+  }
+
+  // Check if current template is still viable
+  const currentPreconditions = currentTemplate.preconditions(state);
+  if (!currentPreconditions.feasible) {
+    return handleInfeasibleTemplate(currentTemplate, state, ctx, bestTemplate);
+  }
+
+  return evaluateSwitchConditions(
+    bestTemplate,
+    bestScore,
+    ctx,
+    state,
+    currentTemplate,
+  );
+}
+
+/**
+ * Update policy context with new plan results (backward compatible)
  */
 function updatePolicyContext(
   ctx: PolicyContext,
@@ -363,6 +625,41 @@ function updatePolicyContext(
     lastSecondScore: secondScore,
     lastUpdate: fromNow(),
     planAge: isSamePlan ? ctx.planAge + 1 : 0, // Increment if same, reset if different
+  };
+}
+
+/**
+ * Enhanced policy context update with plan history and branching support
+ */
+function updatePolicyContextEnhanced(
+  ctx: EnhancedPolicyContext,
+  chosenTemplate: Template,
+  bestScore: number,
+  secondScore: number,
+  isBranching = false,
+): EnhancedPolicyContext {
+  const isSamePlan = ctx.lastPlanId === chosenTemplate.id;
+
+  // Update plan history
+  let newPlanHistory: ReadonlyArray<string>;
+  if (isBranching) {
+    // Reset history on branching to prevent long chains
+    newPlanHistory = resetPlanHistory(chosenTemplate.id);
+  } else if (isSamePlan) {
+    // Same plan, keep history unchanged
+    newPlanHistory = ctx.planHistory ?? [];
+  } else {
+    // New plan, add to history
+    newPlanHistory = addToPlanHistory(chosenTemplate.id, ctx);
+  }
+
+  return {
+    lastBestScore: bestScore,
+    lastPlanId: chosenTemplate.id,
+    lastSecondScore: secondScore,
+    lastUpdate: fromNow(),
+    planAge: isSamePlan && !isBranching ? ctx.planAge + 1 : 0, // Reset age on branching
+    planHistory: newPlanHistory,
   };
 }
 
@@ -481,15 +778,75 @@ function formatRationale(
   return rationale;
 }
 
+/**
+ * Enhanced recommendMove with branching and rollout support
+ * This replaces the simpler template selection with advanced branching logic
+ */
+export function recommendMoveEnhanced(
+  state: GameState,
+  ctx: EnhancedPolicyContext = {
+    lastBestScore: null,
+    lastPlanId: null,
+    lastSecondScore: null,
+    lastUpdate: null,
+    planAge: 0,
+  },
+): {
+  suggestion: { template: Template; score: number; secondScore: number };
+  nextCtx: EnhancedPolicyContext;
+  isBranching: boolean;
+} {
+  // Use enhanced template selection with rollout
+  const selection = selectTemplateWithRollout(BASE_TEMPLATES, state);
+
+  // Apply hysteresis with branching support
+  const hysteresisResult = chooseWithHysteresisEnhanced(
+    selection.template,
+    selection.score,
+    selection.secondScore,
+    ctx,
+    state,
+  );
+
+  // Update context with branching information
+  const nextCtx = updatePolicyContextEnhanced(
+    ctx,
+    hysteresisResult.template,
+    selection.score,
+    selection.secondScore,
+    hysteresisResult.isBranching,
+  );
+
+  return {
+    isBranching: hysteresisResult.isBranching,
+    nextCtx,
+    suggestion: {
+      score: selection.score,
+      secondScore: selection.secondScore,
+      template: hysteresisResult.template,
+    },
+  };
+}
+
 // Export main planning functions
 export {
+  attemptGracefulExit,
   calculateBaseUtility,
   calculateConfidence,
   calculateHazards,
   choosePlacementForStep,
   chooseWithHysteresis,
+  chooseWithHysteresisEnhanced,
   clearMemoCache,
+  findViableBranch,
   formatRationale,
   HAZARDS,
+  isInPlanHistory,
+  // New exports for Chapter 3
+  selectTemplateWithRollout,
   updatePolicyContext,
+  updatePolicyContextEnhanced,
 };
+
+// Export enhanced context type for external usage
+export type { EnhancedPolicyContext };

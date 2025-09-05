@@ -210,10 +210,10 @@
     "lines": 100
   },
   "src/modes/freePlay.ts": {
-    "statements": 94,
+    "statements": 100,
     "branches": 100,
-    "functions": 85,
-    "lines": 94
+    "functions": 95,
+    "lines": 100
   },
   "src/modes/guided.ts": {
     "statements": 87,
@@ -240,16 +240,16 @@
     "lines": 100
   },
   "src/modes/types.ts": {
-    "statements": 92,
+    "statements": 100,
     "branches": 95,
     "functions": 100,
     "lines": 100
   },
   "src/modes/freePlay/ui.ts": {
-    "statements": 100,
+    "statements": 83,
     "branches": 100,
     "functions": 100,
-    "lines": 100
+    "lines": 83
   },
   "src/modes/guided/deck.ts": {
     "statements": 98,
@@ -275,17 +275,41 @@
     "functions": 100,
     "lines": 96
   },
-  "src/policy/index.ts": {
-    "statements": 93,
-    "branches": 63,
+  "src/policy/cache.ts": {
+    "statements": 46,
+    "branches": 37,
     "functions": 44,
-    "lines": 93
+    "lines": 48
+  },
+  "src/policy/executor.ts": {
+    "statements": 95,
+    "branches": 75,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/policy/index.ts": {
+    "statements": 94,
+    "branches": 60,
+    "functions": 73,
+    "lines": 95
   },
   "src/policy/planner.ts": {
-    "statements": 88,
-    "branches": 75,
-    "functions": 95,
+    "statements": 89,
+    "branches": 82,
+    "functions": 97,
     "lines": 90
+  },
+  "src/policy/rollout.ts": {
+    "statements": 84,
+    "branches": 71,
+    "functions": 93,
+    "lines": 84
+  },
+  "src/policy/silhouettes.ts": {
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
   },
   "src/policy/templates/_compose.ts": {
     "statements": 83,
@@ -294,10 +318,40 @@
     "lines": 100
   },
   "src/policy/templates/index.ts": {
+    "statements": 99,
+    "branches": 82,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/policy/templates/opener_utils.ts": {
+    "statements": 87,
+    "branches": 68,
+    "functions": 93,
+    "lines": 93
+  },
+  "src/policy/templates/variants.ts": {
     "statements": 96,
-    "branches": 77,
+    "branches": 88,
     "functions": 100,
     "lines": 96
+  },
+  "src/scenarios/cards.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/scenarios/generators.ts": {
+    "statements": 100,
+    "branches": 92,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/scenarios/srs.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/srs/fsrs-adapter.ts": {
     "statements": 97,

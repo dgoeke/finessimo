@@ -87,11 +87,15 @@ Note: core logic is pure and functional; side effects live in input handlers and
 ## Policy (opener training system)
 
 - src/policy/index.ts: Main policy orchestrator; template ranking, hysteresis, suggestion generation.
-- src/policy/planner.ts: Policy planning logic; template evaluation and selection with hazard detection.
+- src/policy/planner.ts: Enhanced policy planning logic; template evaluation, selection, branching, rollout tie-breaking, and hazard detection.
 - src/policy/types.ts: Policy domain types (`Template`, `Suggestion`, `Intent`, `Placement`, `PolicyContext`).
+- src/policy/cache.ts: Chapter 4 memoization caches for expensive policy computations; preview signature, board feature, and precondition caching with LRU eviction.
+- src/policy/rollout.ts: Micro-rollout for tie-break resolution; 1-2 ply lookahead when template scores are close (≤0.05).
+- src/policy/silhouettes.ts: Shape pattern matching for opener targets; TKI/PCO silhouette progress calculation and board analysis.
+- src/policy/executor.ts: Chapter 4 executor for placement clustering, Pareto filtering, and UI hint generation with finesse cost integration.
 - src/policy/templates/index.ts: Base templates for TKI/PCO/Neither opener strategies with caching and utility functions.
 - src/policy/templates/_compose.ts: Template composition utilities; `extendTemplate` for creating variants with patch-based overrides.
-- src/policy/templates/variants.ts: Additional template variants using `extendTemplate` infrastructure; PCO edge and transition variants.
+- src/policy/templates/variants.ts: Template variants with branching functionality; enhanced templates with branch/gracefulExit, TKI stacking, PCO rush variants.
 
 ## Input (side‑effects at the edge)
 
@@ -138,6 +142,11 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/scenarios/cards.ts: ScenarioCard types and registry; 6+ training scenarios spanning TKI/PCO easy/mid difficulty variants.
 - src/scenarios/generators.ts: Deterministic sequence generators; `queueFromSeed`, `boardFromScenario` using existing RNG infrastructure.
 - src/scenarios/srs.ts: Spaced repetition scheduler; SM-2-like algorithm with Grade types and ReviewState management.
+
+## Microbenchmarks
+
+- microbench/policy_planner.bench.ts: Policy planner performance benchmarks; target ≤0.3ms per recommendMove() call with statistical analysis.
+- microbench/policy_cluster.bench.ts: Chapter 4 clustering system benchmarks; target ≤0.1ms for Pareto filtering + placement clustering pipeline.
 
 ## Utilities
 

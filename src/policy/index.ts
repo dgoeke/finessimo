@@ -1,6 +1,14 @@
 // Public API for opener policy system
 // Chapter 1: Pure, deterministic policy with hysteresis and hazard detection
 
+import { gridCoordAsNumber } from "../types/brands";
+
+import { getCachedPreconditions, clearAllCaches } from "./cache";
+import {
+  clusterPlacements,
+  paretoFilter,
+  calculateFinesseCost,
+} from "./executor";
 import {
   calculateBaseUtility,
   calculateConfidence,
@@ -19,8 +27,9 @@ import type {
   Suggestion,
   Template,
   Hazard,
+  Placement,
 } from "./types";
-import type { GameState } from "../state/types";
+import type { GameState, ModeGuidance } from "../state/types";
 
 // Internal scoring type
 type PlanScore = {
@@ -34,8 +43,8 @@ type PlanScore = {
  * Internal function for policy evaluation
  */
 function scorePlan(template: Template, state: GameState): PlanScore {
-  // Base score from template preconditions and utility
-  const preconditions = template.preconditions(state);
+  // Use cached preconditions for performance
+  const preconditions = getCachedPreconditions(template, state);
   let rawScore = calculateBaseUtility(template, state);
 
   // Add score delta from preconditions (can be bonus or penalty)
@@ -53,6 +62,42 @@ function scorePlan(template: Template, state: GameState): PlanScore {
   }
 
   return { adjusted, hazards, rawScore };
+}
+
+/**
+ * Collect all placement candidates from a template for clustering
+ * This is similar to choosePlacementForStep but returns all candidates
+ */
+function collectPlacementCandidates(
+  template: Template,
+  state: GameState,
+): ReadonlyArray<{ placement: Placement; utility: number }> {
+  const steps = template.nextStep(state);
+  const candidates: Array<{ placement: Placement; utility: number }> = [];
+
+  // Collect candidates from all applicable steps
+  for (const step of steps) {
+    if (!step.when(state)) continue;
+
+    const placements = step.propose(state);
+    for (const placement of placements) {
+      const utility = step.utility(placement, state);
+      candidates.push({ placement, utility });
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * Helper function to create ModeGuidance from placement
+ */
+function toModeGuidance(placement: Placement): ModeGuidance {
+  return {
+    label: `${placement.rot} @ x=${String(gridCoordAsNumber(placement.x))}`,
+    target: { rot: placement.rot, x: placement.x },
+    visual: { highlightTarget: true, showPath: false },
+  };
 }
 
 /**
@@ -118,7 +163,33 @@ export function recommendMove(
     state,
   );
 
-  // Get placement for chosen template
+  // Collect all placement candidates for clustering
+  const candidates = collectPlacementCandidates(chosenTemplate, state);
+
+  // Extract placement array and utility function for clustering
+  const candidatePlacements = candidates.map((c) => c.placement);
+  const utilityLookup = new Map(
+    candidates.map((c) => [c.placement, c.utility]),
+  );
+  const utility = (p: Placement): number => utilityLookup.get(p) ?? 0;
+  const finesseCost = (p: Placement): number => calculateFinesseCost(p);
+
+  // Apply Pareto filtering to remove dominated placements
+  const nonDominatedPlacements = paretoFilter(
+    candidatePlacements,
+    utility,
+    finesseCost,
+  );
+
+  // Generate placement groups using clustering
+  const groups = clusterPlacements(
+    nonDominatedPlacements,
+    utility,
+    finesseCost,
+    gridCoordAsNumber,
+  );
+
+  // Get placement for chosen template (fallback to original method)
   const placement = choosePlacementForStep(chosenTemplate, state);
 
   // Calculate confidence
@@ -133,14 +204,15 @@ export function recommendMove(
   const chosenScore = scorePlan(chosenTemplate, state);
   const rationale = formatRationale(chosenTemplate, chosenScore.hazards);
 
-  // Build suggestion
+  // Build suggestion with populated groups and guidance
   const suggestion: Suggestion = {
     confidence,
+    groups, // Now populated with clustered placements
+    guidance: toModeGuidance(placement),
     intent: chosenTemplate.opener,
     placement,
     planId: chosenTemplate.id,
     rationale,
-    // groups and guidance are empty in Chapter 1
   };
 
   // Update context
@@ -163,6 +235,7 @@ export function recommendMove(
 export function clearPolicyCache(): void {
   clearMemoCache();
   clearTemplateCache();
+  clearAllCaches(); // Clear new Chapter 4 caches
 }
 
 // Re-export types for consumers

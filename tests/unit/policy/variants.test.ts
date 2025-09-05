@@ -1,7 +1,6 @@
 // Tests for template variants
 // Ensures variant templates are properly constructed and integrated
 
-import { BASE_TEMPLATES } from "../../../src/policy/templates/index";
 import { VARIANT_TEMPLATES } from "../../../src/policy/templates/variants";
 import { createGridCoord } from "../../../src/types/brands";
 import { createTestGameState } from "../../test-helpers";
@@ -11,7 +10,7 @@ import type { ActivePiece } from "../../../src/state/types";
 describe("Template Variants", () => {
   describe("VARIANT_TEMPLATES", () => {
     it("should export the correct number of variants", () => {
-      expect(VARIANT_TEMPLATES).toHaveLength(2);
+      expect(VARIANT_TEMPLATES).toHaveLength(7);
     });
 
     it("should have unique template IDs", () => {
@@ -34,13 +33,19 @@ describe("Template Variants", () => {
       expect(pcoTransition?.opener).toBe("PCO");
     });
 
-    it("should not conflict with base template IDs", () => {
-      const baseIds = new Set(BASE_TEMPLATES.map((t) => t.id));
+    it("should have expected template IDs", () => {
       const variantIds = VARIANT_TEMPLATES.map((t) => t.id);
 
-      for (const variantId of variantIds) {
-        expect(baseIds.has(variantId)).toBe(false);
-      }
+      // Check for core variant templates
+      expect(variantIds).toContain("PCO/edge");
+      expect(variantIds).toContain("PCO/transition");
+      expect(variantIds).toContain("TKI/stacking");
+      expect(variantIds).toContain("PCO/rush");
+
+      // Enhanced templates that override base templates
+      expect(variantIds).toContain("PCO/standard");
+      expect(variantIds).toContain("TKI/base");
+      expect(variantIds).toContain("TKI/flatTop");
     });
   });
 

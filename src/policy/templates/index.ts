@@ -5,6 +5,7 @@ import { canPlacePiece, dropToBottom } from "../../core/board";
 import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
 
 import { extendTemplate } from "./_compose";
+import { tkiUtility, pcoUtility, safeUtility } from "./opener_utils";
 
 import type { GameState, ActivePiece, Rot, PieceId } from "../../state/types";
 import type { Template, StepCandidate, Placement } from "../types";
@@ -134,9 +135,9 @@ function generateLegalPlacementsInternal(
 
   // Add hold variants if requested and different piece available
   if (includeHold && state.active && state.canHold) {
-    const holdState = { ...state, active: { ...state.active, id: pieceId } };
-    const holdPlacements = generateLegalPlacements(
-      holdState,
+    // Create a simplified state for hold placement generation
+    const holdPlacements = generateLegalPlacementsInternal(
+      state,
       state.active.id,
       false,
     );
@@ -189,52 +190,6 @@ function generateLegalPlacements(
   const result = generateLegalPlacementsInternal(state, pieceId, includeHold);
   placementCache.set(key, result);
   return result;
-}
-
-// Template step candidates
-
-// Template-specific utility functions
-function tkiUtility(p: Placement, s: GameState): number {
-  let utility = 1.0;
-  const x = gridCoordAsNumber(p.x);
-
-  // TKI prefers center columns for T-spins
-  if (x >= 3 && x <= 6) {
-    utility += 0.3; // Center bonus
-  }
-
-  // Bonus for using hold to get optimal pieces
-  if (p.useHold === true && s.active?.id !== "T" && s.active?.id !== "I") {
-    utility += 0.2; // Hold optimization
-  }
-
-  return utility;
-}
-
-function pcoUtility(p: Placement, _s: GameState): number {
-  let utility = 1.0;
-  const x = gridCoordAsNumber(p.x);
-
-  // PCO prefers left side for PC patterns
-  if (x <= 4) {
-    utility += 0.2; // Left side bonus
-  }
-
-  // Flat placement bonus (spawn rotation often optimal)
-  if (p.rot === "spawn") {
-    utility += 0.1;
-  }
-
-  return utility;
-}
-
-function safeUtility(p: Placement, _s: GameState): number {
-  const x = gridCoordAsNumber(p.x);
-  // Safe stacking prefers center positions
-  if (x >= 2 && x <= 7) {
-    return 1.2; // Higher utility for center
-  }
-  return 1.0; // Lower utility for edges
 }
 
 // Step candidates with template-specific utilities

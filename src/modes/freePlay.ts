@@ -28,6 +28,8 @@ import {
 type FreePlayModeData = {
   policyContext: PolicyContext;
   policyOutput?: PolicyOutput;
+  lastLoggedPlacement?: { x: number; rot: string; planId?: string };
+  lastLogTime?: number;
 };
 
 export class FreePlayMode implements GameMode {
@@ -161,10 +163,14 @@ export class FreePlayMode implements GameMode {
     // Only decorate when the current active piece is to be placed.
     // If the suggestion is to use hold, skip decorations to avoid
     // showing the next piece's landing as the current piece's target.
-    if (placement.useHold === true) return null;
+    if (placement.useHold === true) {
+      return null;
+    }
 
     const placingPieceId: PieceId | undefined = state.active?.id;
-    if (placingPieceId === undefined) return null;
+    if (placingPieceId === undefined) {
+      return null;
+    }
 
     const startY = createGridCoord(-2);
     const piece = {

@@ -60,8 +60,8 @@ const createBoardWithCells = (
 
 describe("Policy Template Variants", () => {
   describe("Variant Templates Registry", () => {
-    it("should have exactly 2 variant templates", () => {
-      expect(VARIANT_TEMPLATES).toHaveLength(2);
+    it("should have exactly 7 variant templates", () => {
+      expect(VARIANT_TEMPLATES).toHaveLength(7);
     });
 
     it("should have unique template IDs", () => {
@@ -70,11 +70,16 @@ describe("Policy Template Variants", () => {
       expect(uniqueIds.size).toBe(ids.length);
     });
 
-    it("should extend PCO base templates", () => {
+    it("should include expected template variants", () => {
       const variantIds = VARIANT_TEMPLATES.map((t) => t.id);
 
       expect(variantIds).toContain("PCO/edge");
       expect(variantIds).toContain("PCO/transition");
+      expect(variantIds).toContain("PCO/standard");
+      expect(variantIds).toContain("TKI/base");
+      expect(variantIds).toContain("TKI/flatTop");
+      expect(variantIds).toContain("TKI/stacking");
+      expect(variantIds).toContain("PCO/rush");
     });
 
     it("should have all required template fields", () => {
@@ -91,10 +96,25 @@ describe("Policy Template Variants", () => {
       });
     });
 
-    it("should inherit PCO opener from base template", () => {
-      VARIANT_TEMPLATES.forEach((template) => {
+    it("should have appropriate opener types", () => {
+      const pcoTemplates = VARIANT_TEMPLATES.filter((t) =>
+        t.id.startsWith("PCO"),
+      );
+      const tkiTemplates = VARIANT_TEMPLATES.filter((t) =>
+        t.id.startsWith("TKI"),
+      );
+
+      pcoTemplates.forEach((template) => {
         expect(template.opener).toBe("PCO");
       });
+
+      tkiTemplates.forEach((template) => {
+        expect(template.opener).toBe("TKI");
+      });
+
+      expect(pcoTemplates.length + tkiTemplates.length).toBe(
+        VARIANT_TEMPLATES.length,
+      );
     });
   });
 
@@ -373,6 +393,77 @@ describe("Policy Template Variants", () => {
     });
   });
 
+  describe("Branching Functionality", () => {
+    it("should have gracefulExit function on all templates", () => {
+      VARIANT_TEMPLATES.forEach((template) => {
+        expect(template).toHaveProperty("gracefulExit");
+        expect(typeof template.gracefulExit).toBe("function");
+
+        const state = createTestState();
+        const fallback = template.gracefulExit?.(state);
+
+        // All should fallback to Neither/safe
+        expect(fallback).toBeDefined();
+        expect(fallback?.id).toBe("Neither/safe");
+      });
+    });
+
+    it("should have branch function on enhanced templates", () => {
+      const enhancedTemplates = VARIANT_TEMPLATES.filter((t) =>
+        [
+          "PCO/standard",
+          "TKI/base",
+          "TKI/flatTop",
+          "TKI/stacking",
+          "PCO/rush",
+        ].includes(t.id),
+      );
+
+      enhancedTemplates.forEach((template) => {
+        expect(template).toHaveProperty("branch");
+        expect(typeof template.branch).toBe("function");
+
+        const state = createTestState();
+        const branches = template.branch?.(state) ?? [];
+        expect(Array.isArray(branches)).toBe(true);
+      });
+    });
+
+    it("should return valid branches when conditions are met", () => {
+      const pcoStandard = VARIANT_TEMPLATES.find(
+        (t) => t.id === "PCO/standard",
+      );
+      expect(pcoStandard).toBeDefined();
+
+      // Test with clean edges for edge branch
+      const cleanBoard = createEmptyBoard();
+      const cleanState = createTestState({}, cleanBoard);
+      const branches = pcoStandard?.branch?.(cleanState) ?? [];
+
+      expect(branches.length).toBeGreaterThan(0);
+      expect(branches.some((b) => b.id === "PCO/edge")).toBe(true);
+    });
+
+    it("should handle empty branches gracefully", () => {
+      const tkiBase = VARIANT_TEMPLATES.find((t) => t.id === "TKI/base");
+      expect(tkiBase).toBeDefined();
+
+      // Test with conditions that don't favor branching
+      const messyBlocks = [
+        { x: 3, y: 0 },
+        { x: 4, y: 1 },
+        { x: 5, y: 0 },
+        { x: 6, y: 2 },
+      ];
+      const messyBoard = createBoardWithCells(messyBlocks);
+      const messyState = createTestState({}, messyBoard);
+      const branches = tkiBase?.branch?.(messyState) ?? [];
+
+      expect(Array.isArray(branches)).toBe(true);
+      // May or may not have branches, but should not throw
+    });
+  });
+
   describe("Template Integration", () => {
     it("should work with existing template system", () => {
       const state = createTestState();
@@ -443,6 +534,122 @@ describe("Policy Template Variants", () => {
     });
   });
 
+  describe("TKI Stacking Variant", () => {
+    let tkiStacking: Template;
+
+    beforeEach(() => {
+      const template = VARIANT_TEMPLATES.find((t) => t.id === "TKI/stacking");
+      if (!template) {
+        throw new Error("TKI/stacking template not found");
+      }
+      tkiStacking = template;
+    });
+
+    it("should have correct ID and opener", () => {
+      expect(tkiStacking.id).toBe("TKI/stacking");
+      expect(tkiStacking.opener).toBe("TKI");
+    });
+
+    it("should give bonus for good stacking pattern", () => {
+      // Create board with center columns higher than edges
+      const stackingBlocks = [
+        { x: 3, y: 2 },
+        { x: 3, y: 3 },
+        { x: 3, y: 4 },
+        { x: 4, y: 2 },
+        { x: 4, y: 3 },
+        { x: 4, y: 4 },
+        { x: 5, y: 2 },
+        { x: 5, y: 3 },
+        { x: 6, y: 2 },
+        { x: 6, y: 3 },
+      ];
+      const stackingBoard = createBoardWithCells(stackingBlocks);
+      const state = createTestState({}, stackingBoard);
+
+      const result = tkiStacking.preconditions(state);
+
+      expect(result.feasible).toBe(true);
+      expect(result.scoreDelta).toBeGreaterThan(0);
+      expect(result.notes).toContain("good stacking pattern for center build");
+    });
+
+    it("should penalize when no clear stacking pattern", () => {
+      // Create board with even height distribution
+      const evenBlocks = [
+        { x: 0, y: 2 },
+        { x: 1, y: 2 },
+        { x: 2, y: 2 },
+        { x: 7, y: 2 },
+        { x: 8, y: 2 },
+        { x: 9, y: 2 },
+      ];
+      const evenBoard = createBoardWithCells(evenBlocks);
+      const state = createTestState({}, evenBoard);
+
+      const result = tkiStacking.preconditions(state);
+
+      expect(result.feasible).toBe(true);
+      // Base TKI gives +0.3, stacking penalty -0.05, total = 0.25
+      expect(result.scoreDelta).toBeLessThan(0.3);
+      expect(result.notes).toContain("no clear stacking pattern");
+    });
+  });
+
+  describe("PCO Rush Variant", () => {
+    let pcoRush: Template;
+
+    beforeEach(() => {
+      const template = VARIANT_TEMPLATES.find((t) => t.id === "PCO/rush");
+      if (!template) {
+        throw new Error("PCO/rush template not found");
+      }
+      pcoRush = template;
+    });
+
+    it("should have correct ID and opener", () => {
+      expect(pcoRush.id).toBe("PCO/rush");
+      expect(pcoRush.opener).toBe("PCO");
+    });
+
+    it("should be viable with more cells than standard PCO", () => {
+      // Create board with 10 cells (less than rush limit of 15)
+      const moderateBlocks = Array.from({ length: 10 }, (_, i) => ({
+        x: i % 10,
+        y: 2,
+      }));
+      const moderateBoard = createBoardWithCells(moderateBlocks);
+      const state = createTestState({}, moderateBoard);
+
+      const result = pcoRush.preconditions(state);
+
+      expect(result.feasible).toBe(true);
+      expect(result.scoreDelta).toBeGreaterThan(0);
+      expect(result.notes).toContain("field viable for rush PC attempt");
+    });
+
+    it("should penalize when field is too messy for rush", () => {
+      // Create board with 16 cells in the range that rush variant checks
+      // Rush variant checks board.vanishRows to board.vanishRows + 3 (storage rows 3,4,5)
+      // Test y coordinates: 0->storage 3, 1->storage 4, 2->storage 5
+      const messyBlocks = [
+        // Test y=0 (storage row 3): 10 cells
+        ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 0 })),
+        // Test y=1 (storage row 4): 6 more cells = 16 total > 15 limit
+        ...Array.from({ length: 6 }, (_, i) => ({ x: i, y: 1 })),
+      ];
+      const messyBoard = createBoardWithCells(messyBlocks);
+      const state = createTestState({}, messyBoard);
+
+      const result = pcoRush.preconditions(state);
+
+      // Field is not flat anymore (has cells in y=0,1), so base PCO fails
+      expect(result.feasible).toBe(false);
+      expect(result.scoreDelta).toBeLessThan(0);
+      expect(result.notes).toContain("field too messy for rush PC");
+    });
+  });
+
   describe("Score Delta Behavior", () => {
     it("should provide meaningful score deltas", () => {
       const state = createTestState();
@@ -469,20 +676,28 @@ describe("Policy Template Variants", () => {
             (note) =>
               note.includes("clean") ||
               note.includes("viable") ||
-              note.includes("good"),
+              note.includes("good") ||
+              note.includes("flat") ||
+              note.includes("I is") ||
+              note.includes("I in"),
           );
           const hasNegativeNote = result.notes.some(
             (note) =>
               note.includes("height") ||
               note.includes("unviable") ||
-              note.includes("transition"),
+              note.includes("transition") ||
+              note.includes("no clear") ||
+              note.includes("too messy"),
           );
 
+          // For enhanced templates, we expect either positive or negative indicators
+          // But some may have mixed results due to base template inheritance
           if (result.scoreDelta > 0) {
             expect(hasPositiveNote).toBe(true);
           } else if (result.scoreDelta < 0) {
             expect(hasNegativeNote).toBe(true);
           }
+          // Note: scoreDelta could be 0, which is neutral
         }
       }
     });

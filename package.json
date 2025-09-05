@@ -23,6 +23,8 @@
     "assistants:build": "node scripts/build-assistants.cjs",
     "assistants:validate": "node scripts/validate-assistants.cjs",
     "generate:finesse-table": "jest --runInBand tests/scripts/generate-guided-finesse-table.test.ts",
+    "bench:policy": "npx tsx microbench/policy_planner.bench.ts",
+    "bench:clustering": "npx tsx microbench/policy_cluster.bench.ts",
     "prepare": "husky"
   },
   "keywords": [
