@@ -1,3 +1,12 @@
+/* Font faces */
+@font-face {
+  font-family: "matrixtype";
+  src: url("/matrixtype.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Root theme tokens */
 :root {
   --header-h: 56px;
@@ -1632,4 +1641,30 @@ keybinding-modal {
 
 keybinding-modal[visible] {
   display: block;
+}
+
+/* Fixed logo styling */
+#finessimo-logo {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #555;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-family:
+    "matrixtype",
+    "Inter",
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+  font-size: 58px;
+  line-height: 1;
+  letter-spacing: -0.12em;
+  font-kerning: normal;
 }

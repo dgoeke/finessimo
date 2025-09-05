@@ -1,4 +1,3 @@
-import type { PolicyOutput } from "../policy/types";
 import type { GameState } from "../state/types";
 import type { GridCoord } from "../types/brands";
 
@@ -31,12 +30,6 @@ export type ExtendedModeData = {
    * When false, suppresses ghost pieces for this mode only.
    */
   readonly ghostEnabled?: boolean;
-
-  /**
-   * Policy output for opening coaching in freeplay mode.
-   * Contains AI-generated recommendations for piece placement.
-   */
-  readonly policyOutput?: PolicyOutput;
 };
 
 /**
@@ -88,10 +81,5 @@ export function isExtendedModeData(u: unknown): u is ExtendedModeData {
           }),
       ));
 
-  const policyOutput = o["policyOutput"];
-  const policyOk =
-    policyOutput === undefined ||
-    (typeof policyOutput === "object" && policyOutput !== null);
-
-  return ghostOk && targetsOk && policyOk;
+  return ghostOk && targetsOk;
 }

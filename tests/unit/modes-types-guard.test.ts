@@ -27,8 +27,4 @@ describe("modes/types.isExtendedModeData", () => {
     // pattern contains non-object
     expect(isExtendedModeData({ targets: [[null]] })).toBe(false);
   });
-
-  test("rejects non-object policyOutput", () => {
-    expect(isExtendedModeData({ policyOutput: 42 })).toBe(false);
-  });
 });

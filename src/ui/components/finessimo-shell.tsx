@@ -2,7 +2,6 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 
 import "./finesse-overlay";
-import "./coachOverlay";
 import "./game-board";
 import "./effects-overlay";
 import "./piece-hold";
@@ -21,6 +20,9 @@ export class FinessimoShell extends LitElement {
 
   protected render(): unknown {
     return html`
+      <!-- Fixed logo -->
+      <div id="finessimo-logo" aria-hidden="true">finessimo</div>
+
       <main class="app shell">
         <section class="hold-column">
           <piece-hold></piece-hold>
@@ -45,9 +47,6 @@ export class FinessimoShell extends LitElement {
 
       <!-- Finesse overlay positioned as fixed overlay -->
       <finesse-overlay></finesse-overlay>
-
-      <!-- Coach overlay positioned as fixed overlay -->
-      <coach-overlay></coach-overlay>
 
       <!-- Keybinding modal overlay -->
       <keybinding-modal></keybinding-modal>
