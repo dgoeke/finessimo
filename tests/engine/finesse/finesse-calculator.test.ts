@@ -1,22 +1,23 @@
-import { createEmptyBoard, moveToWall } from "../../../src/core/board";
-import { PIECES } from "../../../src/core/pieces";
-import { getNextRotation, tryRotate } from "../../../src/core/srs";
+import { createEmptyBoard, moveToWall } from "@/core/board";
+import { PIECES } from "@/core/pieces";
+import { getNextRotation, tryRotate } from "@/core/srs";
 import {
   finesseCalculator,
   type Fault,
   extractFinesseActions,
   isFaultyResult,
   isOptimalResult,
-} from "../../../src/engine/finesse/calculator";
+} from "@/engine/finesse/calculator";
 import {
   type FinesseAction,
   type ActivePiece,
   type GameplayConfig,
   type Rot,
   type Action,
-} from "../../../src/state/types";
-import { createDurationMs, createGridCoord } from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import {
   MoveLeft,
   MoveRight,

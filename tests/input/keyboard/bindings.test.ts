@@ -4,10 +4,10 @@ import {
   loadBindingsFromStorage,
   saveBindingsToStorage,
   type KeyBindings,
-} from "../../../src/input/keyboard/bindings";
-import { StateMachineInputHandler } from "../../../src/input/keyboard/handler";
-import { type Action, type GameState } from "../../../src/state/types";
-import { createDurationMs } from "../../../src/types/brands";
+} from "@/input/keyboard/bindings";
+import { StateMachineInputHandler } from "@/input/keyboard/handler";
+import { type Action, type GameState } from "@/state/types";
+import { createDurationMs } from "@/types/brands";
 
 // Mock localStorage
 const mockLocalStorage = {

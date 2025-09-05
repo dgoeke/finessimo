@@ -1,4 +1,4 @@
-import { normalizeColorBrightness } from "../../../src/ui/utils/colors";
+import { normalizeColorBrightness } from "@/ui/utils/colors";
 
 // Helper to compute relative luminance using the same method as production
 const hexToRgb = (hex: string): [number, number, number] => {

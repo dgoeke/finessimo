@@ -1,6 +1,6 @@
-import { type Action } from "../../src/state/types";
-import { type Timestamp } from "../../src/types/timestamp";
-import { createTimestamp } from "../../src/types/timestamp";
+import { type Action } from "@/state/types";
+import { type Timestamp } from "@/types/timestamp";
+import { createTimestamp } from "@/types/timestamp";
 
 /**
  * Test helpers for creating Action objects with sensible defaults

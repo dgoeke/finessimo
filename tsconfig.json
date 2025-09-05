@@ -22,7 +22,11 @@
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@chnicoloso/lit-jsx",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src", "tests", "vite.config.ts", "src/**/*.tsx", "src/**/*.jsx"]
 }

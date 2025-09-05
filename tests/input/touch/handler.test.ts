@@ -1,6 +1,6 @@
-import { StateMachineInputHandler } from "../../../src/input/keyboard/handler";
-import { TouchInputHandler } from "../../../src/input/touch/handler";
-import { type Action, type KeyAction } from "../../../src/state/types";
+import { StateMachineInputHandler } from "@/input/keyboard/handler";
+import { TouchInputHandler } from "@/input/touch/handler";
+import { type Action, type KeyAction } from "@/state/types";
 
 // Mock DOM APIs for touch support
 Object.defineProperty(window, "ontouchstart", {

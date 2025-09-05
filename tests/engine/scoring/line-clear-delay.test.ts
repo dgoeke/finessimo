@@ -1,19 +1,16 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { shouldCompleteLineClear } from "../../../src/app/app";
+import { shouldCompleteLineClear } from "@/app/app";
 import {
   type GameState,
   type Board,
   idx,
   createBoardCells,
   buildPlayingState,
-} from "../../../src/state/types";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline } from "../../helpers/reducer-with-pipeline";
 
 function createStateWithDelay(delayMs: number): GameState {

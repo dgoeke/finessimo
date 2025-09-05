@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 
-import { keyOf } from "../../../src/modes/guided/deck";
-import { createColumn } from "../../../src/modes/guided/types";
+import { keyOf } from "@/modes/guided/deck";
+import { createColumn } from "@/modes/guided/types";
 
 describe("guided deck utils", () => {
   test("keyOf builds stable id", () => {

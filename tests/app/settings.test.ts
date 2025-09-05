@@ -1,11 +1,11 @@
-import { loadSettings, saveSettings } from "../../src/app/settings";
+import { loadSettings, saveSettings } from "@/app/settings";
 import {
   defaultKeyBindings,
   type KeyBindings,
-} from "../../src/input/keyboard/bindings";
-import { createDurationMs } from "../../src/types/brands";
+} from "@/input/keyboard/bindings";
+import { createDurationMs } from "@/types/brands";
 
-import type { GameState } from "../../src/state/types";
+import type { GameState } from "@/state/types";
 
 // Mock localStorage
 const mockLocalStorage = {

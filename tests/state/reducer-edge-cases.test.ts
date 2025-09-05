@@ -3,9 +3,10 @@ import {
   type Action,
   createBoardCells,
   idx,
-} from "../../src/state/types";
-import { createSeed, createGridCoord } from "../../src/types/brands";
-import { createTimestamp, fromNow } from "../../src/types/timestamp";
+} from "@/state/types";
+import { createSeed, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
   assertActivePiece,

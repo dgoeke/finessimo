@@ -1,16 +1,17 @@
-import { createSevenBagRng } from "../../../src/core/rng/seeded";
-import { Airborne } from "../../../src/engine/physics/lock-delay.machine";
-import { defaultKeyBindings } from "../../../src/input/keyboard/bindings";
-import { StateMachineInputHandler } from "../../../src/input/keyboard/handler";
-import { createBoardCells } from "../../../src/state/types";
-import { createGridCoord, createDurationMs } from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { createSevenBagRng } from "@/core/rng/seeded";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { defaultKeyBindings } from "@/input/keyboard/bindings";
+import { StateMachineInputHandler } from "@/input/keyboard/handler";
+import { createBoardCells } from "@/state/types";
+import { createGridCoord, createDurationMs } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import {
   createTestPhysicsState,
   createTestTimingConfig,
 } from "../../test-helpers";
 
-import type { PieceRandomGenerator } from "../../../src/core/rng/interface";
+import type { PieceRandomGenerator } from "@/core/rng/interface";
 import type {
   Action,
   GameState,
@@ -20,7 +21,7 @@ import type {
   GameplayConfig,
   Stats,
   PhysicsState,
-} from "../../../src/state/types";
+} from "@/state/types";
 
 // Mock localStorage
 const mockLocalStorage = {

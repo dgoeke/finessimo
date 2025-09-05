@@ -2,7 +2,7 @@
  * Simple unit test for outline cache implementation.
  */
 
-import { createOutlineCache } from "../../../src/ui/renderers/outline-cache";
+import { createOutlineCache } from "@/ui/renderers/outline-cache";
 
 describe("outline cache", () => {
   it("should create a cache instance", () => {

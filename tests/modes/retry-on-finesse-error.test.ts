@@ -1,21 +1,18 @@
-import { gameModeRegistry } from "../../src/modes/index";
-import { runLockPipeline } from "../../src/modes/lock-pipeline";
-import { reducer } from "../../src/state/reducer";
-import { getLockDelayStartTime } from "../../src/state/types";
-import {
-  createSeed,
-  createGridCoord,
-  createDurationMs,
-} from "../../src/types/brands";
-import { createTimestamp, fromNow } from "../../src/types/timestamp";
+import { gameModeRegistry } from "@/modes/index";
+import { runLockPipeline } from "@/modes/lock-pipeline";
+import { reducer } from "@/state/reducer";
+import { getLockDelayStartTime } from "@/state/types";
+import { createSeed, createGridCoord, createDurationMs } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import {
   createTestRetryAction,
   createTestSoftDropAction,
   createTestSpawnAction,
 } from "../test-helpers";
 
-import type { FinesseResult } from "../../src/engine/finesse/calculator";
-import type { GameState, Action } from "../../src/state/types";
+import type { FinesseResult } from "@/engine/finesse/calculator";
+import type { GameState, Action } from "@/state/types";
 
 describe("Retry on finesse error", () => {
   let initialState: GameState;

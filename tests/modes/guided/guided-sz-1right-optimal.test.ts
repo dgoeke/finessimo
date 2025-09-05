@@ -1,19 +1,15 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { dropToBottom } from "../../../src/core/board";
-import { finesseService } from "../../../src/engine/finesse/service";
-import { createInitialState } from "../../../src/engine/init";
-import { GuidedMode } from "../../../src/modes/guided/mode";
-import { makeDeck } from "../../../src/modes/guided/srs/fsrs-adapter";
-import { createColumn } from "../../../src/modes/guided/types";
-import {
-  createDurationMs,
-  createGridCoord,
-  createSeed,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { dropToBottom } from "@/core/board";
+import { finesseService } from "@/engine/finesse/service";
+import { createInitialState } from "@/engine/init";
+import { GuidedMode } from "@/modes/guided/mode";
+import { makeDeck } from "@/modes/guided/srs/fsrs-adapter";
+import { createColumn } from "@/modes/guided/types";
+import { createDurationMs, createGridCoord, createSeed } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
 
-import type { GameState, ProcessedAction } from "../../../src/state/types";
+import type { GameState, ProcessedAction } from "@/state/types";
 
 describe("Guided Z: 1-right in left-rot should be 3 inputs", () => {
   function guidedStateWithSingleCard(): GameState {

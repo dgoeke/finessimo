@@ -1,9 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { cellsForActivePiece } from "../../../src/engine/util/cell-projection";
-import { createGridCoord } from "../../../src/types/brands";
+import { cellsForActivePiece } from "@/engine/util/cell-projection";
+import { createGridCoord } from "@/types/brands";
 
-import type { ActivePiece } from "../../../src/state/types";
+import type { ActivePiece } from "@/state/types";
 
 describe("cell-projection.ts", () => {
   describe("cellsForActivePiece", () => {

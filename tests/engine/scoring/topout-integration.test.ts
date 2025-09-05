@@ -1,13 +1,10 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { reducer } from "../../../src/state/reducer";
-import {
-  buildPlayingState,
-  createBoardCells,
-  idx,
-} from "../../../src/state/types";
-import { createGridCoord } from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { reducer } from "@/state/reducer";
+import { buildPlayingState, createBoardCells, idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../../test-helpers";
 
 describe("topout integration", () => {

@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 
-import { Z } from "../../../src/engine/ui/overlays";
-import { createGridCoord } from "../../../src/types/brands";
-import { renderOverlays } from "../../../src/ui/renderers/overlays";
+import { Z } from "@/engine/ui/overlays";
+import { createGridCoord } from "@/types/brands";
+import { renderOverlays } from "@/ui/renderers/overlays";
 import {
   asCellSizePx,
   asBoardCols,
   asVisibleRows,
   asVanishRows,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
-import type { RenderOverlay } from "../../../src/engine/ui/overlays";
-import type { OutlineCache } from "../../../src/ui/renderers/outline-cache";
-import type { BoardViewport } from "../../../src/ui/types/brands-render";
-import type { OutlinePath } from "../../../src/ui/utils/outlines";
+import type { RenderOverlay } from "@/engine/ui/overlays";
+import type { OutlineCache } from "@/ui/renderers/outline-cache";
+import type { BoardViewport } from "@/ui/types/brands-render";
+import type { OutlinePath } from "@/ui/utils/outlines";
 
 describe("overlays renderer", () => {
   let mockCtx: CanvasRenderingContext2D;

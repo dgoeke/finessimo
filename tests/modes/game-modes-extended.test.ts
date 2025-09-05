@@ -1,24 +1,21 @@
 import { describe, test, expect, beforeEach, jest } from "@jest/globals";
 
-import { createSevenBagRng } from "../../src/core/rng/seeded";
-import { Airborne } from "../../src/engine/physics/lock-delay.machine";
-import { FreePlayMode } from "../../src/modes/free-play/mode";
-import { GuidedMode } from "../../src/modes/guided/mode";
-import { buildPlayingState } from "../../src/state/types";
-import {
-  createDurationMs,
-  createSeed,
-  createGridCoord,
-} from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+import { createSevenBagRng } from "@/core/rng/seeded";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { FreePlayMode } from "@/modes/free-play/mode";
+import { GuidedMode } from "@/modes/guided/mode";
+import { buildPlayingState } from "@/state/types";
+import { createDurationMs, createSeed, createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import {
   createTestPhysicsState,
   createTestTimingConfig,
   createTestGameState,
 } from "../test-helpers";
 
-import type { FinesseResult } from "../../src/engine/finesse/calculator";
-import type { GameState, ActivePiece, Rot } from "../../src/state/types";
+import type { FinesseResult } from "@/engine/finesse/calculator";
+import type { GameState, ActivePiece, Rot } from "@/state/types";
 
 const mockState = (): GameState =>
   createTestGameState({

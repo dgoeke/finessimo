@@ -5,7 +5,7 @@ import {
   assertTimestamp,
   asNumber,
   type Timestamp,
-} from "../../src/types/timestamp";
+} from "@/types/timestamp";
 
 describe("Timestamp", () => {
   describe("createTimestamp", () => {

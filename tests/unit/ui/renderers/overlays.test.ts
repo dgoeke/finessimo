@@ -1,7 +1,8 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-import { createGridCoord } from "../../../../src/types/brands";
-import { renderOverlays } from "../../../../src/ui/renderers/overlays";
+import { createGridCoord } from "@/types/brands";
+import { renderOverlays } from "@/ui/renderers/overlays";
+
 import {
   createBoardViewport,
   createCellSizePx,
@@ -11,9 +12,9 @@ import {
 } from "../../../fixtures/brands-render";
 import { createMockCanvasContext } from "../../../test-helpers";
 
-import type { RenderOverlay } from "../../../../src/engine/ui/overlays";
-import type { OutlineCache } from "../../../../src/ui/renderers/outline-cache";
-import type { OutlinePath } from "../../../../src/ui/utils/outlines";
+import type { RenderOverlay } from "@/engine/ui/overlays";
+import type { OutlineCache } from "@/ui/renderers/outline-cache";
+import type { OutlinePath } from "@/ui/utils/outlines";
 
 // Mock outline cache
 const createMockOutlineCache = (): OutlineCache => ({

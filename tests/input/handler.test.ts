@@ -3,19 +3,20 @@ import {
   normalizeInputSequence,
   type InputHandler,
   type InputHandlerState,
-} from "../../src/input/handler";
+} from "@/input/handler";
 import {
   defaultKeyBindings,
   type KeyBindings,
-} from "../../src/input/keyboard/bindings";
-import { createFrame } from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+} from "@/input/keyboard/bindings";
+import { createFrame } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import {
   createTestRotateAction,
   createTestSoftDropAction,
 } from "../test-helpers";
 
-import type { Action, GameState, InputEvent } from "../../src/state/types";
+import type { Action, GameState, InputEvent } from "@/state/types";
 
 describe("handler.ts", () => {
   describe("MockInputHandler", () => {

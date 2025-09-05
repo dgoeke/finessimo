@@ -25,7 +25,7 @@ import {
   numberToFrame,
   numberToGridCoord,
   seedAsString,
-} from "../../src/types/brands";
+} from "@/types/brands";
 
 describe("brands.ts", () => {
   it("constructors accept valid inputs and brand correctly", () => {

@@ -1,11 +1,8 @@
 import { describe, test, expect, beforeEach } from "@jest/globals";
 
-import { serialize } from "../../../src/modes/guided/srs/fsrs-adapter";
-import {
-  loadGuidedDeck,
-  saveGuidedDeck,
-} from "../../../src/modes/guided/srs/storage";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { serialize } from "@/modes/guided/srs/fsrs-adapter";
+import { loadGuidedDeck, saveGuidedDeck } from "@/modes/guided/srs/storage";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("Guided deck persistence", () => {
   beforeEach(() => {

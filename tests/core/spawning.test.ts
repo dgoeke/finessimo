@@ -1,20 +1,16 @@
 /* eslint-disable sonarjs/todo-tag */
 import { describe, it, expect } from "@jest/globals";
 
-import { canPlacePiece } from "../../src/core/board";
+import { canPlacePiece } from "@/core/board";
 import {
   createActivePiece,
   canSpawnPiece,
   isTopOut,
   spawnWithHold,
-} from "../../src/core/spawning";
-import {
-  type Board,
-  type PieceId,
-  createBoardCells,
-  idx,
-} from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+} from "@/core/spawning";
+import { type Board, type PieceId, createBoardCells, idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+
 import { assertDefined } from "../test-helpers";
 
 // Helper to create a test board

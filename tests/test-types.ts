@@ -1,4 +1,4 @@
-import type { SevenBagRng } from "../src/core/rng/seeded";
+import type { SevenBagRng } from "@/core/rng/seeded";
 import type {
   GameState,
   Action,
@@ -6,7 +6,7 @@ import type {
   ActivePiece,
   Board,
   Rot,
-} from "../src/state/types";
+} from "@/state/types";
 
 // Deep partial type for testing invalid/partial states
 export type DeepPartial<T> =

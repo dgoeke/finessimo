@@ -1,9 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import {
-  Airborne,
-  Grounded,
-} from "../../src/engine/physics/lock-delay.machine";
+import { Airborne, Grounded } from "@/engine/physics/lock-delay.machine";
 import {
   isPlaying,
   isResolvingLock,
@@ -22,9 +19,10 @@ import {
   buildResolvingLockState,
   buildLineClearState,
   buildTopOutState,
-} from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+} from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../test-helpers";
 
 import type {
@@ -34,7 +32,7 @@ import type {
   PhysicsState,
   PendingLock,
   BaseShared,
-} from "../../src/state/types";
+} from "@/state/types";
 
 describe("state/types.ts - Extended Coverage", () => {
   const mockActivePiece: ActivePiece = {

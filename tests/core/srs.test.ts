@@ -1,15 +1,11 @@
-import { createEmptyBoard } from "../../src/core/board";
-import { canRotate, tryRotate, getNextRotation } from "../../src/core/srs";
-import {
-  type ActivePiece,
-  type Board,
-  type Rot,
-  idx,
-} from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+import { createEmptyBoard } from "@/core/board";
+import { canRotate, tryRotate, getNextRotation } from "@/core/srs";
+import { type ActivePiece, type Board, type Rot, idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+
 import { assertDefined } from "../test-helpers";
 
-import type * as SRSModule from "../../src/core/srs";
+import type * as SRSModule from "@/core/srs";
 
 // Factory for jest.doMock to reduce nested function depth inside tests
 const mockEmptyKickTableFactory = (): Record<string, unknown> => {

@@ -1,25 +1,25 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 
 // PIECES removed - not used in simplified tests
-import { createEmptyBoard } from "../../../src/core/board";
-import { idx } from "../../../src/state/types";
-import { createGridCoord } from "../../../src/types/brands";
+import { createEmptyBoard } from "@/core/board";
+import { idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
 import {
   getCellColor,
   isWithinBounds,
   renderBoardCells,
   renderActivePieceCells,
-} from "../../../src/ui/renderers/cells";
+} from "@/ui/renderers/cells";
 import {
   asCellSizePx,
   asBoardCols,
   asVisibleRows,
   asVanishRows,
   asPixelY,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
-import type { Board, ActivePiece } from "../../../src/state/types";
-import type { BoardViewport } from "../../../src/ui/types/brands-render";
+import type { Board, ActivePiece } from "@/state/types";
+import type { BoardViewport } from "@/ui/types/brands-render";
 
 describe("cells renderer", () => {
   let mockCtx: CanvasRenderingContext2D;

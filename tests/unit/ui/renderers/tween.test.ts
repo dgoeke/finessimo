@@ -4,8 +4,9 @@ import {
   advanceTween,
   verticalOffsetPx,
   isTweenActive,
-} from "../../../../src/ui/renderers/tween";
-import { pixelYAsNumber } from "../../../../src/ui/types/brands-render";
+} from "@/ui/renderers/tween";
+import { pixelYAsNumber } from "@/ui/types/brands-render";
+
 import {
   createBoardViewport,
   createCellSizePx,
@@ -15,7 +16,7 @@ import {
 } from "../../../fixtures/brands-render";
 import { createActivePiece } from "../../../fixtures/state";
 
-import type { TweenState } from "../../../../src/ui/renderers/tween";
+import type { TweenState } from "@/ui/renderers/tween";
 
 describe("ui/renderers/tween", () => {
   let viewport: ReturnType<typeof createBoardViewport>;

@@ -1,21 +1,14 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { PIECES } from "../../../src/core/pieces";
-import { DefaultFinesseService } from "../../../src/engine/finesse/service";
-import { FreePlayMode } from "../../../src/modes/free-play/mode";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { PIECES } from "@/core/pieces";
+import { DefaultFinesseService } from "@/engine/finesse/service";
+import { FreePlayMode } from "@/modes/free-play/mode";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 
-import type {
-  GameState,
-  ActivePiece,
-  ProcessedAction,
-} from "../../../src/state/types";
+import type { GameState, ActivePiece, ProcessedAction } from "@/state/types";
 
 function baseState(): GameState {
   return reducer(undefined, {

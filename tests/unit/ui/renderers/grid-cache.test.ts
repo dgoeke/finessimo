@@ -7,7 +7,8 @@ import {
   afterEach,
 } from "@jest/globals";
 
-import { createGridCache } from "../../../../src/ui/renderers/grid-cache";
+import { createGridCache } from "@/ui/renderers/grid-cache";
+
 import {
   createBoardViewport,
   createCellSizePx,

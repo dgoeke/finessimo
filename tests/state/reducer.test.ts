@@ -3,13 +3,10 @@ import {
   type TimingConfig,
   type GameplayConfig,
   type Action,
-} from "../../src/state/types";
-import {
-  createSeed,
-  createGridCoord,
-  createDurationMs,
-} from "../../src/types/brands";
-import { createTimestamp, fromNow } from "../../src/types/timestamp";
+} from "@/state/types";
+import { createSeed, createGridCoord, createDurationMs } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import {
   assertActivePiece,

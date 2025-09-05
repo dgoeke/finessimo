@@ -10,7 +10,7 @@ import type {
   VisibleRows,
   VanishRows,
   BoardCols,
-} from "../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
 // Simple branded type constructors for testing
 export const createCellSizePx = (value: number): CellSizePx =>

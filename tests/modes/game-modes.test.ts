@@ -1,21 +1,18 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { createSevenBagRng } from "../../src/core/rng/seeded";
-import { type FinesseResult } from "../../src/engine/finesse/calculator";
-import { Airborne } from "../../src/engine/physics/lock-delay.machine";
-import { FreePlayMode } from "../../src/modes/free-play/mode";
-import { GuidedMode } from "../../src/modes/guided/mode";
+import { createSevenBagRng } from "@/core/rng/seeded";
+import { type FinesseResult } from "@/engine/finesse/calculator";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { FreePlayMode } from "@/modes/free-play/mode";
+import { GuidedMode } from "@/modes/guided/mode";
 import {
   type GameState,
   type ActivePiece,
   createBoardCells,
-} from "../../src/state/types";
-import {
-  createDurationMs,
-  createSeed,
-  createGridCoord,
-} from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+} from "@/state/types";
+import { createDurationMs, createSeed, createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import {
   createTestPhysicsState,
   createTestTimingConfig,

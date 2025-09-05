@@ -1,7 +1,7 @@
-import { normalizeInputSequence } from "../../src/input/handler";
-import { type InputEvent, type KeyAction } from "../../src/state/types";
-import { createFrame } from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+import { normalizeInputSequence } from "@/input/handler";
+import { type InputEvent, type KeyAction } from "@/state/types";
+import { createFrame } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("Input Normalization", () => {
   const createInputEvent = (action: KeyAction, tMs: number): InputEvent => ({

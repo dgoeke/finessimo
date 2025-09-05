@@ -3,15 +3,15 @@ import { describe, it, expect, beforeEach } from "@jest/globals";
 import {
   drawPlayAreaBackground,
   drawPlayAreaBorder,
-} from "../../../src/ui/renderers/viewport";
+} from "@/ui/renderers/viewport";
 import {
   asCellSizePx,
   asBoardCols,
   asVisibleRows,
   asVanishRows,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
-import type { BoardViewport } from "../../../src/ui/types/brands-render";
+import type { BoardViewport } from "@/ui/types/brands-render";
 
 describe("viewport renderer", () => {
   let mockCtx: CanvasRenderingContext2D;

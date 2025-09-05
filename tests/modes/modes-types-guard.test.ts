@@ -1,5 +1,5 @@
-import { isExtendedModeData } from "../../src/modes/types";
-import { createGridCoord } from "../../src/types/brands";
+import { isExtendedModeData } from "@/modes/types";
+import { createGridCoord } from "@/types/brands";
 
 describe("modes/types.isExtendedModeData", () => {
   test("rejects null and non-objects", () => {

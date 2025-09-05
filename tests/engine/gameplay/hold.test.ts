@@ -1,11 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
 
-import {
-  type GameState,
-  getLockDelayStartTime,
-} from "../../../src/state/types";
-import { createSeed } from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { type GameState, getLockDelayStartTime } from "@/state/types";
+import { createSeed } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 import { assertActivePiece, createTestSpawnAction } from "../../test-helpers";
 

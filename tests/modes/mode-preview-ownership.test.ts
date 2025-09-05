@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeAll } from "@jest/globals";
 
-import { gameModeRegistry, type GameMode } from "../../src/modes/index";
-import { getActiveRng } from "../../src/modes/spawn-service";
-import { fromNow } from "../../src/types/timestamp";
+import { gameModeRegistry, type GameMode } from "@/modes/index";
+import { getActiveRng } from "@/modes/spawn-service";
+import { fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 import { createTestSpawnAction } from "../test-helpers";
 
-import type { PieceRandomGenerator } from "../../src/core/rng/interface";
-import type { Action, GameState, PieceId } from "../../src/state/types";
+import type { PieceRandomGenerator } from "@/core/rng/interface";
+import type { Action, GameState, PieceId } from "@/state/types";
 
 class MockRng implements PieceRandomGenerator {
   private readonly piece: PieceId;

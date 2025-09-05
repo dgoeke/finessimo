@@ -1,5 +1,6 @@
-import { createSeed } from "../../src/types/brands";
-import { fromNow } from "../../src/types/timestamp";
+import { createSeed } from "@/types/brands";
+import { fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../helpers/reducer-with-pipeline";
 
 describe("Reducer Init retainStats behavior", () => {

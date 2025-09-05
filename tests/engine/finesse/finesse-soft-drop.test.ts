@@ -1,12 +1,12 @@
-import { createEmptyBoard } from "../../../src/core/board";
-import { PIECES } from "../../../src/core/pieces";
-import { createSevenBagRng } from "../../../src/core/rng/seeded";
+import { createEmptyBoard } from "@/core/board";
+import { PIECES } from "@/core/pieces";
+import { createSevenBagRng } from "@/core/rng/seeded";
 import {
   finesseCalculator,
   extractFinesseActions,
   extractFinesseActionsFromProcessed,
-} from "../../../src/engine/finesse/calculator";
-import { Airborne } from "../../../src/engine/physics/lock-delay.machine";
+} from "@/engine/finesse/calculator";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
 import {
   type FinesseAction,
   idx,
@@ -19,13 +19,10 @@ import {
   type ProcessedAction,
   createBoardCells,
   buildPlayingState,
-} from "../../../src/state/types";
-import {
-  createDurationMs,
-  createGridCoord,
-  createSeed,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createDurationMs, createGridCoord, createSeed } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 import {
   createTestPhysicsState,

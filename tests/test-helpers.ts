@@ -1,8 +1,8 @@
-import { createSevenBagRng, type SevenBagRng } from "../src/core/rng/seeded";
-import { Airborne } from "../src/engine/physics/lock-delay.machine";
-import { createBoardCells, buildPlayingState } from "../src/state/types";
-import { createSeed, createDurationMs } from "../src/types/brands";
-import { fromNow, createTimestamp } from "../src/types/timestamp";
+import { createSevenBagRng, type SevenBagRng } from "@/core/rng/seeded";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { createBoardCells, buildPlayingState } from "@/state/types";
+import { createSeed, createDurationMs } from "@/types/brands";
+import { fromNow, createTimestamp } from "@/types/timestamp";
 
 import type {
   GameState,
@@ -12,7 +12,7 @@ import type {
   PieceId,
   TimingConfig,
   BaseShared,
-} from "../src/state/types";
+} from "@/state/types";
 
 // Assertion helper that provides runtime type narrowing
 export function assertDefined<T>(

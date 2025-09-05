@@ -1,6 +1,6 @@
 import { describe, test, expect, jest, beforeEach } from "@jest/globals";
 
-import { KeyBindingManager } from "../../../src/input/utils/key-binding-manager";
+import { KeyBindingManager } from "@/input/utils/key-binding-manager";
 
 // Mock HTMLElement for testing
 type MockElement = {

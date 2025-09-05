@@ -7,8 +7,8 @@ import type {
   CellValue,
   Frame,
   Seed,
-} from "../../src/types/brands";
-import type { Timestamp } from "../../src/types/timestamp";
+} from "@/types/brands";
+import type { Timestamp } from "@/types/timestamp";
 
 // Utility types for compile-time testing
 type Equals<A, B> = (() => A) extends () => B

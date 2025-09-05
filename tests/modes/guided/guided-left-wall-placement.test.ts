@@ -1,9 +1,9 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { PIECES } from "../../../src/core/pieces";
-import { validColumns, ROTATION_CLASSES } from "../../../src/modes/guided/deck";
+import { PIECES } from "@/core/pieces";
+import { validColumns, ROTATION_CLASSES } from "@/modes/guided/deck";
 
-import type { PieceId, Rot } from "../../../src/state/types";
+import type { PieceId, Rot } from "@/state/types";
 
 describe("Guided mode left wall placement", () => {
   test("all pieces can be placed flush against left wall when physically possible", () => {

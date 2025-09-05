@@ -11,14 +11,10 @@ import {
   getCompletedLines,
   clearLines,
   shiftUpAndInsertRow,
-} from "../../src/core/board";
-import {
-  type ActivePiece,
-  type Board,
-  type PieceId,
-  idx,
-} from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+} from "@/core/board";
+import { type ActivePiece, type Board, type PieceId, idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+
 import { assertDefined } from "../test-helpers";
 
 // Helper function for testing piece values

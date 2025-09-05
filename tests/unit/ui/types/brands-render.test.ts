@@ -34,7 +34,7 @@ import {
   type CanvasCol,
   type CanvasRow,
   type BoardViewport,
-} from "../../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
 describe("ui/types/brands-render", () => {
   describe("CellSizePx brand", () => {

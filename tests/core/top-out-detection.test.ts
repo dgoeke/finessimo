@@ -5,9 +5,9 @@ import {
   isTopOut,
   isPieceEntirelyInVanishZone,
   createActivePiece,
-} from "../../src/core/spawning";
-import { type Board, createBoardCells, idx } from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+} from "@/core/spawning";
+import { type Board, createBoardCells, idx } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
 
 // Helper to create a test board
 function createTestBoard(): Board {

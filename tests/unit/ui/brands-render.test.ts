@@ -17,7 +17,7 @@ import {
   pixelYAsNumber,
   canvasColAsNumber,
   canvasRowAsNumber,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
 describe("brands-render types", () => {
   it("asCellSizePx should create from positive numbers", () => {

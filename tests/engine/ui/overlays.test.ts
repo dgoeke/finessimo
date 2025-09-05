@@ -5,18 +5,15 @@ import {
   selectTargetOverlays,
   selectColumnHighlightOverlay,
   selectDerivedOverlays,
-} from "../../../src/engine/selectors/overlays";
-import { buildTopOutState } from "../../../src/state/types";
-import { createGridCoord } from "../../../src/types/brands";
+} from "@/engine/selectors/overlays";
+import { buildTopOutState } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+
 // no timestamp helpers needed in this test
 import { createTestGameState } from "../../test-helpers";
 
-import type { ExtendedModeData, TargetCell } from "../../../src/modes/types";
-import type {
-  GameState,
-  ActivePiece,
-  BaseShared,
-} from "../../../src/state/types";
+import type { ExtendedModeData, TargetCell } from "@/modes/types";
+import type { GameState, ActivePiece, BaseShared } from "@/state/types";
 
 describe("overlays.ts", () => {
   const mockActivePiece: ActivePiece = {

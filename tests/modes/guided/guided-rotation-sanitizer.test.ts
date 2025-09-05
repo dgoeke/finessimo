@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from "@jest/globals";
 
-import { loadGuidedDeck } from "../../../src/modes/guided/srs/storage";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { loadGuidedDeck } from "@/modes/guided/srs/storage";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("Guided deck rotation sanitization", () => {
   beforeEach(() => {

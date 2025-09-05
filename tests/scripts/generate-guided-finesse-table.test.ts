@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { createActivePiece } from "../../src/core/spawning";
-import { finesseCalculator } from "../../src/engine/finesse/calculator";
-import { generateCards } from "../../src/modes/guided/deck";
-import { createDurationMs } from "../../src/types/brands";
+import { createActivePiece } from "@/core/spawning";
+import { finesseCalculator } from "@/engine/finesse/calculator";
+import { generateCards } from "@/modes/guided/deck";
+import { createDurationMs } from "@/types/brands";
 
-import type { GameplayConfig } from "../../src/state/types";
+import type { GameplayConfig } from "@/state/types";
 
 describe("Guided finesse table generator", () => {
   it("writes guided_finesse_table.json and guided_finesse_table.csv under ./generated", () => {

@@ -1,12 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { type GameState, buildPlayingState } from "../../../src/state/types";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { type GameState, buildPlayingState } from "@/state/types";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 
 describe("finesse analysis trigger logic", () => {

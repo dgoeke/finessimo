@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach } from "@jest/globals";
 import {
   drawPlayAreaBackground,
   drawPlayAreaBorder,
-} from "../../../../src/ui/renderers/viewport";
+} from "@/ui/renderers/viewport";
+
 import {
   createBoardViewport,
   createCellSizePx,

@@ -4,13 +4,14 @@ import {
   pushUiEffect,
   pruneUiEffects,
   clearUiEffects,
-} from "../../../src/engine/ui/effects";
+} from "@/engine/ui/effects";
 import {
   createDurationMs,
   createUiEffectId,
   createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../../test-helpers";
 
 import type {
@@ -19,7 +20,7 @@ import type {
   FloatingTextEffect,
   LineFlashEffect,
   FinesseBoopEffect,
-} from "../../../src/state/types";
+} from "@/state/types";
 
 describe("engine/ui/effects", () => {
   let baseState: GameState;

@@ -2,14 +2,11 @@
  * Integration test for line clearing with real app update loop
  */
 
-import { shouldCompleteLineClear } from "../../../src/app/app";
-import { idx } from "../../../src/state/types";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { shouldCompleteLineClear } from "@/app/app";
+import { idx } from "@/state/types";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 import {
   createTestSpawnAction,

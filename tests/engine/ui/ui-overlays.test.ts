@@ -1,11 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 
-import {
-  Z,
-  hasValidZOrder,
-  sortOverlaysByZOrder,
-} from "../../../src/engine/ui/overlays";
-import { createGridCoord } from "../../../src/types/brands";
+import { Z, hasValidZOrder, sortOverlaysByZOrder } from "@/engine/ui/overlays";
+import { createGridCoord } from "@/types/brands";
 
 import type {
   RenderOverlay,
@@ -14,7 +10,7 @@ import type {
   LineFlashOverlay,
   EffectDotOverlay,
   ColumnHighlightOverlay,
-} from "../../../src/engine/ui/overlays";
+} from "@/engine/ui/overlays";
 
 describe("ui/overlays.ts", () => {
   describe("Z-order constants", () => {

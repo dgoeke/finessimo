@@ -1,7 +1,7 @@
 // Compile-time tests for GameSettingsSchema completeness
 // This file ensures that all GameSettings fields are handled in the schema
 
-import type { GameSettings } from "../../src/ui/types/settings";
+import type { GameSettings } from "@/ui/types/settings";
 
 // Test utilities for compile-time type checking
 type Equals<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;

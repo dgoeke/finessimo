@@ -7,7 +7,7 @@ import type {
   PendingLock,
   Action,
   PieceId,
-} from "../../src/state/types";
+} from "@/state/types";
 
 // Utility types for compile-time testing
 type _Equals<A, B> = (() => A) extends () => B

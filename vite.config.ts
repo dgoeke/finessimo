@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import path from "path";
 
 export default defineConfig({
   build: {
@@ -17,6 +18,9 @@ export default defineConfig({
   },
   resolve: {
     extensions: [".ts", ".js", ".tsx", ".jsx"],
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   root: ".",
   server: {

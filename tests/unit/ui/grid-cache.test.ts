@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 
-import { createGridCache } from "../../../src/ui/renderers/grid-cache";
+import { createGridCache } from "@/ui/renderers/grid-cache";
 import {
   asCellSizePx,
   asBoardCols,
   asVisibleRows,
   asVanishRows,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
-import type { GridCache } from "../../../src/ui/renderers/grid-cache";
-import type { BoardViewport } from "../../../src/ui/types/brands-render";
+import type { GridCache } from "@/ui/renderers/grid-cache";
+import type { BoardViewport } from "@/ui/types/brands-render";
 
 // Mock OffscreenCanvas since it may not be available in test environment
 class MockOffscreenCanvas {

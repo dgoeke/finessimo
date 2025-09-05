@@ -5,11 +5,7 @@
 
 import { describe, it, expect } from "@jest/globals";
 
-import type {
-  GameState,
-  BoardCells,
-  ProcessedAction,
-} from "../../src/state/types";
+import type { GameState, BoardCells, ProcessedAction } from "@/state/types";
 
 // Type-level test utilities
 type Equals<A, B> = (() => A extends B ? 1 : 2) extends () => B extends A

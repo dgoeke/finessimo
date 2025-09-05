@@ -3,11 +3,11 @@
  * Creates properly typed Board and ActivePiece instances for use in tests.
  */
 
-import { createActivePiece as coreCreateActivePiece } from "../../src/core/spawning";
-import { createBoardCells } from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+import { createActivePiece as coreCreateActivePiece } from "@/core/spawning";
+import { createBoardCells } from "@/state/types";
+import { createGridCoord } from "@/types/brands";
 
-import type { Board, ActivePiece, PieceId, Rot } from "../../src/state/types";
+import type { Board, ActivePiece, PieceId, Rot } from "@/state/types";
 
 // Create a Board with custom cells or defaults
 export function createBoard(overrides: Partial<Board> = {}): Board {

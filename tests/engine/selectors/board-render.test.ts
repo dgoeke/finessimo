@@ -1,20 +1,17 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { selectBoardRenderModel } from "../../../src/engine/selectors/board-render";
+import { selectBoardRenderModel } from "@/engine/selectors/board-render";
 import {
   createGridCoord,
   createDurationMs,
   createUiEffectId,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../../test-helpers";
 
-import type { TargetCell } from "../../../src/modes/types";
-import type {
-  GameState,
-  ActivePiece,
-  UiEffect,
-} from "../../../src/state/types";
+import type { TargetCell } from "@/modes/types";
+import type { GameState, ActivePiece, UiEffect } from "@/state/types";
 
 describe("board-render.ts", () => {
   const mockActivePiece: ActivePiece = {

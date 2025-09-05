@@ -1,15 +1,16 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { selectEffectOverlays } from "../../../src/engine/selectors/effects-to-overlays";
+import { selectEffectOverlays } from "@/engine/selectors/effects-to-overlays";
 import {
   createGridCoord,
   createDurationMs,
   createUiEffectId,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../../test-helpers";
 
-import type { GameState, UiEffect } from "../../../src/state/types";
+import type { GameState, UiEffect } from "@/state/types";
 
 describe("effects-to-overlays.ts", () => {
   const baseGameState: GameState = createTestGameState(

@@ -1,17 +1,13 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { createSevenBagRng } from "../../../src/core/rng/seeded";
-import { Airborne } from "../../../src/engine/physics/lock-delay.machine";
-import { guidedUi } from "../../../src/modes/guided/ui";
-import { createBoardCells } from "../../../src/state/types";
-import {
-  createDurationMs,
-  createGridCoord,
-  createSeed,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { createSevenBagRng } from "@/core/rng/seeded";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { guidedUi } from "@/modes/guided/ui";
+import { createBoardCells } from "@/state/types";
+import { createDurationMs, createGridCoord, createSeed } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
 
-import type { GameState } from "../../../src/state/types";
+import type { GameState } from "@/state/types";
 
 // Local minimal helper to construct a valid GameState for tests
 const createMockGameState = (overrides: Partial<GameState> = {}): GameState =>

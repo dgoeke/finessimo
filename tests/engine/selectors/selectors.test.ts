@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { Grounded } from "../../../src/engine/physics/lock-delay.machine";
+import { Grounded } from "@/engine/physics/lock-delay.machine";
 import {
   selectStatus,
   selectIsPlaying,
@@ -18,16 +18,17 @@ import {
   selectLockDelayMs,
   selectLockResetCap,
   selectGhostPieceBottom,
-} from "../../../src/engine/selectors";
+} from "@/engine/selectors";
 import {
   buildResolvingLockState,
   buildPlayingState,
   updateGameState,
   buildTopOutState,
   buildLineClearState,
-} from "../../../src/state/types";
-import { createGridCoord } from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { createTestGameState } from "../../test-helpers";
 
 import type {
@@ -36,7 +37,7 @@ import type {
   BaseShared,
   PendingLock,
   PlayingState,
-} from "../../../src/state/types";
+} from "@/state/types";
 
 describe("selectors.ts", () => {
   const mockActivePiece: ActivePiece = {

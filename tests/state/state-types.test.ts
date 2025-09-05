@@ -4,8 +4,8 @@ import {
   isCellBlocked,
   type Board,
   createBoardCells,
-} from "../../src/state/types";
-import { createGridCoord } from "../../src/types/brands";
+} from "@/state/types";
+import { createGridCoord } from "@/types/brands";
 
 // Test board helper
 const createTestBoard = (): Board => ({

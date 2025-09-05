@@ -1,18 +1,14 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { createGridCoord } from "../../../src/types/brands";
+import { createGridCoord } from "@/types/brands";
 import {
   computePerimeterEdges,
   orderEdgesToPaths,
   computeOutlinePaths,
   pathToPath2D,
-} from "../../../src/ui/utils/outlines";
+} from "@/ui/utils/outlines";
 
-import type {
-  GridCell,
-  OrientedEdge,
-  OutlinePath,
-} from "../../../src/ui/utils/outlines";
+import type { GridCell, OrientedEdge, OutlinePath } from "@/ui/utils/outlines";
 
 describe("outline utilities", () => {
   describe("computePerimeterEdges", () => {

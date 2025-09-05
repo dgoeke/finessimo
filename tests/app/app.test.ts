@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 
-import { FinessimoApp } from "../../src/app/app";
-import { fromNow } from "../../src/types/timestamp";
+import { FinessimoApp } from "@/app/app";
+import { fromNow } from "@/types/timestamp";
 
 // Minimal DOM setup for app to work
 function setupMinimalDOM(): void {

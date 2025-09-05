@@ -9,9 +9,9 @@ import {
   updateContextARR,
   updateConfig,
   type DASEvent,
-} from "../../../src/input/machines/das";
-import { type Action } from "../../../src/state/types";
-import { createDurationMs } from "../../../src/types/brands";
+} from "@/input/machines/das";
+import { type Action } from "@/state/types";
+import { createDurationMs } from "@/types/brands";
 
 // Helper functions to check action types
 const isTapMoveAction = (

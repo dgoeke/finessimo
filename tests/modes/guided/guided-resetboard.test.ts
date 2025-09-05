@@ -1,10 +1,11 @@
 import { describe, test, expect, jest } from "@jest/globals";
 
-import { createDurationMs } from "../../../src/types/brands";
+import { createDurationMs } from "@/types/brands";
+
 import { reducerWithPipeline } from "../../helpers/reducer-with-pipeline";
 import { createTestInitAction } from "../../test-helpers";
 
-import type { Action, GameState } from "../../../src/state/types";
+import type { Action, GameState } from "@/state/types";
 
 describe("Guided mode clears board after commit", () => {
   test("board is reset after a hard drop commit", () => {

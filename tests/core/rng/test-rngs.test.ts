@@ -1,8 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { OnePieceRng, SequenceRng } from "../../../src/core/rng/test-rngs";
+import { OnePieceRng, SequenceRng } from "@/core/rng/test-rngs";
 
-import type { PieceId } from "../../../src/state/types";
+import type { PieceId } from "@/state/types";
 
 describe("other-rngs (OnePieceRng, SequenceRng)", () => {
   it("OnePieceRng returns the same piece and same instance", () => {

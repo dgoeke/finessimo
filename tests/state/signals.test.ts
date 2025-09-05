@@ -5,9 +5,9 @@ import {
   gameStateSignal,
   getCurrentState,
   stateSelectors,
-} from "../../src/state/signals";
-import { createSeed } from "../../src/types/brands";
-import { fromNow } from "../../src/types/timestamp";
+} from "@/state/signals";
+import { createSeed } from "@/types/brands";
+import { fromNow } from "@/types/timestamp";
 
 describe("signals.ts store and selectors", () => {
   it("initializes state via Init and updates the signal", () => {

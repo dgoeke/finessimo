@@ -7,9 +7,9 @@ import {
   pickNextDue,
   type SrsDeck,
   type SrsRecord,
-} from "../../../../src/modes/guided/srs/fsrs-adapter";
-import { createDeckId, createColumn } from "../../../../src/modes/guided/types";
-import { createTimestamp } from "../../../../src/types/timestamp";
+} from "@/modes/guided/srs/fsrs-adapter";
+import { createDeckId, createColumn } from "@/modes/guided/types";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("fsrs-adapter tie-breakers", () => {
   const now = createTimestamp(1000);

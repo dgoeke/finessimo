@@ -1,16 +1,16 @@
 import { describe, expect, test } from "@jest/globals";
 
-import { createEmptyBoard } from "../../src/core/board";
-import { createActivePiece } from "../../src/core/spawning";
-import { createPendingLock } from "../../src/engine/lock-utils";
-import { gameModeRegistry } from "../../src/modes/index";
-import { runLockPipeline } from "../../src/modes/lock-pipeline";
-import { createDurationMs, createUiEffectId } from "../../src/types/brands";
-import { asNumber, fromNow } from "../../src/types/timestamp";
+import { createEmptyBoard } from "@/core/board";
+import { createActivePiece } from "@/core/spawning";
+import { createPendingLock } from "@/engine/lock-utils";
+import { gameModeRegistry } from "@/modes/index";
+import { runLockPipeline } from "@/modes/lock-pipeline";
+import { createDurationMs, createUiEffectId } from "@/types/brands";
+import { asNumber, fromNow } from "@/types/timestamp";
 
-import type { FinesseResult } from "../../src/engine/finesse/calculator";
-import type { GameMode, ResolveLockDecision } from "../../src/modes/index";
-import type { Action, GameState, GameplayConfig } from "../../src/state/types";
+import type { FinesseResult } from "@/engine/finesse/calculator";
+import type { GameMode, ResolveLockDecision } from "@/modes/index";
+import type { Action, GameState, GameplayConfig } from "@/state/types";
 
 const dummyAnalyze = (
   _s: GameState,

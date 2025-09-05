@@ -1,18 +1,19 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 
-import { createSevenBagRng } from "../../src/core/rng/seeded";
+import { createSevenBagRng } from "@/core/rng/seeded";
 import {
   getActiveRng,
   getNextFromMode,
   getPreviewFromMode,
   planPreviewRefill,
-} from "../../src/modes/spawn-service";
+} from "@/modes/spawn-service";
+
 import { createTestGameState } from "../test-helpers";
 
-import type { PieceRandomGenerator } from "../../src/core/rng/interface";
-import type { FinesseResult } from "../../src/engine/finesse/calculator";
-import type { GameMode, GameModeResult } from "../../src/modes/index";
-import type { GameState, PieceId, ActivePiece } from "../../src/state/types";
+import type { PieceRandomGenerator } from "@/core/rng/interface";
+import type { FinesseResult } from "@/engine/finesse/calculator";
+import type { GameMode, GameModeResult } from "@/modes/index";
+import type { GameState, PieceId, ActivePiece } from "@/state/types";
 
 describe("modes/spawn-service", () => {
   let baseState: GameState;

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { createActivePiece } from "../../../src/core/spawning";
-import { finesseCalculator } from "../../../src/engine/finesse/calculator";
-import { generateCards } from "../../../src/modes/guided/deck";
-import { createDurationMs } from "../../../src/types/brands";
+import { createActivePiece } from "@/core/spawning";
+import { finesseCalculator } from "@/engine/finesse/calculator";
+import { generateCards } from "@/modes/guided/deck";
+import { createDurationMs } from "@/types/brands";
 
-import type { GameplayConfig } from "../../../src/state/types";
+import type { GameplayConfig } from "@/state/types";
 
 describe("Guided deck card ordering", () => {
   it("orders cards by difficulty using round-robin across pieces", () => {

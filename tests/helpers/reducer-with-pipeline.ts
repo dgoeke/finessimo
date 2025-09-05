@@ -7,14 +7,14 @@
  * It also mirrors app-level preview refill behavior for deterministic tests.
  */
 
-import { finesseService } from "../../src/engine/finesse/service";
-import { gameModeRegistry } from "../../src/modes/index";
-import { runLockPipeline } from "../../src/modes/lock-pipeline";
-import { planPreviewRefill } from "../../src/modes/spawn-service";
-import { reducer } from "../../src/state/reducer";
+import { finesseService } from "@/engine/finesse/service";
+import { gameModeRegistry } from "@/modes/index";
+import { runLockPipeline } from "@/modes/lock-pipeline";
+import { planPreviewRefill } from "@/modes/spawn-service";
+import { reducer } from "@/state/reducer";
 
-import type { FinesseResult } from "../../src/engine/finesse/calculator";
-import type { Action, GameState } from "../../src/state/types";
+import type { FinesseResult } from "@/engine/finesse/calculator";
+import type { Action, GameState } from "@/state/types";
 
 export function reducerWithPipeline(
   state: GameState | undefined,

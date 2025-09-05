@@ -7,20 +7,17 @@ import {
   afterEach,
 } from "@jest/globals";
 
-import { createSevenBagRng } from "../../../src/core/rng/seeded";
-import { Airborne } from "../../../src/engine/physics/lock-delay.machine";
-import { TouchInputHandler } from "../../../src/input/touch/handler";
+import { createSevenBagRng } from "@/core/rng/seeded";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
+import { TouchInputHandler } from "@/input/touch/handler";
 import {
   type GameState,
   createBoardCells,
   type ActivePiece,
-} from "../../../src/state/types";
-import {
-  createDurationMs,
-  createSeed,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createDurationMs, createSeed, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { createTestPhysicsState } from "../../test-helpers";
 
 // Mock DOM APIs for touch support

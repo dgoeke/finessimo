@@ -1,22 +1,22 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { createGridCoord } from "../../../src/types/brands";
+import { createGridCoord } from "@/types/brands";
 import {
   advanceTween,
   verticalOffsetPx,
   isTweenActive,
-} from "../../../src/ui/renderers/tween";
+} from "@/ui/renderers/tween";
 import {
   asCellSizePx,
   asBoardCols,
   asVisibleRows,
   asVanishRows,
   pixelYAsNumber,
-} from "../../../src/ui/types/brands-render";
+} from "@/ui/types/brands-render";
 
-import type { ActivePiece } from "../../../src/state/types";
-import type { TweenState } from "../../../src/ui/renderers/tween";
-import type { BoardViewport } from "../../../src/ui/types/brands-render";
+import type { ActivePiece } from "@/state/types";
+import type { TweenState } from "@/ui/renderers/tween";
+import type { BoardViewport } from "@/ui/types/brands-render";
 
 describe("tween renderer", () => {
   let viewport: BoardViewport;

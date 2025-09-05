@@ -1,10 +1,11 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { selectGhostOverlay } from "../../../src/engine/selectors/overlays";
-import { createGridCoord, createDurationMs } from "../../../src/types/brands";
+import { selectGhostOverlay } from "@/engine/selectors/overlays";
+import { createGridCoord, createDurationMs } from "@/types/brands";
+
 import { createTestGameState } from "../../test-helpers";
 
-import type { ActivePiece } from "../../../src/state/types";
+import type { ActivePiece } from "@/state/types";
 
 function makeActivePiece(): ActivePiece {
   return {

@@ -3,8 +3,9 @@ import {
   getNextPiece,
   getNextPieces,
   type SevenBagRng,
-} from "../../../src/core/rng/seeded";
-import { type PieceId } from "../../../src/state/types";
+} from "@/core/rng/seeded";
+import { type PieceId } from "@/state/types";
+
 import { createCorruptedRng } from "../../test-types";
 
 describe("Seven Bag RNG", () => {

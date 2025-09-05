@@ -422,8 +422,6 @@ export class FinessimoApp {
       const guidance = mode.getGuidance(this.gameState) ?? null;
       const prev = this.gameState.guidance ?? null;
       if (!simpleEqual(guidance, prev)) {
-        // Surface guidance updates in console
-        console.warn("[Guidance] Updated:", guidance);
         this.dispatch({ guidance, type: "UpdateGuidance" });
       }
     }

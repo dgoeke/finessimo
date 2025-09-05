@@ -5,14 +5,11 @@
  * when lineClearDelayMs > 0, causing game softlock.
  */
 
-import { shouldCompleteLineClear } from "../../../src/app/app";
-import { type GameState, idx } from "../../../src/state/types";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp, fromNow } from "../../../src/types/timestamp";
+import { shouldCompleteLineClear } from "@/app/app";
+import { type GameState, idx } from "@/state/types";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp, fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 import {
   createTestSpawnAction,

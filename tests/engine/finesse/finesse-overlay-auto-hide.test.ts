@@ -1,7 +1,8 @@
 // Mock Lit similar to existing finesse-overlay tests
-import { type GameState } from "../../../src/state/types";
-import { createSeed } from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { type GameState } from "@/state/types";
+import { createSeed } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 
 jest.mock(

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { isAtBottom } from "../../../src/core/board";
-import { Airborne } from "../../../src/engine/physics/lock-delay.machine";
+import { isAtBottom } from "@/core/board";
+import { Airborne } from "@/engine/physics/lock-delay.machine";
 import {
   createBoardCells,
   type Board,
@@ -13,13 +13,10 @@ import {
   getLockDelayResetCount,
   buildPlayingState,
   idx,
-} from "../../../src/state/types";
-import {
-  createSeed,
-  createDurationMs,
-  createGridCoord,
-} from "../../../src/types/brands";
-import { createTimestamp } from "../../../src/types/timestamp";
+} from "@/state/types";
+import { createSeed, createDurationMs, createGridCoord } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 import {
   createTestSpawnAction,

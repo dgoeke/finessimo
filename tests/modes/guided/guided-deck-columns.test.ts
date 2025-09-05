@@ -1,9 +1,9 @@
 import { describe, test, expect } from "@jest/globals";
 
-import { PIECES } from "../../../src/core/pieces";
-import { validColumns } from "../../../src/modes/guided/deck";
+import { PIECES } from "@/core/pieces";
+import { validColumns } from "@/modes/guided/deck";
 
-import type { Rot } from "../../../src/state/types";
+import type { Rot } from "@/state/types";
 
 describe("Guided deck column generation", () => {
   const rots: Array<Rot> = ["spawn", "right", "two", "left"];

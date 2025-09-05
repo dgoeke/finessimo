@@ -1,13 +1,13 @@
 import { describe, it, expect } from "@jest/globals";
 
-import { calculateGhostPosition } from "../../../src/core/board";
+import { calculateGhostPosition } from "@/core/board";
 import {
   type Board,
   type ActivePiece,
   createBoardCells,
   idx,
-} from "../../../src/state/types";
-import { createGridCoord } from "../../../src/types/brands";
+} from "@/state/types";
+import { createGridCoord } from "@/types/brands";
 
 // Helper to create a test board
 function createTestBoard(): Board {

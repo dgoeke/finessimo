@@ -24,7 +24,13 @@ export default tseslint.config(
       },
     },
     settings: {
-      "import-x/resolver": { typescript: true, node: true },
+      "import-x/resolver": { 
+        typescript: {
+          alwaysTryTypes: true,
+          project: "./tsconfig.json"
+        }, 
+        node: true 
+      },
     },
     plugins: {
       "eslint-comments": eslintComments,
@@ -245,9 +251,16 @@ export default tseslint.config(
     },
   },
 
-  // Test files: relax some rules, add jest/vitest globals if needed
+  // Test files: use test TypeScript config and relax some rules
   {
-    files: ["**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
+    files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: ["./tsconfig.test.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "no-console": "error",

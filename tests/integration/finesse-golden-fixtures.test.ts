@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { PIECES } from "../../src/core/pieces";
-import { finesseCalculator } from "../../src/engine/finesse/calculator";
-import { createDurationMs, createGridCoord } from "../../src/types/brands";
+import { PIECES } from "@/core/pieces";
+import { finesseCalculator } from "@/engine/finesse/calculator";
+import { createDurationMs, createGridCoord } from "@/types/brands";
 
-import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";
+import type { ActivePiece, GameplayConfig, Rot } from "@/state/types";
 
 const cfg: GameplayConfig = {
   finesseCancelMs: createDurationMs(50),

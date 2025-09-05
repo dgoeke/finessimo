@@ -51,5 +51,6 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@lit-labs/signals$": "<rootDir>/__mocks__/@lit-labs/signals.ts",
+    "^@/(.*)$": "<rootDir>/src/$1",
   },
 };

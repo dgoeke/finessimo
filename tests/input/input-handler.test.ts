@@ -1,7 +1,7 @@
-import { normalizeInputSequence } from "../../src/input/handler";
-import { type InputEvent } from "../../src/state/types";
-import { createFrame } from "../../src/types/brands";
-import { createTimestamp } from "../../src/types/timestamp";
+import { normalizeInputSequence } from "@/input/handler";
+import { type InputEvent } from "@/state/types";
+import { createFrame } from "@/types/brands";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("normalizeInputSequence", () => {
   test("cancels opposite inputs within window", () => {

@@ -1,13 +1,14 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-import { type PieceId } from "../../../../src/state/types";
+import { type PieceId } from "@/state/types";
 import {
   getCellColor,
   isWithinBounds,
   renderBoardCells,
   renderActivePieceCells,
-} from "../../../../src/ui/renderers/cells";
-import { lightenColor, darkenColor } from "../../../../src/ui/utils/colors";
+} from "@/ui/renderers/cells";
+import { lightenColor, darkenColor } from "@/ui/utils/colors";
+
 import {
   createBoardViewport,
   createCellSizePx,

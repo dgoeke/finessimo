@@ -1,7 +1,8 @@
 // Mock Lit to avoid ESM node resolution for real 'lit' package in tests
-import { type GameState } from "../../../src/state/types";
-import { createSeed } from "../../../src/types/brands";
-import { fromNow } from "../../../src/types/timestamp";
+import { type GameState } from "@/state/types";
+import { createSeed } from "@/types/brands";
+import { fromNow } from "@/types/timestamp";
+
 import { reducerWithPipeline as reducer } from "../../helpers/reducer-with-pipeline";
 jest.mock(
   "lit",

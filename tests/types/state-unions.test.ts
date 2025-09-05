@@ -8,7 +8,7 @@ import type {
   LineClearState,
   TopOutState,
   Action,
-} from "../../src/state/types";
+} from "@/state/types";
 
 // Utility types for compile-time testing
 type Equals<A, B> = (() => A) extends () => B

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { generateCards, makeDefaultDeck } from "../../../src/modes/guided/deck";
-import { pickNextDue } from "../../../src/modes/guided/srs/fsrs-adapter";
-import { createTimestamp } from "../../../src/types/timestamp";
+import { generateCards, makeDefaultDeck } from "@/modes/guided/deck";
+import { pickNextDue } from "@/modes/guided/srs/fsrs-adapter";
+import { createTimestamp } from "@/types/timestamp";
 
 describe("Initial deck ordering", () => {
   it("should preserve the difficulty-based card order from generateCards", () => {
