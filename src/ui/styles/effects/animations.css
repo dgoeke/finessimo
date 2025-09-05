@@ -1,0 +1,11 @@
+@keyframes floatUpFade {
+  0% {
+    transform: translateY(0) scale(var(--fx-scale-from, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(-1 * var(--fx-drift-y, 48px)))
+      scale(var(--fx-scale-to, 0.9));
+    opacity: 0;
+  }
+}

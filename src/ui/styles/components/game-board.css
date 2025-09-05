@@ -1,0 +1,57 @@
+/* Board area */
+.board-frame {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+}
+
+game-board canvas {
+  display: block;
+  /* Ensure proper aspect ratio is always maintained - 10 wide × 22 tall including vanish zone */
+  aspect-ratio: 10 / 22;
+  /* Use the smaller of: available height OR (22/10)x available width */
+  height: min(
+    calc(100vh - var(--header-h) - 100px),
+    /* Available height */ calc((100vw - 128px - 40px - 32px) * 2.2)
+      /* 2.2x available width to maintain 22:10 ratio */
+  );
+  width: auto; /* Width derives from height via aspect-ratio */
+  image-rendering: pixelated;
+}
+
+/* Legacy support for any remaining #game-canvas references */
+#game-canvas {
+  display: block;
+  aspect-ratio: 10 / 22;
+  height: min(
+    calc(100vh - var(--header-h) - 100px),
+    calc((100vw - 128px - 40px - 32px) * 2.2)
+  );
+  width: auto;
+  image-rendering: pixelated;
+}
+.board-frame {
+  padding: 12px;
+  position: relative; /* Anchor touch overlay locally on mobile */
+  /* Fit contents without extra width */
+  display: inline-block;
+}
+
+/* UI Effects overlay */
+.effects-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fx-item {
+  position: absolute;
+}
+
+.fx-floating-text {
+  will-change: transform, opacity;
+  transform-origin: bottom right;
+  animation: floatUpFade var(--fx-dur, 1200ms) ease-out forwards;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,76 @@
+/* Header */
+.site-header {
+  position: static;
+  inset: unset;
+  height: auto;
+  z-index: 10;
+  background: color-mix(in oklab, var(--bg-elev-1) 70%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  /* Match (board outer width) + two fixed side columns + two column gaps */
+  width: min(
+    /* Height-limited path: board canvas width + frame + two gaps + two 60px cols */
+      calc(
+        (2 * var(--side-col-w)) + (2 * var(--col-gap)) +
+          var(--board-frame-extra-w) + ((100vh - var(--header-h) - 100px) / 2)
+      ),
+    /* Width-limited path: align to grid container width (columns + gaps) */
+      calc(
+        100vw - max(16px, env(safe-area-inset-left)) -
+          max(16px, env(safe-area-inset-right))
+      ),
+    1200px
+  );
+  margin: 0 auto;
+  padding: 10px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+.brand-text .title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--primary);
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.chip:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}

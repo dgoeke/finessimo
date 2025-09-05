@@ -1,0 +1,16 @@
+.panel {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--bg-elev-1) 92%, transparent),
+    var(--bg-elev-2)
+  );
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Hide mobile-only elements on desktop */
+.mobile-only {
+  display: none;
+}

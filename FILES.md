@@ -125,6 +125,27 @@ Note: core logic is pure and functional; side effects live in input handlers and
 - src/ui/utils/dom.ts: Typed DOM queries for app elements (shell, board frame, settings modal).
 - src/ui/utils/outlines.ts: Pure geometry: compute perimeter edges/paths from grid cells for clean piece outlines.
 
+## Styles (modular CSS architecture)
+
+- src/ui/styles/index.css: Main CSS entry point; imports all style modules in correct cascade order.
+- src/ui/styles/foundations/fonts.css: @font-face declarations for custom fonts.
+- src/ui/styles/foundations/variables.css: CSS custom properties (theme tokens, colors, spacing).
+- src/ui/styles/foundations/reset.css: CSS reset, base styles, focus states.
+- src/ui/styles/layout/header.css: Site header, branding, navigation elements.
+- src/ui/styles/layout/app-shell.css: Main 3-column grid layout, hold/board/preview columns.
+- src/ui/styles/layout/panels.css: Panel container styles, mobile-only utilities.
+- src/ui/styles/components/game-board.css: Board frame, canvas, effects overlay.
+- src/ui/styles/components/game-pieces.css: Hold section, preview section, piece layouts.
+- src/ui/styles/components/stats-panel.css: Statistics display, stat sections, value formatting.
+- src/ui/styles/components/controls.css: Touch controls, zones, buttons, gesture handling.
+- src/ui/styles/components/modals.css: Settings modal, keybinding modal, dialog styles.
+- src/ui/styles/effects/animations.css: CSS keyframe animations (floatUpFade, etc.).
+- src/ui/styles/effects/overlays.css: Coaching overlay, feedback positioning.
+- src/ui/styles/effects/finesse.css: Finesse feedback overlay, action icons.
+- src/ui/styles/lit-components/board.css: Web component styles for game-board, piece-hold, etc.
+- src/ui/styles/lit-components/settings.css: Settings components (checkbox, slider, dropdown, etc.).
+- src/ui/styles/responsive/breakpoints.css: Media queries, responsive adjustments.
+
 
 
 ## Utilities
