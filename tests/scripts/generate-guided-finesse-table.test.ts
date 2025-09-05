@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createActivePiece } from "../../src/core/spawning";
-import { finesseCalculator } from "../../src/finesse/calculator";
+import { finesseCalculator } from "../../src/engine/finesse/calculator";
 import { generateCards } from "../../src/modes/guided/deck";
 import { createDurationMs } from "../../src/types/brands";
 

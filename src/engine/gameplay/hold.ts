@@ -1,8 +1,8 @@
 /* eslint-disable sonarjs/todo-tag */
 import { canPlacePiece } from "../../core/board";
 import { createActivePiece } from "../../core/spawning";
-import { Airborne } from "../../engine/physics/lock-delay.machine";
 import { buildTopOutState } from "../../state/types";
+import { Airborne } from "../physics/lock-delay.machine";
 
 import type {
   GameState,

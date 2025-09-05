@@ -4,9 +4,9 @@
  * Tests the full application stack from keyboard input through game state updates
  */
 
-import { FinessimoApp } from "../../src/app";
+import { FinessimoApp } from "../../src/app/app";
 import { isAtBottom } from "../../src/core/board";
-import { OnePieceRng } from "../../src/core/other-rngs";
+import { OnePieceRng } from "../../src/core/rng/test-rngs";
 import { gameStateSignal } from "../../src/state/signals";
 import { type Action, type GameState } from "../../src/state/types";
 import { createSeed, createDurationMs } from "../../src/types/brands";

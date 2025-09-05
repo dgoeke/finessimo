@@ -1,12 +1,12 @@
 import { dropToBottom } from "../../core/board";
 import { PIECES } from "../../core/pieces";
-import { pickNextDue } from "../../srs/fsrs-adapter";
 import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
 import { createTimestamp } from "../../types/timestamp";
 
 import { makeDefaultDeck } from "./deck";
+import { pickNextDue } from "./srs/fsrs-adapter";
 
-import type { GuidedCard, SrsDeck } from "../../srs/fsrs-adapter";
+import type { GuidedCard, SrsDeck } from "./srs/fsrs-adapter";
 import type { GameState } from "../../state/types";
 import type { GridCoord } from "../../types/brands";
 import type { ModeUiAdapter, ExtendedModeData, TargetCell } from "../types";

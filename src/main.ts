@@ -1,4 +1,4 @@
-import { FinessimoApp } from "./app";
+import { FinessimoApp } from "./app/app";
 import { getFinessimoShell } from "./ui/utils/dom";
 
 // Import components to register them

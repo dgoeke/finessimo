@@ -1,26 +1,26 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: ".",
   build: {
-    target: "es2020",
     outDir: "dist",
-    sourcemap: true,
     rollupOptions: {
       input: {
         main: "index.html",
       },
     },
-  },
-  server: {
-    port: 3000,
-    open: true,
-  },
-  resolve: {
-    extensions: [".ts", ".js", ".tsx", ".jsx"],
+    sourcemap: true,
+    target: "es2020",
   },
   esbuild: {
     jsx: "automatic",
     jsxImportSource: "@chnicoloso/lit-jsx",
+  },
+  resolve: {
+    extensions: [".ts", ".js", ".tsx", ".jsx"],
+  },
+  root: ".",
+  server: {
+    open: true,
+    port: 3000,
   },
 });

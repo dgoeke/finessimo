@@ -1,5 +1,5 @@
-import { type PieceRandomGenerator } from "../core/rng-interface";
-import { type FinesseResult } from "../finesse/calculator";
+import { type PieceRandomGenerator } from "../core/rng/interface";
+import { type FinesseResult } from "../engine/finesse/calculator";
 import {
   type GameState,
   type ActivePiece,
@@ -13,8 +13,8 @@ import {
   type BoardDecorations,
 } from "../state/types";
 
-import { FreePlayMode } from "./freePlay";
-import { GuidedMode } from "./guided";
+import { FreePlayMode } from "./free-play/mode";
+import { GuidedMode } from "./guided/mode";
 
 // Lock resolution types for mode-driven retry decisions
 export type ResolveLockContext = {

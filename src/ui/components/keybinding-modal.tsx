@@ -1,7 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import type { KeyBindings, BindableAction } from "../../input/keyboard";
+import type {
+  KeyBindings,
+  BindableAction,
+} from "../../input/keyboard/bindings";
 
 @customElement("keybinding-modal")
 export class KeybindingModal extends LitElement {

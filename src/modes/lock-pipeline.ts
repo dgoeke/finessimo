@@ -17,7 +17,7 @@
 import { gameModeRegistry } from "./index";
 
 import type { ResolveLockDecision } from "./index";
-import type { FinesseResult } from "../finesse/calculator";
+import type { FinesseResult } from "../engine/finesse/calculator";
 import type {
   GameState,
   Action,

@@ -1,8 +1,8 @@
 // Game state
 import { gridCoordAsNumber } from "../types/brands";
 
-import type { PieceRandomGenerator } from "../core/rng-interface";
-import type { FaultType, FinesseResult } from "../finesse/calculator";
+import type { PieceRandomGenerator } from "../core/rng/interface";
+import type { FaultType, FinesseResult } from "../engine/finesse/calculator";
 import type {
   GridCoord,
   DurationMs,

@@ -1,11 +1,11 @@
 import { createEmptyBoard } from "../core/board";
-import { createSevenBagRng } from "../core/rng";
+import { createSevenBagRng } from "../core/rng/seeded";
 import { createDurationMs } from "../types/brands";
 
 import { Airborne } from "./physics/lock-delay.machine";
 import { applyDelta } from "./scoring/stats";
 
-import type { PieceRandomGenerator } from "../core/rng-interface";
+import type { PieceRandomGenerator } from "../core/rng/interface";
 import type {
   PlayingState,
   Stats,

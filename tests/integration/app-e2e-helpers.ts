@@ -2,7 +2,7 @@
  * Type-safe helpers for end-to-end integration tests
  */
 
-import { type FinessimoApp } from "../../src/app";
+import { type FinessimoApp } from "../../src/app/app";
 import { type Action, type GameState } from "../../src/state/types";
 
 // Interface for internal app methods we need for testing

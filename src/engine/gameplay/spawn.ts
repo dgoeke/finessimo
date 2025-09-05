@@ -1,7 +1,7 @@
 /* eslint-disable sonarjs/todo-tag */
 import { createActivePiece, isTopOut } from "../../core/spawning";
-import { Airborne } from "../../engine/physics/lock-delay.machine";
 import { buildTopOutState } from "../../state/types";
+import { Airborne } from "../physics/lock-delay.machine";
 
 import type { GameState, Action, PieceId } from "../../state/types";
 

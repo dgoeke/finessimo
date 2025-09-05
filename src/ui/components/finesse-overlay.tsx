@@ -2,7 +2,7 @@ import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, html } from "lit";
 import { customElement, state, query } from "lit/decorators.js";
 
-import { getActionIcon } from "../../finesse/constants";
+import { getActionIcon } from "../../engine/finesse/constants";
 import { gameStateSignal } from "../../state/signals";
 import { playBoop } from "../audio";
 

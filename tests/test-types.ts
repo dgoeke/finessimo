@@ -1,4 +1,4 @@
-import type { SevenBagRng } from "../src/core/rng";
+import type { SevenBagRng } from "../src/core/rng/seeded";
 import type {
   GameState,
   Action,

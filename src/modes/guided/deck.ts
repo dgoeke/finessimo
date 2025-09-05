@@ -1,13 +1,13 @@
 import { PIECES } from "../../core/pieces";
 import { createActivePiece } from "../../core/spawning";
-import { finesseCalculator } from "../../finesse/calculator";
-import { makeDeck } from "../../srs/fsrs-adapter";
+import { finesseCalculator } from "../../engine/finesse/calculator";
 import { createDurationMs } from "../../types/brands";
 import { createTimestamp, type Timestamp } from "../../types/timestamp";
 
+import { makeDeck } from "./srs/fsrs-adapter";
 import { createColumn, type Column, createCardId, type CardId } from "./types";
 
-import type { GuidedCard, SrsDeck } from "../../srs/fsrs-adapter";
+import type { GuidedCard, SrsDeck } from "./srs/fsrs-adapter";
 import type { GameplayConfig, PieceId, Rot } from "../../state/types";
 
 // Rotation equivalence classes to avoid visual duplicates

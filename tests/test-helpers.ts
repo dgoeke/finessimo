@@ -1,4 +1,4 @@
-import { createSevenBagRng, type SevenBagRng } from "../src/core/rng";
+import { createSevenBagRng, type SevenBagRng } from "../src/core/rng/seeded";
 import { Airborne } from "../src/engine/physics/lock-delay.machine";
 import { createBoardCells, buildPlayingState } from "../src/state/types";
 import { createSeed, createDurationMs } from "../src/types/brands";

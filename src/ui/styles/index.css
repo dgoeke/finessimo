@@ -23,7 +23,6 @@
 /* === EFFECTS === */
 /* Animation, transitions, and visual effects */
 @import "./effects/animations.css";
-@import "./effects/overlays.css";
 @import "./effects/finesse.css";
 
 /* === LIT COMPONENTS === */

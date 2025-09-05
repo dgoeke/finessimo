@@ -2,11 +2,11 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 
-import { defaultKeyBindings } from "../../input/keyboard";
+import { defaultKeyBindings } from "../../input/keyboard/bindings";
 import { createDurationMs } from "../../types/brands";
 
 import type { DropdownOption } from "./settings/dropdown";
-import type { KeyBindings } from "../../input/keyboard";
+import type { KeyBindings } from "../../input/keyboard/bindings";
 import type { TimingConfig, GameplayConfig } from "../../state/types";
 import type { GameSettings } from "../types/settings";
 

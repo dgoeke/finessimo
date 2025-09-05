@@ -1,5 +1,5 @@
-import { createSevenBagRng } from "../core/rng";
-import { type PieceRandomGenerator } from "../core/rng-interface";
+import { type PieceRandomGenerator } from "../core/rng/interface";
+import { createSevenBagRng } from "../core/rng/seeded";
 import { type GameState, type PieceId } from "../state/types";
 
 import { type GameMode } from "./index";

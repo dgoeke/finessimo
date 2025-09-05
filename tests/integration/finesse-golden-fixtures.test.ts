@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { PIECES } from "../../src/core/pieces";
-import { finesseCalculator } from "../../src/finesse/calculator";
+import { finesseCalculator } from "../../src/engine/finesse/calculator";
 import { createDurationMs, createGridCoord } from "../../src/types/brands";
 
 import type { ActivePiece, GameplayConfig, Rot } from "../../src/state/types";

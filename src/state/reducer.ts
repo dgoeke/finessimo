@@ -62,7 +62,7 @@ import {
   idx,
 } from "./types";
 
-import type { FaultType } from "../finesse/calculator";
+import type { FaultType } from "../engine/finesse/calculator";
 import type { Timestamp } from "../types/timestamp";
 
 // Type-safe action handler map for functional pattern

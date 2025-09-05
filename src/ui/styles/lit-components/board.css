@@ -44,10 +44,10 @@ finesse-overlay {
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  color: #555;
-  height: 80px;
+  color: #333333;
+  height: 90px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   white-space: nowrap;
   font-family:
@@ -58,8 +58,8 @@ finesse-overlay {
     Segoe UI,
     Roboto,
     sans-serif;
-  font-size: 58px;
+  font-size: 57px;
   line-height: 1;
-  letter-spacing: -0.12em;
+  letter-spacing: -0.13em;
   font-kerning: normal;
 }

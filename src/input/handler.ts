@@ -5,7 +5,7 @@ import {
   type GameState,
 } from "../state/types";
 
-import { type KeyBindings, defaultKeyBindings } from "./keyboard";
+import { type KeyBindings, defaultKeyBindings } from "./keyboard/bindings";
 
 // Check if two actions are opposite directional inputs
 function areOppositeDirections(current: KeyAction, next: KeyAction): boolean {

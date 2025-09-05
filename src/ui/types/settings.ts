@@ -1,7 +1,7 @@
 // Shared settings type used by the app and tests
 // Moved from the deprecated settings-modal component
 
-import type { KeyBindings } from "../../input/keyboard";
+import type { KeyBindings } from "../../input/keyboard/bindings";
 
 export type GameSettings = {
   // Timing settings
