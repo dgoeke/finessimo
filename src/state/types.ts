@@ -242,7 +242,9 @@ export type FinesseResultCardEffect = Readonly<{
   optimalSequences: ReadonlyArray<ReadonlyArray<FinesseAction>>;
   playerSequence: ReadonlyArray<FinesseAction>;
   rating?: "again" | "hard" | "good" | "easy"; // SRS rating from guided mode
-  ttlMs: DurationMs; // How long to display (use Infinity to persist until next spawn)
+  // Note: DurationMs is finite by brand. Persist-until-spawn is achieved via
+  // a subsequent FinesseResultCardClearEffect, not Infinity.
+  ttlMs: DurationMs; // How long to display
   createdAt: Timestamp;
 }>;
 
@@ -252,10 +254,10 @@ export type FinesseResultCardEffect = Readonly<{
 export type FinesseResultCardClearEffect = Readonly<{
   kind: "finesseResultCardClear";
   id: UiEffectId;
+  // Use 0ms for immediate clear; this is an event-style effect.
   ttlMs: DurationMs; // Should be 0 for immediate clear
   createdAt: Timestamp;
 }>;
-
 export type UiEffect =
   | FloatingTextEffect
   | LineFlashEffect

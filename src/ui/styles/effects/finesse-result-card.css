@@ -6,94 +6,50 @@
  */
 
 .finesse-result-card {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 240px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  border-left: 4px solid var(--border-color, #666666);
+  /* Positioned relative to .board-frame via .effects-overlay (absolute/inset:0) */
+  position: absolute;
+  /* Place the card to the LEFT of the board, aligned under the Hold section */
+  right: calc(100% + var(--col-gap));
+  /* Default offset under Hold: 60px padding + title + margin + 60px canvas + gap */
+  top: var(--card-top, 180px);
+  width: 180px;
+  background: var(--bg-elev-1);
+  /* Subtle glass + theme-aware fallback */
+  background: color-mix(in oklab, var(--bg-elev-1) 92%, black 8%);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
   z-index: 1000;
   font-family: var(--font-family-mono);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  /* no animations at this time */
 
-  /* Slide-in animation */
-  animation: slideInFromRight 0.3s ease-out;
-}
-
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.result-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.result-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.result-rating {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-}
-
-.result-rating.rating-again {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.result-rating.rating-hard {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.result-rating.rating-good {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.result-rating.rating-easy {
-  background: #dbeafe;
-  color: #1e40af;
+  /* Animated accent border using rating color */
+  --_acc: var(--rating-color, var(--border-color, #666666));
 }
 
 .mini-board-container {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-  background: #f9fafb;
+  /* Shrink-wrap tightly around the canvas, no inline baseline line-box */
+  display: block;
+  width: fit-content;
+  line-height: 0; /* remove baseline/descender gap from inline content */
+  font-size: 0; /* ensure no text metrics add extra height */
+  padding: 0;
+  margin: 0;
+  background: transparent;
 }
 
 .mini-board-container .mini-board-canvas {
-  /* Scale the canvas to 40% of original size */
-  transform: scale(0.4);
-  transform-origin: center;
-  border: 1px solid #d1d5db;
-  border-radius: 2px;
+  /* Remove transform scaling and size the element tightly */
+  width: 178px;
+  display: block; /* avoid inline baseline gap */
+  aspect-ratio: 2 / 1;
 }
 
 .finesse-sequences {
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  padding: 4px 8px;
+  background: color-mix(in oklab, var(--bg-elev-2) 88%, transparent);
 }
 
 .sequence-row {
@@ -109,25 +65,22 @@
 
 .sequence-label {
   font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-  min-width: 50px;
+  font-weight: 600;
+  color: var(--text-dim);
+  min-width: 56px;
 }
 
 .sequence-icons {
   font-family: var(--font-family-mono);
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: 2px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.12);
 }
 
-.sequence-icons.optimal {
-  color: #059669;
-}
+.sequence-icons.optimal { color: #10b981; }
 
-.sequence-icons.player {
-  color: #3b82f6;
-}
+.sequence-icons.player { color: #60a5fa; }
 
 /* Empty sequence styling */
 .sequence-icons:empty::before {
@@ -136,44 +89,9 @@
   font-style: italic;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .finesse-result-card {
-    right: 10px;
-    top: 10px;
-    width: 220px;
-  }
-
-  .mini-board-container .mini-board-canvas {
-    transform: scale(0.35);
-  }
-}
-
 /* Dark theme support (if implemented later) */
 @media (prefers-color-scheme: dark) {
-  .finesse-result-card {
-    background: #1f2937;
-    color: #f9fafb;
-  }
-
-  .result-card-header {
-    border-bottom-color: #374151;
-  }
-
-  .result-title {
-    color: #f9fafb;
-  }
-
-  .mini-board-container {
-    background: #111827;
-  }
-
-  .finesse-sequences {
-    background: #111827;
-    border-top-color: #374151;
-  }
-
-  .sequence-label {
-    color: #9ca3af;
-  }
+  .finesse-result-card { color: var(--text); }
 }
+
+/* Keep entry/exit pure: slide + fade only, no extra shakes/glows */

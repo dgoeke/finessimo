@@ -1,6 +1,6 @@
 import { SignalWatcher } from "@lit-labs/signals";
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 import { getActionIcon } from "../../engine/finesse/constants";
 import { gameStateSignal } from "../../state/signals";
@@ -13,15 +13,10 @@ import type { UiEffect, FinesseResultCardEffect } from "../../state/types";
 
 @customElement("effects-overlay")
 export class EffectsOverlay extends SignalWatcher(LitElement) {
-  // Component state to track the current active result card
-  @state()
-  private currentResultCard: FinesseResultCardEffect | null = null;
-
   // Light DOM so it inherits board-frame positioning and global styles
   protected createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
   }
-
   private renderResultCard(e: FinesseResultCardEffect): unknown {
     const state = gameStateSignal.get();
 
@@ -41,27 +36,21 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
         ? e.playerSequence.map((action) => getActionIcon(action)).join("")
         : "";
 
-    // Get rating color for border
+    // Get rating color for accent/border
     const ratingColors = {
       again: "#ef4444",
       easy: "#60a5fa",
       good: "#10b981",
       hard: "#f59e0b",
-    };
-    const borderColor =
-      e.rating !== undefined ? ratingColors[e.rating] : "#666666";
+    } as const;
+    const ratingClass = e.rating ? `rating-${e.rating}` : "";
+    const accentColor = e.rating ? ratingColors[e.rating] : "#666666";
 
     return html`
-      <div class="finesse-result-card" style="--border-color: ${borderColor}">
-        <div class="result-card-header">
-          <span class="result-title">Target Position</span>
-          ${e.rating !== undefined
-            ? html`<span class="result-rating rating-${e.rating}"
-                >${e.rating}</span
-              >`
-            : ""}
-        </div>
-
+      <div
+        class="finesse-result-card ${ratingClass}"
+        style="--border-color: ${accentColor}; --rating-color: ${accentColor}"
+      >
         <div class="mini-board-container">${canvas}</div>
 
         <div class="finesse-sequences">
@@ -70,17 +59,15 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
             <span class="sequence-icons optimal">${optimalSequenceText}</span>
           </div>
           <div class="sequence-row">
-            <span class="sequence-label">Your:</span>
+            <span class="sequence-label">Yours:</span>
             <span class="sequence-icons player">${playerSequenceText}</span>
           </div>
         </div>
       </div>
     `;
   }
-
   private renderEffect(e: UiEffect): unknown {
     // Only render FloatingTextEffect - other effects are handled by overlay system
-    // Result card effects are managed separately by component state
     if (e.kind !== "floatingText") {
       return html``;
     }
@@ -110,15 +97,15 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
       <div
         class="fx-item ${anchorClass}"
         style="${posStyle} --fx-dur: ${String(durMs)}ms; --fx-drift-y: ${String(
-          drift,
+          drift
         )}px; --fx-scale-from: ${String(scaleFrom)}; --fx-scale-to: ${String(
-          scaleTo,
+          scaleTo
         )};"
       >
         <div
           class="fx-floating-text"
           style="color: ${e.color}; font-size: ${String(
-            e.fontPx,
+            e.fontPx
           )}px; font-weight: ${String(e.fontWeight ?? 800)};"
         >
           ${e.text}
@@ -127,21 +114,31 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
     `;
   }
 
+  private getLatestResultCardEffect(
+    effects: ReadonlyArray<UiEffect>
+  ): FinesseResultCardEffect | null {
+    let latest: FinesseResultCardEffect | null = null;
+    for (const e of effects) {
+      if (e.kind === "finesseResultCard") latest = e;
+    }
+    return latest;
+  }
+
   protected render(): unknown {
     const state = gameStateSignal.get();
     const effects = state.uiEffects;
 
-    // Process effects to update result card state
-    this.processEffectsForCardLifecycle(effects);
+    // Derive the current result card from effects; no animations
+    const currentEffect = this.getLatestResultCardEffect(effects);
 
-    // Filter out result card effects since they're managed separately
+    // Filter out result-card effects since they're managed separately
     const nonResultCardEffects = effects.filter(
       (e) =>
-        e.kind !== "finesseResultCard" && e.kind !== "finesseResultCardClear",
+        e.kind !== "finesseResultCard" && e.kind !== "finesseResultCardClear"
     );
 
     const hasEffectsToRender =
-      nonResultCardEffects.length > 0 || this.currentResultCard !== null;
+      nonResultCardEffects.length > 0 || currentEffect !== null;
 
     if (!hasEffectsToRender) {
       return html``;
@@ -150,24 +147,8 @@ export class EffectsOverlay extends SignalWatcher(LitElement) {
     return html`
       <div class="effects-overlay">
         ${nonResultCardEffects.map((e) => this.renderEffect(e))}
-        ${this.currentResultCard
-          ? this.renderResultCard(this.currentResultCard)
-          : ""}
+        ${currentEffect ? this.renderResultCard(currentEffect) : ""}
       </div>
     `;
-  }
-
-  private processEffectsForCardLifecycle(
-    effects: ReadonlyArray<UiEffect>,
-  ): void {
-    for (const effect of effects) {
-      if (effect.kind === "finesseResultCard") {
-        // Replace any existing card with the new one
-        this.currentResultCard = effect;
-      } else if (effect.kind === "finesseResultCardClear") {
-        // Clear the current card
-        this.currentResultCard = null;
-      }
-    }
   }
 }
