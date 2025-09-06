@@ -256,48 +256,5 @@ describe("effects-to-overlays.ts", () => {
       // IDs should be unique
       expect(new Set(ids).size).toBe(ids.length);
     });
-
-    it("should convert finesseResultCard effect to null (handled separately)", () => {
-      const finesseResultCardEffect: UiEffect = {
-        createdAt: createTimestamp(1000),
-        id: createUiEffectId(5),
-        kind: "finesseResultCard",
-        optimalSequences: [["MoveRight", "HardDrop"]],
-        playerSequence: ["MoveRight", "RotateCW", "HardDrop"],
-        rating: "hard",
-        targetPiece: {
-          id: "T",
-          rot: "spawn",
-          x: createGridCoord(4),
-          y: createGridCoord(18),
-        },
-        ttlMs: createDurationMs(Number.MAX_SAFE_INTEGER),
-      };
-
-      const stateWithEffect: GameState = {
-        ...baseGameState,
-        uiEffects: [finesseResultCardEffect],
-      };
-
-      const overlays = selectEffectOverlays(stateWithEffect);
-      expect(overlays).toEqual([]);
-    });
-
-    it("should convert finesseResultCardClear effect to null (handled separately)", () => {
-      const finesseResultCardClearEffect: UiEffect = {
-        createdAt: createTimestamp(1000),
-        id: createUiEffectId(6),
-        kind: "finesseResultCardClear",
-        ttlMs: createDurationMs(0),
-      };
-
-      const stateWithEffect: GameState = {
-        ...baseGameState,
-        uiEffects: [finesseResultCardClearEffect],
-      };
-
-      const overlays = selectEffectOverlays(stateWithEffect);
-      expect(overlays).toEqual([]);
-    });
   });
 });

@@ -69,6 +69,10 @@ export type GameMode = {
   // Spawn policy hook: allow a mode to suggest the next piece (e.g., guided drills)
   onBeforeSpawn?(state: GameState): { piece?: PieceId } | null;
 
+  // Called immediately after a piece is spawned (Spawn reducer already applied).
+  // Lets a mode initialize per-piece UI/lifecycle state (e.g., guided card).
+  onAfterSpawn?(state: GameState): GameModeResult | undefined;
+
   // Generic guidance for UI/visualization (targets, labels, flags)
   getGuidance?(state: GameState): ModeGuidance | null;
 

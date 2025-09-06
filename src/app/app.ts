@@ -734,12 +734,49 @@ export class FinessimoApp {
       mode && typeof mode.onBeforeSpawn === "function"
         ? mode.onBeforeSpawn(this.gameState)
         : null;
+
     const now = fromNow();
+
+    // 1) Spawn the piece (with optional override)
     if (override?.piece !== undefined) {
       this.dispatch({ piece: override.piece, timestampMs: now, type: "Spawn" });
+    } else {
+      this.dispatch({ timestampMs: now, type: "Spawn" });
+    }
+
+    // 2) Immediately notify the mode that spawn has completed
+    this.runModeOnAfterSpawn();
+  }
+
+  private runModeOnAfterSpawn(): void {
+    const mode = gameModeRegistry.get(this.gameState.currentMode);
+    if (!mode || typeof mode.onAfterSpawn !== "function") return;
+
+    let result: unknown;
+    try {
+      result = mode.onAfterSpawn(this.gameState);
+    } catch {
       return;
     }
-    this.dispatch({ timestampMs: now, type: "Spawn" });
+
+    if (result === null || result === undefined || typeof result !== "object")
+      return;
+
+    const typedResult = result as {
+      modeData?: unknown;
+      postActions?: ReadonlyArray<Action>;
+    };
+    if (typedResult.modeData !== undefined) {
+      this.dispatch({ data: typedResult.modeData, type: "UpdateModeData" });
+    }
+    if (
+      Array.isArray(typedResult.postActions) &&
+      typedResult.postActions.length > 0
+    ) {
+      for (const action of typedResult.postActions) {
+        this.dispatch(action as Action);
+      }
+    }
   }
 
   private pushSettingsToSettingsView(): void {

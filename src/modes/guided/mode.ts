@@ -2,6 +2,7 @@ import { dropToBottom, createEmptyBoard } from "../../core/board";
 import { PIECES } from "../../core/pieces";
 import {
   type FinesseResult,
+  finesseCalculator,
   extractFinesseActionsFromProcessed,
 } from "../../engine/finesse/calculator";
 import { getActionIcon } from "../../engine/finesse/constants";
@@ -14,7 +15,6 @@ import {
   type Action,
   type BoardDecorations,
   type Board,
-  type FinesseAction,
 } from "../../state/types";
 import {
   createGridCoord,
@@ -25,6 +25,12 @@ import {
 import { createTimestamp, fromNow } from "../../types/timestamp";
 import { type GameMode, type GameModeResult } from "../index";
 
+import {
+  startActiveCard,
+  finalizeActiveCard,
+  type GuidedCardVM,
+  isGuidedStackData,
+} from "./cards";
 import { makeDefaultDeck } from "./deck";
 import { canonicalId } from "./srs/fsrs-adapter";
 import {
@@ -45,6 +51,9 @@ type GuidedGradingConfig = Readonly<{
 type GuidedSrsData = Readonly<{
   deck: SrsDeck;
   gradingConfig: GuidedGradingConfig;
+  // NEW: result card stack (guided-only)
+  cards: ReadonlyArray<GuidedCardVM>;
+  activeCard?: GuidedCardVM;
 }>;
 
 function isGuidedSrsData(u: unknown): u is GuidedSrsData {
@@ -105,6 +114,7 @@ export class GuidedMode implements GameMode {
 
   initModeData(): GuidedSrsData {
     return {
+      cards: [], // NEW
       deck: makeDefaultDeck(createTimestamp(1)),
       gradingConfig: {
         easyThresholdMs: 1000,
@@ -141,6 +151,67 @@ export class GuidedMode implements GameMode {
     const card = this.selectCard(state);
     if (!card) return null;
     return { piece: card.piece };
+  }
+
+  onAfterSpawn(state: GameState): GameModeResult | undefined {
+    // Only in guided mode, only when playing and an active piece exists
+    if (state.status !== "playing" || !state.active) return;
+
+    // Determine the current FSRS card (same as onBeforeSpawn/getGuidance)
+    const dueCard = this.selectCard(state);
+    if (!dueCard) return;
+
+    // Build a spawn piece from the ID
+    const spawnTopLeft = PIECES[dueCard.piece].spawnTopLeft;
+    const spawnPiece: ActivePiece = {
+      id: dueCard.piece,
+      rot: "spawn",
+      x: createGridCoord(spawnTopLeft[0]),
+      y: createGridCoord(spawnTopLeft[1]),
+    };
+
+    // Target piece (rot/x from FSRS card) and bottom it for mini-board render
+    const targetPieceBase: ActivePiece = {
+      id: dueCard.piece,
+      rot: dueCard.rot,
+      x: createGridCoord(dueCard.x as number),
+      y: createGridCoord(-2),
+    };
+    const board = state.board;
+    const targetFinal = dropToBottom(board, targetPieceBase);
+
+    // Compute optimal sequences now so the card shows "Optimal:" immediately
+    const result = finesseCalculator.analyze(
+      spawnPiece,
+      dueCard.x as number,
+      dueCard.rot,
+      [], // empty player sequence for computing optimal moves
+      {
+        finesseCancelMs: createDurationMs(50),
+        holdEnabled: false,
+      },
+    );
+
+    // Prepare the active card view model
+    const attemptId = state.stats.attempts + 1;
+    const spawnedAt = state.physics.activePieceSpawnedAt ?? fromNow();
+
+    const nextActive = {
+      attemptId,
+      optimalSequences: result.optimalSequences,
+      piece: dueCard.piece,
+      playerSequence: [], // will be filled live by the UI adapter
+      spawnedAt,
+      targetPiece: targetFinal,
+    } satisfies Omit<GuidedCardVM, "rating">;
+
+    // Merge with existing guided data (deck/config preserved)
+    const prev = state.modeData ?? {};
+    const prevStack = isGuidedStackData(prev) ? prev : { cards: [] };
+
+    const stack = startActiveCard(prevStack, nextActive);
+
+    return { modeData: { ...prev, ...stack } };
   }
 
   getGuidance(state: GameState): ModeGuidance | null {
@@ -209,27 +280,6 @@ export class GuidedMode implements GameMode {
       scaleTo: 0.9,
       text,
       ttlMs: createDurationMs(feedback.ttlMs),
-    } as const;
-
-    return { effect, type: "PushUiEffect" };
-  }
-
-  private createResultCardEffect(
-    rating: Rating,
-    finesseResult: FinesseResult,
-    targetPiece: ActivePiece,
-    playerSequence: ReadonlyArray<FinesseAction>,
-  ): NonNullable<GameModeResult["postActions"]>[0] {
-    const createdAt = fromNow();
-    const effect = {
-      createdAt,
-      id: createUiEffectId(createdAt as number),
-      kind: "finesseResultCard" as const,
-      optimalSequences: finesseResult.optimalSequences,
-      playerSequence,
-      rating,
-      targetPiece,
-      ttlMs: createDurationMs(Number.MAX_SAFE_INTEGER), // Persist until next spawn
     } as const;
 
     return { effect, type: "PushUiEffect" };
@@ -311,17 +361,17 @@ export class GuidedMode implements GameMode {
       gameState.processedInputLog,
     );
 
+    // ... after computing: rating, playerSequence, targetFinal, etc.
+
+    const prev = gameState.modeData ?? {};
+    const prevStack = isGuidedStackData(prev) ? prev : { cards: [] };
+
+    const stack = finalizeActiveCard(prevStack, rating, playerSequence);
+
     return {
-      modeData: { deck: newDeck, gradingConfig },
-      postActions: [
-        this.createFeedbackEffect(rating, finesseResult),
-        this.createResultCardEffect(
-          rating,
-          finesseResult,
-          targetFinal,
-          playerSequence,
-        ),
-      ],
+      modeData: { ...prev, ...stack, deck: newDeck, gradingConfig },
+      // keep your boop/feedback effect if you had one:
+      postActions: [this.createFeedbackEffect(rating, finesseResult)],
     };
   }
 
@@ -462,6 +512,7 @@ export class GuidedMode implements GameMode {
     const deck = loadGuidedDeck(now);
     return {
       modeData: {
+        cards: [], // NEW
         deck,
         gradingConfig: {
           easyThresholdMs: 1000,

@@ -95,4 +95,54 @@ describe("FinessimoApp Mode Change Deferral", () => {
     };
     expect(appWithPrivates.pendingModeChange).toBeNull();
   });
+
+  it("should call runModeOnAfterSpawn when spawnNextPiece is called", () => {
+    // Test that the onAfterSpawn hook is invoked during spawn
+    const appWithPrivates = app as unknown as {
+      runModeOnAfterSpawn: () => void;
+      spawnNextPiece: () => void;
+    };
+
+    // Mock the method to verify it's called
+    let onAfterSpawnCalled = false;
+    const originalMethod = appWithPrivates.runModeOnAfterSpawn;
+    appWithPrivates.runModeOnAfterSpawn = () => {
+      onAfterSpawnCalled = true;
+      originalMethod.call(appWithPrivates);
+    };
+
+    // Directly call spawnNextPiece to test the hook
+    appWithPrivates.spawnNextPiece();
+
+    // Verify the hook was called
+    expect(onAfterSpawnCalled).toBe(true);
+  });
+
+  it("should handle runModeOnAfterSpawn with no mode gracefully", () => {
+    // Test error handling when no mode is available
+    const appWithPrivates = app as unknown as {
+      runModeOnAfterSpawn: () => void;
+      gameState: { currentMode: string };
+    };
+
+    // Set invalid mode
+    const originalMode = appWithPrivates.gameState.currentMode;
+    appWithPrivates.gameState.currentMode = "nonexistent";
+
+    // Should not throw when called
+    expect(() => appWithPrivates.runModeOnAfterSpawn()).not.toThrow();
+
+    // Restore original mode
+    appWithPrivates.gameState.currentMode = originalMode;
+  });
+
+  it("should handle runModeOnAfterSpawn with mode without onAfterSpawn", () => {
+    // Test when mode exists but doesn't have onAfterSpawn method
+    const appWithPrivates = app as unknown as {
+      runModeOnAfterSpawn: () => void;
+    };
+
+    // Currently freePlay mode doesn't have onAfterSpawn, so this should work
+    expect(() => appWithPrivates.runModeOnAfterSpawn()).not.toThrow();
+  });
 });

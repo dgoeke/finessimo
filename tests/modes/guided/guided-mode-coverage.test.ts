@@ -466,4 +466,107 @@ describe("GuidedMode - Coverage Tests", () => {
       }
     });
   });
+
+  describe("onAfterSpawn", () => {
+    test("returns undefined when not playing", () => {
+      const state = createMockGameState({
+        modeData: mode.initModeData(),
+        status: "topOut",
+      });
+
+      const result = mode.onAfterSpawn(state);
+
+      expect(result).toBeUndefined();
+    });
+
+    test("returns undefined when no active piece", () => {
+      const state = createMockGameState({
+        active: undefined,
+        modeData: mode.initModeData(),
+        status: "playing",
+      });
+
+      const result = mode.onAfterSpawn(state);
+
+      expect(result).toBeUndefined();
+    });
+
+    test("returns undefined when no due card", () => {
+      const activePiece: ActivePiece = {
+        id: "T",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
+
+      const state = createMockGameState({
+        active: activePiece,
+        modeData: {
+          cards: [],
+          deck: { items: new Map() },
+          gradingConfig: { easyThresholdMs: 1000, goodThresholdMs: 2000 },
+        },
+        status: "playing",
+      });
+
+      const result = mode.onAfterSpawn(state);
+
+      expect(result).toBeUndefined();
+    });
+
+    test("creates active card when valid state", () => {
+      const activePiece: ActivePiece = {
+        id: "T",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
+
+      const state = createMockGameState({
+        active: activePiece,
+        modeData: mode.initModeData(),
+        status: "playing",
+      });
+
+      const result = mode.onAfterSpawn(state);
+
+      expect(result).toBeDefined();
+      expect(result?.modeData).toBeDefined();
+    });
+
+    test("creates active card with existing stack data", () => {
+      const activePiece: ActivePiece = {
+        id: "T",
+        rot: "spawn",
+        x: createGridCoord(4),
+        y: createGridCoord(0),
+      };
+
+      const existingModeData = {
+        ...mode.initModeData(),
+        cards: [
+          {
+            attemptId: 1,
+            optimalSequences: [["HardDrop"]],
+            piece: "I",
+            playerSequence: ["HardDrop"],
+            rating: "good" as const,
+            spawnedAt: createTimestamp(1000),
+            targetPiece: activePiece,
+          },
+        ],
+      };
+
+      const state = createMockGameState({
+        active: activePiece,
+        modeData: existingModeData,
+        status: "playing",
+      });
+
+      const result = mode.onAfterSpawn(state);
+
+      expect(result).toBeDefined();
+      expect(result?.modeData).toBeDefined();
+    });
+  });
 });

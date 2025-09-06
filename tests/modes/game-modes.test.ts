@@ -122,7 +122,7 @@ const mockSuboptimalResult: FinesseResult = {
 describe("FreePlayMode", () => {
   const mode = new FreePlayMode();
 
-  test("does not emit textual feedback for optimal finesse but clears result cards", () => {
+  test("does not emit textual feedback for optimal finesse", () => {
     const result = mode.onPieceLocked(
       mockGameState,
       mockOptimalResult,
@@ -130,16 +130,11 @@ describe("FreePlayMode", () => {
       mockPiece,
     );
 
-    expect(result).toHaveProperty("postActions");
-    expect(result.postActions).toHaveLength(1);
-    expect(result.postActions?.[0]).toHaveProperty("type", "PushUiEffect");
-    expect(result.postActions?.[0]).toHaveProperty(
-      "effect.kind",
-      "finesseResultCardClear",
-    );
+    // FreePlay no longer needs to clear result cards since they're mode-local to guided
+    expect(result).toEqual({});
   });
 
-  test("does not emit textual feedback for suboptimal finesse but clears result cards", () => {
+  test("does not emit textual feedback for suboptimal finesse", () => {
     const result = mode.onPieceLocked(
       mockGameState,
       mockSuboptimalResult,
@@ -147,13 +142,8 @@ describe("FreePlayMode", () => {
       mockPiece,
     );
 
-    expect(result).toHaveProperty("postActions");
-    expect(result.postActions).toHaveLength(1);
-    expect(result.postActions?.[0]).toHaveProperty("type", "PushUiEffect");
-    expect(result.postActions?.[0]).toHaveProperty(
-      "effect.kind",
-      "finesseResultCardClear",
-    );
+    // FreePlay no longer needs to clear result cards since they're mode-local to guided
+    expect(result).toEqual({});
   });
 
   test("should not prompt for next challenge", () => {

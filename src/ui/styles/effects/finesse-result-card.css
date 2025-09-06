@@ -1,52 +1,64 @@
 /**
- * Finesse Result Card Styles
- * 
- * Styles for the floating result card that displays after piece locking
- * in guided mode, showing target position and finesse comparison.
+ * Finesse Result Card — COMPLETE REWRITE
+ * - Styles for the floating result card and the 3-card guided stack.
+ * - Built to cooperate with FLIP/WAAPI motion from @lit-labs/motion.
+ * - No CSS transitions on position/transform; movement is driven by WAAPI.
  */
 
+/* ---------- Single-card appearance (also used by stacked cards) ---------- */
+
 .finesse-result-card {
-  /* Positioned relative to .board-frame via .effects-overlay (absolute/inset:0) */
+  /* Positioned relative to .board-frame via an overlay container */
   position: absolute;
+
   /* Place the card to the LEFT of the board, aligned under the Hold section */
   right: calc(100% + var(--col-gap));
-  /* Default offset under Hold: 60px padding + title + margin + 60px canvas + gap */
+
+  /* Default vertical offset under Hold (can be overridden by the stack) */
   top: var(--card-top, 180px);
+
   width: 180px;
+
+  /* Glassy panel look */
   background: var(--bg-elev-1);
-  /* Subtle glass + theme-aware fallback */
   background: color-mix(in oklab, var(--bg-elev-1) 92%, black 8%);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border);
+  border-radius: 4px;
+
   z-index: 1000;
   font-family: var(--font-family-mono);
+  color: var(--text);
   overflow: hidden;
+
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  /* no animations at this time */
 
-  /* Animated accent border using rating color */
-  --_acc: var(--rating-color, var(--border-color, #666666));
+  /* Accent color variable (used by rating stamp colors) */
+  --_acc: var(--rating-color, var(--border-color, #666));
 }
 
+/* Mini-board container: no line-height gaps */
 .mini-board-container {
-  /* Shrink-wrap tightly around the canvas, no inline baseline line-box */
   display: block;
   width: fit-content;
-  line-height: 0; /* remove baseline/descender gap from inline content */
-  font-size: 0; /* ensure no text metrics add extra height */
+  line-height: 0;
+  font-size: 0;
   padding: 0;
   margin: 0;
   background: transparent;
 }
 
-.mini-board-container .mini-board-canvas {
-  /* Remove transform scaling and size the element tightly */
-  width: 178px;
-  display: block; /* avoid inline baseline gap */
+/* Make sure the canvas inside .mini-board sizes tightly */
+.mini-board > canvas,
+.mini-board-canvas {
+  display: block;
+  width: 178px; /* fit within the 180px card */
+  height: auto;
   aspect-ratio: 2 / 1;
 }
 
+/* Sequences rows */
 .finesse-sequences {
   padding: 4px 8px;
   background: color-mix(in oklab, var(--bg-elev-2) 88%, transparent);
@@ -56,10 +68,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-}
-
-.sequence-row:last-child {
   margin-bottom: 0;
 }
 
@@ -75,23 +83,103 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 2px;
-  text-shadow: 0 1px 0 rgba(0,0,0,0.12);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
 }
 
-.sequence-icons.optimal { color: #10b981; }
+.sequence-icons.optimal {
+  color: #10b981;
+} /* emerald */
+.sequence-icons.player {
+  color: #60a5fa;
+} /* sky    */
 
-.sequence-icons.player { color: #60a5fa; }
-
-/* Empty sequence styling */
 .sequence-icons:empty::before {
   content: "—";
   color: #9ca3af;
   font-style: italic;
 }
 
-/* Dark theme support (if implemented later) */
+/* Dark theme hook (if you switch palettes by media query) */
 @media (prefers-color-scheme: dark) {
-  .finesse-result-card { color: var(--text); }
+  .finesse-result-card {
+    color: var(--text);
+  }
 }
 
-/* Keep entry/exit pure: slide + fade only, no extra shakes/glows */
+/* ---------- Guided stack container (clips to 3 rows) ---------- */
+
+.guided-result-stack {
+  position: absolute;
+  right: calc(100% + var(--col-gap));
+  top: var(--card-top, 180px);
+  width: 180px;
+
+  /* Exactly 3 rows visible; JS sets --stack-row to (cardHeight + gap) */
+  height: calc(var(--stack-row, 120px) * 3 + var(--stack-gap, 8px) * 2);
+  overflow: hidden; /* only 3 rows visible */
+  pointer-events: none;
+}
+
+/* Cards when they live inside the stack: layout is immediate; WAAPI animates motion */
+.guided-result-stack .finesse-result-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+
+  /* The real vertical placement is set inline in TS (style="top: …px") */
+  top: 0;
+
+  z-index: var(--card-z, 1);
+
+  /* DO NOT transition top/transform/opacity here—FLIP (WAAPI) owns motion */
+  transition: none;
+  transform-origin: 50% 0%;
+}
+
+/* Hide the brand-new top card for the first paint so the old top starts moving first.
+   TS removes this attribute on the next frame; WAAPI keyframes handle visibility. */
+.guided-result-stack .finesse-result-card[data-new-top="1"] {
+  visibility: hidden;
+}
+
+/* Temporary “leaving ghost” (when present) shouldn’t catch events */
+.guided-result-stack .finesse-result-card.leaving {
+  pointer-events: none;
+}
+
+/* ---------- Rating “stamp” overlay ---------- */
+
+.rating-stamp {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: var(--font-family-mono);
+  font-size: 56px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+
+  pointer-events: none;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+
+  /* Final resting opacity (the WAAPI animation will land on this) */
+  opacity: 0.8;
+}
+
+/* Stamp color variants (rating → color) */
+.rating-stamp--again {
+  color: #ef4444;
+} /* red    */
+.rating-stamp--hard {
+  color: #f59e0b;
+} /* amber  */
+.rating-stamp--good {
+  color: #10b981;
+} /* green  */
+.rating-stamp--easy {
+  color: #60a5fa;
+} /* sky    */

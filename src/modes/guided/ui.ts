@@ -1,8 +1,10 @@
 import { dropToBottom } from "../../core/board";
 import { PIECES } from "../../core/pieces";
+import { extractFinesseActionsFromProcessed } from "../../engine/finesse/calculator";
 import { createGridCoord, gridCoordAsNumber } from "../../types/brands";
 import { createTimestamp } from "../../types/timestamp";
 
+import { isGuidedStackData, updateActivePlayerSequence } from "./cards";
 import { makeDefaultDeck } from "./deck";
 import { pickNextDue } from "./srs/fsrs-adapter";
 
@@ -134,11 +136,27 @@ export const guidedUi: ModeUiAdapter = {
       }
     }
 
-    // Return target pattern as single array (one target placement)
-    // Also suppress ghost pieces in guided mode to avoid visual confusion
+    // Live update the active card's "Yours:" sequence
+    let activeCardPatch: { activeCard?: unknown } = {};
+    const md = state.modeData;
+
+    if (isGuidedStackData(md) && md.activeCard) {
+      const activeCard = md.activeCard;
+      const sinceSpawn = state.processedInputLog.filter(
+        (e) => (e.t as number) >= (activeCard.spawnedAt as number),
+      );
+      const seq = extractFinesseActionsFromProcessed(sinceSpawn);
+      const next = updateActivePlayerSequence(md, seq);
+      // Only include the updated activeCard in the derived patch to avoid clobbering other fields
+      activeCardPatch = next.activeCard ? { activeCard: next.activeCard } : {};
+    }
+
+    // existing code builds `targets` and sets `ghostEnabled: false`
+    // At the end, return merged derived data:
     return {
       ghostEnabled: false,
-      targets: [targetCells],
+      targets: [targetCells], // your existing line
+      ...activeCardPatch, // NEW
     };
   },
 } as const;
