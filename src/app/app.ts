@@ -19,7 +19,12 @@ import {
   type TimingConfig,
   type GameplayConfig,
 } from "../state/types";
-import { createSeed, createDurationMs, type Seed } from "../types/brands";
+import {
+  createSeed,
+  createDurationMs,
+  durationMsAsNumber,
+  type Seed,
+} from "../types/brands";
 import { createTimestamp, fromNow } from "../types/timestamp";
 import { getSettingsView } from "../ui/utils/dom";
 
@@ -66,8 +71,6 @@ export class FinessimoApp {
   private gameState: GameState;
   private keyboardInputHandler: KeyboardInputHandler;
   private touchInputHandler?: TouchInputHandler;
-  private settingsView: Element | null = null;
-  private bootSettings: Partial<GameSettings> | null = null;
   private isRunning = false;
   private isActive = true;
   private rafId: number | null = null;
@@ -277,18 +280,14 @@ export class FinessimoApp {
       this.touchInputHandler.start();
     }
 
-    // Initialize settings-view listeners if available
-    this.initializeSettingsUi();
-
     // Load persisted settings and apply to engine
     const persisted = loadSettings();
-    this.bootSettings = { ...persisted, keyBindings: persistedBindings };
     if (Object.keys(persisted).length > 0) {
       this.handleSettingsChange(persisted);
     }
-    // Push settings to settings-view if already connected
-    // Push settings to settings-view if already connected
-    this.pushSettingsToSettingsView();
+
+    // Initialize settings-view listeners if available
+    this.initializeSettingsUi();
 
     // Robust focus/visibility detection ensures gameplay pauses predictably
     this.setupVisibilityListeners();
@@ -335,10 +334,24 @@ export class FinessimoApp {
 
   destroy(): void {
     this.stop();
-    // Remove settings-view event listeners
-    this.removeSettingsViewListeners();
 
-    // Remove settings-view-connected listener if still active
+    // Remove document-level settings listeners
+    document.removeEventListener(
+      "update-timing",
+      this.handleUpdateTiming as EventListener,
+    );
+    document.removeEventListener(
+      "update-gameplay",
+      this.handleUpdateGameplay as EventListener,
+    );
+    document.removeEventListener(
+      "set-mode",
+      this.handleSetMode as EventListener,
+    );
+    document.removeEventListener(
+      "update-keybindings",
+      this.handleUpdateKeybindings as EventListener,
+    );
     document.removeEventListener(
       "settings-view-connected",
       this.handleSettingsViewConnected as EventListener,
@@ -609,62 +622,38 @@ export class FinessimoApp {
 
   // Initialize settings-view event handling
   private initializeSettingsUi(): void {
-    // Initialize settings-view integration - listen for when it becomes available
-    this.settingsView = getSettingsView();
-    if (this.settingsView) {
-      this.setupSettingsViewListeners();
-    } else {
-      // Listen for settings-view to become available
-      document.addEventListener(
-        "settings-view-connected",
-        this.handleSettingsViewConnected as EventListener,
-      );
+    // Listen at the document level so it works across re-mounts of <settings-view>
+    document.addEventListener(
+      "update-timing",
+      this.handleUpdateTiming as EventListener,
+    );
+    document.addEventListener(
+      "update-gameplay",
+      this.handleUpdateGameplay as EventListener,
+    );
+    document.addEventListener("set-mode", this.handleSetMode as EventListener);
+    document.addEventListener(
+      "update-keybindings",
+      this.handleUpdateKeybindings as EventListener,
+    );
+
+    // Keep listening for future connects to push an initial snapshot
+    document.addEventListener(
+      "settings-view-connected",
+      this.handleSettingsViewConnected as EventListener,
+    );
+
+    // If <settings-view> is already in the DOM (e.g., default tab is "settings"),
+    // seed it immediately so the UI matches engine state on first paint.
+    const existing = getSettingsView();
+    if (existing) {
+      const target = existing as unknown as {
+        applySettings?: (s: Partial<GameSettings>) => void;
+      };
+      if (typeof target.applySettings === "function") {
+        target.applySettings(this.extractCurrentSettings());
+      }
     }
-  }
-
-  private setupSettingsViewListeners(): void {
-    if (!this.settingsView) return;
-
-    this.settingsView.addEventListener(
-      "update-timing",
-      this.handleUpdateTiming as EventListener,
-    );
-    this.settingsView.addEventListener(
-      "update-gameplay",
-      this.handleUpdateGameplay as EventListener,
-    );
-    this.settingsView.addEventListener(
-      "set-mode",
-      this.handleSetMode as EventListener,
-    );
-    this.settingsView.addEventListener(
-      "update-keybindings",
-      this.handleUpdateKeybindings as EventListener,
-    );
-
-    // Send initial settings snapshot to the settings view for UI consistency
-    this.pushSettingsToSettingsView();
-  }
-
-  private removeSettingsViewListeners(): void {
-    if (!this.settingsView) return;
-
-    this.settingsView.removeEventListener(
-      "update-timing",
-      this.handleUpdateTiming as EventListener,
-    );
-    this.settingsView.removeEventListener(
-      "update-gameplay",
-      this.handleUpdateGameplay as EventListener,
-    );
-    this.settingsView.removeEventListener(
-      "set-mode",
-      this.handleSetMode as EventListener,
-    );
-    this.settingsView.removeEventListener(
-      "update-keybindings",
-      this.handleUpdateKeybindings as EventListener,
-    );
   }
 
   // Setup focus and visibility change listeners
@@ -714,18 +703,53 @@ export class FinessimoApp {
     event: CustomEvent<{ settingsView?: Element }>,
   ): void => {
     const settingsView = event.detail.settingsView;
-    if (settingsView) {
-      this.settingsView = settingsView;
-      this.setupSettingsViewListeners();
-      // Remove the listener since we found the settings-view
-      document.removeEventListener(
-        "settings-view-connected",
-        this.handleSettingsViewConnected as EventListener,
-      );
-      // Push initial settings after connecting
-      this.pushSettingsToSettingsView();
+    if (!settingsView) return;
+    const target = settingsView as unknown as {
+      applySettings?: (s: Partial<GameSettings>) => void;
+    };
+    if (typeof target.applySettings === "function") {
+      target.applySettings(this.extractCurrentSettings());
     }
   };
+
+  private extractCurrentSettings(): Partial<GameSettings> {
+    const { currentMode, gameplay, timing } = this.gameState;
+    const settings: Partial<GameSettings> = {
+      arrMs: durationMsAsNumber(timing.arrMs),
+      dasMs: durationMsAsNumber(timing.dasMs),
+      finesseCancelMs: durationMsAsNumber(gameplay.finesseCancelMs),
+      gravityEnabled: timing.gravityEnabled,
+      gravityMs: durationMsAsNumber(timing.gravityMs),
+      keyBindings: this.keyboardInputHandler.getKeyBindings(),
+      lineClearDelayMs: durationMsAsNumber(timing.lineClearDelayMs),
+      lockDelayMs: durationMsAsNumber(timing.lockDelayMs),
+      mode: currentMode as "freePlay" | "guided",
+      softDrop: timing.softDrop,
+    };
+
+    // Only include optional properties if they are defined
+    if (gameplay.ghostPieceEnabled !== undefined) {
+      settings.ghostPieceEnabled = gameplay.ghostPieceEnabled;
+    }
+    if (gameplay.guidedColumnHighlightEnabled !== undefined) {
+      settings.guidedColumnHighlightEnabled =
+        gameplay.guidedColumnHighlightEnabled;
+    }
+    if (gameplay.nextPieceCount !== undefined) {
+      settings.nextPieceCount = gameplay.nextPieceCount;
+    }
+    if (gameplay.finesseFeedbackEnabled !== undefined) {
+      settings.finesseFeedbackEnabled = gameplay.finesseFeedbackEnabled;
+    }
+    if (gameplay.finesseBoopEnabled !== undefined) {
+      settings.finesseBoopEnabled = gameplay.finesseBoopEnabled;
+    }
+    if (gameplay.retryOnFinesseError !== undefined) {
+      settings.retryOnFinesseError = gameplay.retryOnFinesseError;
+    }
+
+    return settings;
+  }
 
   // Helper method to spawn the appropriate piece based on current mode
   private spawnNextPiece(): void {
@@ -740,16 +764,6 @@ export class FinessimoApp {
       return;
     }
     this.dispatch({ timestampMs: now, type: "Spawn" });
-  }
-
-  private pushSettingsToSettingsView(): void {
-    if (!this.settingsView || !this.bootSettings) return;
-    const target = this.settingsView as unknown as {
-      applySettings?: (s: Partial<GameSettings>) => void;
-    };
-    if (typeof target.applySettings === "function") {
-      target.applySettings(this.bootSettings);
-    }
   }
 
   private persistAllSettings(): void {

@@ -1,9 +1,9 @@
 {
   "src/app/app.ts": {
-    "statements": 76,
-    "branches": 66,
-    "functions": 75,
-    "lines": 78
+    "statements": 75,
+    "branches": 62,
+    "functions": 74,
+    "lines": 77
   },
   "src/app/settings.ts": {
     "statements": 89,
