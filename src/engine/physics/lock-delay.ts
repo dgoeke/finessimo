@@ -29,11 +29,14 @@ export function updateLock(
   const cfg = s.cfg;
 
   if (!opts.grounded) {
-    // Airborne—clear deadline
+    // Airborne—clear deadline but preserve resetCount
     if (lock.deadlineTick !== null) {
       s = {
         ...s,
-        physics: { ...s.physics, lock: { deadlineTick: null, resetCount: 0 } },
+        physics: {
+          ...s.physics,
+          lock: { deadlineTick: null, resetCount: lock.resetCount },
+        },
       };
     }
     return { lockNow, reset, resetReason: undefined, started, state: s };
