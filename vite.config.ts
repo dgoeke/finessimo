@@ -1,5 +1,6 @@
-import { defineConfig } from "vite";
 import path from "path";
+
+import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
@@ -17,10 +18,10 @@ export default defineConfig({
     jsxImportSource: "@chnicoloso/lit-jsx",
   },
   resolve: {
-    extensions: [".ts", ".js", ".tsx", ".jsx"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    extensions: [".ts", ".js", ".tsx", ".jsx"],
   },
   root: ".",
   server: {
