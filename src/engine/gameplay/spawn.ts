@@ -1,49 +1,28 @@
-/* eslint-disable sonarjs/todo-tag */
-import { createActivePiece, isTopOut } from "../../core/spawning";
-import { buildTopOutState } from "../../state/types";
-import { Airborne } from "../physics/lock-delay.machine";
+import type { GameState } from "../types.js";
 
-import type { GameState, Action, PieceId } from "../../state/types";
+export function placeActivePiece(state: GameState): {
+  state: GameState;
+  pieceId: number;
+} {
+  // TODO: write the active piece blocks into board.cells
+  const id = state.piece ? state.piece.id : -1;
+  const next = state; // placeholder
+  return { pieceId: id, state: next };
+}
 
-export const handlers = {
-  Spawn: (
-    state: GameState,
-    action: Extract<Action, { type: "Spawn" }>,
-  ): GameState => {
-    // Spawn only when no active piece exists and gameplay is active
-    if (state.active || state.status !== "playing") {
-      return state;
-    }
+export function clearCompletedLines(state: GameState): {
+  state: GameState;
+  rows: Array<number>;
+} {
+  // TODO: detect full rows; remove them; collapse board
+  return { rows: [], state };
+}
 
-    let pieceToSpawn: PieceId;
-    const newQueue = [...state.nextQueue];
-
-    if (action.piece !== undefined) {
-      pieceToSpawn = action.piece;
-    } else {
-      if (newQueue.length === 0) return state;
-      const nextFromQueue = newQueue.shift();
-      if (nextFromQueue === undefined) return state;
-      pieceToSpawn = nextFromQueue;
-    }
-
-    // Check for topout - piece overlaps existing blocks when spawning
-    if (isTopOut(state.board, pieceToSpawn)) {
-      return buildTopOutState(state);
-    }
-
-    const newPiece = createActivePiece(pieceToSpawn);
-    return {
-      ...state,
-      active: newPiece,
-      nextQueue: newQueue,
-      physics: {
-        ...state.physics,
-        activePieceSpawnedAt: action.timestampMs,
-        // Reset gravity timer so new piece doesn't auto-drop immediately
-        lastGravityTime: action.timestampMs,
-        lockDelay: Airborne(),
-      },
-    };
-  },
-} as const;
+export function spawnNextOrTopOut(state: GameState): {
+  state: GameState;
+  spawnedId: number | null;
+  topOut: boolean;
+} {
+  // TODO: bag RNG and spawn logic; if blocked, topOut = true
+  return { spawnedId: null, state, topOut: false };
+}

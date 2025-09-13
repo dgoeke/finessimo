@@ -90,6 +90,9 @@ export default tseslint.config(
       "promise/no-promise-in-callback": "error",
       "promise/no-callback-in-promise": "warn",
 
+      // Disable TODO tag warnings
+      "sonarjs/todo-tag": "off",
+
       // Perfectionist (keep objects/ts members tidy)
       "perfectionist/sort-objects": [
         "error",
