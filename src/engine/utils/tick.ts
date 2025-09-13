@@ -1,4 +1,4 @@
-import type { Tick } from "../types";
+import type { Tick, TickDelta } from "../types";
 
 /**
  * Type-safe utilities for working with branded Tick types.
@@ -7,10 +7,10 @@ import type { Tick } from "../types";
  */
 
 /**
- * Safely adds a delta (in ticks) to a branded Tick type.
+ * Safely adds a TickDelta to a branded Tick type.
  * Used at system boundaries where arithmetic is necessary.
  */
-export function addTicks(baseTick: Tick, deltaTicks: number): Tick {
+export function addTicks(baseTick: Tick, deltaTicks: TickDelta): Tick {
   return (baseTick + deltaTicks) as Tick;
 }
 
@@ -61,6 +61,26 @@ export function asTick(n: number): Tick {
  * Subtracts one tick from another to get the delta.
  * Useful for calculating elapsed time between ticks.
  */
-export function tickDelta(later: Tick, earlier: Tick): number {
-  return (later as number) - (earlier as number);
+export function tickDelta(later: Tick, earlier: Tick): TickDelta {
+  return ((later as number) - (earlier as number)) as TickDelta;
+}
+
+// TickDelta creation and conversion functions
+
+/**
+ * Create a TickDelta from a raw number - use at configuration boundaries
+ */
+export function asTickDelta(ticks: number): TickDelta {
+  return ticks as TickDelta;
+}
+
+/**
+ * Helpers for converting player-facing "frames@60" settings to ticks.
+ */
+export function framesAt60ToTicks(framesAt60: number, TPS: number): TickDelta {
+  return Math.ceil(framesAt60 * (TPS / 60)) as TickDelta;
+}
+
+export function msToTicks(ms: number, TPS: number): TickDelta {
+  return Math.ceil((ms / 1000) * TPS) as TickDelta;
 }

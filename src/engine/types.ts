@@ -10,6 +10,7 @@ import {
 export * from "./core/types";
 export type Tick = number & { readonly brand: "Tick" };
 export type Q16_16 = number & { readonly brand: "Q16_16" };
+export type TickDelta = number & { readonly brand: "TickDelta" };
 
 export { type PieceRandomGenerator } from "./core/rng/interface";
 export { createSevenBagRng } from "./core/rng/seeded";
@@ -19,7 +20,6 @@ export type RNGState = PieceRandomGenerator;
 export type PhysicsState = {
   gravityAccum32: Q16_16; // accumulates cells per tick
   softDropOn: boolean;
-  grounded: boolean;
 
   lock: {
     deadlineTick: Tick | null;
@@ -31,7 +31,7 @@ export type EngineConfig = Readonly<{
   width: 10;
   height: 20;
   previewCount: number;
-  lockDelayTicks: number;
+  lockDelayTicks: TickDelta;
   maxLockResets: number;
   gravity32: Q16_16;
   softDrop32?: Q16_16;
@@ -67,7 +67,6 @@ export function mkInitialState(cfg: EngineConfig, startTick: Tick): GameState {
     hold: { piece: null, usedThisTurn: false },
     physics: {
       gravityAccum32: 0 as Q16_16,
-      grounded: false,
       lock: { deadlineTick: null, resetCount: 0 },
       softDropOn: false,
     },

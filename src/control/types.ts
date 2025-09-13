@@ -1,5 +1,5 @@
 import type { Command } from "../engine/commands";
-import type { Tick } from "../engine/types";
+import type { Tick, TickDelta } from "../engine/types";
 
 export type Key =
   | "Left"
@@ -11,7 +11,10 @@ export type Key =
   | "Hold";
 export type KeyEdge = { key: Key; type: "down" | "up" };
 
-export type ControlConfig = Readonly<{ dasTicks: number; arrTicks: number }>;
+export type ControlConfig = Readonly<{
+  dasTicks: TickDelta;
+  arrTicks: TickDelta;
+}>;
 
 export type ControlState = {
   leftDown: boolean;

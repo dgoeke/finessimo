@@ -229,6 +229,14 @@ export function canRotate(
   return false;
 }
 
+/**
+ * Result of attempting a rotation with kick information
+ */
+export type SRSRotateResult = {
+  piece: ActivePiece | null;
+  kickIndex: number; // -1 if failed, 0+ for successful kick index
+};
+
 // Perform a rotation with wall kicks, returns the new piece position or null if invalid
 // NOTE: This function only allows adjacent rotation states (90° rotations) per SRS rules.
 // Direct 180° rotations (spawn→two, two→spawn, right→left, left→right) are not supported.
@@ -237,9 +245,24 @@ export function tryRotate(
   targetRot: Rot,
   board: Board,
 ): ActivePiece | null {
+  const result = tryRotateWithKickInfo(piece, targetRot, board);
+  return result.piece;
+}
+
+/**
+ * Perform rotation with detailed kick information for event classification
+ */
+export function tryRotateWithKickInfo(
+  piece: ActivePiece,
+  targetRot: Rot,
+  board: Board,
+): SRSRotateResult {
   // O piece doesn't rotate
   if (piece.id === "O") {
-    return piece.rot === targetRot ? piece : null;
+    return {
+      kickIndex: piece.rot === targetRot ? 0 : -1,
+      piece: piece.rot === targetRot ? piece : null,
+    };
   }
 
   const testPiece = { ...piece, rot: targetRot };
@@ -248,11 +271,15 @@ export function tryRotate(
   const kicks = kickTable[kickKey];
 
   if (!kicks) {
-    return null;
+    return { kickIndex: -1, piece: null };
   }
 
   // Try each kick offset
-  for (const [dx, dy] of kicks) {
+  for (let i = 0; i < kicks.length; i++) {
+    const kickOffset = kicks[i];
+    if (!kickOffset) continue;
+
+    const [dx, dy] = kickOffset;
     // Invert dy to account for y-down coordinate system
     const appliedDy = -dy;
     const kickedPiece = {
@@ -262,9 +289,9 @@ export function tryRotate(
     };
 
     if (canPlacePiece(board, kickedPiece)) {
-      return kickedPiece;
+      return { kickIndex: i, piece: kickedPiece };
     }
   }
 
-  return null;
+  return { kickIndex: -1, piece: null };
 }

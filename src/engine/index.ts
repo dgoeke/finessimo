@@ -23,15 +23,15 @@ export function init(
 
 /**
  * One deterministic tick. Applies commands, advances physics, resolves transitions.
+ * Engine owns time - uses state.tick internally and increments it.
  */
 export function step(
   state: GameState,
-  tick: Tick,
   cmds: ReadonlyArray<Command>,
 ): { state: GameState; events: ReadonlyArray<DomainEvent> } {
-  const a = applyCommands(state, tick, cmds);
-  const b = advancePhysics(a.state, tick, a.sideEffects);
-  const c = resolveTransitions(b.state, tick, b.sideEffects);
+  const a = applyCommands(state, cmds);
+  const b = advancePhysics(a.state, a.sideEffects);
+  const c = resolveTransitions(b.state, b.sideEffects);
   const events = [...a.events, ...b.events, ...c.events];
 
   // Increment tick at the end of the step
@@ -42,20 +42,18 @@ export function step(
 
 /**
  * Advance multiple ticks with per-tick command buckets.
+ * Uses state.tick for time tracking - no external tick management needed.
  */
 export function stepN(
   state: GameState,
-  startTick: Tick,
   byTick: ReadonlyArray<ReadonlyArray<Command>>,
 ): { state: GameState; events: ReadonlyArray<DomainEvent> } {
   let s = state;
-  let t = startTick;
   const all: Array<DomainEvent> = [];
   for (const cmds of byTick) {
-    const r = step(s, t, cmds);
+    const r = step(s, cmds);
     s = r.state;
     all.push(...r.events);
-    t = incrementTick(t);
   }
   return { events: all, state: s };
 }

@@ -15,12 +15,12 @@ let { state } = init(/* cfg * /{} as any, tick);
 game.on("preupdate", () => {
   // Collect key edges this tick from Excalibur input
   const edges: KeyEdge[] = []; // TODO: translate ex.Input to KeyEdge[]
-  const { commands, next } = controlStep(ctrl, tick, edges);
+  const { commands, next } = controlStep(ctrl, state.tick, edges);
   ctrl = next;
-  const r = step(state, tick, commands);
+  const r = step(state, commands);
   state = r.state; // render reads from this
   // events: r.events
-  tick = (tick + 1) as any;
+  // Engine now owns tick completely - no external tick tracking needed
 });
 
 game.start();

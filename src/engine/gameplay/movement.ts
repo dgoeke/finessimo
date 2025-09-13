@@ -1,11 +1,10 @@
-import { tryMove, moveToWall, dropToBottom } from "../core/board";
-import { tryRotate, getNextRotation } from "../core/srs";
+import { tryMove, moveToWall, dropToBottom, isAtBottom } from "../core/board";
 import {
-  type GameState,
-  type Tick,
-  type PieceId,
-  gridCoordAsNumber,
-} from "../types";
+  tryRotateWithKickInfo,
+  getNextRotation,
+  type SRSRotateResult,
+} from "../core/srs";
+import { type GameState, type PieceId, gridCoordAsNumber } from "../types";
 
 type MoveResult = {
   state: GameState;
@@ -35,7 +34,7 @@ export function tryMoveLeft(state: GameState): MoveResult {
 
   const next = { ...state, piece: movedPiece };
   // If grounded before and moved horizontally, this is lock reset eligible
-  const lockResetEligible = state.physics.grounded;
+  const lockResetEligible = isAtBottom(state.board, state.piece);
   return { fromX, lockResetEligible, moved: true, state: next, toX };
 }
 
@@ -52,7 +51,7 @@ export function tryMoveRight(state: GameState): MoveResult {
   }
 
   const next = { ...state, piece: movedPiece };
-  const lockResetEligible = state.physics.grounded;
+  const lockResetEligible = isAtBottom(state.board, state.piece);
   return { fromX, lockResetEligible, moved: true, state: next, toX };
 }
 
@@ -70,8 +69,30 @@ export function tryShiftToWall(
   const toX = gridCoordAsNumber(movedPiece.x);
 
   const next = { ...state, piece: movedPiece };
-  const lockResetEligible = state.physics.grounded;
+  const lockResetEligible = isAtBottom(state.board, state.piece);
   return { fromX, lockResetEligible, moved: toX !== fromX, state: next, toX };
+}
+
+/**
+ * Classifies kick type based on kick index from SRS table
+ * - Index 0: No kick (basic rotation)
+ * - Index 1-4: Wall kicks (horizontal or vertical adjustments)
+ * - Floor kicks involve upward movement (negative Y in SRS coordinate system)
+ */
+function classifyKick(
+  kickIndex: number,
+  kickOffset?: readonly [number, number],
+): "none" | "wall" | "floor" {
+  if (kickIndex === 0) return "none"; // Basic rotation, no kick needed
+  if (kickIndex < 0) return "none"; // Failed rotation
+
+  // For proper classification, we'd need the actual kick offset
+  // For now, use a heuristic: upward movement suggests floor kick
+  if (kickOffset && kickOffset[1] < 0) {
+    return "floor"; // Negative Y is upward in SRS coordinates
+  }
+
+  return "wall"; // Default to wall kick for any offset
 }
 
 function tryRotateInternal(
@@ -82,19 +103,22 @@ function tryRotateInternal(
     return { kick: "none", lockResetEligible: false, rotated: false, state };
 
   const targetRot = getNextRotation(state.piece.rot, direction);
-  const rotatedPiece = tryRotate(state.piece, targetRot, state.board);
+  const rotateResult: SRSRotateResult = tryRotateWithKickInfo(
+    state.piece,
+    targetRot,
+    state.board,
+  );
 
-  if (!rotatedPiece) {
+  if (rotateResult.piece === null) {
     return { kick: "none", lockResetEligible: false, rotated: false, state };
   }
 
-  const next = { ...state, piece: rotatedPiece };
-  const lockResetEligible = state.physics.grounded;
-  // Determine kick type - for now, simplified
-  const kick =
-    rotatedPiece.x !== state.piece.x || rotatedPiece.y !== state.piece.y
-      ? "wall"
-      : "none";
+  const next = { ...state, piece: rotateResult.piece };
+  const lockResetEligible = isAtBottom(state.board, state.piece);
+
+  // Classify kick based on the kick index
+  const kick = classifyKick(rotateResult.kickIndex);
+
   return { kick, lockResetEligible, rotated: true, state: next };
 }
 
@@ -106,10 +130,7 @@ export function tryRotateCCW(state: GameState): RotateResult {
   return tryRotateInternal(state, "CCW");
 }
 
-export function tryHardDrop(
-  state: GameState,
-  tick: Tick,
-): {
+export function tryHardDrop(state: GameState): {
   state: GameState;
   hardDropped: boolean;
 } {
@@ -118,17 +139,10 @@ export function tryHardDrop(
   const piece = state.piece;
   const droppedPiece = dropToBottom(state.board, piece);
 
-  // Update piece position and set lock deadline to current tick for immediate lock
+  // Pure hard drop: only move piece to bottom, don't mutate lock state
+  // Lock handling is done in advance-physics via hardDropped flag
   const newState: GameState = {
     ...state,
-    physics: {
-      ...state.physics,
-      grounded: true, // Hard drop always grounds the piece
-      lock: {
-        deadlineTick: tick, // Force lock on this tick
-        resetCount: 0, // Reset count doesn't matter as it locks immediately
-      },
-    },
     piece: droppedPiece,
   };
 
