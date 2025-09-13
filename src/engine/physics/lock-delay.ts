@@ -1,9 +1,17 @@
-import type { Tick, GameState } from "../types.js";
+import { addTicks, isTickAfterOrEqual } from "../utils/tick";
+
+import type { Tick, GameState } from "../types";
+
+type LockUpdateOptions = {
+  grounded: boolean;
+  lockResetEligible: boolean;
+  lockResetReason?: "move" | "rotate" | undefined;
+};
 
 export function updateLock(
   state: GameState,
   tick: Tick,
-  opts: { grounded: boolean; lockResetEligible: boolean },
+  opts: LockUpdateOptions,
 ): {
   state: GameState;
   started: boolean;
@@ -21,11 +29,14 @@ export function updateLock(
   const cfg = s.cfg;
 
   if (!opts.grounded) {
-    // Airborne—clear deadline
+    // Airborne—clear deadline but preserve resetCount
     if (lock.deadlineTick !== null) {
       s = {
         ...s,
-        physics: { ...s.physics, lock: { deadlineTick: null, resetCount: 0 } },
+        physics: {
+          ...s.physics,
+          lock: { deadlineTick: null, resetCount: lock.resetCount },
+        },
       };
     }
     return { lockNow, reset, resetReason: undefined, started, state: s };
@@ -34,8 +45,7 @@ export function updateLock(
   // Grounded
   if (lock.deadlineTick === null) {
     // Start lock
-    // @ts-ignore arithmetic on branded Tick at boundary
-    const deadline = (tick + cfg.lockDelayTicks) as Tick;
+    const deadline = addTicks(tick, cfg.lockDelayTicks);
     s = {
       ...s,
       physics: {
@@ -50,8 +60,7 @@ export function updateLock(
       opts.lockResetEligible &&
       s.physics.lock.resetCount < cfg.maxLockResets
     ) {
-      // @ts-ignore arithmetic on branded Tick at boundary
-      const deadline = (tick + cfg.lockDelayTicks) as Tick;
+      const deadline = addTicks(tick, cfg.lockDelayTicks);
       s = {
         ...s,
         physics: {
@@ -63,14 +72,14 @@ export function updateLock(
         },
       };
       reset = true;
-      resetReason = "move"; // TODO: differentiate rotate vs move in ApplyCommands flags if desired
+      resetReason = opts.lockResetReason;
     }
   }
 
   // Check deadline
   if (
     s.physics.lock.deadlineTick !== null &&
-    tick >= s.physics.lock.deadlineTick
+    isTickAfterOrEqual(tick, s.physics.lock.deadlineTick)
   ) {
     lockNow = true;
   }

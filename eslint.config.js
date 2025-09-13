@@ -24,12 +24,12 @@ export default tseslint.config(
       },
     },
     settings: {
-      "import-x/resolver": { 
+      "import-x/resolver": {
         typescript: {
           alwaysTryTypes: true,
-          project: "./tsconfig.json"
-        }, 
-        node: true 
+          project: "./tsconfig.json",
+        },
+        node: true,
       },
     },
     plugins: {
@@ -209,6 +209,34 @@ export default tseslint.config(
           message:
             "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing and stronger type safety. Only timestamp utilities may use performance.now() directly.",
         },
+        {
+          // Forbid raw arithmetic with anything named *tick* or .tick
+          // Covers +, -, *, /
+          selector:
+            "BinaryExpression:matches([operator='+'],[operator='-'],[operator='*'],[operator='/']):has(:matches(Identifier[name=/\\b[Tt]ick\\b/], Identifier[name=/[Tt]ick$/], MemberExpression[property.name='tick']))",
+          message:
+            "Don’t do raw math on Tick; use helpers from 'engine/utils/tick' (addTicks, incrementTick, tickDelta, compareTicks, isTickAfter, isTickAfterOrEqual).",
+        },
+        // Also forbid tick++ / tick-- (UpdateExpression)
+        {
+          selector:
+            "UpdateExpression:has(:matches(Identifier[name=/\\b[Tt]ick\\b/], Identifier[name=/[Tt]ick$/], MemberExpression[property.name='tick']))",
+          message:
+            "Don’t update Tick directly; use helpers from 'engine/utils/tick'.",
+        },
+        // And forbid tick += n / tick -= n (AssignmentExpression)
+        {
+          selector:
+            "AssignmentExpression[operator='+=']:has(:matches(Identifier[name=/\\b[Tt]ick\\b/], Identifier[name=/[Tt]ick$/], MemberExpression[property.name='tick']))",
+          message:
+            "Don’t update Tick directly; use helpers from 'engine/utils/tick'.",
+        },
+        {
+          selector:
+            "AssignmentExpression[operator='-=']:has(:matches(Identifier[name=/\\b[Tt]ick\\b/], Identifier[name=/[Tt]ick$/], MemberExpression[property.name='tick']))",
+          message:
+            "Don’t update Tick directly; use helpers from 'engine/utils/tick'.",
+        },
       ],
 
       // Style & API clarity (tune to taste)
@@ -239,6 +267,29 @@ export default tseslint.config(
     },
   },
 
+  // Allow direct arithmetic in tick utilities (but nowhere else)
+  {
+    files: ["**/engine/utils/tick.ts", "**/tick.test.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message:
+            "Use fromNow() from '../types/timestamp' instead of Date.now() for consistent timing and strong type safety. Only timestamp utilities may use performance.now() directly.",
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='performance'][callee.property.name='now']",
+          message:
+            "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing and stronger type safety. Only timestamp utilities may use performance.now() directly.",
+        },
+        // Note: Tick arithmetic is allowed in this file since it implements the helpers
+      ],
+    },
+  },
+
   // Maintainability guardrails (tune thresholds to your codebase)
   {
     files: ["src/**/*.{ts,tsx}"],
@@ -256,7 +307,11 @@ export default tseslint.config(
 
   // Test files: use test TypeScript config and relax some rules
   {
-    files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
+    files: [
+      "tests/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      "**/__tests__/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

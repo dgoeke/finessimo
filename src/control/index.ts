@@ -1,16 +1,16 @@
-import type { ControlState, ControlResult, KeyEdge, Key } from "./types.js";
-import type { Command } from "../engine/commands.js";
-import type { Tick } from "../engine/types.js";
+import { addTicks, isTickAfterOrEqual } from "../engine/utils/tick";
 
-/**
- * Safely adds ticks to a branded Tick type at system boundaries
- */
-function addTicks(baseTick: Tick, deltaTicks: number): Tick {
-  return (baseTick + deltaTicks) as Tick;
-}
+import type { ControlState, ControlResult, KeyEdge, Key } from "./types";
+import type { Command } from "../engine/commands";
+import type { Tick } from "../engine/types";
 
 /**
  * Processes Left key edge
+ *
+ * Left/Right contention semantics: "Last-pressed wins"
+ * - When Left is pressed while Right is active: Left becomes active
+ * - When Left is released while active: Right becomes active if still held, else null
+ * - This allows for quick direction changes without releasing both keys
  */
 function processLeftKey(
   state: ControlState,
@@ -23,10 +23,11 @@ function processLeftKey(
   if (type === "down") {
     commands.push({ kind: "MoveLeft", source: "tap" });
     state.dasDeadlineTick = addTicks(tick, state.cfg.dasTicks);
-    state.activeDir = "Left";
+    state.activeDir = "Left"; // Last-pressed wins
     state.nextRepeatTick =
       state.cfg.arrTicks > 0 ? addTicks(tick, state.cfg.dasTicks) : null;
   } else if (state.activeDir === "Left") {
+    // Release-to-reverse: if Right is still held, switch to Right
     state.activeDir = state.rightDown ? "Right" : null;
     updateDasArrTiming(state, tick);
   }
@@ -34,6 +35,11 @@ function processLeftKey(
 
 /**
  * Processes Right key edge
+ *
+ * Left/Right contention semantics: "Last-pressed wins"
+ * - When Right is pressed while Left is active: Right becomes active
+ * - When Right is released while active: Left becomes active if still held, else null
+ * - This allows for quick direction changes without releasing both keys
  */
 function processRightKey(
   state: ControlState,
@@ -46,10 +52,11 @@ function processRightKey(
   if (type === "down") {
     commands.push({ kind: "MoveRight", source: "tap" });
     state.dasDeadlineTick = addTicks(tick, state.cfg.dasTicks);
-    state.activeDir = "Right";
+    state.activeDir = "Right"; // Last-pressed wins
     state.nextRepeatTick =
       state.cfg.arrTicks > 0 ? addTicks(tick, state.cfg.dasTicks) : null;
   } else if (state.activeDir === "Right") {
+    // Release-to-reverse: if Left is still held, switch to Left
     state.activeDir = state.leftDown ? "Left" : null;
     updateDasArrTiming(state, tick);
   }
@@ -98,6 +105,10 @@ function processActionKey(
 
 /**
  * Generates DAS/ARR commands based on current timing state
+ *
+ * ARR=0 behavior: After DAS delay, emits ONE ShiftToWall command and stops.
+ * This provides "sonic" movement that instantly moves piece to wall.
+ * No repeats are generated when ARR=0 to prevent continuous wall-shifting.
  */
 function generateDasArrCommands(
   state: ControlState,
@@ -107,17 +118,24 @@ function generateDasArrCommands(
   if (state.activeDir === null) return;
 
   if (state.cfg.arrTicks === 0) {
-    // Sonic at DAS deadline
-    if (state.dasDeadlineTick !== null && tick >= state.dasDeadlineTick) {
+    // ARR=0: Sonic behavior - shift to wall once after DAS, then stop
+    if (
+      state.dasDeadlineTick !== null &&
+      isTickAfterOrEqual(tick, state.dasDeadlineTick)
+    ) {
       commands.push({
         kind:
           state.activeDir === "Left" ? "ShiftToWallLeft" : "ShiftToWallRight",
       });
+      // Clear deadline to prevent repeat firing
       state.dasDeadlineTick = null;
     }
   } else {
-    // Repeats
-    if (state.nextRepeatTick !== null && tick >= state.nextRepeatTick) {
+    // ARR>0: Normal repeating behavior
+    if (
+      state.nextRepeatTick !== null &&
+      isTickAfterOrEqual(tick, state.nextRepeatTick)
+    ) {
       commands.push({
         kind: state.activeDir === "Left" ? "MoveLeft" : "MoveRight",
         source: "repeat",

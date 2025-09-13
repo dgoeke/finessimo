@@ -1,7 +1,7 @@
-import type { Tick } from "./types.js";
+import type { Tick, PieceId } from "./types";
 
 export type DomainEvent =
-  | { kind: "PieceSpawned"; pieceId: number; tick: Tick }
+  | { kind: "PieceSpawned"; pieceId: PieceId; tick: Tick }
   | { kind: "MovedLeft"; fromX: number; toX: number; tick: Tick }
   | { kind: "MovedRight"; fromX: number; toX: number; tick: Tick }
   | {
@@ -16,7 +16,7 @@ export type DomainEvent =
   | {
       kind: "Locked";
       source: "ground" | "hardDrop";
-      pieceId: number;
+      pieceId: PieceId;
       tick: Tick;
     }
   | { kind: "LinesCleared"; rows: Array<number>; tick: Tick }

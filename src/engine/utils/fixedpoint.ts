@@ -1,4 +1,4 @@
-import type { Q16_16 } from "../types.js";
+import type { Q16_16 } from "../types";
 
 export function toQ(n: number): Q16_16 {
   return (n * 65536) as Q16_16;

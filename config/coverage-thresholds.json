@@ -1,0 +1,128 @@
+{
+  "src/analytics/finesse.ts": {
+    "statements": 0,
+    "branches": 100,
+    "functions": 0,
+    "lines": 0
+  },
+  "src/control/index.ts": {
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
+  },
+  "src/engine/index.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/types.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/board.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/pieces.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/spawning.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/srs.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/types.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/rng/one-piece.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/rng/seeded.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/core/rng/sequence.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/gameplay/movement.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/gameplay/spawn.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/physics/gravity.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/physics/lock-delay.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/step/advance-physics.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/step/apply-commands.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/step/resolve-transitions.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/utils/fixedpoint.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  },
+  "src/engine/utils/tick.ts": {
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+  }
+}

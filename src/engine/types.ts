@@ -1,39 +1,26 @@
-// Basic branded Tick
+import { type PieceRandomGenerator } from "./core/rng/interface";
+import { createSevenBagRng } from "./core/rng/seeded";
+import {
+  type Board,
+  type PieceId,
+  type ActivePiece,
+  createBoardCells,
+} from "./core/types";
+
+export * from "./core/types";
 export type Tick = number & { readonly brand: "Tick" };
-
-// Fixed-point Q16.16 helpers (see utils)
 export type Q16_16 = number & { readonly brand: "Q16_16" };
+export type TickDelta = number & { readonly brand: "TickDelta" };
 
-// Board/Piece basics (skeleton)
-export type Cell = 0 | 1; // TODO: include color/type if needed
-export type Board = {
-  readonly width: number;
-  readonly height: number;
-  readonly cells: Uint8Array; // width * height
-};
+export { type PieceRandomGenerator } from "./core/rng/interface";
+export { createSevenBagRng } from "./core/rng/seeded";
 
-export type PieceKind = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
-export type Rotation = 0 | 1 | 2 | 3;
-
-export type ActivePiece = {
-  readonly id: number;
-  kind: PieceKind;
-  rot: Rotation;
-  x: number;
-  y: number;
-};
-
-export type RNGState = {
-  seed: number;
-  // TODO: bag7 & prng impl
-};
+export type RNGState = PieceRandomGenerator;
 
 export type PhysicsState = {
   gravityAccum32: Q16_16; // accumulates cells per tick
   softDropOn: boolean;
-  grounded: boolean;
 
-  // Lock-delay state
   lock: {
     deadlineTick: Tick | null;
     resetCount: number;
@@ -41,10 +28,10 @@ export type PhysicsState = {
 };
 
 export type EngineConfig = Readonly<{
-  width: number;
-  height: number;
+  width: 10;
+  height: 20;
   previewCount: number;
-  lockDelayTicks: number;
+  lockDelayTicks: TickDelta;
   maxLockResets: number;
   gravity32: Q16_16;
   softDrop32?: Q16_16;
@@ -54,30 +41,38 @@ export type EngineConfig = Readonly<{
 export type GameState = {
   readonly cfg: EngineConfig;
   readonly board: Board;
-  readonly queue: ReadonlyArray<PieceKind>; // TODO: make ring buffer
-  readonly hold: { piece: PieceKind | null; usedThisTurn: boolean };
+  readonly queue: ReadonlyArray<PieceId>; // TODO: make ring buffer
+  readonly hold: { piece: PieceId | null; usedThisTurn: boolean };
   readonly rng: RNGState;
   readonly tick: Tick;
   readonly piece: ActivePiece | null;
   readonly physics: PhysicsState;
-  // Any other stats you need
 };
 
 export function mkInitialState(cfg: EngineConfig, startTick: Tick): GameState {
-  const cells = new Uint8Array(cfg.width * cfg.height);
+  const cells = createBoardCells();
+  const rng = createSevenBagRng(cfg.rngSeed.toString());
+
+  const queueResult = rng.getNextPieces(cfg.previewCount);
+
   return {
-    board: { cells, height: cfg.height, width: cfg.width },
+    board: {
+      cells,
+      height: 20,
+      totalHeight: 23,
+      vanishRows: 3,
+      width: 10,
+    },
     cfg,
     hold: { piece: null, usedThisTurn: false },
     physics: {
       gravityAccum32: 0 as Q16_16,
-      grounded: false,
       lock: { deadlineTick: null, resetCount: 0 },
       softDropOn: false,
     },
     piece: null,
-    queue: [],
-    rng: { seed: cfg.rngSeed },
+    queue: queueResult.pieces,
+    rng: queueResult.newRng,
     tick: startTick,
   };
 }
