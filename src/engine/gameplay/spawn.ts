@@ -1,7 +1,7 @@
 import { lockPiece, getCompletedLines, clearLines } from "../core/board";
 import { createActivePiece, isTopOut } from "../core/spawning";
 
-import type { GameState, PieceId } from "../types";
+import type { GameState, PhysicsState, PieceId } from "../types";
 
 export function placeActivePiece(state: GameState): {
   state: GameState;
@@ -95,10 +95,9 @@ export function spawnPiece(
   const activePiece = createActivePiece(pieceToSpawn);
 
   // Reset physics state for new piece
-  const resetPhysics = {
+  const resetPhysics: PhysicsState = {
     ...state.physics,
     gravityAccum32: 0 as typeof state.physics.gravityAccum32,
-    grounded: false,
     lock: {
       deadlineTick: null,
       resetCount: 0,

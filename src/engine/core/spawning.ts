@@ -63,25 +63,3 @@ export function isPieceEntirelyInVanishZone(piece: ActivePiece): boolean {
 
   return true; // All cells are in the vanish zone (y < 0)
 }
-
-/**
- * Spawn a piece with hold swap logic
- * Returns [newActivePiece, newHoldPiece] or null if top-out
- */
-export function spawnWithHold(
-  board: Board,
-  nextPiece: PieceId,
-  currentHold?: PieceId,
-): [ActivePiece, PieceId | undefined] | null {
-  // If no hold piece, just spawn the next piece
-  if (currentHold === undefined) {
-    const piece = createActivePiece(nextPiece);
-    if (!canPlacePiece(board, piece)) return null; // top-out
-    return [piece, undefined];
-  }
-
-  // Spawn the held piece, next piece becomes new hold
-  const heldPiece = createActivePiece(currentHold);
-  if (!canPlacePiece(board, heldPiece)) return null; // top-out
-  return [heldPiece, nextPiece];
-}

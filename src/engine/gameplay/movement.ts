@@ -81,14 +81,13 @@ export function tryShiftToWall(
  */
 function classifyKick(
   kickIndex: number,
-  kickOffset?: readonly [number, number],
+  kickOffset: readonly [number, number],
 ): "none" | "wall" | "floor" {
   if (kickIndex === 0) return "none"; // Basic rotation, no kick needed
   if (kickIndex < 0) return "none"; // Failed rotation
 
-  // For proper classification, we'd need the actual kick offset
-  // For now, use a heuristic: upward movement suggests floor kick
-  if (kickOffset && kickOffset[1] < 0) {
+  // Check for floor kick: upward movement (negative Y in SRS coordinates)
+  if (kickOffset[1] < 0) {
     return "floor"; // Negative Y is upward in SRS coordinates
   }
 
@@ -116,8 +115,8 @@ function tryRotateInternal(
   const next = { ...state, piece: rotateResult.piece };
   const lockResetEligible = isAtBottom(state.board, state.piece);
 
-  // Classify kick based on the kick index
-  const kick = classifyKick(rotateResult.kickIndex);
+  // Classify kick based on the kick index and offset
+  const kick = classifyKick(rotateResult.kickIndex, rotateResult.kickOffset);
 
   return { kick, lockResetEligible, rotated: true, state: next };
 }

@@ -235,6 +235,7 @@ export function canRotate(
 export type SRSRotateResult = {
   piece: ActivePiece | null;
   kickIndex: number; // -1 if failed, 0+ for successful kick index
+  kickOffset: readonly [number, number]; // dx, dy in SRS (positive up)
 };
 
 // Perform a rotation with wall kicks, returns the new piece position or null if invalid
@@ -261,6 +262,7 @@ export function tryRotateWithKickInfo(
   if (piece.id === "O") {
     return {
       kickIndex: piece.rot === targetRot ? 0 : -1,
+      kickOffset: [0, 0],
       piece: piece.rot === targetRot ? piece : null,
     };
   }
@@ -271,7 +273,7 @@ export function tryRotateWithKickInfo(
   const kicks = kickTable[kickKey];
 
   if (!kicks) {
-    return { kickIndex: -1, piece: null };
+    return { kickIndex: -1, kickOffset: [0, 0], piece: null };
   }
 
   // Try each kick offset
@@ -289,9 +291,9 @@ export function tryRotateWithKickInfo(
     };
 
     if (canPlacePiece(board, kickedPiece)) {
-      return { kickIndex: i, piece: kickedPiece };
+      return { kickIndex: i, kickOffset: kickOffset, piece: kickedPiece };
     }
   }
 
-  return { kickIndex: -1, piece: null };
+  return { kickIndex: -1, kickOffset: [0, 0], piece: null };
 }
