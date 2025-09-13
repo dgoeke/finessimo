@@ -6,6 +6,7 @@ import type { Tick, GameState } from "../types.js";
 import type { CommandSideEffects } from "./apply-commands.js";
 
 export type PhysicsSideEffects = {
+  hardDropped: boolean;
   lockNow: boolean;
 };
 
@@ -33,13 +34,19 @@ export function advancePhysics(
   const L = updateLock(s, tick, {
     grounded: s.physics.grounded,
     lockResetEligible: cmdFx.lockResetEligible,
+    lockResetReason: cmdFx.lockResetReason,
   });
   s = L.state;
   if (L.started) events.push({ kind: "LockStarted", tick });
   if (L.reset && L.resetReason !== undefined)
     events.push({ kind: "LockReset", reason: L.resetReason, tick });
 
-  const lockNow = L.lockNow;
+  // Hard drop forces immediate lock regardless of lock delay
+  const lockNow = L.lockNow || cmdFx.hardDropped;
 
-  return { events, sideEffects: { lockNow }, state: s };
+  return {
+    events,
+    sideEffects: { hardDropped: cmdFx.hardDropped, lockNow },
+    state: s,
+  };
 }

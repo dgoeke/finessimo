@@ -1,4 +1,4 @@
-import type { GameState } from "../types.js";
+import type { GameState, Tick } from "../types.js";
 
 type MoveResult = {
   state: GameState;
@@ -80,13 +80,39 @@ export function tryRotateCCW(state: GameState): RotateResult {
   return tryRotateInternal(state, "CCW");
 }
 
-export function tryHardDrop(state: GameState): {
+export function tryHardDrop(
+  state: GameState,
+  tick: Tick,
+): {
   state: GameState;
   hardDropped: boolean;
 } {
   if (!state.piece) return { hardDropped: false, state };
-  // TODO: move down until blocked; set physics.lock.deadlineTick = tick to force lock this tick
-  return { hardDropped: true, state };
+
+  const piece = state.piece;
+  let newY = piece.y;
+
+  // Move piece down until it would collide (simplified - assumes floor at bottom)
+  // TODO: implement proper collision detection with board
+  while (newY + 1 < state.board.height) {
+    newY++;
+  }
+
+  // Update piece position and set lock deadline to current tick for immediate lock
+  const newState: GameState = {
+    ...state,
+    physics: {
+      ...state.physics,
+      grounded: true, // Hard drop always grounds the piece
+      lock: {
+        deadlineTick: tick, // Force lock on this tick
+        resetCount: 0, // Reset count doesn't matter as it locks immediately
+      },
+    },
+    piece: { ...piece, y: newY },
+  };
+
+  return { hardDropped: true, state: newState };
 }
 
 export function tryHold(state: GameState): {

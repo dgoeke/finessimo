@@ -2,6 +2,7 @@ import { advancePhysics } from "./step/advance-physics.js";
 import { applyCommands } from "./step/apply-commands.js";
 import { resolveTransitions } from "./step/resolve-transitions.js";
 import { mkInitialState } from "./types.js";
+import { incrementTick } from "./utils/tick.js";
 
 import type { Command } from "./commands.js";
 import type { DomainEvent } from "./events.js";
@@ -32,7 +33,11 @@ export function step(
   const b = advancePhysics(a.state, tick, a.sideEffects);
   const c = resolveTransitions(b.state, tick, b.sideEffects);
   const events = [...a.events, ...b.events, ...c.events];
-  return { events, state: c.state };
+
+  // Increment tick at the end of the step
+  const finalState = { ...c.state, tick: incrementTick(c.state.tick) };
+
+  return { events, state: finalState };
 }
 
 /**
@@ -50,8 +55,7 @@ export function stepN(
     const r = step(s, t, cmds);
     s = r.state;
     all.push(...r.events);
-    // @ts-ignore - arithmetic on branded type is OK at boundary
-    t = (t + 1) as Tick;
+    t = incrementTick(t);
   }
   return { events: all, state: s };
 }

@@ -1,13 +1,8 @@
+import { addTicks, isTickAfterOrEqual } from "../engine/utils/tick.js";
+
 import type { ControlState, ControlResult, KeyEdge, Key } from "./types.js";
 import type { Command } from "../engine/commands.js";
 import type { Tick } from "../engine/types.js";
-
-/**
- * Safely adds ticks to a branded Tick type at system boundaries
- */
-function addTicks(baseTick: Tick, deltaTicks: number): Tick {
-  return (baseTick + deltaTicks) as Tick;
-}
 
 /**
  * Processes Left key edge
@@ -108,7 +103,10 @@ function generateDasArrCommands(
 
   if (state.cfg.arrTicks === 0) {
     // Sonic at DAS deadline
-    if (state.dasDeadlineTick !== null && tick >= state.dasDeadlineTick) {
+    if (
+      state.dasDeadlineTick !== null &&
+      isTickAfterOrEqual(tick, state.dasDeadlineTick)
+    ) {
       commands.push({
         kind:
           state.activeDir === "Left" ? "ShiftToWallLeft" : "ShiftToWallRight",
@@ -117,7 +115,10 @@ function generateDasArrCommands(
     }
   } else {
     // Repeats
-    if (state.nextRepeatTick !== null && tick >= state.nextRepeatTick) {
+    if (
+      state.nextRepeatTick !== null &&
+      isTickAfterOrEqual(tick, state.nextRepeatTick)
+    ) {
       commands.push({
         kind: state.activeDir === "Left" ? "MoveLeft" : "MoveRight",
         source: "repeat",

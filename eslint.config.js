@@ -24,12 +24,12 @@ export default tseslint.config(
       },
     },
     settings: {
-      "import-x/resolver": { 
+      "import-x/resolver": {
         typescript: {
           alwaysTryTypes: true,
-          project: "./tsconfig.json"
-        }, 
-        node: true 
+          project: "./tsconfig.json",
+        },
+        node: true,
       },
     },
     plugins: {
@@ -209,6 +209,12 @@ export default tseslint.config(
           message:
             "Use fromNow() from '../types/timestamp' instead of performance.now() for consistent timing and stronger type safety. Only timestamp utilities may use performance.now() directly.",
         },
+        {
+          selector:
+            "BinaryExpression[operator=/[+\\-*/]/]:has(Identifier[name=/[tT]ick/])",
+          message:
+            "Use tick helpers from 'engine/utils/tick' (addTicks, incrementTick, tickDelta, isTickAfter, isTickAfterOrEqual).",
+        },
       ],
 
       // Style & API clarity (tune to taste)
@@ -239,6 +245,14 @@ export default tseslint.config(
     },
   },
 
+  // Allow direct arithmetic in tick utilities (but nowhere else)
+  {
+    files: ["src/engine/utils/tick.ts"],
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
+
   // Maintainability guardrails (tune thresholds to your codebase)
   {
     files: ["src/**/*.{ts,tsx}"],
@@ -256,7 +270,11 @@ export default tseslint.config(
 
   // Test files: use test TypeScript config and relax some rules
   {
-    files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
+    files: [
+      "tests/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      "**/__tests__/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

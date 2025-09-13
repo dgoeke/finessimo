@@ -14,6 +14,7 @@ import type { Tick, GameState } from "../types.js";
 
 export type CommandSideEffects = {
   lockResetEligible: boolean;
+  lockResetReason?: "move" | "rotate" | undefined;
   hardDropped: boolean;
 };
 
@@ -21,8 +22,28 @@ type CommandResult = {
   state: GameState;
   events: ReadonlyArray<DomainEvent>;
   lockResetEligible: boolean;
+  lockResetReason?: "move" | "rotate" | undefined;
   hardDropped: boolean;
 };
+
+/**
+ * Helper function to create CommandResult objects more ergonomically
+ */
+function createCommandResult(opts: {
+  state: GameState;
+  events?: ReadonlyArray<DomainEvent>;
+  lockResetEligible?: boolean;
+  lockResetReason?: "move" | "rotate";
+  hardDropped?: boolean;
+}): CommandResult {
+  return {
+    events: opts.events ?? [],
+    hardDropped: opts.hardDropped ?? false,
+    lockResetEligible: opts.lockResetEligible ?? false,
+    lockResetReason: opts.lockResetReason,
+    state: opts.state,
+  };
+}
 
 /**
  * Handles MoveLeft command
@@ -30,19 +51,14 @@ type CommandResult = {
 function handleMoveLeft(state: GameState, tick: Tick): CommandResult {
   const r = tryMoveLeft(state);
   if (r.moved) {
-    return {
+    return createCommandResult({
       events: [{ fromX: r.fromX, kind: "MovedLeft", tick, toX: r.toX }],
-      hardDropped: false,
       lockResetEligible: r.lockResetEligible,
+      ...(r.lockResetEligible && { lockResetReason: "move" as const }),
       state: r.state,
-    };
+    });
   }
-  return {
-    events: [],
-    hardDropped: false,
-    lockResetEligible: false,
-    state,
-  };
+  return createCommandResult({ state });
 }
 
 /**
@@ -51,19 +67,14 @@ function handleMoveLeft(state: GameState, tick: Tick): CommandResult {
 function handleMoveRight(state: GameState, tick: Tick): CommandResult {
   const r = tryMoveRight(state);
   if (r.moved) {
-    return {
+    return createCommandResult({
       events: [{ fromX: r.fromX, kind: "MovedRight", tick, toX: r.toX }],
-      hardDropped: false,
       lockResetEligible: r.lockResetEligible,
+      ...(r.lockResetEligible && { lockResetReason: "move" as const }),
       state: r.state,
-    };
+    });
   }
-  return {
-    events: [],
-    hardDropped: false,
-    lockResetEligible: false,
-    state,
-  };
+  return createCommandResult({ state });
 }
 
 /**
@@ -77,19 +88,14 @@ function handleShiftToWall(
   const r = tryShiftToWall(state, direction);
   if (r.moved) {
     const eventKind = direction === "Left" ? "MovedLeft" : "MovedRight";
-    return {
+    return createCommandResult({
       events: [{ fromX: r.fromX, kind: eventKind, tick, toX: r.toX }],
-      hardDropped: false,
       lockResetEligible: r.lockResetEligible,
+      ...(r.lockResetEligible && { lockResetReason: "move" as const }),
       state: r.state,
-    };
+    });
   }
-  return {
-    events: [],
-    hardDropped: false,
-    lockResetEligible: false,
-    state,
-  };
+  return createCommandResult({ state });
 }
 
 /**
@@ -102,19 +108,14 @@ function handleRotation(
 ): CommandResult {
   const r = direction === "CW" ? tryRotateCW(state) : tryRotateCCW(state);
   if (r.rotated) {
-    return {
+    return createCommandResult({
       events: [{ dir: direction, kick: r.kick, kind: "Rotated", tick }],
-      hardDropped: false,
       lockResetEligible: r.lockResetEligible,
+      ...(r.lockResetEligible && { lockResetReason: "rotate" as const }),
       state: r.state,
-    };
+    });
   }
-  return {
-    events: [],
-    hardDropped: false,
-    lockResetEligible: false,
-    state,
-  };
+  return createCommandResult({ state });
 }
 
 /**
@@ -126,32 +127,23 @@ function handleSoftDrop(
   on: boolean,
 ): CommandResult {
   if (state.physics.softDropOn !== on) {
-    return {
+    return createCommandResult({
       events: [{ kind: "SoftDropToggled", on, tick }],
-      hardDropped: false,
-      lockResetEligible: false,
       state: { ...state, physics: { ...state.physics, softDropOn: on } },
-    };
+    });
   }
-  return {
-    events: [],
-    hardDropped: false,
-    lockResetEligible: false,
-    state,
-  };
+  return createCommandResult({ state });
 }
 
 /**
  * Handles hard drop command
  */
-function handleHardDrop(state: GameState): CommandResult {
-  const r = tryHardDrop(state);
-  return {
-    events: [],
+function handleHardDrop(state: GameState, tick: Tick): CommandResult {
+  const r = tryHardDrop(state, tick);
+  return createCommandResult({
     hardDropped: r.hardDropped,
-    lockResetEligible: false,
     state: r.state,
-  };
+  });
 }
 
 /**
@@ -159,12 +151,10 @@ function handleHardDrop(state: GameState): CommandResult {
  */
 function handleHold(state: GameState, tick: Tick): CommandResult {
   const r = tryHold(state);
-  return {
+  return createCommandResult({
     events: r.emitted ? [{ kind: "Held", swapped: r.swapped, tick }] : [],
-    hardDropped: false,
-    lockResetEligible: false,
     state: r.state,
-  };
+  });
 }
 
 /**
@@ -193,7 +183,7 @@ function getCommandHandler(
     case "SoftDropOff":
       return handleSoftDrop(state, tick, false);
     case "HardDrop":
-      return handleHardDrop(state);
+      return handleHardDrop(state, tick);
     case "Hold":
       return handleHold(state, tick);
   }
@@ -211,6 +201,7 @@ export function applyCommands(
   let s = state;
   const events: Array<DomainEvent> = [];
   let lockResetEligible = false;
+  let lockResetReason: "move" | "rotate" | undefined;
   let hardDropped = false;
 
   for (const cmd of cmds) {
@@ -218,8 +209,16 @@ export function applyCommands(
     s = result.state;
     events.push(...result.events);
     lockResetEligible = lockResetEligible || result.lockResetEligible;
+    // Take the first reset reason we find (since there should only be one per tick)
+    if (lockResetReason === undefined && result.lockResetReason !== undefined) {
+      lockResetReason = result.lockResetReason;
+    }
     hardDropped = hardDropped || result.hardDropped;
   }
 
-  return { events, sideEffects: { hardDropped, lockResetEligible }, state: s };
+  return {
+    events,
+    sideEffects: { hardDropped, lockResetEligible, lockResetReason },
+    state: s,
+  };
 }

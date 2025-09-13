@@ -23,7 +23,7 @@ export function resolveTransitions(
     events.push({
       kind: "Locked",
       pieceId: placed.pieceId,
-      source: "ground",
+      source: physFx.hardDropped ? "hardDrop" : "ground",
       tick,
     });
 
@@ -43,10 +43,6 @@ export function resolveTransitions(
       events.push({ kind: "PieceSpawned", pieceId: sp.spawnedId, tick });
     }
   }
-
-  // Advance state's tick marker
-  // @ts-ignore - arithmetic on branded type is OK here
-  s = { ...s, tick: (s.tick + 1) as Tick };
 
   return { events, state: s };
 }
