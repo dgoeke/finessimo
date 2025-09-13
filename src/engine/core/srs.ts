@@ -11,6 +11,7 @@
 // Wall Kick Tables
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
+import { canPlacePiece } from "./board";
 import {
   type ActivePiece,
   type Board,
@@ -18,8 +19,6 @@ import {
   createGridCoord,
   gridCoordAsNumber,
 } from "./types";
-
-import { canPlacePiece } from "./board";
 
 export const KICKS_JLSTZ: Record<
   string,
@@ -156,7 +155,7 @@ export const KICKS_I: Record<
 
 // Helper function to get the appropriate kick table for a piece
 function getKickTable(
-  pieceId: string
+  pieceId: string,
 ): Record<string, ReadonlyArray<readonly [number, number]>> {
   return pieceId === "I" ? KICKS_I : KICKS_JLSTZ;
 }
@@ -196,7 +195,7 @@ export function getNextRotation(currentRot: Rot, direction: "CW" | "CCW"): Rot {
 export function canRotate(
   piece: ActivePiece,
   targetRot: Rot,
-  board: Board
+  board: Board,
 ): boolean {
   // O piece doesn't rotate
   if (piece.id === "O") {
@@ -236,7 +235,7 @@ export function canRotate(
 export function tryRotate(
   piece: ActivePiece,
   targetRot: Rot,
-  board: Board
+  board: Board,
 ): ActivePiece | null {
   // O piece doesn't rotate
   if (piece.id === "O") {

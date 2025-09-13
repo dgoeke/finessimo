@@ -1,12 +1,12 @@
-import { advancePhysics } from "./step/advance-physics.js";
-import { applyCommands } from "./step/apply-commands.js";
-import { resolveTransitions } from "./step/resolve-transitions.js";
-import { mkInitialState } from "./types.js";
-import { incrementTick } from "./utils/tick.js";
+import { advancePhysics } from "./step/advance-physics";
+import { applyCommands } from "./step/apply-commands";
+import { resolveTransitions } from "./step/resolve-transitions";
+import { mkInitialState } from "./types";
+import { incrementTick } from "./utils/tick";
 
-import type { Command } from "./commands.js";
-import type { DomainEvent } from "./events.js";
-import type { Tick, EngineConfig, GameState } from "./types.js";
+import type { Command } from "./commands";
+import type { DomainEvent } from "./events";
+import type { Tick, EngineConfig, GameState } from "./types";
 
 /**
  * Initialize engine with deterministic seed and starting tick.

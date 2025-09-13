@@ -6,11 +6,12 @@ import {
   tryHold,
   tryHardDrop,
   tryShiftToWall,
-} from "../gameplay/movement.js";
+} from "../gameplay/movement";
+import { spawnPiece } from "../gameplay/spawn";
 
-import type { Command } from "../commands.js";
-import type { DomainEvent } from "../events.js";
-import type { Tick, GameState } from "../types.js";
+import type { Command } from "../commands";
+import type { DomainEvent } from "../events";
+import type { Tick, GameState } from "../types";
 
 export type CommandSideEffects = {
   lockResetEligible: boolean;
@@ -151,9 +152,43 @@ function handleHardDrop(state: GameState, tick: Tick): CommandResult {
  */
 function handleHold(state: GameState, tick: Tick): CommandResult {
   const r = tryHold(state);
+
+  if (!r.emitted) {
+    // Hold was not allowed or not possible
+    return createCommandResult({ state: r.state });
+  }
+
+  let finalState = r.state;
+  const events: Array<DomainEvent> = [
+    { kind: "Held", swapped: r.swapped, tick },
+  ];
+
+  // If we have a piece to spawn (either from hold swap or need to spawn next)
+  if (r.pieceToSpawn !== null) {
+    // Swap with held piece
+    const spawn = spawnPiece(finalState, r.pieceToSpawn);
+    finalState = spawn.state;
+
+    if (spawn.topOut) {
+      events.push({ kind: "TopOut", tick });
+    } else if (spawn.spawnedId !== null) {
+      events.push({ kind: "PieceSpawned", pieceId: spawn.spawnedId, tick });
+    }
+  } else {
+    // First hold (no piece in hold) - spawn next from queue
+    const spawn = spawnPiece(finalState);
+    finalState = spawn.state;
+
+    if (spawn.topOut) {
+      events.push({ kind: "TopOut", tick });
+    } else if (spawn.spawnedId !== null) {
+      events.push({ kind: "PieceSpawned", pieceId: spawn.spawnedId, tick });
+    }
+  }
+
   return createCommandResult({
-    events: r.emitted ? [{ kind: "Held", swapped: r.swapped, tick }] : [],
-    state: r.state,
+    events,
+    state: finalState,
   });
 }
 

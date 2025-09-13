@@ -1,3 +1,4 @@
+import { PIECES } from "./pieces";
 import {
   type Board,
   type ActivePiece,
@@ -8,8 +9,6 @@ import {
   createGridCoord,
   gridCoordAsNumber,
 } from "./types";
-
-import { PIECES } from "./pieces";
 
 // Brand the cells array to lock dimensions and prevent misuse elsewhere
 export function createEmptyBoard(): Board {
@@ -44,7 +43,7 @@ export function canMove(
   board: Board,
   piece: ActivePiece,
   dx: number,
-  dy: number
+  dy: number,
 ): boolean {
   const newPiece = {
     ...piece,
@@ -59,7 +58,7 @@ export function canMove(
 export function moveToWall(
   board: Board,
   piece: ActivePiece,
-  direction: -1 | 1
+  direction: -1 | 1,
 ): ActivePiece {
   let currentPiece = piece;
 
@@ -90,7 +89,7 @@ export function dropToBottom(board: Board, piece: ActivePiece): ActivePiece {
 // Calculate ghost piece position (same as dropToBottom but more explicit naming)
 export function calculateGhostPosition(
   board: Board,
-  piece: ActivePiece
+  piece: ActivePiece,
 ): ActivePiece {
   return dropToBottom(board, piece);
 }
@@ -105,7 +104,7 @@ export function tryMove(
   board: Board,
   piece: ActivePiece,
   dx: number,
-  dy: number
+  dy: number,
 ): ActivePiece | null {
   if (canMove(board, piece, dx, dy)) {
     return {
@@ -177,7 +176,7 @@ export function getCompletedLines(board: Board): ReadonlyArray<number> {
 // Clear completed lines from the board
 export function clearLines(
   board: Board,
-  toClear: ReadonlyArray<number>
+  toClear: ReadonlyArray<number>,
 ): Board {
   if (toClear.length === 0) return board;
   const newCells = createBoardCells();
@@ -210,7 +209,7 @@ export function clearLines(
 // Pure utility to centralize board cell mutations for garbage insertion.
 export function shiftUpAndInsertRow(
   board: Board,
-  row: ReadonlyArray<number>
+  row: ReadonlyArray<number>,
 ): Board["cells"] {
   const newCells = createBoardCells();
   // Shift rows from y = -vanish..(height-2) up by 1

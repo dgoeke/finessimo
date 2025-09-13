@@ -1,4 +1,5 @@
-/* eslint-disable sonarjs/todo-tag */
+import { canPlacePiece } from "./board";
+import { PIECES } from "./pieces";
 import {
   type Board,
   type ActivePiece,
@@ -6,9 +7,6 @@ import {
   createGridCoord,
   gridCoordAsNumber,
 } from "./types";
-
-import { canPlacePiece } from "./board";
-import { PIECES } from "./pieces";
 
 // Precompute spawn ActivePiece per PieceId with branded coords
 const SPAWN_ACTIVE: Readonly<Record<PieceId, ActivePiece>> = ((): Readonly<
@@ -73,7 +71,7 @@ export function isPieceEntirelyInVanishZone(piece: ActivePiece): boolean {
 export function spawnWithHold(
   board: Board,
   nextPiece: PieceId,
-  currentHold?: PieceId
+  currentHold?: PieceId,
 ): [ActivePiece, PieceId | undefined] | null {
   // If no hold piece, just spawn the next piece
   if (currentHold === undefined) {

@@ -1,9 +1,10 @@
-import { gravityStep } from "../physics/gravity.js";
-import { updateLock } from "../physics/lock-delay.js";
+import { isAtBottom } from "../core/board";
+import { gravityStep } from "../physics/gravity";
+import { updateLock } from "../physics/lock-delay";
 
-import type { DomainEvent } from "../events.js";
-import type { Tick, GameState } from "../types.js";
-import type { CommandSideEffects } from "./apply-commands.js";
+import type { DomainEvent } from "../events";
+import type { Tick, GameState } from "../types";
+import type { CommandSideEffects } from "./apply-commands";
 
 export type PhysicsSideEffects = {
   hardDropped: boolean;
@@ -25,14 +26,20 @@ export function advancePhysics(
   // 1) Apply gravity (may move the piece down multiple cells)
   const g = gravityStep(s);
   s = g.state;
-  // TODO: optionally emit vertical move events; many games don't for down moves.
 
-  // 2) Update grounded flag here if your collision indicates piece is on floor.
-  // TODO: set s.physics.grounded based on collision under the piece.
+  // 2) Update grounded flag based on whether piece is at bottom
+  const grounded = s.piece ? isAtBottom(s.board, s.piece) : false;
+  s = {
+    ...s,
+    physics: {
+      ...s.physics,
+      grounded,
+    },
+  };
 
   // 3) Lock delay machine
   const L = updateLock(s, tick, {
-    grounded: s.physics.grounded,
+    grounded,
     lockResetEligible: cmdFx.lockResetEligible,
     lockResetReason: cmdFx.lockResetReason,
   });

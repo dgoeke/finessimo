@@ -1,5 +1,5 @@
-import type { Command } from "../engine/commands.js";
-import type { Tick } from "../engine/types.js";
+import type { Command } from "../engine/commands";
+import type { Tick } from "../engine/types";
 
 export type Key =
   | "Left"

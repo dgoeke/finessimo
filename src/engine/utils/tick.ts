@@ -1,4 +1,4 @@
-import type { Tick } from "../types.js";
+import type { Tick } from "../types";
 
 /**
  * Type-safe utilities for working with branded Tick types.

@@ -1,8 +1,8 @@
-import { addTicks, isTickAfterOrEqual } from "../engine/utils/tick.js";
+import { addTicks, isTickAfterOrEqual } from "../engine/utils/tick";
 
-import type { ControlState, ControlResult, KeyEdge, Key } from "./types.js";
-import type { Command } from "../engine/commands.js";
-import type { Tick } from "../engine/types.js";
+import type { ControlState, ControlResult, KeyEdge, Key } from "./types";
+import type { Command } from "../engine/commands";
+import type { Tick } from "../engine/types";
 
 /**
  * Processes Left key edge

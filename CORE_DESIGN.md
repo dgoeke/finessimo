@@ -478,7 +478,8 @@ export function controlStep(
       nextRepeatTick = null; // sonic: done
     } else {
       if (nextRepeatTick === null)
-        nextRepeatTick = (dasDeadlineTick + cfg.arrTicks) as Tick;
+        nextRepeatTick = addTicks(dasDeadlineTick, cfg.arrTicks);
+
       if (tick >= nextRepeatTick) {
         cmds.push(
           activeDir === "Left"

@@ -1,6 +1,6 @@
-import { addTicks, isTickAfterOrEqual } from "../utils/tick.js";
+import { addTicks, isTickAfterOrEqual } from "../utils/tick";
 
-import type { Tick, GameState } from "../types.js";
+import type { Tick, GameState } from "../types";
 
 type LockUpdateOptions = {
   grounded: boolean;

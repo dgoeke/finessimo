@@ -94,7 +94,7 @@ export function idxSafe(board: Board, x: GridCoord, y: GridCoord): number {
 export function isCellBlocked(
   board: Board,
   x: GridCoord,
-  y: GridCoord
+  y: GridCoord,
 ): boolean {
   const xNum = gridCoordAsNumber(x);
   const yNum = gridCoordAsNumber(y);

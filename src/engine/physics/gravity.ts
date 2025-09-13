@@ -1,7 +1,7 @@
-import { addQ, fracQ } from "../utils/fixedpoint.js";
-// import { floorQ } from "../utils/fixedpoint.js"; // Will be needed when implementing tryMoveDownNTimes
+import { addQ, fracQ } from "../utils/fixedpoint";
+// import { floorQ } from "../utils/fixedpoint"; // Will be needed when implementing tryMoveDownNTimes
 
-import type { GameState } from "../types.js";
+import type { GameState } from "../types";
 
 /**
  * Advance gravity/softdrop accumulator and attempt to descend piece.
