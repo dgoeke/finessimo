@@ -261,7 +261,7 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
   });
 
   describe("Floor kicks", () => {
-    test("When kickOffset is exposed by tryRotateWithKickInfo, classify 'floor' kicks when Y offset is negative (upward)", () => {
+    test("When kickOffset is exposed by tryRotateWithKickInfo, classify 'floor' kicks when Y offset is positive (upward in SRS)", () => {
       // Create a board with floor obstacle that forces upward kicks
       const floorBoard = fillBoardRow(createEmptyBoard(), 12);
 
@@ -277,10 +277,10 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
       if (result.piece && result.kickIndex > 0) {
         const [, dy] = result.kickOffset;
 
-        // Check if this is a floor kick (negative Y offset means upward movement)
-        if (dy < 0) {
+        // Check if this is a floor kick (positive Y offset means upward movement in SRS)
+        if (dy > 0) {
           // This is a floor kick - piece moved upward to avoid obstacle
-          expect(dy).toBeLessThan(0);
+          expect(dy).toBeGreaterThan(0);
           expect(result.piece).not.toBeNull();
           expect(canPlacePiece(floorBoard, result.piece)).toBe(true);
         }
@@ -298,10 +298,10 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
         const [, dy] = iResult.kickOffset;
 
         // Floor kick classification
-        const isFloorKick = dy < 0;
+        const isFloorKick = dy > 0;
 
         if (isFloorKick) {
-          expect(dy).toBeLessThan(0); // Upward movement
+          expect(dy).toBeGreaterThan(0); // Upward movement in SRS coordinates
           expect(canPlacePiece(floorBoard, iResult.piece)).toBe(true);
         }
       }
@@ -323,9 +323,9 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
         const [, dy] = result.kickOffset;
 
         // If it's a floor kick, verify the piece behavior
-        if (dy < 0) {
-          // Floor kick detected - dy is negative (upward in SRS coordinates)
-          expect(dy).toBeLessThan(0);
+        if (dy > 0) {
+          // Floor kick detected - dy is positive (upward in SRS coordinates)
+          expect(dy).toBeGreaterThan(0);
           expect(canPlacePiece(obstructedBoard, result.piece)).toBe(true);
 
           // Note: Due to coordinate system conversion (dy inverted in implementation),

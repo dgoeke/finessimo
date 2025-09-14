@@ -85,12 +85,13 @@ function classifyKick(
 ): "none" | "wall" | "floor" {
   if (kickIndex === 0) return "none"; // Basic rotation, no kick needed
 
-  // Check for floor kick: upward movement (negative Y in SRS coordinates)
-  if (kickOffset[1] < 0) {
-    return "floor"; // Negative Y is upward in SRS coordinates
+  // Check for floor kick: upward movement. Negative Y is upward in board coords,
+  // but positive Y is up in SRS coords and kickOffset is in SRS coords.
+  if (kickOffset[1] > 0) {
+    return "floor"; //
   }
 
-  return "wall"; // Default to wall kick for any offset
+  return "wall";
 }
 
 function tryRotateInternal(

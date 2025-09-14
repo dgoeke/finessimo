@@ -497,6 +497,20 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
       expect(result.state).toBe(state); // State should be unchanged on failure
     });
 
+    test("handles queue with undefined elements (edge case)", () => {
+      // This tests the defensive undefined check that should never happen
+      // We create a malformed queue to test this edge case
+      const malformedQueue = [undefined] as unknown as ReadonlyArray<PieceId>;
+      const state = createTestState({ queue: malformedQueue });
+
+      const result = spawnPiece(state);
+
+      expect(result.spawnedId).toBeNull();
+      expect(result.topOut).toBe(true);
+      expect(result.state.piece).toBeNull();
+      expect(result.state).toBe(state); // State should be unchanged on failure
+    });
+
     test("immutability - original state unchanged", () => {
       const originalQueue = ["I", "O"] as ReadonlyArray<PieceId>;
       const originalPhysics = createTestPhysics();

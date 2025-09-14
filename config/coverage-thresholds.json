@@ -25,7 +25,7 @@
   },
   "src/engine/core/board.ts": {
     "statements": 100,
-    "branches": 82,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -42,16 +42,16 @@
     "lines": 100
   },
   "src/engine/core/srs.ts": {
-    "statements": 85,
-    "branches": 81,
-    "functions": 80,
-    "lines": 87
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/core/types.ts": {
-    "statements": 87,
-    "branches": 70,
-    "functions": 72,
-    "lines": 92
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/core/rng/one-piece.ts": {
     "statements": 100,
@@ -61,7 +61,7 @@
   },
   "src/engine/core/rng/seeded.ts": {
     "statements": 100,
-    "branches": 70,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
@@ -72,16 +72,16 @@
     "lines": 100
   },
   "src/engine/gameplay/movement.ts": {
-    "statements": 98,
-    "branches": 96,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },
   "src/engine/gameplay/spawn.ts": {
-    "statements": 97,
-    "branches": 92,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 97
+    "lines": 100
   },
   "src/engine/physics/gravity.ts": {
     "statements": 100,
@@ -102,14 +102,14 @@
     "lines": 100
   },
   "src/engine/step/apply-commands.ts": {
-    "statements": 98,
-    "branches": 98,
+    "statements": 100,
+    "branches": 100,
     "functions": 100,
-    "lines": 98
+    "lines": 100
   },
   "src/engine/step/resolve-transitions.ts": {
     "statements": 100,
-    "branches": 87,
+    "branches": 100,
     "functions": 100,
     "lines": 100
   },

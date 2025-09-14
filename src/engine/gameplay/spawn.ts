@@ -67,12 +67,13 @@ export function spawnPiece(
       return { spawnedId: null, state, topOut: true };
     }
 
-    const nextPiece = state.queue[0];
-    if (nextPiece === undefined) {
+    // Safe to access [0] because we checked length > 0 above
+    const firstPiece = state.queue[0];
+    if (firstPiece === undefined) {
+      // Should never happen due to length check above, but satisfies TS
       return { spawnedId: null, state, topOut: true };
     }
-
-    pieceToSpawn = nextPiece;
+    pieceToSpawn = firstPiece;
     newQueue = state.queue.slice(1);
 
     // Refill queue if getting low

@@ -150,7 +150,7 @@ describe("@/engine/step/apply-commands — command handling", () => {
       expect(result.events).toHaveLength(1);
       expect(result.events[0]).toEqual({
         dir: "CW",
-        kick: "wall", // Kick needed due to grounded position
+        kick: "floor", // Floor kick due to grounded position requiring upward kick
         kind: "Rotated",
         tick: groundedState.tick,
       });
@@ -173,7 +173,7 @@ describe("@/engine/step/apply-commands — command handling", () => {
       expect(result.events).toHaveLength(1);
       expect(result.events[0]).toEqual({
         dir: "CCW",
-        kick: "wall",
+        kick: "floor", // Floor kick due to grounded position requiring upward kick
         kind: "Rotated",
         tick: groundedState.tick,
       });

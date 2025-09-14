@@ -23,17 +23,23 @@ function handleLocking(
   // Keep a copy of the active piece state *before* locking
   const justLockedPiece = s.piece;
 
-  // Place piece
+  // Place piece (guaranteed to have pieceId since we checked s.piece exists above)
   const placed = placeActivePiece(s);
   s = placed.state;
-  if (placed.pieceId !== null) {
-    events.push({
-      kind: "Locked",
-      pieceId: placed.pieceId,
-      source: physFx.hardDropped ? "hardDrop" : "ground",
-      tick: s.tick,
-    });
+  // By contract: placeActivePiece only returns null when !state.piece, but we confirmed s.piece exists
+  const pieceId = placed.pieceId;
+  if (pieceId === null) {
+    // This should never happen given our preconditions, but satisfies TypeScript
+    throw new Error(
+      "Unexpected: placeActivePiece returned null when piece exists",
+    );
   }
+  events.push({
+    kind: "Locked",
+    pieceId,
+    source: physFx.hardDropped ? "hardDrop" : "ground",
+    tick: s.tick,
+  });
 
   // Clear lines
   const cleared = clearCompletedLines(s);
@@ -69,10 +75,18 @@ function handleSpawning(
   s = sp.state;
   if (sp.topOut) {
     events.push({ kind: "TopOut", tick: s.tick });
-  } else if (sp.spawnedId !== null) {
+  } else {
+    // By contract: spawnPiece only returns null spawnedId when topOut is true
+    const spawnedId = sp.spawnedId;
+    if (spawnedId === null) {
+      // This should never happen when topOut is false, but satisfies TypeScript
+      throw new Error(
+        "Unexpected: spawnPiece returned null spawnedId when not top-out",
+      );
+    }
     events.push({
       kind: "PieceSpawned",
-      pieceId: sp.spawnedId,
+      pieceId: spawnedId,
       tick: s.tick,
     });
   }

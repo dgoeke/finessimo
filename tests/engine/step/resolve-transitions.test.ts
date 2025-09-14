@@ -14,6 +14,27 @@ import type { Tick } from "@/engine/types";
 
 describe("@/engine/step/resolve-transitions — place/clear/spawn", () => {
   describe("When lockNow=true", () => {
+    test("handles locking with no active piece (edge case)", () => {
+      // Arrange: State with no active piece but lockNow=true
+      const state = createTestGameState({
+        piece: null, // No active piece
+        tick: 50 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      // Act
+      const result = resolveTransitions(state, physFx);
+
+      // Assert: Should skip locking and go to spawning
+      expect(result.events).toHaveLength(1); // Only PieceSpawned
+      expect(result.events[0]?.kind).toBe("PieceSpawned");
+      expect(result.state.piece).not.toBeNull(); // New piece spawned
+    });
+
     test("placeActivePiece() merges into board, emits Locked before any LinesCleared/PieceSpawned", () => {
       // Arrange: State with active piece ready to lock
       const piece = createTestPiece("T", 4, 10);
@@ -256,6 +277,32 @@ describe("@/engine/step/resolve-transitions — place/clear/spawn", () => {
       expect(result.events).toHaveLength(1);
       expect(result.events[0]?.kind).toBe("PieceSpawned");
     });
+
+    test("successful spawn emits PieceSpawned event with correct pieceId", () => {
+      // Arrange: Specific test to cover the spawnedId !== null branch
+      const state = createTestGameState({
+        piece: null, // Trigger spawning
+        queue: ["L", "T", "S"],
+        tick: 450 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: false,
+      };
+
+      // Act
+      const result = resolveTransitions(state, physFx);
+
+      // Assert: Verify the specific spawn success path
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0]).toEqual({
+        kind: "PieceSpawned",
+        pieceId: "L",
+        tick: 450,
+      });
+      expect(result.state.piece?.id).toBe("L");
+    });
   });
 
   describe("Top-out scenarios", () => {
@@ -319,6 +366,108 @@ describe("@/engine/step/resolve-transitions — place/clear/spawn", () => {
   });
 
   describe("Edge cases", () => {
+    test("contract assertion: placeActivePiece should not return null when piece exists", () => {
+      // This tests the assertValidPlacement function
+      // We'll use a spy to monitor the assertion being called
+      const piece = createTestPiece("T", 4, 10);
+      const state = createTestGameState({
+        piece,
+        tick: 100 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      // Act - this should work normally and call the assertion
+      const result = resolveTransitions(state, physFx);
+
+      // Assert - normal operation should succeed
+      expect(result.events).toContainEqual({
+        kind: "Locked",
+        pieceId: "T",
+        source: "ground",
+        tick: 100,
+      });
+    });
+
+    test("contract assertion: spawnPiece should return valid spawn when not top-out", () => {
+      // This tests the assertValidSpawn function
+      const state = createTestGameState({
+        piece: null, // Trigger spawning
+        queue: ["L", "T", "S"],
+        tick: 200 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: false,
+      };
+
+      // Act - this should work normally and call the assertion
+      const result = resolveTransitions(state, physFx);
+
+      // Assert - normal operation should succeed
+      expect(result.events).toContainEqual({
+        kind: "PieceSpawned",
+        pieceId: "L",
+        tick: 200,
+      });
+    });
+
+    test("edge case: test null checks in resolve-transitions", async () => {
+      // These tests cover the null checks that should never execute in practice
+      // but are necessary for TypeScript to understand the types are narrowed
+
+      // We'll mock the functions to return null values to trigger the error paths
+      const spawn = await import("@/engine/gameplay/spawn");
+
+      // Mock placeActivePiece to return null
+      jest.spyOn(spawn, "placeActivePiece").mockReturnValueOnce({
+        pieceId: null,
+        state: createTestGameState(),
+      });
+
+      const stateWithPiece = createTestGameState({
+        piece: createTestPiece("T", 4, 10),
+        tick: 100 as Tick,
+      });
+
+      const lockPhysFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      expect(() => resolveTransitions(stateWithPiece, lockPhysFx)).toThrow(
+        "Unexpected: placeActivePiece returned null when piece exists",
+      );
+
+      // Mock spawnPiece to return null spawnedId with topOut false
+      jest.spyOn(spawn, "spawnPiece").mockReturnValueOnce({
+        spawnedId: null,
+        state: createTestGameState(),
+        topOut: false,
+      });
+
+      const stateWithoutPiece = createTestGameState({
+        piece: null,
+        tick: 200 as Tick,
+      });
+
+      const spawnPhysFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: false,
+      };
+
+      expect(() => resolveTransitions(stateWithoutPiece, spawnPhysFx)).toThrow(
+        "Unexpected: spawnPiece returned null spawnedId when not top-out",
+      );
+
+      // Restore mocks
+      jest.restoreAllMocks();
+    });
+
     test("handles lock + line clear + spawn in correct order", () => {
       // Arrange: State that will trigger all three operations
       const almostFullBoard = fillBoardRow(
