@@ -180,8 +180,15 @@ export function clearLines(
 ): Board {
   if (toClear.length === 0) return board;
 
+  // Filter to valid range [0, height-1] and deduplicate
+  const validCleared = Array.from(
+    new Set(toClear.filter((y) => y >= 0 && y < board.height)),
+  ).sort((a, b) => a - b);
+
+  if (validCleared.length === 0) return board;
+
   const newCells = createBoardCells();
-  const clearedSet = new Set(toClear);
+  const clearedSet = new Set(validCleared);
 
   // Standard Tetris behavior: only rows ABOVE cleared lines shift down
   // Rows below cleared lines stay in their original positions
@@ -193,13 +200,12 @@ export function clearLines(
 
     // Calculate how many cleared lines are below this row (larger y values)
     // In Tetris, rows shift down by the number of cleared lines below them
-    const clearedBelow = toClear.filter((clearedY) => clearedY > y).length;
+    const clearedBelow = validCleared.filter((clearedY) => clearedY > y).length;
     const newY = y + clearedBelow;
 
-    // Skip if the new position would be out of bounds
-    if (newY >= board.height) {
-      continue;
-    }
+    // Note: overflow check (newY >= board.height) is mathematically impossible here.
+    // Max newY occurs when y=-3 and all 20 visible rows are cleared: -3+20=17 < 20
+    // Since validCleared only contains [0, height-1] and y >= -vanishRows, overflow cannot occur.
 
     // Copy row y to newY
     for (let x = 0; x < board.width; x++) {

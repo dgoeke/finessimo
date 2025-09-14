@@ -388,24 +388,6 @@ describe("@/engine/core/board — geometry & line clear", () => {
       ).toBe(0); // Not pulled down to row 2
     });
 
-    test("overflow protection prevents writing beyond board boundaries", () => {
-      const board = createEmptyBoard();
-
-      // Create a test case where newY would exceed board.height (20)
-      // Put content at y=19 (bottom row)
-      const testBoard = setBoardCell(board, 0, 19, 1);
-
-      // Pass invalid "cleared" row numbers > 19 to trigger the overflow protection
-      // When y=19, clearedBelow will count [20,21] as 2, making newY = 19 + 2 = 21 >= 20
-      const result = clearLines(testBoard, [20, 21]); // Invalid row numbers
-
-      // The overflow protection should skip writing this row (since newY = 21 >= 20)
-      // So the content at y=19 gets discarded (not copied to new board)
-      expect(
-        result.cells[idx(result, createGridCoord(0), createGridCoord(19))] ?? 0,
-      ).toBe(0); // Content was discarded due to overflow protection
-    });
-
     test("handles clearing all visible rows while vanish zone has blocks", () => {
       const b0 = createEmptyBoard();
       // Place blocks in vanish zone
@@ -445,6 +427,110 @@ describe("@/engine/core/board — geometry & line clear", () => {
       expect(
         result.cells[idx(result, createGridCoord(0), createGridCoord(-1))] ?? 0,
       ).toBe(0);
+    });
+
+    test("handles duplicate row numbers correctly", () => {
+      const board = createEmptyBoard();
+      // Create board with content at rows 5 and 10
+      let testBoard = setBoardCell(board, 0, 5, 1);
+      testBoard = setBoardCell(testBoard, 0, 10, 2);
+
+      // Clear row 10 with duplicates [10, 10, 10]
+      const resultWithDuplicates = clearLines(testBoard, [10, 10, 10]);
+      // Clear row 10 normally [10]
+      const resultNormal = clearLines(testBoard, [10]);
+
+      // Both should produce identical results
+      expect(resultWithDuplicates).toEqual(resultNormal);
+
+      // Row 5 should shift down to row 6 in both cases
+      expect(
+        resultWithDuplicates.cells[
+          idx(resultWithDuplicates, createGridCoord(0), createGridCoord(6))
+        ],
+      ).toBe(1);
+      expect(
+        resultNormal.cells[
+          idx(resultNormal, createGridCoord(0), createGridCoord(6))
+        ],
+      ).toBe(1);
+    });
+
+    test("handles negative row numbers correctly", () => {
+      const board = createEmptyBoard();
+      // Create board with content at rows 5 and 10
+      let testBoard = setBoardCell(board, 0, 5, 1);
+      testBoard = setBoardCell(testBoard, 0, 10, 2);
+
+      // Clear with negative and valid rows [-1, 10]
+      const resultWithNegative = clearLines(testBoard, [-1, 10]);
+      // Clear normally [10]
+      const resultNormal = clearLines(testBoard, [10]);
+
+      // Both should produce identical results (negative rows ignored)
+      expect(resultWithNegative).toEqual(resultNormal);
+
+      // Row 5 should shift down to row 6 in both cases
+      expect(
+        resultWithNegative.cells[
+          idx(resultWithNegative, createGridCoord(0), createGridCoord(6))
+        ],
+      ).toBe(1);
+    });
+
+    test("handles out-of-range row numbers correctly", () => {
+      const board = createEmptyBoard();
+      // Create board with content at rows 5 and 10
+      let testBoard = setBoardCell(board, 0, 5, 1);
+      testBoard = setBoardCell(testBoard, 0, 10, 2);
+
+      // Clear with out-of-range and valid rows [25, 10]
+      const resultWithOutOfRange = clearLines(testBoard, [25, 10]);
+      // Clear normally [10]
+      const resultNormal = clearLines(testBoard, [10]);
+
+      // Both should produce identical results (out-of-range rows ignored)
+      expect(resultWithOutOfRange).toEqual(resultNormal);
+
+      // Row 5 should shift down to row 6 in both cases
+      expect(
+        resultWithOutOfRange.cells[
+          idx(resultWithOutOfRange, createGridCoord(0), createGridCoord(6))
+        ],
+      ).toBe(1);
+    });
+
+    test("handles mixed invalid inputs correctly", () => {
+      const board = createEmptyBoard();
+      // Create board with content at rows 5 and 10
+      let testBoard = setBoardCell(board, 0, 5, 1);
+      testBoard = setBoardCell(testBoard, 0, 10, 2);
+
+      // Clear with mixed invalid inputs [-1, 10, 10, 25, -5]
+      const resultWithMixed = clearLines(testBoard, [-1, 10, 10, 25, -5]);
+      // Clear normally [10]
+      const resultNormal = clearLines(testBoard, [10]);
+
+      // Both should produce identical results (invalid rows ignored, duplicates removed)
+      expect(resultWithMixed).toEqual(resultNormal);
+
+      // Row 5 should shift down to row 6 in both cases
+      expect(
+        resultWithMixed.cells[
+          idx(resultWithMixed, createGridCoord(0), createGridCoord(6))
+        ],
+      ).toBe(1);
+    });
+
+    test("returns unchanged board when all input rows are invalid", () => {
+      const board = createEmptyBoard();
+      const testBoard = setBoardCell(board, 0, 5, 1);
+
+      // Clear with only invalid rows
+      const result = clearLines(testBoard, [-1, -5, 25, 30]);
+
+      // Board should be unchanged
+      expect(result).toBe(testBoard);
     });
   });
 
