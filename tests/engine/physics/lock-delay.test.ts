@@ -12,28 +12,25 @@ import {
 import { toQ } from "@/engine/utils/fixedpoint";
 import { addTicks } from "@/engine/utils/tick";
 
+import { createTestConfig } from "../../test-helpers";
+
 // Test helper functions
-function createTestConfig(
+function createTestConfig_lockDelay(
   lockDelayTicks: TickDelta = 30 as TickDelta,
   maxLockResets = 15,
 ): EngineConfig {
-  return {
-    gravity32: toQ(0.5),
-    height: 20,
+  return createTestConfig({
     lockDelayTicks,
     maxLockResets,
-    previewCount: 7,
-    rngSeed: 12345,
-    width: 10,
-  };
+  });
 }
 
-function createTestGameState(
+function createTestGameState_lockDelay(
   overrides: Partial<GameState> = {},
   lockDelayTicks: TickDelta = 30 as TickDelta,
   maxLockResets = 15,
 ): GameState {
-  const cfg = createTestConfig(lockDelayTicks, maxLockResets);
+  const cfg = createTestConfig_lockDelay(lockDelayTicks, maxLockResets);
   const baseState = mkInitialState(cfg, 0 as Tick);
 
   return {
@@ -66,7 +63,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const expectedDeadline = addTicks(currentTick, lockDelay);
 
     // Create state with no active deadline
-    const state = createTestGameState(
+    const state = createTestGameState_lockDelay(
       {
         physics: createPhysicsState(toQ(0), false, null, 0), // No deadline
         tick: currentTick,
@@ -95,7 +92,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const existingResetCount = 3;
 
     // Create state with existing deadline and reset count
-    const state = createTestGameState({
+    const state = createTestGameState_lockDelay({
       physics: createPhysicsState(
         toQ(0),
         false,
@@ -127,7 +124,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const expectedNewDeadline = addTicks(currentTick, lockDelay);
 
     // Create state with existing deadline and resetCount below limit
-    const state = createTestGameState(
+    const state = createTestGameState_lockDelay(
       {
         physics: createPhysicsState(
           toQ(0),
@@ -182,7 +179,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const existingDeadline = 120 as Tick;
 
     // Create state with resetCount at maxResets
-    const state = createTestGameState(
+    const state = createTestGameState_lockDelay(
       {
         physics: createPhysicsState(
           toQ(0),
@@ -217,7 +214,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const deadlineTick = 90 as Tick; // In the past
 
     // Create state with deadline in the past
-    const state = createTestGameState({
+    const state = createTestGameState_lockDelay({
       physics: createPhysicsState(toQ(0), false, deadlineTick, 5),
       tick: currentTick,
     });
@@ -240,7 +237,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const currentTick = 100 as Tick;
     const deadlineTick = 100 as Tick; // Exactly at deadline
 
-    const state = createTestGameState({
+    const state = createTestGameState_lockDelay({
       physics: createPhysicsState(toQ(0), false, deadlineTick, 0),
       tick: currentTick,
     });
@@ -257,7 +254,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const currentTick = 100 as Tick;
     const deadlineTick = 101 as Tick; // In the future
 
-    const state = createTestGameState({
+    const state = createTestGameState_lockDelay({
       physics: createPhysicsState(toQ(0), false, deadlineTick, 0),
       tick: currentTick,
     });
@@ -275,7 +272,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const currentTick = 100 as Tick;
     const existingDeadline = 120 as Tick;
 
-    const state = createTestGameState(
+    const state = createTestGameState_lockDelay(
       {
         physics: createPhysicsState(toQ(0), false, existingDeadline, 0),
         tick: currentTick,
@@ -302,7 +299,7 @@ describe("@/engine/physics/lock-delay — deadlines & caps", () => {
     const resetCount = 5;
 
     // Create state with no deadline (null) but some reset count
-    const state = createTestGameState({
+    const state = createTestGameState_lockDelay({
       physics: createPhysicsState(toQ(0), false, null, resetCount),
       tick: currentTick,
     });

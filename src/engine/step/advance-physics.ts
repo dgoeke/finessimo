@@ -30,7 +30,31 @@ export function advancePhysics(
   // 2) Compute grounded flag based on whether piece is at bottom (not stored in state)
   const grounded = s.piece ? isAtBottom(s.board, s.piece) : false;
 
-  // 3) Lock delay machine
+  // 3) Hard drop bypasses lock delay system entirely
+  if (cmdFx.hardDropped) {
+    // If piece just became grounded and had no deadline, emit LockStarted
+    const wasAirborne = s.physics.lock.deadlineTick === null;
+    if (grounded && wasAirborne) {
+      events.push({ kind: "LockStarted", tick: s.tick });
+    }
+
+    const sideEffects: PhysicsSideEffects = {
+      hardDropped: true,
+      lockNow: true,
+    };
+
+    if (cmdFx.spawnOverride !== undefined) {
+      sideEffects.spawnOverride = cmdFx.spawnOverride;
+    }
+
+    return {
+      events,
+      sideEffects,
+      state: s,
+    };
+  }
+
+  // 4) Normal lock delay machine (only for non-hard-drop cases)
   const L = updateLock(s, s.tick, {
     grounded,
     lockResetEligible: cmdFx.lockResetEligible,
@@ -41,8 +65,7 @@ export function advancePhysics(
   if (L.reset && L.resetReason !== undefined)
     events.push({ kind: "LockReset", reason: L.resetReason, tick: s.tick });
 
-  // Hard drop forces immediate lock regardless of lock delay
-  const lockNow = L.lockNow || cmdFx.hardDropped;
+  const lockNow = L.lockNow;
 
   const sideEffects: PhysicsSideEffects = {
     hardDropped: cmdFx.hardDropped,

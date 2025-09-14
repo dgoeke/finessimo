@@ -8,111 +8,14 @@ import {
   tryHardDrop,
   tryHold,
 } from "@/engine/gameplay/movement";
+import { createGridCoord } from "@/engine/types";
+
 import {
-  type GameState,
-  type ActivePiece,
-  type Board,
-  type PieceId,
-  type Rot,
-  type Tick,
-  type TickDelta,
-  type Q16_16,
-  mkInitialState,
-  createBoardCells,
-  createGridCoord,
-  createCellValue,
-  idx,
-} from "@/engine/types";
-
-// ===========================
-// Test Helper Functions
-// ===========================
-
-/**
- * Create a complete GameState with sensible defaults for testing
- */
-function createTestGameState(overrides: Partial<GameState> = {}): GameState {
-  const cfg = {
-    gravity32: (1 << 16) as Q16_16, // 1.0 in fixed point
-    height: 20 as const,
-    lockDelayTicks: 30 as TickDelta,
-    maxLockResets: 15,
-    previewCount: 5,
-    rngSeed: 12345,
-    softDrop32: (20 << 16) as Q16_16,
-    width: 10 as const,
-  };
-
-  const baseState = mkInitialState(cfg, 0 as Tick);
-
-  // Apply overrides, merging nested objects properly
-  return {
-    ...baseState,
-    ...overrides,
-    hold: {
-      ...baseState.hold,
-      ...(overrides.hold ?? {}),
-    },
-    physics: {
-      ...baseState.physics,
-      ...(overrides.physics ?? {}),
-    },
-  };
-}
-
-/**
- * Create an ActivePiece at specified position with proper branded types
- */
-function createTestPiece(
-  id: PieceId = "T",
-  x = 4,
-  y = 10,
-  rot: Rot = "spawn",
-): ActivePiece {
-  return {
-    id,
-    rot,
-    x: createGridCoord(x),
-    y: createGridCoord(y),
-  };
-}
-
-/**
- * Set individual board cells for obstacle testing
- */
-function setBoardCell(
-  board: Board,
-  x: number,
-  y: number,
-  value: number,
-): Board {
-  const newCells = createBoardCells();
-  // Copy existing cells
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Set the specific cell
-  const index = idx(board, createGridCoord(x), createGridCoord(y));
-  newCells[index] = createCellValue(value);
-  return { ...board, cells: newCells };
-}
-
-/**
- * Fill entire rows for testing boundaries
- */
-function fillBoardRow(board: Board, y: number, value = 1): Board {
-  const newCells = createBoardCells();
-  // Copy existing cells
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Fill the specified row
-  for (let x = 0; x < board.width; x++) {
-    const index = idx(board, createGridCoord(x), createGridCoord(y));
-    newCells[index] = createCellValue(value);
-  }
-  return { ...board, cells: newCells };
-}
+  createTestGameState,
+  createTestPiece,
+  setBoardCell,
+  fillBoardRow,
+} from "../../test-helpers";
 
 // ===========================
 // Test Suites
@@ -121,7 +24,7 @@ function fillBoardRow(board: Board, y: number, value = 1): Board {
 describe("@/engine/gameplay/movement — move/rotate/hold/drop", () => {
   describe("tryMoveLeft/tryMoveRight", () => {
     test("returns moved=true and updates x by ±1 when legal; lockResetEligible computed from pre-move grounded state", () => {
-      // Test valid left move
+      // Test valid left move - note: the shared createTestPiece uses y=0 by default, so specify y=10
       const state = createTestGameState({
         piece: createTestPiece("T", 5, 10),
       });

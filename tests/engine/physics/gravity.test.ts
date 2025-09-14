@@ -1,107 +1,17 @@
 // Tests for @/engine/physics/gravity.ts — Q16.16 fixed-point gravity system
 import { createEmptyBoard } from "@/engine/core/board";
-import {
-  type ActivePiece,
-  type Board,
-  createBoardCells,
-  createGridCoord,
-  idx,
-} from "@/engine/core/types";
+import { createGridCoord } from "@/engine/core/types";
 import { gravityStep } from "@/engine/physics/gravity";
-import {
-  mkInitialState,
-  type GameState,
-  type EngineConfig,
-  type Tick,
-  type Q16_16,
-  type TickDelta,
-} from "@/engine/types";
+import { mkInitialState, type GameState, type Tick } from "@/engine/types";
 import { toQ, floorQ } from "@/engine/utils/fixedpoint";
 
-// Test helper functions
-function createTestConfig(
-  gravity32: Q16_16 = toQ(0.5),
-  softDrop32?: Q16_16,
-): EngineConfig {
-  const config: EngineConfig = {
-    gravity32,
-    height: 20,
-    lockDelayTicks: 30 as TickDelta,
-    maxLockResets: 15,
-    previewCount: 7,
-    rngSeed: 12345,
-    width: 10,
-  };
-
-  if (softDrop32 !== undefined) {
-    return { ...config, softDrop32 };
-  }
-
-  return config;
-}
-
-function createTestGameState(
-  overrides: Partial<GameState> = {},
-  gravity32: Q16_16 = toQ(0.5),
-): GameState {
-  // Extract softDrop32 from cfg overrides if present
-  const softDrop32 = overrides.cfg?.softDrop32;
-  const cfg = createTestConfig(gravity32, softDrop32);
-  const baseState = mkInitialState(cfg, 0 as Tick);
-
-  return {
-    ...baseState,
-    ...overrides,
-    physics: { ...baseState.physics, ...overrides.physics },
-  };
-}
-
-function createTestPiece(
-  id: "T" | "I" | "O" | "S" | "Z" | "L" | "J" = "T",
-  x = 4,
-  y = 0,
-  rot: "spawn" | "right" | "two" | "left" = "spawn",
-): ActivePiece {
-  return {
-    id,
-    rot,
-    x: createGridCoord(x),
-    y: createGridCoord(y),
-  };
-}
-
-function setupBoardWithFloor(floorY: number, blockValue = 1): Board {
-  const board = createEmptyBoard();
-  const newCells = createBoardCells();
-
-  // Copy existing empty cells
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-
-  // Fill floor row
-  for (let x = 0; x < board.width; x++) {
-    const index = idx(board, createGridCoord(x), createGridCoord(floorY));
-    newCells[index] = blockValue;
-  }
-
-  return { ...board, cells: newCells };
-}
-
-function setBoardCell(
-  board: Board,
-  x: number,
-  y: number,
-  value: number,
-): Board {
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  const index = idx(board, createGridCoord(x), createGridCoord(y));
-  newCells[index] = value;
-  return { ...board, cells: newCells };
-}
+import {
+  createTestConfig,
+  createTestGameState,
+  createTestPiece,
+  setupBoardWithFloor,
+  setBoardCell,
+} from "../../test-helpers";
 
 describe("@/engine/physics/gravity — fixed-point descent", () => {
   test("With gravity32 = 0.5 (Q16.16), two ticks should move the piece down by one cell (absent collision)", () => {
@@ -210,7 +120,7 @@ describe("@/engine/physics/gravity — fixed-point descent", () => {
   test("Soft drop behavior when softDropOn = true", () => {
     const piece = createTestPiece("T", 4, 0);
     // Create state with soft drop rate
-    const cfg = createTestConfig(toQ(0.5), toQ(2.0)); // gravity 0.5, soft drop 2.0
+    const cfg = createTestConfig({ gravity32: toQ(0.5), softDrop32: toQ(2.0) }); // gravity 0.5, soft drop 2.0
     const baseState = mkInitialState(cfg, 0 as Tick);
     const state: GameState = {
       ...baseState,
@@ -345,8 +255,13 @@ describe("@/engine/physics/gravity — fixed-point descent", () => {
   test("Soft drop with undefined softDrop32 falls back to normal gravity", () => {
     const piece = createTestPiece("T", 4, 0);
     // Create state with no soft drop rate (undefined)
-    const cfg = createTestConfig(toQ(0.5)); // Only normal gravity, no soft drop
-    const baseState = mkInitialState(cfg, 0 as Tick);
+    const cfg = createTestConfig({ gravity32: toQ(0.5) });
+    // Create a modified config without softDrop32 to test fallback by destructuring
+    // Note: we extract softDrop32 to remove it, creating a config that doesn't have this property
+    const cfgWithoutSoftDrop = (({ softDrop32: _softDrop32, ...rest }) => rest)(
+      cfg,
+    );
+    const baseState = mkInitialState(cfgWithoutSoftDrop, 0 as Tick);
     const state: GameState = {
       ...baseState,
       physics: {

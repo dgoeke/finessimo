@@ -11,78 +11,16 @@ import {
   shiftUpAndInsertRow,
   tryMove,
 } from "@/engine/core/board";
+import { type Board, createGridCoord, idx } from "@/engine/core/types";
+
 import {
-  type ActivePiece,
-  type Board,
-  createBoardCells,
-  createGridCoord,
-  idx,
-} from "@/engine/core/types";
+  createTestBoard,
+  createTestPiece,
+  setBoardCell,
+  fillBoardRow,
+} from "../../test-helpers";
 
 // Helper functions for building test scenarios
-
-function createTestBoard(customCells: Record<number, number> = {}): Board {
-  const board = createEmptyBoard();
-  const newCells = createBoardCells();
-
-  // Copy existing cells
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-
-  // Apply custom cells
-  for (const [indexStr, value] of Object.entries(customCells)) {
-    const index = parseInt(indexStr, 10);
-    newCells[index] = value;
-  }
-
-  return { ...board, cells: newCells };
-}
-
-function createTestPiece(
-  id: "T" | "I" | "O" | "S" | "Z" | "L" | "J" = "T",
-  x = 0,
-  y = 0,
-  rot: "spawn" | "right" | "two" | "left" = "spawn",
-): ActivePiece {
-  return {
-    id,
-    rot,
-    x: createGridCoord(x),
-    y: createGridCoord(y),
-  };
-}
-
-function setBoardCell(
-  board: Board,
-  x: number,
-  y: number,
-  value: number,
-): Board {
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  const index = idx(board, createGridCoord(x), createGridCoord(y));
-  newCells[index] = value;
-  return { ...board, cells: newCells };
-}
-
-function fillBoardRow(board: Board, y: number, value = 1): Board {
-  const newCells = createBoardCells();
-  // Copy existing cells
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Fill the specified row
-  for (let x = 0; x < board.width; x++) {
-    const index = idx(board, createGridCoord(x), createGridCoord(y));
-    newCells[index] = value;
-  }
-  return { ...board, cells: newCells };
-}
-
-// Removed unused function createBoardWithFilledRows
 
 describe("@/engine/core/board — geometry & line clear", () => {
   describe("idx()", () => {
@@ -543,6 +481,91 @@ describe("@/engine/core/board — geometry & line clear", () => {
       // Should return properly sized BoardCells
       expect(newCells).toHaveLength(230); // 23 * 10
       expect(newCells).toBeInstanceOf(Uint8Array);
+    });
+
+    test("handles short garbage row by filling remaining cells with 0", () => {
+      const board = createTestBoard();
+      const shortRow = [1, 2, 3]; // shorter than width 10
+      const newCells = shiftUpAndInsertRow(board, shortRow);
+      const expectedBoard = { ...board, cells: newCells };
+
+      for (let x = 0; x < 10; x++) {
+        const v =
+          newCells[
+            idx(expectedBoard, createGridCoord(x), createGridCoord(19))
+          ] ?? 0;
+        if (x < shortRow.length) {
+          expect(v).toBe(shortRow[x] ?? 0);
+        } else {
+          expect(v).toBe(0);
+        }
+      }
+    });
+  });
+
+  describe("Defensive fallbacks with truncated BoardCells (branch coverage)", () => {
+    test("lockPiece: copies from truncated source using 0 fallback", () => {
+      // Intentionally create an invalid board with too-short cells to exercise `?? 0` fallbacks
+      const invalidCells = new Uint8Array(10) as unknown as Board["cells"]; // shorter than 230
+      const invalidBoard: Board = {
+        cells: invalidCells,
+        height: 20,
+        totalHeight: 23,
+        vanishRows: 3,
+        width: 10,
+      };
+
+      const piece = createTestPiece("T", 4, 10, "spawn");
+      const locked = lockPiece(invalidBoard, piece);
+
+      // Should succeed and produce a full-sized cells array
+      expect(locked.cells).toHaveLength(230);
+      // Expect some known cell from the piece to be written
+      const v =
+        locked.cells[idx(locked, createGridCoord(5), createGridCoord(10))] ?? 0;
+      expect(v).toBe(3); // T piece value
+    });
+
+    test("clearLines: uses vanish copy fallback without throwing", () => {
+      const invalidCells = new Uint8Array(10) as unknown as Board["cells"]; // shorter than 230
+      const invalidBoard: Board = {
+        cells: invalidCells,
+        height: 20,
+        totalHeight: 23,
+        vanishRows: 3,
+        width: 10,
+      };
+
+      // Clearing any line should not throw and should return a board with full-sized cells
+      const cleared = clearLines(invalidBoard, [0]);
+      expect(cleared.cells).toHaveLength(230);
+    });
+
+    test("shiftUpAndInsertRow: reads undefined from source and falls back to 0", () => {
+      const invalidCells = new Uint8Array(10) as unknown as Board["cells"]; // shorter than 230
+      const invalidBoard: Board = {
+        cells: invalidCells,
+        height: 20,
+        totalHeight: 23,
+        vanishRows: 3,
+        width: 10,
+      };
+
+      const garbageRow = [9, 9, 9, 9, 9, 9, 9, 9, 9, 9];
+      const newCells = shiftUpAndInsertRow(invalidBoard, garbageRow);
+
+      // Bottom row should match provided garbage; shifted rows beyond source length default to 0
+      for (let x = 0; x < 10; x++) {
+        expect(
+          newCells[
+            idx(
+              { ...invalidBoard, cells: newCells },
+              createGridCoord(x),
+              createGridCoord(19),
+            )
+          ] ?? 0,
+        ).toBe(garbageRow[x] ?? 0);
+      }
     });
   });
 });

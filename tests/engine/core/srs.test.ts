@@ -3,104 +3,18 @@ import {
   tryRotateWithKickInfo,
   getNextRotation,
   canRotate,
+  tryRotate,
+  KICKS_JLSTZ,
 } from "@/engine/core/srs";
+import { type PieceId, type Rot, createGridCoord } from "@/engine/core/types";
+
 import {
-  type ActivePiece,
-  type Board,
-  type PieceId,
-  type Rot,
-  createBoardCells,
-  createGridCoord,
-  idx,
-} from "@/engine/core/types";
-
-// Helper functions for building test scenarios
-
-/**
- * Create a test piece at specified position and rotation
- */
-function createTestPiece(
-  id: PieceId,
-  x: number,
-  y: number,
-  rot: Rot = "spawn",
-): ActivePiece {
-  return {
-    id,
-    rot,
-    x: createGridCoord(x),
-    y: createGridCoord(y),
-  };
-}
-
-/**
- * Set a single cell on the board to a specified value
- */
-function setBoardCell(
-  board: Board,
-  x: number,
-  y: number,
-  value: number,
-): Board {
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  const index = idx(board, createGridCoord(x), createGridCoord(y));
-  newCells[index] = value;
-  return { ...board, cells: newCells };
-}
-
-/**
- * Create a board with a vertical wall on the left side (x=0) from y=0 to y=19
- */
-function createBoardWithLeftWall(): Board {
-  const board = createEmptyBoard();
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Fill left wall (x=0) for visible rows
-  for (let y = 0; y < 20; y++) {
-    const index = idx(board, createGridCoord(0), createGridCoord(y));
-    newCells[index] = 1;
-  }
-  return { ...board, cells: newCells };
-}
-
-/**
- * Create a board with a vertical wall on the right side (x=9) from y=0 to y=19
- */
-function createBoardWithRightWall(): Board {
-  const board = createEmptyBoard();
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Fill right wall (x=9) for visible rows
-  for (let y = 0; y < 20; y++) {
-    const index = idx(board, createGridCoord(9), createGridCoord(y));
-    newCells[index] = 1;
-  }
-  return { ...board, cells: newCells };
-}
-
-/**
- * Create a board with a floor at the specified y level across full width
- */
-function createBoardWithFloor(floorY: number): Board {
-  const board = createEmptyBoard();
-  const newCells = createBoardCells();
-  for (let i = 0; i < board.cells.length; i++) {
-    newCells[i] = board.cells[i] ?? 0;
-  }
-  // Fill floor row across full width
-  for (let x = 0; x < 10; x++) {
-    const index = idx(board, createGridCoord(x), createGridCoord(floorY));
-    newCells[index] = 1;
-  }
-  return { ...board, cells: newCells };
-}
+  createTestPiece,
+  setBoardCell,
+  createBoardWithLeftWall,
+  createBoardWithRightWall,
+  fillBoardRow,
+} from "../../test-helpers";
 
 describe("@/engine/core/srs — wall/floor kicks", () => {
   describe("Basic rotation (no kick)", () => {
@@ -308,7 +222,7 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
   describe("Floor kicks", () => {
     test("When kickOffset is exposed by tryRotateWithKickInfo, classify 'floor' kicks when Y offset is negative (upward)", () => {
       // Create a board with floor obstacle that forces upward kicks
-      const floorBoard = createBoardWithFloor(12);
+      const floorBoard = fillBoardRow(createEmptyBoard(), 12);
 
       // Place T-piece above the floor where rotation might need upward kick
       const tPieceAboveFloor = createTestPiece("T", 4, 11, "spawn");
@@ -548,6 +462,79 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
       } else {
         expect(fullResult.piece).toBeNull();
         expect(fullResult.kickIndex).toBe(-1);
+      }
+    });
+  });
+
+  describe("canRotate and tryRotate wrappers — explicit coverage", () => {
+    test("canRotate: O-piece only allows same-state rotations", () => {
+      const board = createEmptyBoard();
+      const oPiece = createTestPiece("O", 4, 10, "spawn");
+
+      // Same rotation state → true
+      expect(canRotate(oPiece, "spawn", board)).toBe(true);
+
+      // Different rotation state → false (O-piece doesn't rotate)
+      expect(canRotate(oPiece, "right", board)).toBe(false);
+    });
+
+    test("canRotate: rejects non-adjacent rotation pairs (e.g., spawn→two)", () => {
+      const board = createEmptyBoard();
+      const tPiece = createTestPiece("T", 4, 10, "spawn");
+
+      // Direct 180° rotation is not allowed by SRS (no kick table key)
+      expect(canRotate(tPiece, "two", board)).toBe(false);
+    });
+
+    test("canRotate: returns false when all kicks fail (boundary OOB)", () => {
+      const board = createEmptyBoard();
+      // Place near the right boundary so every kick candidate would put a 'right' rotation out-of-bounds
+      const tPiece = createTestPiece("T", 9, 10, "spawn");
+
+      expect(canRotate(tPiece, "right", board)).toBe(false);
+    });
+
+    test("tryRotate: returns piece on success and null on invalid pair", () => {
+      const board = createEmptyBoard();
+      const tPiece = createTestPiece("T", 4, 10, "spawn");
+
+      // Valid adjacent rotation
+      const successPiece = tryRotate(tPiece, "right", board);
+      expect(successPiece).not.toBeNull();
+
+      // Invalid opposite rotation (spawn→two) should fail
+      const failedPiece = tryRotate(tPiece, "two", board);
+      expect(failedPiece).toBeNull();
+    });
+
+    test("getNextRotation: default branch behavior on invalid input (defensive)", () => {
+      // Force an invalid Rot at runtime to exercise default branch.
+      const invalidRot = "invalid" as unknown as Rot;
+      expect(getNextRotation(invalidRot, "CW")).toBe(invalidRot);
+      expect(getNextRotation(invalidRot, "CCW")).toBe(invalidRot);
+    });
+  });
+
+  describe("Defensive handling of malformed kick entries", () => {
+    test("tryRotateWithKickInfo skips undefined kick offsets", () => {
+      const board = createEmptyBoard();
+      const tPieceNearRight = createTestPiece("T", 9, 10, "spawn");
+
+      // Mutate kick table for this test only to include an undefined entry at the end
+      const key = "spawn->right" as const;
+      const arr = KICKS_JLSTZ[key] as unknown as Array<
+        readonly [number, number] | undefined
+      >;
+      arr.push(undefined);
+
+      try {
+        const result = tryRotateWithKickInfo(tPieceNearRight, "right", board);
+        // Rotation should still fail (boundary), but loop should tolerate the undefined entry
+        expect(result.piece).toBeNull();
+        expect(result.kickIndex).toBe(-1);
+      } finally {
+        // Restore original shape
+        arr.pop();
       }
     });
   });

@@ -10,31 +10,19 @@ import {
   idxSafe,
   createGridCoord,
   createCellValue,
+  assertGridCoord,
+  isCellValue,
+  assertCellValue,
+  isCellBlocked,
   createBoardCells,
   type Board,
   type PieceId,
 } from "@/engine/core/types";
-import {
-  mkInitialState,
-  type EngineConfig,
-  type Tick,
-  type Q16_16,
-  type TickDelta,
-} from "@/engine/types";
+import { mkInitialState, type Tick } from "@/engine/types";
+
+import { createTestConfig } from "../test-helpers";
 
 // Test helper functions
-function createTestConfig(): EngineConfig {
-  return {
-    gravity32: 0.5 as Q16_16,
-    height: 20,
-    lockDelayTicks: 30 as TickDelta,
-    maxLockResets: 15,
-    previewCount: 7,
-    rngSeed: 12345,
-    softDrop32: 2.0 as Q16_16,
-    width: 10,
-  } as const;
-}
 
 function assertValidPieceId(piece: unknown): asserts piece is PieceId {
   if (
@@ -182,5 +170,55 @@ describe("@/engine/types — runtime invariants", () => {
     expect(() => idxSafe(board, validX, outOfBoundsYHigh)).toThrow(
       "idxSafe: out-of-bounds",
     );
+  });
+
+  describe("Guards and assertions", () => {
+    test("assertGridCoord throws on invalid input", () => {
+      // Non-number
+      expect(() => assertGridCoord("5" as unknown)).toThrow(
+        "Not a valid GridCoord",
+      );
+      // Non-integer number
+      expect(() => assertGridCoord(5.5 as unknown)).toThrow(
+        "Not a valid GridCoord",
+      );
+      // Valid case should not throw
+      expect(() => assertGridCoord(5 as unknown)).not.toThrow();
+    });
+
+    test("isCellValue truth table (valid 0..8 only)", () => {
+      for (let n = 0; n <= 8; n++) {
+        expect(isCellValue(n)).toBe(true);
+      }
+      expect(isCellValue(-1)).toBe(false);
+      expect(isCellValue(9)).toBe(false);
+      expect(isCellValue(2.5 as unknown as number)).toBe(false);
+      expect(isCellValue("a" as unknown as number)).toBe(false);
+    });
+
+    test("assertCellValue throws on invalid and passes on valid", () => {
+      expect(() => assertCellValue(9 as unknown)).toThrow(
+        "Not a valid CellValue",
+      );
+      expect(() => assertCellValue(-1 as unknown)).toThrow(
+        "Not a valid CellValue",
+      );
+      expect(() => assertCellValue(3 as unknown)).not.toThrow();
+    });
+
+    test("isCellBlocked: y below vanish zone (< -vanishRows) is treated as blocked", () => {
+      const board: Board = {
+        cells: createBoardCells(),
+        height: 20,
+        totalHeight: 23,
+        vanishRows: 3,
+        width: 10,
+      };
+
+      const x = createGridCoord(0);
+      const yAboveStoredTop = createGridCoord(-4); // -4 < -vanishRows (-3)
+      // idxSafe would throw, but isCellBlocked should simply return true
+      expect(isCellBlocked(board, x, yAboveStoredTop)).toBe(true);
+    });
   });
 });

@@ -12,10 +12,10 @@
     "lines": 0
   },
   "src/engine/index.ts": {
-    "statements": 0,
+    "statements": 100,
     "branches": 100,
-    "functions": 0,
-    "lines": 0
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/types.ts": {
     "statements": 100,
@@ -24,8 +24,8 @@
     "lines": 100
   },
   "src/engine/core/board.ts": {
-    "statements": 98,
-    "branches": 77,
+    "statements": 100,
+    "branches": 82,
     "functions": 100,
     "lines": 100
   },
@@ -42,10 +42,10 @@
     "lines": 100
   },
   "src/engine/core/srs.ts": {
-    "statements": 84,
+    "statements": 85,
     "branches": 81,
     "functions": 80,
-    "lines": 85
+    "lines": 87
   },
   "src/engine/core/types.ts": {
     "statements": 87,
@@ -72,16 +72,16 @@
     "lines": 100
   },
   "src/engine/gameplay/movement.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 98,
+    "branches": 96,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/gameplay/spawn.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 97,
+    "branches": 92,
+    "functions": 100,
+    "lines": 97
   },
   "src/engine/physics/gravity.ts": {
     "statements": 100,
@@ -96,22 +96,22 @@
     "lines": 100
   },
   "src/engine/step/advance-physics.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/step/apply-commands.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 98,
+    "branches": 98,
+    "functions": 100,
+    "lines": 98
   },
   "src/engine/step/resolve-transitions.ts": {
-    "statements": 0,
-    "branches": 0,
-    "functions": 0,
-    "lines": 0
+    "statements": 100,
+    "branches": 87,
+    "functions": 100,
+    "lines": 100
   },
   "src/engine/utils/fixedpoint.ts": {
     "statements": 100,
