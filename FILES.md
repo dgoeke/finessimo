@@ -37,7 +37,7 @@ This document provides a concise overview of the TypeScript source files under `
 
 ### Physics (`src/engine/physics/`)
 
-- `src/engine/physics/gravity.ts` — Gravity and soft drop mechanics (skeleton)
+- `src/engine/physics/gravity.ts` — Gravity and soft drop via Q16.16 accumulator
 - `src/engine/physics/lock-delay.ts` — Lock delay timing and reset logic
 
 ### Step Processing (`src/engine/step/`)
@@ -59,7 +59,7 @@ This document provides a concise overview of the TypeScript source files under `
 ## Adapters (`src/adapters/`)
 
 - `src/adapters/excalibur.ts` — Excalibur.js game engine adapter
-- `src/adapters/config-adapter.ts` — Configuration management adapter
+- `src/adapters/config-adapter.ts` — Tick conversion utilities for config (re-exports)
 
 ## Analytics (`src/analytics/`)
 

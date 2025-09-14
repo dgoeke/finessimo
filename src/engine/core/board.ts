@@ -173,6 +173,56 @@ export function getCompletedLines(board: Board): ReadonlyArray<number> {
   return completedLines;
 }
 
+// Helper function to copy vanish rows
+function copyVanishRows(
+  board: Board,
+  newCells: ReturnType<typeof createBoardCells>,
+): void {
+  for (let y = -board.vanishRows; y < 0; y++) {
+    for (let x = 0; x < board.width; x++) {
+      newCells[idx(board, createGridCoord(x), createGridCoord(y))] =
+        board.cells[idx(board, createGridCoord(x), createGridCoord(y))] ?? 0;
+    }
+  }
+}
+
+// Helper function to collect a single row
+function collectRow(board: Board, y: number): Array<number> | null {
+  const row: Array<number> = [];
+  let hasNonZeroCell = false;
+
+  for (let x = 0; x < board.width; x++) {
+    const cellValue =
+      board.cells[idx(board, createGridCoord(x), createGridCoord(y))] ?? 0;
+    row.push(cellValue);
+    if (cellValue !== 0) {
+      hasNonZeroCell = true;
+    }
+  }
+
+  return hasNonZeroCell ? row : null;
+}
+
+// Helper function to place remaining rows
+function placeRemainingRows(
+  board: Board,
+  newCells: ReturnType<typeof createBoardCells>,
+  remainingRows: Array<Array<number>>,
+): void {
+  let targetY = board.height - 1;
+
+  for (let i = remainingRows.length - 1; i >= 0; i--) {
+    const row = remainingRows[i];
+    if (row) {
+      for (let x = 0; x < board.width; x++) {
+        newCells[idx(board, createGridCoord(x), createGridCoord(targetY))] =
+          row[x] ?? 0;
+      }
+      targetY--;
+    }
+  }
+}
+
 // Clear completed lines from the board
 export function clearLines(
   board: Board,
@@ -181,27 +231,24 @@ export function clearLines(
   if (toClear.length === 0) return board;
   const newCells = createBoardCells();
 
-  // 1) Copy vanish rows unchanged (y = -vanish..-1)
-  for (let y = -board.vanishRows; y < 0; y++) {
-    for (let x = 0; x < board.width; x++) {
-      newCells[idx(board, createGridCoord(x), createGridCoord(y))] =
-        board.cells[idx(board, createGridCoord(x), createGridCoord(y))] ?? 0;
+  // 1) Copy vanish rows unchanged
+  copyVanishRows(board, newCells);
+
+  // 2) Collect all non-empty, non-cleared rows
+  const remainingRows: Array<Array<number>> = [];
+
+  for (let y = 0; y < board.height; y++) {
+    if (!toClear.includes(y)) {
+      const row = collectRow(board, y);
+      if (row) {
+        remainingRows.push(row);
+      }
     }
   }
 
-  // 2) Compact visible rows downward into 0..(height-1)
-  let targetY = board.height - 1;
-  for (let y = board.height - 1; y >= 0; y--) {
-    if (toClear.includes(y)) continue;
-    for (let x = 0; x < board.width; x++) {
-      const src = idx(board, createGridCoord(x), createGridCoord(y));
-      const dst = idx(board, createGridCoord(x), createGridCoord(targetY));
-      newCells[dst] = board.cells[src] ?? 0;
-    }
-    targetY--;
-  }
+  // 3) Place remaining rows at the bottom
+  placeRemainingRows(board, newCells, remainingRows);
 
-  // 3) Fill remaining rows at top of visible area with empty (they already default to 0)
   return { ...board, cells: newCells };
 }
 
