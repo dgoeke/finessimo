@@ -37,21 +37,14 @@ function createCommandResult(opts: {
   lockResetEligible?: boolean;
   lockResetReason?: "move" | "rotate";
   hardDropped?: boolean;
-  spawnOverride?: PieceId;
 }): CommandResult {
-  const result: CommandResult = {
+  return {
     events: opts.events ?? [],
     hardDropped: opts.hardDropped ?? false,
     lockResetEligible: opts.lockResetEligible ?? false,
     lockResetReason: opts.lockResetReason,
     state: opts.state,
   };
-
-  if (opts.spawnOverride !== undefined) {
-    result.spawnOverride = opts.spawnOverride;
-  }
-
-  return result;
 }
 
 /**

@@ -837,3 +837,23 @@ export function createEngineScenario(
   });
   return state;
 }
+
+/**
+ * Gets the value of a cell on the board at the specified coordinates.
+ * Supports both visible area and vanish zone coordinates.
+ *
+ * @param board - Board to read from
+ * @param x - X coordinate
+ * @param y - Y coordinate (supports vanish zone: y >= -3)
+ * @returns Cell value at the specified position
+ *
+ * @example
+ * ```typescript
+ * const value = getCell(board, 4, 10); // Get cell value at (4, 10)
+ * const vanishValue = getCell(board, 0, -1); // Get cell value in vanish zone
+ * ```
+ */
+export function getCell(board: Board, x: number, y: number): number {
+  const index = idx(board, createGridCoord(x), createGridCoord(y));
+  return board.cells[index] ?? 0;
+}

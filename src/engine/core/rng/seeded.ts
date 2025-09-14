@@ -49,12 +49,12 @@ function shuffle<T>(
     currentSeed = nextRandom(currentSeed);
     // Use high bits mapped to [0, i] to reduce modulo bias
     const j = Math.floor(((currentSeed >>> 0) / 4294967296) * (i + 1));
-    const temp = result[i];
-    const otherTemp = result[j];
-    if (temp !== undefined && otherTemp !== undefined) {
-      result[i] = otherTemp;
-      result[j] = temp;
-    }
+    const temp = result[i] as T;
+    const otherTemp = result[j] as T;
+    // Both temp and otherTemp are always defined since we operate on a complete array
+    // with valid indices (i from length-1 to 1, j from 0 to i)
+    result[i] = otherTemp;
+    result[j] = temp;
   }
 
   return { nextSeed: currentSeed, shuffled: result };

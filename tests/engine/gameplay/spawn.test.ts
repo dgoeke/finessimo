@@ -85,16 +85,16 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
       expect(result.state).not.toBe(state); // Should return new state
       expect(result.state.board).not.toBe(state.board); // Should return new board
 
-      // Verify the completed line was cleared - partial row 1 should move to bottom (row 19)
+      // Verify the completed line was cleared - partial row 1 stays at row 1
       const newBoard = result.state.board;
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(1))],
       ).toBe(1);
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(1))],
       ).toBe(2);
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(2), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(2), createGridCoord(1))],
       ).toBe(0); // Should be empty
 
       // Top rows should be empty
@@ -142,16 +142,16 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
       expect(result.state).not.toBe(state);
       expect(result.state.board).not.toBe(state.board);
 
-      // Verify lines were cleared - partial row 1 should move to bottom (row 19)
+      // Verify lines were cleared - partial row 1 moves down by 1 to row 2
       const newBoard = result.state.board;
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(2))],
       ).toBe(1);
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(5), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(5), createGridCoord(2))],
       ).toBe(2);
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(19))],
+        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(2))],
       ).toBe(0); // Gap should be empty
 
       // Top rows should be empty
@@ -232,14 +232,14 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
 
       expect(result.rows).toEqual([1, 18]);
 
-      // Verify middle blocks moved down to bottom after clearing above and below
+      // Verify middle blocks moved down by 1 after clearing row 18 below
       const newBoard = result.state.board;
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(19))],
-      ).toBe(1); // Moved from row 10 to bottom
+        newBoard.cells[idx(newBoard, createGridCoord(0), createGridCoord(11))],
+      ).toBe(1); // Moved from row 10 to row 11
       expect(
-        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(19))],
-      ).toBe(2); // Moved from row 10 to bottom
+        newBoard.cells[idx(newBoard, createGridCoord(1), createGridCoord(11))],
+      ).toBe(2); // Moved from row 10 to row 11
 
       // Top rows should be empty
       expect(

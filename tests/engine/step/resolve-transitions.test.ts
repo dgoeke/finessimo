@@ -374,4 +374,94 @@ describe("@/engine/step/resolve-transitions — place/clear/spawn", () => {
       expect(result.state).toEqual(state);
     });
   });
+
+  describe("Lock-out detection", () => {
+    test("Piece locking entirely in vanish zone without line clear causes TopOut", () => {
+      // Create a piece positioned entirely in the vanish zone
+      const piece = createTestPiece("T", 4, -2); // T piece at y=-2 (vanish zone)
+      const state = createTestGameState({
+        piece,
+        tick: 100 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      // Act
+      const result = resolveTransitions(state, physFx);
+
+      // Assert: Should emit Locked then TopOut, no PieceSpawned
+      expect(result.events).toHaveLength(2);
+      expect(result.events[0]).toEqual({
+        kind: "Locked",
+        pieceId: "T",
+        source: "ground",
+        tick: 100,
+      });
+      expect(result.events[1]).toEqual({
+        kind: "TopOut",
+        tick: 100,
+      });
+
+      // No new piece should be spawned
+      expect(result.state.piece).toBeNull();
+    });
+
+    test("Piece locking in vanish zone with line clear does not cause TopOut", () => {
+      // Create a board with a full bottom row for clearing
+      const board = fillBoardRow(createAlmostFullBoard([19]), 19);
+
+      // Position piece in vanish zone but set up for line clear
+      const piece = createTestPiece("I", 4, -1); // I piece in vanish zone
+      const state = createTestGameState({
+        board,
+        piece,
+        tick: 200 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      // Act
+      const result = resolveTransitions(state, physFx);
+
+      // Assert: Should emit Locked, LinesCleared, and PieceSpawned (no TopOut)
+      expect(result.events).toHaveLength(3);
+      expect(result.events[0]?.kind).toBe("Locked");
+      expect(result.events[1]?.kind).toBe("LinesCleared");
+      expect(result.events[2]?.kind).toBe("PieceSpawned");
+
+      // New piece should be spawned
+      expect(result.state.piece).not.toBeNull();
+    });
+
+    test("Piece locking partially in vanish zone does not cause TopOut", () => {
+      // Create a piece that spans vanish zone and visible area
+      const piece = createTestPiece("I", 4, -1); // I piece spanning y=-1 to y=2
+      const state = createTestGameState({
+        piece,
+        tick: 300 as Tick,
+      });
+
+      const physFx: PhysicsSideEffects = {
+        hardDropped: false,
+        lockNow: true,
+      };
+
+      // Act
+      const result = resolveTransitions(state, physFx);
+
+      // Assert: Should emit Locked and PieceSpawned (no TopOut)
+      expect(result.events).toHaveLength(2);
+      expect(result.events[0]?.kind).toBe("Locked");
+      expect(result.events[1]?.kind).toBe("PieceSpawned");
+
+      // New piece should be spawned
+      expect(result.state.piece).not.toBeNull();
+    });
+  });
 });

@@ -84,7 +84,6 @@ function classifyKick(
   kickOffset: readonly [number, number],
 ): "none" | "wall" | "floor" {
   if (kickIndex === 0) return "none"; // Basic rotation, no kick needed
-  if (kickIndex < 0) return "none"; // Failed rotation
 
   // Check for floor kick: upward movement (negative Y in SRS coordinates)
   if (kickOffset[1] < 0) {

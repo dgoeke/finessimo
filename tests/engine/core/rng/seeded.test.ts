@@ -1,5 +1,9 @@
 // Tests for @/engine/core/rng/seeded.ts
-import { getNextPiece, type SevenBagRng } from "@/engine/core/rng/seeded";
+import {
+  getNextPiece,
+  type SevenBagRng,
+  createRng,
+} from "@/engine/core/rng/seeded";
 import { type PieceId } from "@/engine/core/types";
 import { createSevenBagRng } from "@/engine/types";
 
@@ -175,5 +179,30 @@ describe("@/engine/core/rng/seeded — seven-bag determinism", () => {
     expect(() => getNextPiece(corruptedState)).toThrow(
       "Bag is empty or corrupted",
     );
+  });
+
+  test("Default seed parameters: createSevenBagRng() without arguments", () => {
+    // Test the default "default" seed branch (covers line 152)
+    const rng = createSevenBagRng();
+
+    // Should work with default seed
+    const result = rng.getNextPieces(7);
+    expect(result.pieces).toHaveLength(7);
+
+    // Should use "default" as the seed
+    const rngImpl = rng as unknown as { getState(): SevenBagRng };
+    const state = rngImpl.getState();
+    expect(state.seed).toBe("default");
+  });
+
+  test("Default seed parameters: createRng() without arguments", () => {
+    // Test the default "default" seed branch (covers line 16)
+    const rngState = createRng();
+
+    // Should use "default" as the seed
+    expect(rngState.seed).toBe("default");
+    expect(rngState.bagIndex).toBe(0);
+    expect(rngState.currentBag).toEqual([]);
+    expect(typeof rngState.internalSeed).toBe("number");
   });
 });

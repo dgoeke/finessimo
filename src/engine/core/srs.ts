@@ -197,9 +197,13 @@ export function canRotate(
   targetRot: Rot,
   board: Board,
 ): boolean {
-  // O piece doesn't rotate
+  // O piece: rotations are allowed but geometry is identical
   if (piece.id === "O") {
-    return piece.rot === targetRot;
+    if (piece.rot === targetRot) {
+      return true;
+    }
+    const rotated: ActivePiece = { ...piece, rot: targetRot };
+    return canPlacePiece(board, rotated);
   }
 
   const testPiece = { ...piece, rot: targetRot };
@@ -258,13 +262,21 @@ export function tryRotateWithKickInfo(
   targetRot: Rot,
   board: Board,
 ): SRSRotateResult {
-  // O piece doesn't rotate
+  // O piece: rotations are allowed but have no kicks; geometry is identical
   if (piece.id === "O") {
-    return {
-      kickIndex: piece.rot === targetRot ? 0 : -1,
-      kickOffset: [0, 0],
-      piece: piece.rot === targetRot ? piece : null,
-    };
+    if (piece.rot === targetRot) {
+      return { kickIndex: 0, kickOffset: [0, 0], piece };
+    }
+    const rotated: ActivePiece = { ...piece, rot: targetRot };
+    // For O-piece, rotation is always allowed since geometry is identical
+    // The active piece should always be in a valid position by invariant
+    if (!canPlacePiece(board, piece)) {
+      // This should never happen - active piece in invalid position indicates a bug
+      throw new Error(
+        "Invalid state: O-piece in invalid position cannot be placed",
+      );
+    }
+    return { kickIndex: 0, kickOffset: [0, 0], piece: rotated };
   }
 
   const testPiece = { ...piece, rot: targetRot };

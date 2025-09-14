@@ -42,22 +42,63 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
       }
     });
 
-    test("O-piece returns kick index -1 when changing rotation state (current SRS implementation)", () => {
+    test("O-piece rotates with kickIndex 0 and no offset (SRS-compliant)", () => {
       const board = createEmptyBoard();
       const oPiece = createTestPiece("O", 4, 10, "spawn");
 
-      // O-piece rotations are visually identical, but SRS still treats them as state changes
-      // Current implementation returns -1 for rotation state changes, even for O-piece
+      // O-piece rotations are allowed with kickIndex 0 (SRS-compliant)
       const result = tryRotateWithKickInfo(oPiece, "right", board);
-      expect(result.kickIndex).toBe(-1);
+      expect(result.kickIndex).toBe(0);
       expect(result.kickOffset).toEqual([0, 0]);
-      expect(result.piece).toBeNull(); // No rotation allowed
+      expect(result.piece).not.toBeNull();
+      expect(result.piece?.rot).toBe("right");
 
-      // But rotation to same state succeeds
+      // Rotation to same state also succeeds
       const sameStateResult = tryRotateWithKickInfo(oPiece, "spawn", board);
       expect(sameStateResult.kickIndex).toBe(0);
       expect(sameStateResult.kickOffset).toEqual([0, 0]);
       expect(sameStateResult.piece).toEqual(oPiece);
+    });
+
+    test("O-piece rotation succeeds even when completely surrounded", () => {
+      const board = createEmptyBoard();
+      // O-piece at (4,10) occupies cells (5,10), (6,10), (5,11), (6,11)
+      // Surround it without blocking those cells
+      let blockedBoard = setBoardCell(board, 4, 9, 1); // Top-left
+      blockedBoard = setBoardCell(blockedBoard, 5, 9, 1); // Top-left-center
+      blockedBoard = setBoardCell(blockedBoard, 6, 9, 1); // Top-right-center
+      blockedBoard = setBoardCell(blockedBoard, 7, 9, 1); // Top-right
+      blockedBoard = setBoardCell(blockedBoard, 4, 10, 1); // Left side
+      blockedBoard = setBoardCell(blockedBoard, 7, 10, 1); // Right side
+      blockedBoard = setBoardCell(blockedBoard, 4, 11, 1); // Left side
+      blockedBoard = setBoardCell(blockedBoard, 7, 11, 1); // Right side
+      blockedBoard = setBoardCell(blockedBoard, 4, 12, 1); // Bottom-left
+      blockedBoard = setBoardCell(blockedBoard, 5, 12, 1); // Bottom-left-center
+      blockedBoard = setBoardCell(blockedBoard, 6, 12, 1); // Bottom-right-center
+      blockedBoard = setBoardCell(blockedBoard, 7, 12, 1); // Bottom-right
+
+      const oPiece = createTestPiece("O", 4, 10, "spawn");
+
+      // O-piece should still be able to rotate because rotation is a no-op geometrically
+      const result = tryRotateWithKickInfo(oPiece, "right", blockedBoard);
+      expect(result.kickIndex).toBe(0);
+      expect(result.kickOffset).toEqual([0, 0]);
+      expect(result.piece).not.toBeNull();
+      expect(result.piece?.rot).toBe("right");
+    });
+
+    test("O-piece rotation fails when the piece itself is in an invalid position", () => {
+      const board = createEmptyBoard();
+      // Create a board where the O-piece position itself overlaps with existing blocks
+      // O-piece at (4,10) occupies cells (5,10), (6,10), (5,11), (6,11)
+      const blockedBoard = setBoardCell(board, 5, 10, 1); // Block at O-piece cell
+
+      const oPiece = createTestPiece("O", 4, 10, "spawn");
+
+      // O-piece rotation should fail because the piece is already in invalid position
+      expect(() =>
+        tryRotateWithKickInfo(oPiece, "right", blockedBoard),
+      ).toThrow("Invalid state: O-piece in invalid position cannot be placed");
     });
   });
 
@@ -467,15 +508,17 @@ describe("@/engine/core/srs — wall/floor kicks", () => {
   });
 
   describe("canRotate and tryRotate wrappers — explicit coverage", () => {
-    test("canRotate: O-piece only allows same-state rotations", () => {
+    test("canRotate: O-piece allows all rotations (SRS-compliant)", () => {
       const board = createEmptyBoard();
       const oPiece = createTestPiece("O", 4, 10, "spawn");
 
       // Same rotation state → true
       expect(canRotate(oPiece, "spawn", board)).toBe(true);
 
-      // Different rotation state → false (O-piece doesn't rotate)
-      expect(canRotate(oPiece, "right", board)).toBe(false);
+      // Different rotation state → true (O-piece can rotate in SRS)
+      expect(canRotate(oPiece, "right", board)).toBe(true);
+      expect(canRotate(oPiece, "two", board)).toBe(true);
+      expect(canRotate(oPiece, "left", board)).toBe(true);
     });
 
     test("canRotate: rejects non-adjacent rotation pairs (e.g., spawn→two)", () => {

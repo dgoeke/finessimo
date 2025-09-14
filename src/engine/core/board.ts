@@ -173,81 +173,41 @@ export function getCompletedLines(board: Board): ReadonlyArray<number> {
   return completedLines;
 }
 
-// Helper function to copy vanish rows
-function copyVanishRows(
-  board: Board,
-  newCells: ReturnType<typeof createBoardCells>,
-): void {
-  for (let y = -board.vanishRows; y < 0; y++) {
-    for (let x = 0; x < board.width; x++) {
-      newCells[idx(board, createGridCoord(x), createGridCoord(y))] =
-        board.cells[idx(board, createGridCoord(x), createGridCoord(y))] ?? 0;
-    }
-  }
-}
-
-// Helper function to collect a single row
-function collectRow(board: Board, y: number): Array<number> | null {
-  const row: Array<number> = [];
-  let hasNonZeroCell = false;
-
-  for (let x = 0; x < board.width; x++) {
-    const cellValue =
-      board.cells[idx(board, createGridCoord(x), createGridCoord(y))] ?? 0;
-    row.push(cellValue);
-    if (cellValue !== 0) {
-      hasNonZeroCell = true;
-    }
-  }
-
-  return hasNonZeroCell ? row : null;
-}
-
-// Helper function to place remaining rows
-function placeRemainingRows(
-  board: Board,
-  newCells: ReturnType<typeof createBoardCells>,
-  remainingRows: Array<Array<number>>,
-): void {
-  let targetY = board.height - 1;
-
-  for (let i = remainingRows.length - 1; i >= 0; i--) {
-    const row = remainingRows[i];
-    if (row) {
-      for (let x = 0; x < board.width; x++) {
-        newCells[idx(board, createGridCoord(x), createGridCoord(targetY))] =
-          row[x] ?? 0;
-      }
-      targetY--;
-    }
-  }
-}
-
 // Clear completed lines from the board
 export function clearLines(
   board: Board,
   toClear: ReadonlyArray<number>,
 ): Board {
   if (toClear.length === 0) return board;
+
   const newCells = createBoardCells();
+  const clearedSet = new Set(toClear);
 
-  // 1) Copy vanish rows unchanged
-  copyVanishRows(board, newCells);
+  // Standard Tetris behavior: only rows ABOVE cleared lines shift down
+  // Rows below cleared lines stay in their original positions
+  for (let y = -board.vanishRows; y < board.height; y++) {
+    // Skip if this row is being cleared
+    if (y >= 0 && clearedSet.has(y)) {
+      continue;
+    }
 
-  // 2) Collect all non-empty, non-cleared rows
-  const remainingRows: Array<Array<number>> = [];
+    // Calculate how many cleared lines are below this row (larger y values)
+    // In Tetris, rows shift down by the number of cleared lines below them
+    const clearedBelow = toClear.filter((clearedY) => clearedY > y).length;
+    const newY = y + clearedBelow;
 
-  for (let y = 0; y < board.height; y++) {
-    if (!toClear.includes(y)) {
-      const row = collectRow(board, y);
-      if (row) {
-        remainingRows.push(row);
-      }
+    // Skip if the new position would be out of bounds
+    if (newY >= board.height) {
+      continue;
+    }
+
+    // Copy row y to newY
+    for (let x = 0; x < board.width; x++) {
+      const srcIdx = idx(board, createGridCoord(x), createGridCoord(y));
+      const dstIdx = idx(board, createGridCoord(x), createGridCoord(newY));
+      newCells[dstIdx] = board.cells[srcIdx] ?? 0;
     }
   }
-
-  // 3) Place remaining rows at the bottom
-  placeRemainingRows(board, newCells, remainingRows);
 
   return { ...board, cells: newCells };
 }

@@ -283,16 +283,14 @@ describe("@/engine/core/board — geometry & line clear", () => {
       let testBoard = setBoardCell(emptyBoard, 0, 5, 2);
       testBoard = setBoardCell(testBoard, 0, 10, 3);
 
-      // Clear line 10, line 5 should move down to fill the gap
+      // Clear line 10, line 5 should shift down by 1 position
       const clearedSingle = clearLines(testBoard, [10]);
 
-      // After clearing line 10, remaining lines compact downward
-      // Line 5 should move down to become the bottom line since it's the only remaining data
-      // So line 5 should end up at the bottom of the remaining lines
-      // Since only line 5 has data and line 10 is cleared, line 5 should be at y=19
+      // After clearing line 10, line 5 shifts down to position 6 (proper Tetris behavior)
+      // The cleared line was below row 5, so row 5 moves down by 1
       expect(
         clearedSingle.cells[
-          idx(clearedSingle, createGridCoord(0), createGridCoord(19))
+          idx(clearedSingle, createGridCoord(0), createGridCoord(6))
         ],
       ).toBe(2);
       expect(
@@ -307,17 +305,12 @@ describe("@/engine/core/board — geometry & line clear", () => {
       multiBoard = setBoardCell(multiBoard, 0, 15, 3);
 
       const clearedMultiple = clearLines(multiBoard, [5, 10]);
-      // Only line 15 should remain, compacted to the bottom
-      expect(
-        clearedMultiple.cells[
-          idx(clearedMultiple, createGridCoord(0), createGridCoord(19))
-        ],
-      ).toBe(3);
+      // Line 15 stays at row 15 (no lines below it were cleared)
       expect(
         clearedMultiple.cells[
           idx(clearedMultiple, createGridCoord(0), createGridCoord(15))
         ],
-      ).toBe(0);
+      ).toBe(3);
 
       // Test vanish zone preservation - add data to vanish zone
       let vanishBoard = setBoardCell(emptyBoard, 0, -1, 5);
@@ -325,18 +318,133 @@ describe("@/engine/core/board — geometry & line clear", () => {
       vanishBoard = setBoardCell(vanishBoard, 0, 10, 2);
 
       const clearedWithVanish = clearLines(vanishBoard, [5]);
-      // Vanish zone should be preserved
+      // With vanish zone compaction fix: vanish zone row -1 should move to visible area
+      expect(
+        clearedWithVanish.cells[
+          idx(clearedWithVanish, createGridCoord(0), createGridCoord(0))
+        ] ?? 0,
+      ).toBe(5);
+      // Line 10 stays at row 10 (no lines below it were cleared)
+      expect(
+        clearedWithVanish.cells[
+          idx(clearedWithVanish, createGridCoord(0), createGridCoord(10))
+        ] ?? 0,
+      ).toBe(2);
+      // Vanish zone should now be empty
       expect(
         clearedWithVanish.cells[
           idx(clearedWithVanish, createGridCoord(0), createGridCoord(-1))
         ] ?? 0,
-      ).toBe(5);
-      // Line 10 should move down to fill gap left by cleared line 5
+      ).toBe(0);
+    });
+
+    test("Vanish-zone rows are pulled down on line clear", () => {
+      const b0 = createEmptyBoard();
+      // put a single block in vanish at y = -1, x = 0
+      const b1 = setBoardCell(b0, 0, -1, 1);
+      // fill bottom visible row
+      const b2 = fillBoardRow(b1, 19, 1);
+
+      const b3 = clearLines(b2, [19]);
+
+      // block that was at -1 should now be at y = 0
       expect(
-        clearedWithVanish.cells[
-          idx(clearedWithVanish, createGridCoord(0), createGridCoord(19))
-        ] ?? 0,
-      ).toBe(2);
+        b3.cells[idx(b3, createGridCoord(0), createGridCoord(0))] ?? 0,
+      ).toBe(1);
+      // vanish cell at -1 should be cleared after compaction
+      expect(
+        b3.cells[idx(b3, createGridCoord(0), createGridCoord(-1))] ?? 0,
+      ).toBe(0);
+    });
+
+    test("prevents vanish zone rows from overflowing when multiple lines are cleared at the bottom", () => {
+      const b0 = createEmptyBoard();
+      // Place blocks in multiple vanish zone rows
+      let board = setBoardCell(b0, 0, -3, 1); // Top vanish row
+      board = setBoardCell(board, 1, -2, 2); // Middle vanish row
+      board = setBoardCell(board, 2, -1, 3); // Bottom vanish row
+
+      // Fill bottom rows that will be cleared
+      board = fillBoardRow(board, 18, 4);
+      board = fillBoardRow(board, 19, 5);
+
+      // Clear multiple bottom rows - this would try to pull all vanish rows down
+      const result = clearLines(board, [18, 19]);
+
+      // Only the bottom 2 vanish rows should fit in visible area
+      expect(
+        result.cells[idx(result, createGridCoord(1), createGridCoord(0))] ?? 0,
+      ).toBe(2); // -2 → 0
+      expect(
+        result.cells[idx(result, createGridCoord(2), createGridCoord(1))] ?? 0,
+      ).toBe(3); // -1 → 1
+
+      // The top vanish row (-3) should be lost (would overflow beyond visible area)
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(-3))] ?? 0,
+      ).toBe(0);
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(2))] ?? 0,
+      ).toBe(0); // Not pulled down to row 2
+    });
+
+    test("overflow protection prevents writing beyond board boundaries", () => {
+      const board = createEmptyBoard();
+
+      // Create a test case where newY would exceed board.height (20)
+      // Put content at y=19 (bottom row)
+      const testBoard = setBoardCell(board, 0, 19, 1);
+
+      // Pass invalid "cleared" row numbers > 19 to trigger the overflow protection
+      // When y=19, clearedBelow will count [20,21] as 2, making newY = 19 + 2 = 21 >= 20
+      const result = clearLines(testBoard, [20, 21]); // Invalid row numbers
+
+      // The overflow protection should skip writing this row (since newY = 21 >= 20)
+      // So the content at y=19 gets discarded (not copied to new board)
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(19))] ?? 0,
+      ).toBe(0); // Content was discarded due to overflow protection
+    });
+
+    test("handles clearing all visible rows while vanish zone has blocks", () => {
+      const b0 = createEmptyBoard();
+      // Place blocks in vanish zone
+      let board = setBoardCell(b0, 0, -3, 1);
+      board = setBoardCell(board, 1, -2, 2);
+      board = setBoardCell(board, 2, -1, 3);
+
+      // Fill all visible rows (0-19)
+      for (let y = 0; y < 20; y++) {
+        board = fillBoardRow(board, y, y + 10); // Use different values per row
+      }
+
+      // Clear ALL visible rows (extreme edge case)
+      const allVisibleRows = Array.from({ length: 20 }, (_, i) => i);
+      const result = clearLines(board, allVisibleRows);
+
+      // All vanish zone blocks should move into visible area
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(17))] ?? 0,
+      ).toBe(1); // -3 → 17
+      expect(
+        result.cells[idx(result, createGridCoord(1), createGridCoord(18))] ?? 0,
+      ).toBe(2); // -2 → 18
+      expect(
+        result.cells[idx(result, createGridCoord(2), createGridCoord(19))] ?? 0,
+      ).toBe(3); // -1 → 19
+
+      // Rest of visible area should be empty
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(3))] ?? 0,
+      ).toBe(0);
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(19))] ?? 0,
+      ).toBe(0);
+
+      // Vanish zone should be empty
+      expect(
+        result.cells[idx(result, createGridCoord(0), createGridCoord(-1))] ?? 0,
+      ).toBe(0);
     });
   });
 
