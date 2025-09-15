@@ -1,7 +1,7 @@
-import { tryMove } from "../core/board";
-import { addQ, fracQ, floorQ } from "../utils/fixedpoint";
+import { tryMove } from "@/engine/core/board";
+import { addQ, fracQ, floorQ } from "@/engine/utils/fixedpoint";
 
-import type { GameState } from "../types";
+import type { GameState } from "@/engine/types";
 
 /**
  * Attempts to move a piece down N times, stopping at first collision.

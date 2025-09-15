@@ -1,6 +1,6 @@
-import { addTicks, isTickAfterOrEqual } from "../utils/tick";
+import { addTicks, isTickAfterOrEqual } from "@/engine/utils/tick";
 
-import type { Tick, GameState } from "../types";
+import type { Tick, GameState } from "@/engine/types";
 
 type LockUpdateOptions = {
   grounded: boolean;

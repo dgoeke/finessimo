@@ -1,6 +1,5 @@
-import { type PieceId } from "../types";
-
-import { type PieceRandomGenerator } from "./interface";
+import { type PieceRandomGenerator } from "@/engine/core/rng/interface";
+import { type PieceId } from "@/engine/types";
 
 /**
  * RNG that always returns the same piece.

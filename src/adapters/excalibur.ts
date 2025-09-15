@@ -2,9 +2,9 @@
 // Not executable here; for reference only.
 /*
 import * as ex from "excalibur";
-import { controlStep } from "../control/index";
-import type { ControlState, KeyEdge } from "../control/types";
-import { init, step } from "../engine/index";
+import { controlStep } from "@/control/index";
+import type { ControlState, KeyEdge } from "@/control/types";
+import { init, step } from "@/engine/index";
 
 const TPS = 120;
 const game = new ex.Engine({ fixedUpdateFps: TPS });

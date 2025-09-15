@@ -1,7 +1,7 @@
-import { lockPiece, getCompletedLines, clearLines } from "../core/board";
-import { createActivePiece, isTopOut } from "../core/spawning";
+import { lockPiece, getCompletedLines, clearLines } from "@/engine/core/board";
+import { createActivePiece, isTopOut } from "@/engine/core/spawning";
 
-import type { GameState, PhysicsState, PieceId } from "../types";
+import type { GameState, PhysicsState, PieceId } from "@/engine/types";
 
 export function placeActivePiece(state: GameState): {
   state: GameState;

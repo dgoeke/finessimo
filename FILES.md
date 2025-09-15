@@ -6,6 +6,10 @@ This document provides a concise overview of the TypeScript source files under `
 
 - `DESIGN.md` — Unified architecture and engine design (single source of truth; merged from CORE_DESIGN.md and TICK_CORE_DESIGN.md)
 
+## Application Entry (`src/`)
+
+- `src/main.ts` — Minimal application entry point
+
 ## Core Engine (`src/engine/`)
 
 ### Main Engine Files
@@ -14,6 +18,7 @@ This document provides a concise overview of the TypeScript source files under `
 - `src/engine/types.ts` — Unified type system, re-exports core types, GameState, PhysicsState
 - `src/engine/commands.ts` — Command types for input (MoveLeft, RotateCW, etc.)
 - `src/engine/events.ts` — Domain event types (PieceSpawned, Locked, etc.)
+- `src/engine/ops.ts` — Pure state transformation functions for mode-controlled scenarios
 
 ### Core Game Logic (`src/engine/core/`)
 
@@ -51,10 +56,30 @@ This document provides a concise overview of the TypeScript source files under `
 - `src/engine/utils/tick.ts` — Tick manipulation functions
 - `src/engine/utils/fixedpoint.ts` — Fixed-point arithmetic helpers
 
+## Game Modes (`src/modes/`)
+
+- `src/modes/base.ts` — Base mode interface and common types for training modes
+- `src/modes/freeplay.ts` — Pass-through mode for normal gameplay
+- `src/modes/finesse_trainer.ts` — Finesse training mode with fixed scenarios
+- `src/modes/garbage_race.ts` — Garbage clearing race mode
+- `src/modes/opening_trainer.ts` — Opening sequence practice mode
+
 ## Control Layer (`src/control/`)
 
 - `src/control/index.ts` — Input handling and command mapping
 - `src/control/types.ts` — Control-related type definitions
+
+## Device Input (`src/device/`)
+
+- `src/device/types.ts` — Unified device input representation (keyboard, mouse, touch, gamepad)
+
+## Runtime (`src/runtime/`)
+
+- `src/runtime/loop.ts` — Main runtime loop coordinating engine, control, and mode systems
+
+## UI Effects (`src/ui/`)
+
+- `src/ui/effects.ts` — UI effect types for mode feedback (messages, highlights, sounds)
 
 ## Adapters (`src/adapters/`)
 
@@ -69,8 +94,10 @@ This document provides a concise overview of the TypeScript source files under `
 
 The engine follows a functional architecture with clear separation of concerns:
 
-1. **Input** → Commands (control layer)
+1. **Input** → Commands (device → control layer)
 2. **Commands** → State mutations (apply-commands.ts)
 3. **Physics** → Gravity, lock delay, grounding (advance-physics.ts)
 4. **Transitions** → Locking, line clearing, spawning (resolve-transitions.ts)
 5. **Events** → External systems notification
+6. **Modes** → Training scenarios and game flow control
+7. **Runtime** → Coordination of all subsystems

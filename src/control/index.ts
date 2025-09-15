@@ -1,8 +1,13 @@
-import { addTicks, isTickAfterOrEqual } from "../engine/utils/tick";
+import { addTicks, isTickAfterOrEqual } from "@/engine/utils/tick";
 
-import type { ControlState, ControlResult, KeyEdge, Key } from "./types";
-import type { Command } from "../engine/commands";
-import type { Tick } from "../engine/types";
+import type {
+  ControlState,
+  ControlResult,
+  KeyEdge,
+  Key,
+} from "@/control/types";
+import type { Command } from "@/engine/commands";
+import type { Tick } from "@/engine/types";
 
 /**
  * Processes Left key edge

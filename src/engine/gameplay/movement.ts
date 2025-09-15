@@ -1,10 +1,19 @@
-import { tryMove, moveToWall, dropToBottom, isAtBottom } from "../core/board";
+import {
+  tryMove,
+  moveToWall,
+  dropToBottom,
+  isAtBottom,
+} from "@/engine/core/board";
 import {
   tryRotateWithKickInfo,
   getNextRotation,
   type SRSRotateResult,
-} from "../core/srs";
-import { type GameState, type PieceId, gridCoordAsNumber } from "../types";
+} from "@/engine/core/srs";
+import {
+  type GameState,
+  type PieceId,
+  gridCoordAsNumber,
+} from "@/engine/types";
 
 type MoveResult = {
   state: GameState;

@@ -6,11 +6,11 @@ import {
   tryHold,
   tryHardDrop,
   tryShiftToWall,
-} from "../gameplay/movement";
+} from "@/engine/gameplay/movement";
 
-import type { Command } from "../commands";
-import type { DomainEvent } from "../events";
-import type { GameState, PieceId } from "../types";
+import type { Command } from "@/engine/commands";
+import type { DomainEvent } from "@/engine/events";
+import type { GameState, PieceId } from "@/engine/types";
 
 export type CommandSideEffects = {
   lockResetEligible: boolean;

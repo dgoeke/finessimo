@@ -1,4 +1,4 @@
-import type { Tick, PieceId } from "./types";
+import type { Tick, PieceId } from "@/engine/types";
 
 export type DomainEvent =
   | { kind: "PieceSpawned"; pieceId: PieceId; tick: Tick }

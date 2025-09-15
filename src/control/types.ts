@@ -1,5 +1,5 @@
-import type { Command } from "../engine/commands";
-import type { Tick, TickDelta } from "../engine/types";
+import type { Command } from "@/engine/commands";
+import type { Tick, TickDelta } from "@/engine/types";
 
 export type Key =
   | "Left"

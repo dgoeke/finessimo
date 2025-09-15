@@ -1,13 +1,13 @@
-import { isPieceEntirelyInVanishZone } from "../core/spawning";
+import { isPieceEntirelyInVanishZone } from "@/engine/core/spawning";
 import {
   placeActivePiece,
   clearCompletedLines,
   spawnPiece,
-} from "../gameplay/spawn";
+} from "@/engine/gameplay/spawn";
 
-import type { DomainEvent } from "../events";
-import type { GameState } from "../types";
-import type { PhysicsSideEffects } from "./advance-physics";
+import type { DomainEvent } from "@/engine/events";
+import type { PhysicsSideEffects } from "@/engine/step/advance-physics";
+import type { GameState } from "@/engine/types";
 
 function handleLocking(
   state: GameState,

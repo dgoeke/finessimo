@@ -1,4 +1,4 @@
-import { PIECES } from "./pieces";
+import { PIECES } from "@/engine/core/pieces";
 import {
   type Board,
   type ActivePiece,
@@ -8,7 +8,7 @@ import {
   createBoardCells,
   createGridCoord,
   gridCoordAsNumber,
-} from "./types";
+} from "@/engine/core/types";
 
 // Brand the cells array to lock dimensions and prevent misuse elsewhere
 export function createEmptyBoard(): Board {

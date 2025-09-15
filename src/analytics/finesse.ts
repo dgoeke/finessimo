@@ -1,5 +1,5 @@
-import type { Command } from "../engine/commands";
-import type { DomainEvent } from "../engine/events";
+import type { Command } from "@/engine/commands";
+import type { DomainEvent } from "@/engine/events";
 
 /**
  * Sketch of a finesse analysis surface.

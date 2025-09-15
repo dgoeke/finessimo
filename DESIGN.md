@@ -17,19 +17,27 @@ This document is the single source of truth for the engine, control layer, analy
 ## 2) Architecture Overview
 
 ```
-Device (keyboard/touch/gamepad)
-    └─► KeyEdges (ms)
-           └─► Quantize to ticks (ceil rule)
-                  └─► Control Transducer (pure DAS/ARR, tick-based)
-                         └─► Commands (MoveLeft, RotateCW, ShiftToWallRight, ...)
-                                └─► ENGINE.step(state, tick, commands[])
-                                       ├─ ApplyCommands (no time travel)
-                                       ├─ AdvancePhysics (gravity + lock delay)
-                                       └─ ResolveTransitions (place, clear, spawn/topout)
-                                             └─► DomainEvents (facts)
-                                                    ├─► UI / Presentation
-                                                    ├─► Modes / Scoring
-                                                    └─► Analytics (e.g., Finesse)
+Device input (keyboard/touch/gamepad) ──► KeyEdges[tick]
+                     │
+                     ▼
+            controlStep()  // DAS/ARR transducer, pure
+        (ControlState, KeyEdges) -> { nextControlState, commands }
+                     │
+                     ▼
+              Mode.step()  // pure game-mode logic
+  (ModeState, {engine, lastEvents, controlCommands})
+   -> { nextModeState, engineOps?, plan?, effects? }
+                     │
+          ┌──────────┴────────────────────────┐
+          │        apply engineOps            │
+          │      plan/shape final commands    │
+          └──────────┬────────────────────────┘
+                     ▼
+               engine.step()
+           (engineState, commands) -> { state', events }
+                     │
+                     ▼
+       Runtime collects { state', nextControl, nextMode, events } + effects
 ```
 
 Design tenets
@@ -144,7 +152,6 @@ export type DomainEvent =
   | { kind: "Held"; swapped: boolean; tick: Tick }
   | { kind: "TopOut"; tick: Tick };
 ```
-
 
 ### 4.4 State & Engine API
 

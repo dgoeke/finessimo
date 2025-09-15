@@ -11,14 +11,14 @@
 // Wall Kick Tables
 
 // Standard kicks for JLSTZ pieces (SRS-compliant 4-way rotation)
-import { canPlacePiece } from "./board";
+import { canPlacePiece } from "@/engine/core/board";
 import {
   type ActivePiece,
   type Board,
   type Rot,
   createGridCoord,
   gridCoordAsNumber,
-} from "./types";
+} from "@/engine/core/types";
 
 export const KICKS_JLSTZ: Record<
   string,

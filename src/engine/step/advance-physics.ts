@@ -1,10 +1,10 @@
-import { isAtBottom } from "../core/board";
-import { gravityStep } from "../physics/gravity";
-import { updateLock } from "../physics/lock-delay";
+import { isAtBottom } from "@/engine/core/board";
+import { gravityStep } from "@/engine/physics/gravity";
+import { updateLock } from "@/engine/physics/lock-delay";
 
-import type { DomainEvent } from "../events";
-import type { GameState, PieceId } from "../types";
-import type { CommandSideEffects } from "./apply-commands";
+import type { DomainEvent } from "@/engine/events";
+import type { CommandSideEffects } from "@/engine/step/apply-commands";
+import type { GameState, PieceId } from "@/engine/types";
 
 export type PhysicsSideEffects = {
   hardDropped: boolean;

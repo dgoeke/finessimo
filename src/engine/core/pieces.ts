@@ -1,4 +1,4 @@
-import { type PieceId, type TetrominoShape } from "./types";
+import { type PieceId, type TetrominoShape } from "@/engine/core/types";
 
 export const PIECES: Record<PieceId, TetrominoShape> = {
   I: {

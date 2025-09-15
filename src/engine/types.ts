@@ -1,19 +1,19 @@
-import { type PieceRandomGenerator } from "./core/rng/interface";
-import { createSevenBagRng } from "./core/rng/seeded";
+import { type PieceRandomGenerator } from "@/engine/core/rng/interface";
+import { createSevenBagRng } from "@/engine/core/rng/seeded";
 import {
   type Board,
   type PieceId,
   type ActivePiece,
   createBoardCells,
-} from "./core/types";
+} from "@/engine/core/types";
 
-export * from "./core/types";
+export * from "@/engine/core/types";
 export type Tick = number & { readonly brand: "Tick" };
 export type Q16_16 = number & { readonly brand: "Q16_16" };
 export type TickDelta = number & { readonly brand: "TickDelta" };
 
-export { type PieceRandomGenerator } from "./core/rng/interface";
-export { createSevenBagRng } from "./core/rng/seeded";
+export { type PieceRandomGenerator } from "@/engine/core/rng/interface";
+export { createSevenBagRng } from "@/engine/core/rng/seeded";
 
 export type RNGState = PieceRandomGenerator;
 

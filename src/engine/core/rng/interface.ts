@@ -1,4 +1,4 @@
-import { type PieceId } from "../types";
+import { type PieceId } from "@/engine/types";
 
 /**
  * Interface for piece random generators.

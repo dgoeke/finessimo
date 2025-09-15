@@ -1,12 +1,12 @@
-import { canPlacePiece } from "./board";
-import { PIECES } from "./pieces";
+import { canPlacePiece } from "@/engine/core/board";
+import { PIECES } from "@/engine/core/pieces";
 import {
   type Board,
   type ActivePiece,
   type PieceId,
   createGridCoord,
   gridCoordAsNumber,
-} from "./types";
+} from "@/engine/core/types";
 
 // Precompute spawn ActivePiece per PieceId with branded coords
 const SPAWN_ACTIVE: Readonly<Record<PieceId, ActivePiece>> = ((): Readonly<

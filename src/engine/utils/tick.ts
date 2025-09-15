@@ -1,4 +1,4 @@
-import type { Tick, TickDelta } from "../types";
+import type { Tick, TickDelta } from "@/engine/types";
 
 /**
  * Type-safe utilities for working with branded Tick types.
