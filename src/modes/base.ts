@@ -1,3 +1,4 @@
+import type { ControlEvent } from "@/control/types";
 import type { Command } from "@/engine/commands";
 import type { DomainEvent } from "@/engine/events";
 import type { EngineOp } from "@/engine/ops";
@@ -19,6 +20,7 @@ export type ModeStepArgs = Readonly<{
   engine: GameState;
   lastEvents: ReadonlyArray<DomainEvent>;
   controlCommands: ReadonlyArray<Command>;
+  controlTelemetry: ReadonlyArray<ControlEvent>;
 }>;
 
 export type ModeStepResult<S> = Readonly<{

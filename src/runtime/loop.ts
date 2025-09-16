@@ -70,6 +70,7 @@ export function runtimeStep<MState, MConfig>(
   // 2) Mode logic
   const m = mode.step(rs.mode, {
     controlCommands: c.commands,
+    controlTelemetry: c.telemetry,
     engine: rs.engine,
     lastEvents: rs.lastEvents,
   });

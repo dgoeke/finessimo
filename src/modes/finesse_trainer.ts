@@ -74,7 +74,12 @@ const finesseTrainerImpl = {
 
   step(
     state: FinesseTrainerState,
-    { controlCommands, engine, lastEvents }: ModeStepArgs,
+    {
+      controlCommands,
+      controlTelemetry: _controlTelemetry,
+      engine,
+      lastEvents,
+    }: ModeStepArgs,
   ): ModeStepResult<FinesseTrainerState> {
     const { failed, index, progress } = state;
     const expected = this._expected(engine, index);

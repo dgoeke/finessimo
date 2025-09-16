@@ -42,7 +42,11 @@ export const GarbageRace: Mode<GarbageRaceState, GarbageRaceConfig> = {
 
   step(
     state: GarbageRaceState,
-    { engine: _engine, lastEvents }: ModeStepArgs,
+    {
+      controlTelemetry: _controlTelemetry,
+      engine: _engine,
+      lastEvents,
+    }: ModeStepArgs,
   ): ModeStepResult<GarbageRaceState> {
     let cleared = state.clearedRows;
     for (const ev of lastEvents) {
