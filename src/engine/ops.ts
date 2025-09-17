@@ -73,3 +73,8 @@ export function addGarbage(rows: ReadonlyArray<number>): EngineOp {
 export function clearHold(): EngineOp {
   return (s) => ({ ...s, hold: { piece: null, usedThisTurn: false } });
 }
+
+/** Disable hold by marking it as permanently used (useful for modes that don't allow hold). */
+export function disableHold(): EngineOp {
+  return (s) => ({ ...s, hold: { piece: null, usedThisTurn: true } });
+}

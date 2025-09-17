@@ -382,9 +382,9 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
 
       const result = placeActivePiece(originalState);
 
-      // Should preserve all properties except piece and board
+      // Should preserve all properties except piece, board, and hold (which gets reset)
       expect(result.state.tick).toBe(42 as Tick);
-      expect(result.state.hold).toEqual({ piece: "J", usedThisTurn: true });
+      expect(result.state.hold).toEqual({ piece: "J", usedThisTurn: false });
       expect(result.state.queue).toBe(originalState.queue);
       expect(result.state.cfg).toBe(originalState.cfg);
       expect(result.state.rng).toBe(originalState.rng);
@@ -433,8 +433,8 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
       expect(result.state.physics.lock.deadlineTick).toBeNull();
       expect(result.state.physics.lock.resetCount).toBe(0);
 
-      // Hold usage should be reset
-      expect(result.state.hold.usedThisTurn).toBe(false);
+      // Hold usage should NOT be reset during spawn (only during lock)
+      expect(result.state.hold.usedThisTurn).toBe(true);
       expect(result.state.hold.piece).toBe("J"); // Hold piece preserved
 
       // RNG should be advanced
@@ -457,8 +457,8 @@ describe("@/engine/gameplay/spawn — locking & spawning", () => {
       expect(result.state.queue).toEqual(["I", "O", "T"]);
       expect(result.state.rng).toBe(state.rng); // RNG unchanged for override
 
-      // Hold usage should still be reset
-      expect(result.state.hold.usedThisTurn).toBe(false);
+      // Hold usage should NOT be reset for hold swaps (only for queue spawns)
+      expect(result.state.hold.usedThisTurn).toBe(true);
     });
 
     test("does not refill queue when above previewCount threshold", () => {

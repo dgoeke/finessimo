@@ -446,22 +446,17 @@ describe("@/engine/events — event payloads & invariants", () => {
 
       expect(firstHold.state.hold.piece).toBe("T");
       expect(firstHold.state.piece?.id).toBe("I"); // Next piece spawned
-      // Note: usedThisTurn gets reset to false when a new piece spawns
-      expect(firstHold.state.hold.usedThisTurn).toBe(false);
+      // Note: usedThisTurn stays true until the piece locks (not when it spawns)
+      expect(firstHold.state.hold.usedThisTurn).toBe(true);
 
-      // Hold second time should work now since we spawned a new piece
+      // Hold second time should NOT work - hold is disabled until piece locks
       const secondHold = step(firstHold.state, [{ kind: "Hold" }]);
       const secondHoldEvent = findEvent(secondHold.events, "Held");
 
-      expect(secondHoldEvent).toEqual({
-        kind: "Held",
-        swapped: true, // Swapping with existing T piece
-        tick: 2,
-      });
-
-      expect(secondHold.state.hold.piece).toBe("I");
-      expect(secondHold.state.piece?.id).toBe("T"); // T came back from hold
-      expect(secondHold.state.hold.usedThisTurn).toBe(false); // Reset when T spawns
+      expect(secondHoldEvent).toBeUndefined(); // No hold event should occur
+      expect(secondHold.state.hold.piece).toBe("T"); // Hold unchanged
+      expect(secondHold.state.piece?.id).toBe("I"); // Active piece unchanged
+      expect(secondHold.state.hold.usedThisTurn).toBe(true); // Still disabled
     });
 
     test("hold disabled after use until next spawn", () => {
@@ -478,10 +473,9 @@ describe("@/engine/events — event payloads & invariants", () => {
       expect(holdEvents).toHaveLength(1);
       expect(holdEvents[0]?.swapped).toBe(false);
 
-      // The behavior of usedThisTurn depends on whether a new piece spawns in the same step
-      // In this case, when we hold T from empty hold, a new piece from the queue spawns
-      // and usedThisTurn gets reset to false during spawn
-      expect(held.state.hold.usedThisTurn).toBe(false);
+      // The behavior of usedThisTurn: when we hold T from empty hold, a new piece spawns
+      // but usedThisTurn stays true because spawn no longer resets it (only lock does)
+      expect(held.state.hold.usedThisTurn).toBe(true);
 
       // If we want to test hold disabled, we need a scenario where hold doesn't spawn
       // Let's manually set up that scenario

@@ -11,6 +11,7 @@ import {
   forceActive,
   addGarbage,
   clearHold,
+  disableHold,
 } from "@/engine/ops";
 
 import {
@@ -420,6 +421,55 @@ describe("@/engine/ops — pure state transformations for mode control", () => {
 
       expect(result.hold.piece).toBeNull();
       expect(result.hold.usedThisTurn).toBe(false);
+    });
+  });
+
+  describe("disableHold()", () => {
+    test("disables hold by marking as permanently used", () => {
+      const state = createTestGameState({
+        hold: { piece: "I", usedThisTurn: false },
+      });
+
+      const op = disableHold();
+      const result = op(state);
+
+      // Should disable hold
+      expect(result.hold.piece).toBeNull();
+      expect(result.hold.usedThisTurn).toBe(true);
+
+      // Should preserve other state properties
+      expect(result.board).toBe(state.board);
+      expect(result.queue).toBe(state.queue);
+      expect(result.piece).toBe(state.piece);
+      expect(result.physics).toBe(state.physics);
+      expect(result.rng).toBe(state.rng);
+      expect(result.tick).toBe(state.tick);
+    });
+
+    test("works when hold is already empty", () => {
+      const state = createTestGameState({
+        hold: { piece: null, usedThisTurn: false },
+      });
+
+      const op = disableHold();
+      const result = op(state);
+
+      // Should disable hold even when empty
+      expect(result.hold.piece).toBeNull();
+      expect(result.hold.usedThisTurn).toBe(true);
+    });
+
+    test("maintains disabled state when already disabled", () => {
+      const state = createTestGameState({
+        hold: { piece: "T", usedThisTurn: true },
+      });
+
+      const op = disableHold();
+      const result = op(state);
+
+      // Should clear piece but keep disabled
+      expect(result.hold.piece).toBeNull();
+      expect(result.hold.usedThisTurn).toBe(true);
     });
   });
 

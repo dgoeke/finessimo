@@ -17,6 +17,7 @@ export function placeActivePiece(state: GameState): {
   const newState = {
     ...state,
     board: newBoard,
+    hold: { ...state.hold, usedThisTurn: false }, // Reset hold when piece locks
     piece: null, // Clear active piece after locking
   };
 
@@ -107,7 +108,7 @@ export function spawnPiece(
 
   const newState = {
     ...state,
-    hold: { ...state.hold, usedThisTurn: false }, // Reset hold usage
+    hold: state.hold, // Never modify hold state during spawn
     physics: resetPhysics,
     piece: activePiece,
     queue: newQueue,

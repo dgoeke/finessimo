@@ -176,9 +176,23 @@ describe("Engine integration — common scenarios", () => {
     expect(spawnAfterHold).toBeDefined();
     expect(spawnAfterHold?.pieceId).toBe("I");
 
-    // Tick 2: Now hold again — this time it should swap with previously held T
+    // Tick 2: Try to hold again - should be blocked until piece locks
     r = step(s, createCommandSequence("Hold"));
-    const heldTick2 = findEvent(r.events, "Held");
+    let heldTick2 = findEvent(r.events, "Held");
+    expect(heldTick2).toBeUndefined(); // Hold should be blocked
+    s = r.state;
+
+    // Simulate piece locking by hard dropping to bottom and advancing physics
+    r = step(s, createCommandSequence("HardDrop"));
+    s = r.state;
+
+    // Now spawn should reset hold and piece should be available
+    r = step(s, []);
+    s = r.state;
+
+    // Now hold should work again
+    r = step(s, createCommandSequence("Hold"));
+    heldTick2 = findEvent(r.events, "Held");
     expect(heldTick2).toBeDefined();
     expect(heldTick2?.swapped).toBe(true);
 

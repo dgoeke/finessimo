@@ -541,5 +541,35 @@ describe("@/engine/gameplay/movement — move/rotate/hold/drop", () => {
       expect(result.pieceToSpawn).toBe("T");
       expect(result.swapped).toBe(true);
     });
+
+    test("hold remains disabled after swap until new piece spawns", () => {
+      // This test verifies the core bug fix: hold should not be immediately re-enabled
+      // after a hold swap. It should stay disabled until a new piece spawns from the queue.
+      const state = createTestGameState({
+        hold: { piece: "I", usedThisTurn: false },
+        piece: createTestPiece("T", 5, 10),
+      });
+
+      // First hold should work and swap pieces
+      const result = tryHold(state);
+      expect(result.emitted).toBe(true);
+      expect(result.swapped).toBe(true);
+      expect(result.pieceToSpawn).toBe("I"); // I piece should spawn
+      expect(result.state.hold.piece).toBe("T"); // T now in hold
+      expect(result.state.hold.usedThisTurn).toBe(true); // Hold is used
+
+      // Simulate the swapped piece (I) being spawned
+      const stateWithSwappedPiece = {
+        ...result.state,
+        piece: createTestPiece("I", 4, 8), // Swapped piece is now active
+      };
+
+      // Attempt to hold again immediately - should be blocked
+      const secondResult = tryHold(stateWithSwappedPiece);
+      expect(secondResult.emitted).toBe(false);
+      expect(secondResult.swapped).toBe(false);
+      expect(secondResult.pieceToSpawn).toBe(null);
+      expect(secondResult.state.hold.usedThisTurn).toBe(true); // Still disabled
+    });
   });
 });
