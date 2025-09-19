@@ -67,4 +67,7 @@ temp/
 # Local development
 .local
 
+# MCP Serena
+.serena/
+
 PHASES.md

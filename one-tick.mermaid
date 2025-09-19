@@ -1,0 +1,53 @@
+sequenceDiagram
+  autonumber
+  participant Dev as Devices (kbd/gamepad/touch)
+  participant Norm as Normalize → KeyEdges
+  participant Router as Input Router
+  participant UI as UI Control Transducer
+  participant App as App Reducer
+  participant Game as Game Control (DAS/ARR)
+  participant Mode as Mode.step
+  participant Ops as apply EngineOps
+  participant Plan as planCommands
+  participant Eng as engine.step
+  participant View as UI Layer (render/effects)
+
+  Dev->>Norm: raw events (this frame)
+  Norm->>Router: KeyEdge[]
+
+  alt Overlay open
+    Router->>UI: KeyEdge[] (overlay context)
+    UI-->>Router: UiMsg[], consumed edges
+    Router->>App: UiMsg[]
+    App-->>View: app effects (e.g., open/close modal)
+    Note over Router,Game: Remaining edges don’t reach game while overlay active
+  else No overlay
+    Router->>UI: KeyEdge[] (route context)
+    UI-->>Router: UiMsg[], consumed edges
+    Router->>App: UiMsg[]
+    App-->>View: app effects (sounds, scene hints)
+
+    opt Route is Playing & not paused
+      Router->>Game: Remaining KeyEdge[]
+      Game-->>Router: Commands[], Telemetry[]
+
+      Router->>Mode: {engine, lastEvents, controlCommands, controlTelemetry}
+      Mode-->>Router: {engineOps?, plan?, effects?}
+
+      Router->>Ops: engineOps?
+      Ops-->>Router: engine₀ (transformed state)
+
+      Router->>Plan: plan(controlCommands, plan)
+      Plan-->>Router: Final Commands
+
+      Router->>Eng: step(engine₀, Final Commands)
+      Eng-->>Router: {state', events}
+
+      Router-->>Mode: events (for next tick memory)
+      Router-->>App: events (for global UI/state)
+      Mode-->>View: mode effects
+      App-->>View: app effects
+    end
+  end
+
+  View-->>View: Render state', show toasts/hints, play sounds

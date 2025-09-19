@@ -77,23 +77,15 @@ This document provides a concise overview of the TypeScript source files under `
 
 - `src/runtime/loop.ts` — Main runtime loop coordinating engine, control, and mode systems
 
-## UI Effects (`src/ui/`)
+## UI (`src/ui/`)
 
 - `src/ui/effects.ts` — UI effect types for mode feedback (messages, highlights, sounds)
+- `src/ui/layout/` — UI layout components (directory exists but no files currently)
 
 ## Adapters (`src/adapters/`)
 
 - `src/adapters/excalibur.ts` — Excalibur.js game engine adapter
 - `src/adapters/config-adapter.ts` — Tick conversion utilities for config (re-exports)
-
-## Debug UI (`src/debug/`)
-
-- `src/debug/ui.ts` — Debug UI creation with game area, status, event log, and control log
-- `src/debug/game.ts` — Debug game instance with telemetry integration
-- `src/debug/event-logger.ts` — Engine event logging display
-- `src/debug/control-logger.ts` — Control telemetry logging display
-- `src/debug/input.ts` — Keyboard input handling for debug mode
-- `src/debug/renderer.ts` — Canvas rendering for debug visualization
 
 ## Analytics (`src/analytics/`)
 

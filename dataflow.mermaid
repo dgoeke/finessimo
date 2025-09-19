@@ -1,0 +1,46 @@
+flowchart LR
+  subgraph Devices
+    K[Keyboard]:::dev
+    G[Gamepad]:::dev
+    T[Touch]:::dev
+  end
+
+  subgraph Input
+    N["Normalize → KeyEdge[] per tick"]:::box
+    R["Input Router<br/>(Overlay → Route UI → Game)"]:::box
+  end
+
+  subgraph UI_Control
+    U["UI Control Transducer<br/>(maps KeyEdges → UiMsg[])"]:::box
+  end
+
+  subgraph App
+    A["App Reducer (Elm-style)<br/>update(app, UiMsg) → {app', effects[]}"]:::box
+    EFF["Effect Driver<br/>(storage, sound, scene change…)"]:::io
+  end
+
+  subgraph Game_Control
+    C["Game Control Transducer<br/>(DAS/ARR)<br/>KeyEdges → {Commands[], Telemetry[]}"]:::box
+  end
+
+  subgraph Runtime / Playing
+    M["Mode.step<br/>(engine, events, commands, telemetry)<br/>→ {engineOps?, plan?, effects?}"]:::box
+    OP["apply EngineOps<br/>(pure)"]:::box
+    P["planCommands<br/>(prepend/filter/append)"]:::box
+    ENG["engine.step<br/>(state, Commands) → {state', events}"]:::core
+  end
+
+  subgraph UI Layer
+    FX[Render + Show Mode/App Effects]:::io
+  end
+
+  K & G & T --> N --> R
+  R -->|to UI| U -->|"UiMsg[]"| A -->|"effects[]"| EFF
+  R -->|"to Game (when Playing)"| C
+  C -->|Commands + Telemetry| M
+  M -->|engineOps| OP --> P
+  C -->|Commands| P
+  P -->|Final Commands| ENG -->|events| M
+  ENG -->|events| A
+  M -->|mode effects| FX
+  A -->|app effects| FX
