@@ -71,7 +71,10 @@ This document provides a concise overview of the TypeScript source files under `
 
 ## Device Input (`src/device/`)
 
-- `src/device/types.ts` — Unified device input representation (keyboard, mouse, touch, gamepad)
+- `src/device/keys.ts` — Input action types and physical input mappings (PhysicalInput, InputAction, GameAction, UIAction)
+- `src/device/adapter.ts` — Device driver for input-device-handler integration with edge detection
+- `src/device/edge-computation.ts` — Pure functions for computing input state changes and device attribution
+- `src/device/default-keymaps.ts` — Default keyboard and gamepad mappings from physical inputs to logical actions
 
 ## Runtime (`src/runtime/`)
 
@@ -95,7 +98,7 @@ This document provides a concise overview of the TypeScript source files under `
 
 The engine follows a functional architecture with clear separation of concerns:
 
-1. **Input** → Commands (device → control layer)
+1. **Physical Input** → **Input Actions** → **Commands** (device layer → control layer → engine commands)
 2. **Commands** → State mutations (apply-commands.ts)
 3. **Physics** → Gravity, lock delay, grounding (advance-physics.ts)
 4. **Transitions** → Locking, line clearing, spawning (resolve-transitions.ts)
