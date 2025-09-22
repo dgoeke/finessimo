@@ -46,7 +46,7 @@
     "@jest/globals": "^30.0.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
-    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.40.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
